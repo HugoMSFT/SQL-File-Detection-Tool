@@ -128,6 +128,12 @@ class CellResult:
     #: Catalog object the cell was supposed to create, and whether it was there
     #: afterwards. This is the success criterion for DDL, which returns no rows.
     catalog_object: Optional[str] = None
+    #: The public object this cell actually read, where it read one. Live
+    #: evidence has to name the bytes, not the demo fixture whose key the matrix
+    #: uses: `csv_scalar` on a live run means the public iris CSV, and saying so
+    #: is what stops a demo fixture's type-fidelity claims being read onto it.
+    public_shape: Optional[str] = None
+    public_shape_url: Optional[str] = None
 
     @property
     def accepted(self) -> bool:
@@ -299,6 +305,7 @@ def check_result_assertions(
     values: Optional[Dict[str, Any]] = None,
     error_number: Optional[int] = None,
     catalog_present: Optional[bool] = None,
+    first_row: Optional[Sequence[Any]] = None,
 ) -> List[AssertionResult]:
     """Check execution-time assertions against what the server returned."""
     values = values or {}
@@ -324,6 +331,22 @@ def check_result_assertions(
             results.append(AssertionResult('error_number', assertion.value, error_number,
                                            error_number == assertion.value,
                                            assertion.detail))
+        elif assertion.kind == 'values_not_all_null':
+            # The failure this exists to catch: a schema generated from one file
+            # and pointed at another projects column names the data does not
+            # have, so every value comes back NULL while the row and column
+            # counts look perfect. A count-only assertion calls that a PASS.
+            if first_row is None:
+                results.append(AssertionResult(
+                    'values_not_all_null', 'at least one non-NULL value', None, True,
+                    'no row was returned; nullness not verified',
+                ))
+            else:
+                non_null = [value for value in first_row if value is not None]
+                results.append(AssertionResult(
+                    'values_not_all_null', 'at least one non-NULL value',
+                    len(non_null), bool(non_null), assertion.detail,
+                ))
         elif assertion.kind == 'catalog_present':
             # The success criterion for DDL. CREATE EXTERNAL FILE FORMAT
             # returns no rows, so "did it work?" is answered by the catalog,

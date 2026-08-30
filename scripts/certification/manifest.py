@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -36,6 +37,7 @@ from .matrix import (
     platform_for,
 )
 from .redaction import Redactor
+from .public_fixtures import resolve_shape, shape_mismatch
 from .runid import RunIdentity
 from .safety import SafetyPolicy, evaluate_batch
 
@@ -95,6 +97,17 @@ class Staging:
             return None
         entry = self.fixtures.get(fixture_key) or {}
         value = entry.get(access)
+        return str(value) if value else None
+
+    def shape_key(self, fixture_key: str) -> Optional[str]:
+        """Which public object this fixture's remote locations actually point at.
+
+        A remote location without a declared shape is refused by the planner. The
+        harness analyses a local demo file and then reads a public blob, and
+        those only describe the same bytes if someone says so.
+        """
+        entry = self.fixtures.get(fixture_key) or {}
+        value = entry.get('shape')
         return str(value) if value else None
 
     def expectations(self, fixture_key: str) -> Dict[str, Any]:
@@ -457,9 +470,51 @@ def _plan_cell(
         )
         return planned
 
-    if entry.fixture not in metadata_cache:
-        metadata_cache[entry.fixture] = _metadata_for(fixture_path)
-    metadata = dict(metadata_cache[entry.fixture])
+    # A remote location reads bytes that are not this fixture's bytes. Generating
+    # the schema from the local demo file and pointing it at a public blob is how
+    # a run projects ten sales columns out of a five-column iris file: every
+    # value NULL, and either a false FAIL or a false PASS. So a remote cell must
+    # say which public object it reads, and generate from *that*.
+    remote_access = entry.access not in ('none', 'engine_local')
+    shape = resolve_shape(staging.shape_key(entry.fixture)) if remote_access else None
+    if remote_access and shape is None:
+        planned['plan_verdict'] = NOT_EXECUTABLE
+        planned['unstaged'] = True
+        planned['reason'] = (
+            f'fixture {entry.fixture!r} is staged at a remote location but '
+            f'declares no public shape; refusing to generate a schema from '
+            f'unrelated local demo bytes'
+        )
+        return planned
+    if shape is not None:
+        mismatch = shape_mismatch(shape, fixture.file_type)
+        if mismatch:
+            planned['plan_verdict'] = NOT_EXECUTABLE
+            planned['unstaged'] = True
+            planned['reason'] = mismatch
+            return planned
+
+    if shape is not None:
+        # Live evidence must name the object it actually read, not the demo
+        # fixture whose key the matrix happens to use.
+        metadata = shape.metadata()
+        planned['public_shape'] = shape.key
+        planned['public_shape_url'] = shape.url
+        planned['public_shape_summary'] = shape.summary
+        planned['verification_limit'] = shape.verification_limit
+        # A staging document may still pin a first value; the shape owns the
+        # counts, because the shape is what describes the bytes.
+        expectations = dict(shape.expectations())
+        expectations.update({
+            key: value
+            for key, value in staging.expectations(entry.fixture).items()
+            if key == 'first_value'
+        })
+        planned['expectations'] = expectations
+    else:
+        if entry.fixture not in metadata_cache:
+            metadata_cache[entry.fixture] = _metadata_for(fixture_path)
+        metadata = dict(metadata_cache[entry.fixture])
 
     # Cell C30 is the negative control: it deliberately keeps the default,
     # file-derived name so the safety gate has something real to refuse.
@@ -545,7 +600,16 @@ def _plan_cell(
         if setup_block['any_substitution']:
             any_substitution = True
 
-    verification_sql = _verification_sql(entry, schema_name, table_name, external_table_name)
+    verification_sql = _verification_sql(
+        entry, schema_name, table_name, external_table_name,
+        limit=planned.get('verification_limit'),
+    )
+    # A statement that asks for TOP (n) rows returns n rows, not the file's row
+    # count. Asserting 729 against a capped read is a harness bug that reads as
+    # a generator defect, so the expectation is capped to whatever the query
+    # that produces the result set actually asks for.
+    counted_sql = verification_sql or planned.get('sql_redacted') or ''
+    _cap_row_expectation(planned, counted_sql)
     if verification_sql:
         verification_block = _plan_sql_block(
             verification_sql, policy=policy, redactor=redactor, emit_sql=emit_sql,
@@ -576,23 +640,56 @@ def _plan_cell(
     return planned
 
 
+_TOP_CAP_RE = re.compile(r'\bTOP\s*\(\s*(\d+)\s*\)', re.IGNORECASE)
+
+
+def _cap_row_expectation(planned: Dict[str, Any], sql: str) -> None:
+    """Lower a row-count expectation to the cap the statement imposes.
+
+    The generated ad-hoc reads are deliberately bounded - `SELECT TOP (100)`
+    against a blob is a sane thing to generate and an insane thing to remove.
+    But the staged object has 729 rows, and comparing 729 to the 100 that come
+    back is the harness misreading its own query as a generator defect.
+    """
+    expected = (planned.get('expectations') or {}).get('row_count')
+    if expected is None or not sql:
+        return
+    caps = [int(match) for match in _TOP_CAP_RE.findall(sql)]
+    if not caps:
+        return
+    cap = min(caps)
+    if cap < expected:
+        planned['expectations'] = dict(planned['expectations'], row_count=cap)
+        planned['row_count_capped_from'] = expected
+
+
 def _verification_sql(
     entry: MatrixEntry,
     schema_name: str,
     table_name: Optional[str],
     external_table_name: Optional[str],
+    limit: Optional[int] = None,
 ) -> Optional[str]:
     """The query that proves a load worked, or ``None`` where the cell is its own proof.
 
     ``SELECT *`` rather than ``COUNT(*)`` on purpose: the row count and the
     column count both come out of the same result set, and so does the value
     fidelity the encoding cells care about.
+
+    ``limit`` bounds the read where the staged object is large. A month of NYC
+    taxi trips is millions of rows and reading all of them certifies nothing
+    that reading ten does not - but the column count still has to come from a
+    real projection, which is why this stays ``SELECT *`` with a ``TOP``.
     """
+    top = f'TOP ({int(limit)}) ' if limit else ''
     if entry.verification == 'target_table' and table_name:
-        return f'SELECT * FROM [{_escape_ident(schema_name)}].[{_escape_ident(table_name)}];'
+        return (
+            f'SELECT {top}* FROM [{_escape_ident(schema_name)}].'
+            f'[{_escape_ident(table_name)}];'
+        )
     if entry.verification == 'external_table' and external_table_name:
         return (
-            f'SELECT * FROM [{_escape_ident(schema_name)}].'
+            f'SELECT {top}* FROM [{_escape_ident(schema_name)}].'
             f'[{_escape_ident(external_table_name)}];'
         )
     return None

@@ -135,6 +135,17 @@ test suites now read the same machine-readable evidence file.
   run schema can no longer leave a live database behind, and `verify` re-gates
   every batch a run would send - prerequisite setup and verification queries
   included - naming the block it refused.
+- **A generated schema now describes the file the run actually reads.** The
+  harness analysed a local demo fixture and then pointed the statement at a
+  public blob, so a ten-column synthetic sales schema was being read against the
+  five-column public iris CSV - and a Parquet fixture with nested, map and
+  decimal-boundary columns was mapped onto 21 flat taxi columns. Those cells
+  either failed for the wrong reason or passed with every projected value NULL.
+  Staged fixtures now declare which public object they are, generation happens
+  from that declaration, and a remote entry without one is planned
+  `NOT_EXECUTABLE` rather than guessed at. Row expectations are capped to what
+  the query asks for, and every cell that reads a declared object also asserts
+  that its first row is not entirely NULL.
 
 ### Changed
 

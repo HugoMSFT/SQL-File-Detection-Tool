@@ -115,6 +115,37 @@ path explicitly.
 Public fixtures are read anonymously and emit no credential and no database
 master key. Managed identity is one cell of its own, not a blanket default.
 
+## Staged bytes and generated schemas
+
+The harness analyses a local demo fixture and then points the generated
+statement at a public blob. That is only sound when the two describe the same
+file, and for a while they did not: `csv_scalar` mapped ten columns of synthetic
+sales data onto the five-column public iris CSV. The generated `WITH` clause
+then named columns the object does not have, which produces either an error that
+reads as a generator defect or - worse - the right number of rows with every
+value NULL, which a count-only assertion calls a PASS.
+
+So a remote staging entry must also declare a `shape`, naming an object in
+`public_fixtures.py`. That module is committed, carries no credentials and pins
+a public URL per object, and the planner generates from *it* rather than from
+the demo file. A remote entry with no declared shape is planned
+`NOT_EXECUTABLE` on purpose, as is one whose shape is the wrong file type. An
+`engine_local` entry needs no shape, because it means *these* fixture bytes were
+copied to the engine host.
+
+Three consequences worth stating:
+
+- The demo `all_types.parquet` fixture has nested, map, list and
+  decimal-boundary columns. No public object has that shape, and NYC taxi - 21
+  flat scalars - is not a substitute. Those cells stay `NOT_EXECUTABLE` rather
+  than borrow a file that cannot support their claims.
+- A row-count expectation is capped to whatever the generated query asks for. A
+  `SELECT TOP (100)` against a 729-row object returns 100 rows, and comparing
+  that to 729 is the harness misreading its own query.
+- Any cell that reads a declared object also asserts that its first row is not
+  entirely NULL. Counts alone cannot see the failure this whole mechanism
+  exists to prevent.
+
 Transient connection failures are retried with bounded backoff. Authentication
 failures — 18456, 18452, 40615, 40532, 4060, 916, 18470 — are never retried,
 because retrying a bad credential is how accounts get locked out. The

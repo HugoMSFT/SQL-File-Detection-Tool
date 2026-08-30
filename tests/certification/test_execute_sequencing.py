@@ -559,3 +559,73 @@ def test_cleanup_is_not_verified_when_the_inventory_cannot_be_read(identity, pol
     assert outcome['verified'] is False
     assert outcome['unreadable_inventory']
 
+
+
+def test_a_projection_of_all_nulls_is_not_a_pass(identity, policy):
+    """The failure mode a count-only assertion cannot see.
+
+    A schema generated from one file and pointed at another returns the right
+    number of rows and columns, every value NULL. That has to fail, or the
+    harness certifies a read that read nothing.
+    """
+    table = identity.name('c14', 'csv_scalar')
+    verify_sql = f'SELECT * FROM [{identity.schema}].[{table}];'
+    planned = _planned(
+        identity,
+        'C14',
+        asserts_result_counts=True,
+        expectations={'row_count': 2, 'column_count': 3},
+        public_shape='iris_csv',
+        public_shape_url='https://example.invalid/iris.csv',
+        verification={
+            'kind': 'target_table',
+            'batches': [_batch(verify_sql)],
+        },
+    )
+    all_null = FakeQuery(['a', 'b', 'c'], [(None, None, None), (None, None, None)])
+    result = execute_cell(
+        FakeConnection({verify_sql: all_null}), planned,
+        policy=policy, redactor=Redactor(), options=ExecutionOptions(),
+    )
+    assert result.verdict == FAIL
+    nullness = [a for a in result.assertions if a.kind == 'values_not_all_null']
+    assert nullness and nullness[0].ok is False
+
+
+def test_a_projection_with_values_passes_the_nullness_check(identity, policy):
+    table = identity.name('c14', 'csv_scalar')
+    verify_sql = f'SELECT * FROM [{identity.schema}].[{table}];'
+    planned = _planned(
+        identity,
+        'C14',
+        asserts_result_counts=True,
+        expectations={'row_count': 2, 'column_count': 3},
+        public_shape='iris_csv',
+        public_shape_url='https://example.invalid/iris.csv',
+        verification={
+            'kind': 'target_table',
+            'batches': [_batch(verify_sql)],
+        },
+    )
+    loaded = FakeQuery(['a', 'b', 'c'], [(5.1, None, 'Iris-setosa'), (4.9, 3.0, 'x')])
+    result = execute_cell(
+        FakeConnection({verify_sql: loaded}), planned,
+        policy=policy, redactor=Redactor(), options=ExecutionOptions(),
+    )
+    nullness = [a for a in result.assertions if a.kind == 'values_not_all_null']
+    assert nullness and nullness[0].ok is True
+    assert result.verdict == PASS
+
+
+def test_a_cell_that_reads_no_public_object_is_not_null_checked(identity, policy):
+    """Nothing to compare against means no claim, not a failed claim."""
+    planned = _planned(
+        identity, 'C14',
+        asserts_result_counts=True,
+        expectations={'row_count': 0},
+    )
+    result = execute_cell(
+        FakeConnection(), planned,
+        policy=policy, redactor=Redactor(), options=ExecutionOptions(),
+    )
+    assert not [a for a in result.assertions if a.kind == 'values_not_all_null']

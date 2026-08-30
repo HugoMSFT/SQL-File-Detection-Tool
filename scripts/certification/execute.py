@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import adapters
 from .adapters import (
@@ -182,6 +182,7 @@ def _run_batches(
     result set.
     """
     records: List[BatchResult] = []
+    first_row: Optional[Tuple[Any, ...]] = None
     for batch in batches:
         sql = batch.get('sql')
         if sql is None:
@@ -239,6 +240,7 @@ def _run_batches(
                 'column_count': None,
             }
         elapsed = (time.perf_counter() - started) * 1000
+        first_row = tuple(query.rows[0]) if getattr(query, 'rows', None) else None
         records.append(
             BatchResult(
                 index=batch['batch_index'],
@@ -256,6 +258,7 @@ def _run_batches(
         'error': None,
         'row_count': last.row_count if last else None,
         'column_count': last.column_count if last else None,
+        'first_row': first_row,
     }
 
 
@@ -337,6 +340,8 @@ def execute_cell(
         substitutions=planned.get('substitutions', []),
         notes=planned.get('notes', ''),
         catalog_object=planned.get('catalog_object'),
+        public_shape=planned.get('public_shape'),
+        public_shape_url=planned.get('public_shape_url'),
     )
 
     # Static assertions are checked whether or not the cell can execute: a
@@ -418,6 +423,7 @@ def execute_cell(
     failed = False
     last_rows: Optional[int] = None
     last_cols: Optional[int] = None
+    last_first_row: Optional[Tuple[Any, ...]] = None
 
     for batch in planned.get('batches', []):
         sql = batch.get('sql')
@@ -447,6 +453,7 @@ def execute_cell(
             query = connection.execute(sql)
             elapsed = (time.perf_counter() - started) * 1000
             last_rows, last_cols = query.row_count, query.column_count
+            last_first_row = tuple(query.rows[0]) if getattr(query, 'rows', None) else None
             result.batches.append(
                 BatchResult(
                     index=batch['batch_index'],
@@ -508,6 +515,7 @@ def execute_cell(
         result.batches.extend(outcome['batches'])
         if outcome['ok']:
             last_rows, last_cols = outcome['row_count'], outcome['column_count']
+            last_first_row = outcome.get('first_row')
         else:
             failed = True
 
@@ -531,6 +539,7 @@ def execute_cell(
                     (b.error_number for b in result.batches if b.error_number), None
                 ),
                 catalog_present=catalog_present,
+                first_row=last_first_row,
             )
         )
 
@@ -566,6 +575,15 @@ def _result_assertions(planned: Dict[str, Any], entry) -> List[Any]:
             assertions.append(
                 Assertion('column_count', expectations['column_count'],
                           'staged column count')
+            )
+        # A generated schema pointed at the wrong file returns the right shape
+        # full of NULLs. Counts alone call that a PASS, so a cell that reads a
+        # declared public object also has to come back with something in it.
+        if planned.get('public_shape'):
+            assertions.append(
+                Assertion('values_not_all_null', None,
+                          'a projection whose columns the file does not have '
+                          'returns the right shape full of NULLs')
             )
     if planned.get('catalog_object'):
         assertions.append(

@@ -16,7 +16,17 @@
     "An `engine_local` entry is a path on the *engine host*, not on this",
     "machine. Cells that read a file with no data source (C07, C11, C15) are",
     "planned NOT_EXECUTABLE until one is supplied, because a client worktree",
-    "path handed to a server earns error 4860, not a certification result."
+    "path handed to a server earns error 4860, not a certification result.",
+    "",
+    "Every remote entry must declare a `shape`, naming an object in",
+    "scripts/certification/public_fixtures.py. The harness analyses a local demo",
+    "fixture and then reads a public blob, and those describe the same bytes",
+    "only if someone says so: without a shape the generated schema would be the",
+    "demo file's, projecting columns the public object does not have. A remote",
+    "entry with no declared shape is planned NOT_EXECUTABLE on purpose.",
+    "",
+    "An `engine_local` entry needs no shape, because it means *these* fixture",
+    "bytes were copied to the engine host."
   ],
   "hosts": [
     "azuremlexamples.blob.core.windows.net",
@@ -24,34 +34,59 @@
     "azcliprod.blob.core.windows.net",
     "openvmmghtestresults.blob.core.windows.net"
   ],
+  "_parquet_all_types_deliberately_unstaged": [
+    "There is no public object with the demo all_types.parquet shape - nested,",
+    "map, list, logical and decimal-boundary columns. The NYC taxi dataset has",
+    "21 flat scalar and timestamp columns and is NOT a substitute: mapping it",
+    "here would transfer the demo fixture's type-fidelity claims onto a file",
+    "that cannot support them. Those cells stay NOT_EXECUTABLE until the exact",
+    "bytes are staged."
+  ],
   "fixtures": {
     "csv_scalar": {
+      "_comment": [
+        "The public iris CSV, five columns and 150 rows. It certifies the CSV",
+        "access pattern only: it has no Unicode, no boundary values and no wide",
+        "decimals, so it proves nothing about type fidelity. The demo",
+        "sales_scalars.csv keeps that job, statically."
+      ],
+      "shape": "iris_csv",
       "abs": "abs://datasets@azuremlexamples.blob.core.windows.net/iris.csv",
-      "blob_storage": "https://azuremlexamples.blob.core.windows.net/datasets/iris.csv",
-      "row_count": 150,
-      "column_count": 5
+      "blob_storage": "https://azuremlexamples.blob.core.windows.net/datasets/iris.csv"
     },
     "json_array": {
+      "_comment": [
+        "A whole JSON object, read as one document. Its top-level keys are",
+        "image aliases Microsoft adds to over time, so the shape pins no",
+        "columns: the assertion is that the document arrives intact, which is",
+        "what SINGLE_CLOB is being certified for."
+      ],
+      "shape": "aliases_json",
       "blob_storage": "https://azcliprod.blob.core.windows.net/cli/vm/aliases.json",
       "abs": "abs://cli@azcliprod.blob.core.windows.net/vm/aliases.json"
     },
     "ndjson": {
       "_comment": [
-        "Newline-delimited JSON read through abs:// row framing - the shape the",
-        "live run proved (729 rows on both engines). Confirm the blob path",
-        "against the container before executing; an https TYPE = BLOB_STORAGE",
-        "source cannot read this, because that connector rejects the delimiter",
-        "options with error 5369."
+        "Newline-delimited JSON read through abs:// row framing - the exact",
+        "object the live run certified: 729 rows on both engines, four JSON",
+        "fields (timestamp, source, severity, message). An https",
+        "TYPE = BLOB_STORAGE source cannot read this, because that connector",
+        "rejects the delimiter options with error 5369; the https form is",
+        "recorded only so the negative case names a real object."
       ],
-      "abs": "abs://results@openvmmghtestresults.blob.core.windows.net/petri.jsonl"
-    },
-    "parquet_all_types": {
-      "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet",
-      "column_count": 21
+      "shape": "petri_ndjson",
+      "abs": "abs://results@openvmmghtestresults.blob.core.windows.net/31194099274_2/aarch64-linux-tcg-vmm-tests-logs/aarch64_exclusive__openvmm_linux_aarch64_assigned_device_peer_to_peer_dma_aarch64_tcg/petri.jsonl",
+      "blob_storage": "https://openvmmghtestresults.blob.core.windows.net/results/31194099274_2/aarch64-linux-tcg-vmm-tests-logs/aarch64_exclusive__openvmm_linux_aarch64_assigned_device_peer_to_peer_dma_aarch64_tcg/petri.jsonl"
     },
     "parquet_sales": {
-      "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet",
-      "column_count": 21
+      "_comment": [
+        "NYC yellow taxi, June 2018. Certifies the Parquet access pattern and",
+        "column projection against 21 documented columns. No row count is",
+        "asserted - a month of trips is millions of rows - so verification reads",
+        "TOP (10) and checks the column count."
+      ],
+      "shape": "taxi_parquet_2018_06",
+      "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet"
     }
   }
 }
