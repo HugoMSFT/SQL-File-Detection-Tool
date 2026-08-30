@@ -1,0 +1,18 @@
+# generate_samples.py writes these fixtures with LF endings and exact bytes.
+# Without pinning, core.autocrlf would rewrite them on checkout and a plain
+# `python demo/generate_samples.py` would show every text sample as modified.
+
+*.csv     text eol=lf
+*.tsv     text eol=lf
+*.json    text eol=lf
+*.ndjson  text eol=lf
+*.txt     text eol=lf
+*.sql     text eol=lf
+
+# UTF-16LE fixtures contain NUL bytes; never let git touch them.
+unicode/unicode_utf16le_bom.csv -text
+unicode/unicode_utf16le_bom.tsv -text
+
+*.parquet binary
+*.orc     binary
+*.xlsx    binary

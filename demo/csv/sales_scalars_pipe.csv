@@ -1,0 +1,7 @@
+row_id|quantity|unit_price|temperature_c|is_active|product_name|notes|order_date|order_timestamp|order_timestamp_utc
+1|12|19.99|-3.5|true|Widget, standard|first order|2024-01-15|2024-01-15T08:30:00|2024-01-15T08:30:00Z
+2|-4|0.0|0.0|false|"Gadget ""Pro"""||2024-02-29|2024-02-29T23:59:59|2024-02-29T23:59:59Z
+3|0|1234.5678|21.25|true|Ünicode Ünit — ★|accented name|2024-03-01|2024-03-01T00:00:00|2024-03-01T00:00:00Z
+4|2147483647|-0.001|100.0|false|日本語の商品|CJK name|2024-06-30|2024-06-30T12:00:00|2024-06-30T12:00:00Z
+5|||||Missing values row||||
+6|-2147483648|1e-07|-273.15|true|Edge case|min int32|2024-12-31|2024-12-31T23:59:59|2024-12-31T23:59:59Z

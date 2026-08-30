@@ -94,9 +94,19 @@ class FileDetector:
         'utf-16-le': '1200',
         'utf-16-be': '1201',
         'shift_jis': '932',
+        'shift-jis': '932',
+        'sjis': '932',
+        'cp932': '932',
+        'ms932': '932',
         'euc-jp': '20932',
+        'euc_jp': '20932',
         'gbk': '936',
+        'cp936': '936',
+        'gb2312': '936',
         'big5': '950',
+        'cp950': '950',
+        'cp1251': '1251',
+        'windows-1251': '1251',
     }
 
     def __init__(self, cache_max_entries: int = CACHE_MAX_ENTRIES):
@@ -340,6 +350,8 @@ class FileDetector:
                 metadata.update(self._analyze_csv(file_path, encoding))
             elif file_type == 'parquet':
                 metadata.update(self._analyze_parquet(file_path))
+            elif file_type == 'orc':
+                metadata.update(self._analyze_orc(file_path))
             elif file_type == 'delta':
                 metadata.update(self._analyze_delta(file_path))
             elif file_type == 'iceberg':
@@ -508,6 +520,35 @@ class FileDetector:
                     'format_version': str(pq_meta.format_version),
                     'key_value_metadata': kv_meta,
                 },
+            }
+        except Exception as e:
+            return {'error': str(e), 'encoding': 'binary'}
+
+    def _analyze_orc(self, file_path: str) -> Dict[str, Any]:
+        """Analyse ORC file metadata using the Arrow ORC reader."""
+        _ensure_pyarrow()
+        try:
+            import pyarrow.orc as orc
+        except ImportError:
+            return {
+                'error': 'ORC analysis requires a pyarrow build with ORC '
+                         'support. Install with: pip install pyarrow',
+                'encoding': 'binary',
+            }
+
+        try:
+            reader = orc.ORCFile(file_path)
+            arrow_schema = reader.schema
+            compression = getattr(reader, 'compression', None)
+            return {
+                'schema': [(f.name, str(f.type)) for f in arrow_schema],
+                'row_count': reader.nrows,
+                'column_count': len(arrow_schema),
+                'compression': str(compression) if compression else None,
+                'nullable_columns': [
+                    f.name for f in arrow_schema if f.nullable
+                ],
+                'encoding': 'binary',
             }
         except Exception as e:
             return {'error': str(e), 'encoding': 'binary'}

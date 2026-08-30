@@ -34,6 +34,7 @@ def test_analyze_files_forwards_cloud_credentials():
         ['s3://bucket/data.csv'],
         None,
         target_platform='sql_server_2022',
+        storage_url=None,
     )
 
 

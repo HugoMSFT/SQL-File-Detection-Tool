@@ -1,0 +1,7 @@
+row_id,kana_type,sample_text,note
+1,kanji,日本語,漢字
+2,hiragana,ひらがな,ひらがな
+3,katakana,カタカナ,全角カタカナ
+4,halfwidth,ｶﾀｶﾅ,半角カタカナ
+5,mixed,東京都渋谷区,住所の例
+6,ascii,Tokyo,ASCII only

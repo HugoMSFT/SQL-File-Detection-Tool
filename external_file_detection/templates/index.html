@@ -5,7 +5,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>External File Detection Tool</title>
+    <script>
+        /* Applied before first paint so the page never flashes the wrong theme. */
+        (function () {
+            var stored = null;
+            try { stored = window.localStorage.getItem('efd-theme'); } catch (e) { stored = null; }
+            var theme = (stored === 'light' || stored === 'dark') ? stored : null;
+            if (!theme) {
+                theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+                    ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <style>
+        /* ---- theme tokens: dark (default) and light ---- */
+        :root {
+            color-scheme: dark;
+            --c-bg: #0f172a;
+            --c-surface: #1e293b;
+            --c-surface-2: #1a2236;
+            --c-surface-3: #172033;
+            --c-surface-4: #253348;
+            --c-code-bg: #020617;
+            --c-border: #334155;
+            --c-border-strong: #475569;
+            --c-text: #e2e8f0;
+            --c-text-2: #cbd5e1;
+            --c-text-muted: #94a3b8;
+            --c-text-dim: #64748b;
+            --c-on-accent: #fff;
+            --c-accent: #2563eb;
+            --c-accent-hover: #1d4ed8;
+            --c-accent-soft: #60a5fa;
+            --c-accent-softer: #93c5fd;
+            --c-accent-2: #7c3aed;
+            --c-purple: #c084fc;
+            --c-purple-soft: #d8b4fe;
+            --c-purple-bg: #3b1f63;
+            --c-success: #4ade80;
+            --c-success-soft: #86efac;
+            --c-success-bg: #14432a;
+            --c-success-bg-2: #15311f;
+            --c-warning: #fbbf24;
+            --c-warning-bg: #422006;
+            --c-warning-bg-2: #1c1508;
+            --c-danger: #f87171;
+            --c-danger-bg: #450a0a;
+            --c-pink: #f472b6;
+            --c-info-bg: #1e3a5f;
+            --c-shadow: rgba(0, 0, 0, .4);
+            --c-overlay: rgba(0, 0, 0, .6);
+            --c-row-hover: rgba(255, 255, 255, .04);
+            --c-row-alt: rgba(255, 255, 255, .03);
+            --c-accent-a10: rgba(37, 99, 235, .1);
+            --c-accent-a15: rgba(37, 99, 235, .15);
+            --c-accent-a08: rgba(37, 99, 235, .08);
+            --c-accent-a06: rgba(37, 99, 235, .06);
+            --c-danger-a15: rgba(248, 113, 113, .15);
+        }
+
+        html[data-theme="light"] {
+            color-scheme: light;
+            --c-bg: #eef2f7;
+            --c-surface: #ffffff;
+            --c-surface-2: #f8fafc;
+            --c-surface-3: #f1f5f9;
+            --c-surface-4: #e6edf7;
+            --c-code-bg: #f8fafc;
+            --c-border: #cbd5e1;
+            --c-border-strong: #94a3b8;
+            --c-text: #0f172a;
+            --c-text-2: #1e293b;
+            --c-text-muted: #475569;
+            --c-text-dim: #64748b;
+            --c-on-accent: #ffffff;
+            --c-accent: #2563eb;
+            --c-accent-hover: #1d4ed8;
+            --c-accent-soft: #1d4ed8;
+            --c-accent-softer: #1e40af;
+            --c-accent-2: #7c3aed;
+            --c-purple: #7e22ce;
+            --c-purple-soft: #6b21a8;
+            --c-purple-bg: #f3e8ff;
+            --c-success: #15803d;
+            --c-success-soft: #166534;
+            --c-success-bg: #dcfce7;
+            --c-success-bg-2: #ecfdf5;
+            --c-warning: #b45309;
+            --c-warning-bg: #fef3c7;
+            --c-warning-bg-2: #fffbeb;
+            --c-danger: #dc2626;
+            --c-danger-bg: #fee2e2;
+            --c-pink: #db2777;
+            --c-info-bg: #dbeafe;
+            --c-shadow: rgba(15, 23, 42, .12);
+            --c-overlay: rgba(15, 23, 42, .45);
+            --c-row-hover: rgba(15, 23, 42, .05);
+            --c-row-alt: rgba(15, 23, 42, .03);
+            --c-accent-a10: rgba(37, 99, 235, .10);
+            --c-accent-a15: rgba(37, 99, 235, .14);
+            --c-accent-a08: rgba(37, 99, 235, .08);
+            --c-accent-a06: rgba(37, 99, 235, .06);
+            --c-danger-a15: rgba(220, 38, 38, .12);
+        }
+
         *,
         *::before,
         *::after {
@@ -16,16 +120,16 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--c-bg);
+            color: var(--c-text);
         }
 
         .container {
             max-width: 1500px;
             margin: 0 auto;
-            background: #1e293b;
+            background: var(--c-surface);
             border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
+            box-shadow: 0 4px 20px var(--c-shadow);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -34,8 +138,8 @@
 
         /* ---- header ---- */
         .header {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            color: #fff;
+            background: linear-gradient(135deg, var(--c-accent) 0%, var(--c-accent-2) 100%);
+            color: var(--c-on-accent);
             padding: 16px 24px;
             display: flex;
             align-items: center;
@@ -55,8 +159,8 @@
         /* ---- toolbar ---- */
         .toolbar {
             padding: 12px 20px;
-            background: #1a2236;
-            border-bottom: 1px solid #334155;
+            background: var(--c-surface-2);
+            border-bottom: 1px solid var(--c-border);
             display: flex;
             gap: 10px;
             align-items: center;
@@ -65,27 +169,27 @@
 
         .btn {
             padding: 7px 14px;
-            border: 1px solid #475569;
+            border: 1px solid var(--c-border-strong);
             border-radius: 6px;
-            background: #334155;
-            color: #e2e8f0;
+            background: var(--c-border);
+            color: var(--c-text);
             cursor: pointer;
             font-size: 13px;
             white-space: nowrap;
         }
 
         .btn:hover {
-            background: #475569;
+            background: var(--c-border-strong);
         }
 
         .btn-primary {
-            background: #2563eb;
-            border-color: #2563eb;
-            color: #fff;
+            background: var(--c-accent);
+            border-color: var(--c-accent);
+            color: var(--c-on-accent);
         }
 
         .btn-primary:hover {
-            background: #1d4ed8;
+            background: var(--c-accent-hover);
         }
 
         .btn-sm {
@@ -101,16 +205,16 @@
 
         .input-group label {
             font-size: 13px;
-            color: #94a3b8;
+            color: var(--c-text-muted);
         }
 
         .input-group input,
         .input-group select {
             padding: 5px 10px;
-            border: 1px solid #475569;
+            border: 1px solid var(--c-border-strong);
             border-radius: 4px;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--c-bg);
+            color: var(--c-text);
             font-size: 13px;
         }
 
@@ -124,9 +228,9 @@
         .sidebar {
             width: 320px;
             min-width: 280px;
-            border-right: 1px solid #334155;
+            border-right: 1px solid var(--c-border);
             overflow-y: auto;
-            background: #1a2236;
+            background: var(--c-surface-2);
         }
 
         .content-area {
@@ -139,8 +243,8 @@
         /* ---- tabs ---- */
         .tabs {
             display: flex;
-            border-bottom: 1px solid #334155;
-            background: #1a2236;
+            border-bottom: 1px solid var(--c-border);
+            background: var(--c-surface-2);
             overflow-x: auto;
         }
 
@@ -149,20 +253,20 @@
             cursor: pointer;
             font-size: 13px;
             border-bottom: 2px solid transparent;
-            color: #94a3b8;
+            color: var(--c-text-muted);
             white-space: nowrap;
             user-select: none;
         }
 
         .tab:hover {
-            color: #e2e8f0;
-            background: rgba(255, 255, 255, .04);
+            color: var(--c-text);
+            background: var(--c-row-hover);
         }
 
         .tab.active {
-            border-bottom-color: #2563eb;
-            color: #e2e8f0;
-            background: rgba(37, 99, 235, .1);
+            border-bottom-color: var(--c-accent);
+            color: var(--c-text);
+            background: var(--c-accent-a10);
         }
 
         .tab-content {
@@ -183,7 +287,7 @@
         /* ---- file list ---- */
         .file-item {
             padding: 10px 16px;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid var(--c-surface);
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -192,12 +296,12 @@
         }
 
         .file-item:hover {
-            background: #253348;
+            background: var(--c-surface-4);
         }
 
         .file-item.selected {
-            background: rgba(37, 99, 235, .15);
-            border-left: 3px solid #2563eb;
+            background: var(--c-accent-a15);
+            border-left: 3px solid var(--c-accent);
         }
 
         .file-info {
@@ -215,7 +319,7 @@
 
         .file-meta {
             font-size: 11px;
-            color: #64748b;
+            color: var(--c-text-dim);
             margin-top: 2px;
             white-space: nowrap;
             overflow: hidden;
@@ -225,7 +329,7 @@
         .btn-remove-file {
             background: none;
             border: none;
-            color: #64748b;
+            color: var(--c-text-dim);
             cursor: pointer;
             font-size: 18px;
             line-height: 1;
@@ -241,8 +345,8 @@
         }
 
         .btn-remove-file:hover {
-            color: #f87171;
-            background: rgba(248, 113, 113, .15);
+            color: var(--c-danger);
+            background: var(--c-danger-a15);
         }
 
         .badge {
@@ -255,45 +359,45 @@
         }
 
         .badge-csv {
-            background: #1e3a5f;
-            color: #60a5fa;
+            background: var(--c-info-bg);
+            color: var(--c-accent-soft);
         }
 
         .badge-json {
-            background: #3b1f63;
-            color: #c084fc;
+            background: var(--c-purple-bg);
+            color: var(--c-purple);
         }
 
         .badge-parquet {
-            background: #14432a;
-            color: #4ade80;
+            background: var(--c-success-bg);
+            color: var(--c-success);
         }
 
         .badge-delta {
-            background: #422006;
-            color: #fbbf24;
+            background: var(--c-warning-bg);
+            color: var(--c-warning);
         }
 
         .badge-iceberg {
-            background: #1e3a5f;
-            color: #93c5fd;
+            background: var(--c-info-bg);
+            color: var(--c-accent-softer);
         }
 
         .badge-text {
-            background: #334155;
-            color: #94a3b8;
+            background: var(--c-border);
+            color: var(--c-text-muted);
         }
 
         .badge-error {
-            background: #450a0a;
-            color: #f87171;
+            background: var(--c-danger-bg);
+            color: var(--c-danger);
         }
 
         /* ---- data grid ---- */
         .data-grid-wrapper {
             overflow: auto;
             max-height: 100%;
-            border: 1px solid #334155;
+            border: 1px solid var(--c-border);
             border-radius: 6px;
         }
 
@@ -307,18 +411,18 @@
         .data-grid th {
             position: sticky;
             top: 0;
-            background: #1a2236;
-            color: #94a3b8;
+            background: var(--c-surface-2);
+            color: var(--c-text-muted);
             padding: 6px 10px;
             text-align: left;
-            border-bottom: 2px solid #334155;
+            border-bottom: 2px solid var(--c-border);
             font-weight: 600;
             white-space: nowrap;
         }
 
         .data-grid td {
             padding: 5px 10px;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid var(--c-surface);
             white-space: nowrap;
             max-width: 300px;
             overflow: hidden;
@@ -326,19 +430,19 @@
         }
 
         .data-grid tr:hover td {
-            background: rgba(255, 255, 255, .03);
+            background: var(--c-row-alt);
         }
 
         .data-grid .col-type {
-            color: #64748b;
+            color: var(--c-text-dim);
             font-size: 10px;
             display: block;
         }
 
         /* ---- SQL code block ---- */
         .sql-block {
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
             border-radius: 6px;
             padding: 16px;
             font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
@@ -347,33 +451,33 @@
             white-space: pre-wrap;
             overflow-y: auto;
             max-height: 100%;
-            color: #e2e8f0;
+            color: var(--c-text);
             position: relative;
         }
 
         .sql-block .kw {
-            color: #c084fc;
+            color: var(--c-purple);
         }
 
         .sql-block .fn {
-            color: #f472b6;
+            color: var(--c-pink);
         }
 
         .sql-block .str {
-            color: #4ade80;
+            color: var(--c-success);
         }
 
         .sql-block .num {
-            color: #fbbf24;
+            color: var(--c-warning);
         }
 
         .sql-block .cmt {
-            color: #64748b;
+            color: var(--c-text-dim);
             font-style: italic;
         }
 
         .sql-block .op {
-            color: #60a5fa;
+            color: var(--c-accent-soft);
         }
 
         .copy-float {
@@ -399,17 +503,17 @@
             padding: 8px 12px;
             text-align: left;
             font-size: 13px;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid var(--c-surface);
         }
 
         .meta-table th {
-            color: #94a3b8;
+            color: var(--c-text-muted);
             font-weight: 500;
             width: 180px;
         }
 
         .meta-table td {
-            color: #e2e8f0;
+            color: var(--c-text);
         }
 
         .schema-table {
@@ -419,27 +523,27 @@
         }
 
         .schema-table th {
-            background: #1a2236;
-            color: #94a3b8;
+            background: var(--c-surface-2);
+            color: var(--c-text-muted);
             padding: 6px 12px;
             text-align: left;
             font-size: 12px;
-            border-bottom: 2px solid #334155;
+            border-bottom: 2px solid var(--c-border);
         }
 
         .schema-table td {
             padding: 5px 12px;
             font-size: 13px;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid var(--c-surface);
         }
 
         /* ---- status bar ---- */
         .status-bar {
             padding: 8px 20px;
-            background: #1a2236;
-            border-top: 1px solid #334155;
+            background: var(--c-surface-2);
+            border-top: 1px solid var(--c-border);
             font-size: 12px;
-            color: #64748b;
+            color: var(--c-text-dim);
             display: flex;
             justify-content: space-between;
         }
@@ -448,7 +552,7 @@
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, .6);
+            background: var(--c-overlay);
             z-index: 1000;
             display: flex;
             align-items: center;
@@ -456,18 +560,18 @@
         }
 
         .modal {
-            background: #1e293b;
+            background: var(--c-surface);
             border-radius: 10px;
             width: 640px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
-            border: 1px solid #334155;
+            border: 1px solid var(--c-border);
         }
 
         .modal-header {
             padding: 16px 20px;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--c-border);
         }
 
         .modal-header h2 {
@@ -482,7 +586,7 @@
 
         .modal-footer {
             padding: 12px 20px;
-            border-top: 1px solid #334155;
+            border-top: 1px solid var(--c-border);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -490,7 +594,7 @@
 
         .browser-item {
             padding: 8px 14px;
-            border-bottom: 1px solid #0f172a;
+            border-bottom: 1px solid var(--c-bg);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -499,7 +603,7 @@
         }
 
         .browser-item:hover {
-            background: #253348;
+            background: var(--c-surface-4);
         }
 
         .browser-item.dir {
@@ -507,12 +611,12 @@
         }
 
         .browser-item input[type=checkbox] {
-            accent-color: #2563eb;
+            accent-color: var(--c-accent);
         }
 
         .browser-path {
             font-size: 12px;
-            color: #64748b;
+            color: var(--c-text-dim);
             margin-top: 6px;
             word-break: break-all;
         }
@@ -520,7 +624,7 @@
         .placeholder {
             text-align: center;
             padding: 60px 20px;
-            color: #475569;
+            color: var(--c-border-strong);
             font-size: 14px;
         }
 
@@ -532,8 +636,8 @@
             display: inline-block;
             width: 14px;
             height: 14px;
-            border: 2px solid #475569;
-            border-top-color: #2563eb;
+            border: 2px solid var(--c-border-strong);
+            border-top-color: var(--c-accent);
             border-radius: 50%;
             animation: spin .6s linear infinite;
         }
@@ -546,24 +650,24 @@
 
         /* ---- drag-drop overlay ---- */
         .drop-zone {
-            border: 2px dashed #475569;
+            border: 2px dashed var(--c-border-strong);
             border-radius: 8px;
             padding: 30px 16px;
             text-align: center;
-            color: #64748b;
+            color: var(--c-text-dim);
             font-size: 13px;
             margin: 8px;
             transition: all .2s;
         }
 
         .drop-zone.active {
-            border-color: #2563eb;
-            background: rgba(37, 99, 235, .08);
-            color: #93c5fd;
+            border-color: var(--c-accent);
+            background: var(--c-accent-a08);
+            color: var(--c-accent-softer);
         }
 
         .sidebar.drag-over {
-            background: rgba(37, 99, 235, .06);
+            background: var(--c-accent-a06);
         }
 
         /* ---- sql toolbar (copy + download inside each SQL pane) ---- */
@@ -588,27 +692,27 @@
         }
 
         .schema-editor-table th {
-            background: #1a2236;
-            color: #94a3b8;
+            background: var(--c-surface-2);
+            color: var(--c-text-muted);
             padding: 6px 10px;
             text-align: left;
             font-size: 12px;
-            border-bottom: 2px solid #334155;
+            border-bottom: 2px solid var(--c-border);
             position: sticky;
             top: 0;
         }
 
         .schema-editor-table td {
             padding: 4px 8px;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid var(--c-surface);
             font-size: 13px;
         }
 
         .schema-editor-table input,
         .schema-editor-table select {
-            background: #0f172a;
-            color: #e2e8f0;
-            border: 1px solid #475569;
+            background: var(--c-bg);
+            color: var(--c-text);
+            border: 1px solid var(--c-border-strong);
             border-radius: 4px;
             padding: 3px 6px;
             font-size: 12px;
@@ -640,8 +744,8 @@
         }
 
         .bp-card {
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
             border-radius: 8px;
             padding: 14px;
         }
@@ -650,13 +754,13 @@
         .bp-card h4 {
             margin: 0 0 10px;
             font-size: 14px;
-            color: #e2e8f0;
+            color: var(--c-text);
         }
 
         .bp-card ul {
             margin: 0;
             padding-left: 18px;
-            color: #cbd5e1;
+            color: var(--c-text-2);
         }
 
         .bp-card li {
@@ -667,13 +771,13 @@
         .bp-item-label {
             display: block;
             font-size: 11px;
-            color: #94a3b8;
+            color: var(--c-text-muted);
             text-transform: uppercase;
             margin-bottom: 6px;
         }
 
         .bp-item-value {
-            color: #e2e8f0;
+            color: var(--c-text);
             font-size: 13px;
             line-height: 1.5;
         }
@@ -688,51 +792,164 @@
         }
 
         .bp-badge-rec {
-            background: #1e3a5f;
-            color: #93c5fd;
+            background: var(--c-info-bg);
+            color: var(--c-accent-softer);
         }
 
         .bp-badge-fast {
-            background: #15311f;
-            color: #86efac;
+            background: var(--c-success-bg-2);
+            color: var(--c-success-soft);
         }
 
         .bp-badge-cost {
-            background: #3b1f63;
-            color: #d8b4fe;
+            background: var(--c-purple-bg);
+            color: var(--c-purple-soft);
         }
 
         .bp-badge-risk {
-            background: #422006;
-            color: #fbbf24;
+            background: var(--c-warning-bg);
+            color: var(--c-warning);
         }
 
         .bp-code {
-            background: #020617;
-            border: 1px solid #1e293b;
+            background: var(--c-code-bg);
+            border: 1px solid var(--c-surface);
             border-radius: 6px;
             padding: 12px;
             font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
             font-size: 12px;
             white-space: pre-wrap;
-            color: #e2e8f0;
+            color: var(--c-text);
         }
 
         /* ---- second toolbar row ---- */
         .toolbar-row2 {
             padding: 6px 20px;
-            background: #1a2236;
-            border-bottom: 1px solid #334155;
+            background: var(--c-surface-2);
+            border-bottom: 1px solid var(--c-border);
             display: flex;
             gap: 10px;
             align-items: center;
             flex-wrap: wrap;
         }
 
+        .toolbar-row2 .input-group {
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .input-group-grow {
+            flex: 1 1 380px;
+            min-width: 320px;
+        }
+
+        .field-help {
+            font-size: 11px;
+            color: var(--c-text-dim);
+            max-width: 420px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .field-help code {
+            color: var(--c-accent-soft);
+        }
+
+        /* ---- theme toggle ---- */
+        .theme-toggle {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            border-radius: 999px;
+            border: 1px solid var(--c-on-accent);
+            background: transparent;
+            color: var(--c-on-accent);
+            cursor: pointer;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, .18);
+        }
+
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--c-on-accent);
+            outline-offset: 2px;
+        }
+
+        .theme-toggle-icon {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        /* ---- public dataset dialog ---- */
+        .pd-form {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .pd-form input {
+            flex: 1 1 420px;
+            padding: 7px 10px;
+            border: 1px solid var(--c-border-strong);
+            border-radius: 4px;
+            background: var(--c-bg);
+            color: var(--c-text);
+            font-size: 13px;
+        }
+
+        .pd-status {
+            font-size: 13px;
+            margin: 8px 0;
+            color: var(--c-text-muted);
+        }
+
+        .pd-status.pd-error {
+            color: var(--c-danger);
+        }
+
+        .pd-list {
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid var(--c-border);
+            border-radius: 6px;
+        }
+
+        .pd-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--c-border);
+            font-size: 13px;
+        }
+
+        .pd-item:last-child {
+            border-bottom: none;
+        }
+
+        .pd-item:hover {
+            background: var(--c-row-hover);
+        }
+
+        .pd-item-url {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            color: var(--c-text-dim);
+            word-break: break-all;
+        }
+
         /* ---- badge for xlsx ---- */
         .badge-excel {
-            background: #14432a;
-            color: #4ade80;
+            background: var(--c-success-bg);
+            color: var(--c-success);
         }
 
         /* ---- wizard step indicator ---- */
@@ -748,23 +965,23 @@
             align-items: center;
             gap: 6px;
             font-size: 12px;
-            color: #475569;
+            color: var(--c-border-strong);
             transition: color .2s;
         }
 
         .wizard-step.active {
-            color: #93c5fd;
+            color: var(--c-accent-softer);
         }
 
         .wizard-step.done {
-            color: #4ade80;
+            color: var(--c-success);
         }
 
         .wizard-step-num {
             width: 22px;
             height: 22px;
             border-radius: 50%;
-            border: 2px solid #475569;
+            border: 2px solid var(--c-border-strong);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -774,26 +991,26 @@
         }
 
         .wizard-step.active .wizard-step-num {
-            border-color: #60a5fa;
-            color: #60a5fa;
+            border-color: var(--c-accent-soft);
+            color: var(--c-accent-soft);
         }
 
         .wizard-step.done .wizard-step-num {
-            border-color: #4ade80;
-            background: #4ade80;
-            color: #0f172a;
+            border-color: var(--c-success);
+            background: var(--c-success);
+            color: var(--c-bg);
         }
 
         .wizard-step-line {
             width: 28px;
             height: 2px;
-            background: #334155;
+            background: var(--c-border);
             margin: 0 4px;
             transition: background .2s;
         }
 
         .wizard-step-line.done {
-            background: #4ade80;
+            background: var(--c-success);
         }
 
         /* ---- tab compatibility dot ---- */
@@ -807,31 +1024,31 @@
         }
 
         .tab-dot-green {
-            background: #4ade80;
+            background: var(--c-success);
         }
 
         .tab-dot-yellow {
-            background: #fbbf24;
+            background: var(--c-warning);
         }
 
         .tab-dot-red {
-            background: #f87171;
+            background: var(--c-danger);
         }
 
         /* ---- quick start banner ---- */
         .quick-start {
-            background: #172033;
-            border: 1px solid #334155;
+            background: var(--c-surface-3);
+            border: 1px solid var(--c-border);
             border-radius: 6px;
             padding: 10px 14px;
             margin-bottom: 12px;
             font-size: 13px;
-            color: #94a3b8;
+            color: var(--c-text-muted);
             line-height: 1.5;
         }
 
         .quick-start strong {
-            color: #e2e8f0;
+            color: var(--c-text);
         }
 
         /* ---- inline settings bar ---- */
@@ -846,15 +1063,15 @@
 
         .sql-settings label {
             font-size: 12px;
-            color: #94a3b8;
+            color: var(--c-text-muted);
         }
 
         .sql-settings input {
             padding: 4px 8px;
-            border: 1px solid #475569;
+            border: 1px solid var(--c-border-strong);
             border-radius: 4px;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--c-bg);
+            color: var(--c-text);
             font-size: 12px;
             width: 260px;
         }
@@ -876,6 +1093,10 @@
                 <div class="wizard-step-line" id="wl2"></div>
                 <div class="wizard-step" id="ws3"><span class="wizard-step-num">3</span><span>SQL</span></div>
             </div>
+            <button type="button" class="theme-toggle" id="themeToggle" aria-pressed="false"
+                aria-label="Switch to light theme" title="Switch to light theme"
+                onclick="toggleTheme()"><span class="theme-toggle-icon" id="themeToggleIcon"
+                    aria-hidden="true">&#9789;</span><span id="themeToggleLabel">Dark</span></button>
         </div>
 
         <!-- toolbar -->
@@ -901,31 +1122,32 @@
             </div>
             <button class="btn" onclick="exportAllSQL()" title="Download all SQL as a single .sql file">Export All
                 SQL</button>
+            <button class="btn" onclick="showPublicDataset()" id="btnPublicDataset"
+                title="Analyze a public HTTPS data file or an Azure Open Datasets page">Public dataset URL</button>
             <button class="btn" onclick="clearAll()">Clear</button>
         </div>
         <!-- settings row -->
         <div class="toolbar-row2" id="settingsRow" style="display:none">
             <div class="input-group">
-                <label>Table:</label>
-                <input id="inpTableName" placeholder="auto-detected" style="width:140px" oninput="regenSQL()">
+                <label for="inpTableName">Target table (optional):</label>
+                <input id="inpTableName" placeholder="derived from file name" style="width:190px"
+                    aria-describedby="tableNameHelp"
+                    title="Leave blank to derive the table name from the selected file name. A value here overrides it in CREATE TABLE, BULK INSERT, OPENROWSET and the validation queries."
+                    oninput="onTableNameInput()">
+                <span class="field-help" id="tableNameHelp">Blank = derived from the file name<span
+                        id="derivedTableName"></span></span>
             </div>
-            <div class="input-group">
-                <label>Account:</label>
-                <input id="inpStorageAccount" placeholder="mystorageaccount" style="width:160px"
-                    oninput="composeStorageUrl()">
+            <div class="input-group input-group-grow">
+                <label for="inpStorageUrl">Data URL / storage location:</label>
+                <input id="inpStorageUrl" placeholder="abs://container@account.blob.core.windows.net/folder/file.parquet"
+                    style="min-width:340px;flex:1"
+                    aria-describedby="storageUrlHelp"
+                    title="Full location of the file as the SQL engine sees it: abs://, adls://, abfss://, wasbs://, s3:// or an https:// storage URL. Leave blank for a local file."
+                    oninput="onStorageUrlInput()">
+                <span class="field-help" id="storageUrlHelp">Blank = local path; cloud SQL needs the file staged in
+                    reachable storage</span>
             </div>
-            <div class="input-group">
-                <label>Container:</label>
-                <input id="inpStorageContainer" placeholder="data" style="width:120px" oninput="composeStorageUrl()">
-            </div>
-            <div class="input-group">
-                <label>Path:</label>
-                <input id="inpStoragePath" placeholder="folder/file.csv" style="width:160px"
-                    oninput="composeStorageUrl()">
-            </div>
-            <div class="input-group"
-                style="opacity:.6;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                id="urlPreview" title=""></div>
+            <div class="field-help" id="urlPreview" title=""></div>
         </div>
 
         <!-- main -->
@@ -954,38 +1176,38 @@
                         <div class="placeholder" id="welcomeState">
                             <div style="max-width:480px;margin:0 auto;text-align:center;padding:40px 20px">
                                 <div style="font-size:48px;margin-bottom:16px">📂</div>
-                                <h2 style="color:#e2e8f0;margin:0 0 12px;font-size:20px">Import Wizard</h2>
-                                <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 20px">
+                                <h2 style="color:var(--c-text);margin:0 0 12px;font-size:20px">Import Wizard</h2>
+                                <p style="color:var(--c-text-muted);font-size:14px;line-height:1.6;margin:0 0 20px">
                                     Drop a data file in the sidebar, browse your file system, or drag &amp; drop
                                     to get started. The tool will detect the file type, show a data preview,
                                     and generate ready-to-use T-SQL for your target platform.
                                 </p>
                                 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
                                     <div
-                                        style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
+                                        style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
                                         <div
-                                            style="font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px">
+                                            style="font-size:11px;color:var(--c-text-dim);text-transform:uppercase;margin-bottom:4px">
                                             Step 1</div>
-                                        <div style="font-size:13px;color:#e2e8f0">Upload or browse a file</div>
+                                        <div style="font-size:13px;color:var(--c-text)">Upload or browse a file</div>
                                     </div>
                                     <div
-                                        style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
+                                        style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
                                         <div
-                                            style="font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px">
+                                            style="font-size:11px;color:var(--c-text-dim);text-transform:uppercase;margin-bottom:4px">
                                             Step 2</div>
-                                        <div style="font-size:13px;color:#e2e8f0">Review metadata &amp; preview</div>
+                                        <div style="font-size:13px;color:var(--c-text)">Review metadata &amp; preview</div>
                                     </div>
                                     <div
-                                        style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
+                                        style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:8px;padding:12px 16px;text-align:left;flex:1;min-width:130px">
                                         <div
-                                            style="font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px">
+                                            style="font-size:11px;color:var(--c-text-dim);text-transform:uppercase;margin-bottom:4px">
                                             Step 3</div>
-                                        <div style="font-size:13px;color:#e2e8f0">Copy T-SQL for your platform</div>
+                                        <div style="font-size:13px;color:var(--c-text)">Copy T-SQL for your platform</div>
                                     </div>
                                 </div>
                                 <div style="margin-top:20px;display:flex;gap:8px;justify-content:center">
                                     <button class="btn btn-primary" onclick="showBrowser()">Browse Files</button>
-                                    <span style="color:#475569;font-size:13px;line-height:32px">or drag &amp; drop onto
+                                    <span style="color:var(--c-border-strong);font-size:13px;line-height:32px">or drag &amp; drop onto
                                         the sidebar</span>
                                 </div>
                             </div>
@@ -1051,6 +1273,34 @@
         </div>
     </div>
 
+    <!-- public dataset modal (hidden) -->
+    <div id="publicDatasetModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Public dataset URL</h2>
+                <div class="browser-path">Paste a direct https:// data file, or an Azure Open Datasets page on
+                    learn.microsoft.com</div>
+            </div>
+            <div class="modal-body">
+                <div class="pd-form">
+                    <label class="field-help" for="inpPublicUrl">URL</label>
+                    <input id="inpPublicUrl" type="url" spellcheck="false"
+                        placeholder="https://learn.microsoft.com/en-us/azure/open-datasets/dataset-catalog"
+                        onkeydown="if (event.key === 'Enter') resolvePublicDataset();">
+                    <button class="btn btn-primary" id="btnResolvePublic"
+                        onclick="resolvePublicDataset()">Resolve</button>
+                </div>
+                <div class="pd-status" id="pdStatus">HTTPS only. Files are downloaded into this session's temporary
+                    area, size- and time-limited, and removed when the session expires.</div>
+                <div class="pd-list hidden" id="pdList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="btnPdBack" onclick="publicDatasetBack()" style="display:none">Back</button>
+                <button class="btn" onclick="closePublicDataset()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /* ================================================================
            STATE
@@ -1063,6 +1313,43 @@
         let schemaOverrides = {};
         let lastStatements = {};
         let regenTimer = null;
+        let tableNameTouched = false;
+        let storageUrlTouched = false;
+        let pdState = { catalogUrl: '', catalogTitle: '' };
+
+        /* ================================================================
+           THEME — CSS custom properties, persisted choice, OS default
+           ================================================================ */
+        function currentTheme() {
+            return document.documentElement.getAttribute('data-theme') === 'light'
+                ? 'light' : 'dark';
+        }
+
+        function applyTheme(theme) {
+            const next = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            const btn = document.getElementById('themeToggle');
+            const icon = document.getElementById('themeToggleIcon');
+            const label = document.getElementById('themeToggleLabel');
+            const isLight = next === 'light';
+            if (btn) {
+                // aria-pressed reflects "light theme is on".
+                btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+                const hint = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+                btn.setAttribute('aria-label', hint);
+                btn.title = hint;
+            }
+            if (icon) icon.innerHTML = isLight ? '&#9728;' : '&#9789;';
+            if (label) label.textContent = isLight ? 'Light' : 'Dark';
+        }
+
+        function toggleTheme() {
+            const next = currentTheme() === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+            try { window.localStorage.setItem('efd-theme', next); } catch (e) { /* private mode */ }
+        }
+
+        applyTheme(currentTheme());
 
         /* ================================================================
            WIZARD STEP INDICATOR
@@ -1083,15 +1370,32 @@
 
         /* ================================================================
            PLATFORM FEATURE MAP — dots on tabs
+           Mirrors SQLGenerator.PLATFORM_FEATURES / EXTERNAL_FORMAT_PLATFORMS.
            ================================================================ */
         const PLATFORM_TAB_COMPAT = {
             // platform -> tab -> 'green' | 'yellow' | 'red'
             sql_server_2019: { create_table: 'green', bulk_insert: 'green', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
             sql_server_2022: { create_table: 'green', bulk_insert: 'green', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
             sql_server_2025: { create_table: 'green', bulk_insert: 'green', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
-            azure_sql_db: { create_table: 'green', bulk_insert: 'green', openrowset: 'yellow', ext_table: 'red', json_functions: 'green', for_json: 'green' },
-            azure_sql_mi: { create_table: 'green', bulk_insert: 'green', openrowset: 'yellow', ext_table: 'red', json_functions: 'green', for_json: 'green' },
-            fabric_sql_db: { create_table: 'green', bulk_insert: 'red', openrowset: 'green', ext_table: 'red', json_functions: 'green', for_json: 'green' },
+            azure_sql_db: { create_table: 'green', bulk_insert: 'green', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
+            azure_sql_mi: { create_table: 'green', bulk_insert: 'green', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
+            // Fabric SQL Database has no BULK INSERT; OPENROWSET alternatives
+            // are generated on that tab instead.
+            fabric_sql_db: { create_table: 'green', bulk_insert: 'red', openrowset: 'green', ext_table: 'green', json_functions: 'green', for_json: 'green' },
+        };
+
+        // External file format support per file type, mirroring
+        // SQLGenerator.EXTERNAL_FORMAT_PLATFORMS.
+        const EXT_TABLE_FORMAT_PLATFORMS = {
+            csv: ['sql_server_2019', 'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'azure_sql_mi', 'fabric_sql_db'],
+            tsv: ['sql_server_2019', 'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'azure_sql_mi', 'fabric_sql_db'],
+            text: ['sql_server_2019', 'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'azure_sql_mi', 'fabric_sql_db'],
+            excel: ['sql_server_2019', 'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'azure_sql_mi', 'fabric_sql_db'],
+            parquet: ['sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'azure_sql_mi', 'fabric_sql_db'],
+            delta: ['sql_server_2022', 'sql_server_2025', 'azure_sql_db'],
+            iceberg: ['sql_server_2025'],
+            orc: ['sql_server_2019'],
+            json: [],
         };
 
         function updateTabDots() {
@@ -1100,20 +1404,21 @@
             const fileType = selectedIdx >= 0
                 ? (currentFiles[selectedIdx].file_type || '').toLowerCase()
                 : '';
-            if (pl === 'sql_server_2019') {
-                if (fileType === 'parquet' || fileType === 'delta') {
-                    compat.openrowset = 'red';
-                    compat.ext_table = 'red';
-                } else if (fileType === 'json') {
-                    compat.openrowset = 'yellow';
-                    compat.ext_table = 'red';
+            if (fileType) {
+                const supported = EXT_TABLE_FORMAT_PLATFORMS[fileType];
+                if (supported) {
+                    compat.ext_table = supported.indexOf(pl) >= 0 ? 'green' : 'red';
                 }
-            } else if (
-                (pl === 'sql_server_2022' || pl === 'sql_server_2025')
-                && fileType === 'json'
-            ) {
-                compat.openrowset = 'yellow';
-                compat.ext_table = 'red';
+                // OPENROWSET reads Parquet/Delta only from SQL Server 2022+.
+                if (pl === 'sql_server_2019' && (fileType === 'parquet' || fileType === 'delta' || fileType === 'iceberg')) {
+                    compat.openrowset = 'red';
+                } else if (fileType === 'delta' && pl === 'fabric_sql_db') {
+                    compat.openrowset = 'red';
+                } else if (fileType === 'json') {
+                    // JSON is read through a row-framed CSV reader, not a
+                    // native JSON reader.
+                    compat.openrowset = 'yellow';
+                }
             }
             document.querySelectorAll('#tabBar .tab[data-tab]').forEach(tab => {
                 const key = tab.dataset.tab;
@@ -1131,38 +1436,82 @@
            ================================================================ */
         const TAB_QUICKSTART = {
             create_table: { title: 'CREATE TABLE', desc: 'Creates a standard relational table to hold imported data. Run this first, then load data with BULK INSERT or INSERT...SELECT FROM OPENROWSET.', best: 'Any platform', nextStep: 'Next: Use the BULK INSERT or OPENROWSET tab to load data into this table.' },
-            bulk_insert: { title: 'BULK INSERT', desc: 'High-speed batch import for CSV/text files directly into a table. Best for SQL Server and Azure SQL.', best: 'SQL Server, Azure SQL', nextStep: 'Prerequisite: Create the target table first (see CREATE TABLE tab).' },
+            bulk_insert: { title: 'BULK INSERT', desc: 'High-speed batch import for CSV/text files directly into a table. Available on SQL Server and Azure SQL; Fabric SQL Database has no BULK INSERT, so equivalent OPENROWSET statements are generated instead.', best: 'SQL Server, Azure SQL', nextStep: 'Prerequisite: Create the target table first (see CREATE TABLE tab).' },
             openrowset: { title: 'OPENROWSET', desc: 'Ad-hoc queries over external files without creating a table. Ideal for exploration and ELT SELECT INTO patterns.', best: 'All platforms', nextStep: 'Tip: Use SELECT INTO to create and populate a table in one step, or INSERT INTO for an existing table.' },
-            ext_table: { title: 'External Table', desc: 'Creates a persistent virtual table backed by external files (PolyBase/Synapse). Includes credential + data source setup when supported.', best: 'Synapse, SQL Server' },
+            ext_table: { title: 'External Table', desc: 'Creates a persistent virtual table backed by external files. Includes credential + data source setup when supported. Format support varies: delimited text everywhere, Parquet on SQL Server 2022/2025, Azure SQL and Fabric SQL DB, Delta on SQL Server 2022/2025 and Azure SQL Database, JSON on none.', best: 'SQL Server, Azure SQL, Fabric SQL DB' },
             json_functions: { title: 'JSON Functions', desc: 'Parse JSON documents using OPENJSON, JSON_VALUE, JSON_QUERY. Shreds nested JSON into relational rows.', best: 'SQL Server, Azure SQL, Fabric SQL DB' },
             for_json: { title: 'FOR JSON', desc: 'Export SQL query results as JSON. Use FOR JSON PATH for structured output or JSON_OBJECT for row-level.', best: 'SQL Server, Azure SQL, Fabric SQL DB' },
         };
 
         /* ================================================================
-           STORAGE URL BUILDER — compose from Account / Container / Path
+           STORAGE LOCATION — one field, parsed for feedback
            ================================================================ */
-        function composeStorageUrl(returnOnly) {
-            const acct = (document.getElementById('inpStorageAccount') || {}).value || '';
-            const cont = (document.getElementById('inpStorageContainer') || {}).value || '';
-            const path = (document.getElementById('inpStoragePath') || {}).value || '';
-            const platform = document.getElementById('selPlatform').value;
-            let url = '';
-            if (acct) {
-                url = platform === 'fabric_sql_db' || platform === 'sql_server_2019'
-                    ? 'abfss://'
-                    : 'adls://';
-                if (cont) url += cont + '@';
-                url += acct + '.dfs.core.windows.net';
-                if (path) url += '/' + path.replace(/^\//, '');
+        function currentStorageUrl() {
+            const el = document.getElementById('inpStorageUrl');
+            return el ? (el.value || '').trim() : '';
+        }
+
+        function describeStorageUrl(url) {
+            if (!url) {
+                return {
+                    text: 'No storage location — the generated SQL uses the local file path. ' +
+                        'Azure SQL and Fabric cannot read local paths; stage the file first.',
+                    ok: true
+                };
             }
+            const m = /^([a-zA-Z0-9+.-]+):\/\/([^/?#]*)(\/[^?#]*)?/.exec(url);
+            if (!m) return { text: 'Not a recognised URL — expected scheme://host/path.', ok: false };
+            const scheme = m[1].toLowerCase();
+            const authority = m[2] || '';
+            const path = (m[3] || '').replace(/^\//, '');
+            const known = ['abs', 'adls', 'abfss', 'wasbs', 's3', 'azure', 'https'];
+            if (known.indexOf(scheme) === -1) {
+                return { text: 'Scheme "' + scheme + '" is not one SQL Server, Azure SQL or Fabric can read.', ok: false };
+            }
+            const at = authority.indexOf('@');
+            const container = at >= 0 ? authority.slice(0, at) : '';
+            const host = at >= 0 ? authority.slice(at + 1) : authority;
+            let text = scheme + ' \u2022 ' + host;
+            if (container) text += ' \u2022 container ' + container;
+            if (path) text += ' \u2022 relative path ' + path;
+            return { text: text, ok: true };
+        }
+
+        function refreshStorageUrlFeedback() {
             const preview = document.getElementById('urlPreview');
-            if (preview) {
-                preview.textContent = url || '';
-                preview.title = url || '';
-            }
-            if (returnOnly) return url;
+            if (!preview) return;
+            const info = describeStorageUrl(currentStorageUrl());
+            preview.textContent = info.text;
+            preview.title = info.text;
+            preview.style.color = info.ok ? '' : 'var(--c-danger)';
+        }
+
+        function onStorageUrlInput() {
+            storageUrlTouched = true;
+            refreshStorageUrlFeedback();
             regenSQL();
-            return url;
+        }
+
+        function setStorageUrl(url, markTouched) {
+            const el = document.getElementById('inpStorageUrl');
+            if (!el) return;
+            el.value = url || '';
+            storageUrlTouched = !!markTouched;
+            refreshStorageUrlFeedback();
+        }
+
+        /* ================================================================
+           TARGET TABLE NAME — blank means "derive from the file name"
+           ================================================================ */
+        function onTableNameInput() {
+            tableNameTouched = true;
+            regenSQL();
+        }
+
+        function showDerivedTableName(name) {
+            const el = document.getElementById('derivedTableName');
+            if (!el) return;
+            el.textContent = name ? ' \u2014 currently ' + name : '';
         }
 
         /* ================================================================
@@ -1286,9 +1635,23 @@
             // Advance wizard to step 2 (review)
             setWizardStep(2);
             document.getElementById('settingsRow').style.display = 'flex';
+            // A table-name override belongs to the file it was typed for; a
+            // storage location typed by hand is kept until the user clears it.
+            if (!tableNameTouched) {
+                const tn = document.getElementById('inpTableName');
+                if (tn) tn.value = '';
+            }
+            tableNameTouched = false;
+            showDerivedTableName('');
+            const originUrl = f.storage_url || f.source_url || '';
+            if (!storageUrlTouched) {
+                setStorageUrl(originUrl && /^[a-zA-Z0-9+.-]+:\/\//.test(originUrl) ? originUrl : '', false);
+            } else {
+                refreshStorageUrlFeedback();
+            }
             updateTabDots();
             if (f.error) {
-                const errMsg = '<div class="placeholder" style="color:#f87171">\u26A0 File has errors:<br><br>' + esc(f.error) + '</div>';
+                const errMsg = '<div class="placeholder" style="color:var(--c-danger)">\u26A0 File has errors:<br><br>' + esc(f.error) + '</div>';
                 ['preview', 'metadata', 'create_table', 'bulk_insert', 'openrowset', 'ext_table', 'json_functions', 'for_json', 'schema_editor', 'best_practices'].forEach(k => setPaneHTML(k, errMsg));
                 setStatus('Error analysing file');
                 return;
@@ -1325,7 +1688,7 @@
                         html += '</tr>';
                     });
                     html += '</tbody></table></div>';
-                    if (d.truncated) html += '<div style="padding:8px;color:#64748b;font-size:12px;">Showing first 200 of ' + (d.total_rows || '?').toLocaleString() + ' rows</div>';
+                    if (d.truncated) html += '<div style="padding:8px;color:var(--c-text-dim);font-size:12px;">Showing first 200 of ' + (d.total_rows || '?').toLocaleString() + ' rows</div>';
                     setPaneHTML('preview', html);
                     setStatus('Preview loaded', (d.rows || []).length + ' rows shown');
                 })
@@ -1341,7 +1704,7 @@
             const pl = document.getElementById('selPlatform').value || 'sql_server_2022';
             const tnInput = document.getElementById('inpTableName');
             const tn = tnInput ? tnInput.value || '' : '';
-            const su = composeStorageUrl(true) || '';
+            const su = currentStorageUrl();
             const allPanes = ['create_table', 'bulk_insert', 'openrowset', 'ext_table', 'json_functions', 'for_json', 'best_practices'];
             allPanes.forEach(k =>
                 setPaneHTML(k, '<div class="placeholder"><span class="loading-spinner"></span> Generating&hellip;</div>')
@@ -1366,6 +1729,7 @@
                     }
                     const s = d.statements || {};
                     lastStatements = s;
+                    showDerivedTableName(d.derived_table_name || '');
                     setSqlPane('create_table', s.create_table || '');
                     setSqlPane('bulk_insert', s.bulk_insert || '');
                     setSqlPane('openrowset', s.openrowset || '');
@@ -1392,8 +1756,8 @@
             const qs = TAB_QUICKSTART[key];
             let banner = '';
             if (qs) {
-                banner = '<div class="quick-start"><strong>' + esc(qs.title) + '</strong> &mdash; ' + esc(qs.desc) + ' <span style="color:#64748b">Best for: ' + esc(qs.best) + '</span>' +
-                    (qs.nextStep ? '<br><span style="color:#60a5fa;font-size:12px">&rarr; ' + esc(qs.nextStep) + '</span>' : '') +
+                banner = '<div class="quick-start"><strong>' + esc(qs.title) + '</strong> &mdash; ' + esc(qs.desc) + ' <span style="color:var(--c-text-dim)">Best for: ' + esc(qs.best) + '</span>' +
+                    (qs.nextStep ? '<br><span style="color:var(--c-accent-soft);font-size:12px">&rarr; ' + esc(qs.nextStep) + '</span>' : '') +
                     '</div>';
             }
             pane.innerHTML = banner +
@@ -1527,7 +1891,7 @@
             let html = '<div class="schema-editor-toolbar">' +
                 '<button class="btn btn-sm btn-primary" onclick="applySchemaOverrides()">Apply &amp; Regenerate SQL</button>' +
                 '<button class="btn btn-sm" onclick="resetSchemaOverrides()">Reset to Detected</button>' +
-                '<span style="color:#64748b;font-size:12px;margin-left:12px;">Edit column names or SQL types below, then click Apply.</span>' +
+                '<span style="color:var(--c-text-dim);font-size:12px;margin-left:12px;">Edit column names or SQL types below, then click Apply.</span>' +
                 '</div>';
             html += '<div class="data-grid-wrapper" style="max-height:calc(100% - 50px)"><table class="schema-editor-table"><thead><tr>' +
                 '<th>#</th><th>Original Column</th><th>Custom Name</th><th>Detected Type</th><th>SQL Type Override</th><th>Nullable</th><th>Exclude</th></tr></thead><tbody>';
@@ -1540,7 +1904,7 @@
                     '<td>' + (i + 1) + '</td>' +
                     '<td>' + esc(name) + '</td>' +
                     '<td><input data-col="' + escAttr(name) + '" data-field="colName" value="' + escAttr(ov.colName || name) + '"></td>' +
-                    '<td style="color:#64748b">' + esc(dtype) + ' &rarr; ' + esc(detectedSql) + '</td>' +
+                    '<td style="color:var(--c-text-dim)">' + esc(dtype) + ' &rarr; ' + esc(detectedSql) + '</td>' +
                     '<td><select data-col="' + escAttr(name) + '" data-field="sqlType">';
                 // Build options: detected first, then standard list
                 const currentType = ov.sqlType || detectedSql;
@@ -1629,7 +1993,7 @@
             let html = '';
             // Show encoding warning banner if present
             if (f.encoding_warning) {
-                html += '<div class="quick-start" style="border-color:#fbbf24;background:#1c1508"><strong style="color:#fbbf24">&#9888; Encoding Warning</strong> &mdash; ' + esc(f.encoding_warning) + '</div>';
+                html += '<div class="quick-start" style="border-color:var(--c-warning);background:var(--c-warning-bg-2)"><strong style="color:var(--c-warning)">&#9888; Encoding Warning</strong> &mdash; ' + esc(f.encoding_warning) + '</div>';
             }
             html += '<table class="meta-table">';
             const rows = [
@@ -1651,7 +2015,7 @@
 
             // JSON nesting info
             if (f.json_nesting && Object.keys(f.json_nesting).length) {
-                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:#94a3b8;">JSON Nesting</h3><table class="schema-table"><thead><tr><th>Column</th><th>Nesting</th></tr></thead><tbody>';
+                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--c-text-muted);">JSON Nesting</h3><table class="schema-table"><thead><tr><th>Column</th><th>Nesting</th></tr></thead><tbody>';
                 Object.entries(f.json_nesting).forEach(([col, kind]) => {
                     html += '<tr><td>' + esc(col) + '</td><td>' + esc(kind) + '</td></tr>';
                 });
@@ -1659,7 +2023,7 @@
             }
 
             if (f.schema && f.schema.length) {
-                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:#94a3b8;">Schema (' + f.schema.length + ' columns)</h3>';
+                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--c-text-muted);">Schema (' + f.schema.length + ' columns)</h3>';
                 html += '<table class="schema-table"><thead><tr><th>#</th><th>Column</th><th>Detected Type</th><th>SQL Type</th></tr></thead><tbody>';
                 const typeMap = buildQuickTypeMap();
                 f.schema.forEach(([name, dtype], i) => {
@@ -1669,7 +2033,7 @@
             }
 
             if (f.parquet_metadata) {
-                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:#94a3b8;">Parquet Metadata</h3><table class="meta-table">';
+                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--c-text-muted);">Parquet Metadata</h3><table class="meta-table">';
                 const pm = f.parquet_metadata;
                 [['Created by', pm.created_by], ['Row groups', pm.num_row_groups], ['Serialised size', pm.serialized_size], ['Format version', pm.format_version]].forEach(([k, v]) => {
                     html += '<tr><th>' + esc(k) + '</th><td>' + esc(String(v != null ? v : '')) + '</td></tr>';
@@ -1678,7 +2042,7 @@
             }
 
             if (f.delta_metadata) {
-                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:#94a3b8;">Delta Lake Metadata</h3><table class="meta-table">';
+                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--c-text-muted);">Delta Lake Metadata</h3><table class="meta-table">';
                 const dm = f.delta_metadata;
                 [['Version', dm.version], ['Name', dm.name], ['Description', dm.description], ['Partition columns', JSON.stringify(dm.partition_columns)], ['Created', dm.created_time]].forEach(([k, v]) => {
                     html += '<tr><th>' + esc(k) + '</th><td>' + esc(String(v != null ? v : '')) + '</td></tr>';
@@ -1687,7 +2051,7 @@
             }
 
             if (f.iceberg_metadata) {
-                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:#94a3b8;">Iceberg Metadata</h3><table class="meta-table">';
+                html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--c-text-muted);">Iceberg Metadata</h3><table class="meta-table">';
                 const im = f.iceberg_metadata;
                 [['Format version', im.format_version], ['Table UUID', im.table_uuid], ['Location', im.location], ['Last updated', im.last_updated], ['Partition spec', JSON.stringify(im.partition_spec)]].forEach(([k, v]) => {
                     html += '<tr><th>' + esc(k) + '</th><td>' + esc(String(v != null ? v : '')) + '</td></tr>';
@@ -1800,7 +2164,211 @@
                 setPaneHTML(k, '<div class="placeholder">Select a file</div>'));
             setWizardStep(1);
             document.getElementById('settingsRow').style.display = 'none';
+            tableNameTouched = false;
+            storageUrlTouched = false;
+            const tn = document.getElementById('inpTableName');
+            if (tn) tn.value = '';
+            setStorageUrl('', false);
+            showDerivedTableName('');
             setStatus('Cleared');
+        }
+
+        /* ================================================================
+           PUBLIC DATASET URL — direct data file or Azure Open Datasets page
+           ================================================================ */
+        function showPublicDataset() {
+            document.getElementById('publicDatasetModal').classList.remove('hidden');
+            const input = document.getElementById('inpPublicUrl');
+            if (input) input.focus();
+        }
+
+        function closePublicDataset() {
+            document.getElementById('publicDatasetModal').classList.add('hidden');
+        }
+
+        function pdSetStatus(message, isError) {
+            const el = document.getElementById('pdStatus');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.toggle('pd-error', !!isError);
+        }
+
+        function pdBusy(busy) {
+            const btn = document.getElementById('btnResolvePublic');
+            if (btn) { btn.disabled = !!busy; btn.textContent = busy ? 'Working\u2026' : 'Resolve'; }
+        }
+
+        function pdShowList(html) {
+            const list = document.getElementById('pdList');
+            if (!list) return;
+            list.innerHTML = html || '';
+            list.classList.toggle('hidden', !html);
+        }
+
+        // Build one list row with the URL carried on the element rather than
+        // interpolated into an inline handler, so a hostile URL can never
+        // break out of an attribute.
+        function pdAppendItem(list, title, url, buttonLabel, handler) {
+            const row = document.createElement('div');
+            row.className = 'pd-item';
+            const text = document.createElement('div');
+            const heading = document.createElement('div');
+            heading.textContent = title;
+            const link = document.createElement('div');
+            link.className = 'pd-item-url';
+            link.textContent = url;
+            text.appendChild(heading);
+            text.appendChild(link);
+            const button = document.createElement('button');
+            button.className = 'btn btn-sm';
+            button.type = 'button';
+            button.textContent = buttonLabel;
+            button.addEventListener('click', handler);
+            row.appendChild(text);
+            row.appendChild(button);
+            list.appendChild(row);
+        }
+
+        function pdListElement() {
+            const list = document.getElementById('pdList');
+            list.innerHTML = '';
+            list.classList.remove('hidden');
+            return list;
+        }
+
+        function publicDatasetBack() {
+            if (!pdState.catalogUrl) return;
+            const input = document.getElementById('inpPublicUrl');
+            if (input) input.value = pdState.catalogUrl;
+            resolvePublicDataset(pdState.catalogUrl, true);
+        }
+
+        function pdJson(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(r => r.json().then(d => ({ ok: r.ok, data: d })));
+        }
+
+        function resolvePublicDataset(explicitUrl, keepCatalog) {
+            const input = document.getElementById('inpPublicUrl');
+            const url = (explicitUrl || (input ? input.value : '') || '').trim();
+            if (!url) { pdSetStatus('Enter an https:// URL first.', true); return; }
+            if (!keepCatalog) pdState = { catalogUrl: '', catalogTitle: '' };
+            document.getElementById('btnPdBack').style.display =
+                pdState.catalogUrl ? '' : 'none';
+            pdShowList('');
+            pdBusy(true);
+            pdSetStatus('Resolving ' + url + '\u2026');
+            pdJson('/api/public_dataset/resolve', { url: url }).then(res => {
+                pdBusy(false);
+                if (!res.ok || !res.data.success) {
+                    pdSetStatus(res.data.error || 'Could not resolve that URL.', true);
+                    return;
+                }
+                const d = res.data;
+                if (d.kind === 'data') {
+                    pdSetStatus('Direct data file detected. Downloading\u2026');
+                    fetchPublicDataset(d.url, null);
+                } else if (d.kind === 'catalog') {
+                    pdState = { catalogUrl: d.url, catalogTitle: d.title || 'Catalog' };
+                    renderCatalog(d);
+                } else {
+                    renderDatasetCandidates(d);
+                }
+            }).catch(e => { pdBusy(false); pdSetStatus('Error: ' + e.message, true); });
+        }
+
+        function renderCatalog(d) {
+            const items = d.datasets || [];
+            if (!items.length) {
+                pdSetStatus('That catalog page lists no dataset pages.', true);
+                return;
+            }
+            pdSetStatus('This catalog lists ' + items.length +
+                ' datasets. Pick one to see its documented data locations.');
+            const list = pdListElement();
+            items.forEach(item => {
+                pdAppendItem(list, item.name, item.url, 'Open',
+                    () => resolvePublicDataset(item.url, true));
+            });
+            document.getElementById('btnPdBack').style.display = 'none';
+        }
+
+        function renderDatasetCandidates(d) {
+            const items = d.candidates || [];
+            document.getElementById('btnPdBack').style.display =
+                pdState.catalogUrl ? '' : 'none';
+            if (!items.length) {
+                pdSetStatus('No downloadable or virtualisable data location is documented on that page.', true);
+                return;
+            }
+            if (items.length === 1 && items[0].downloadable) {
+                pdSetStatus('One data file documented on "' + (d.title || '') + '". Downloading\u2026');
+                fetchPublicDataset(items[0].url, items[0].url);
+                return;
+            }
+            pdSetStatus('"' + (d.title || 'Dataset') + '" documents ' + items.length +
+                ' data locations. Folder and wildcard locations are resolved to one ' +
+                'representative file for metadata; the documented location is what ends up in the SQL.');
+            const list = pdListElement();
+            items.forEach(item => {
+                const note = item.downloadable ? 'file'
+                    : (item.kind === 'virtualise' ? 'storage location for SQL' : 'folder / wildcard');
+                pdAppendItem(list,
+                    note + (item.extension ? ' \u2022 ' + item.extension : ''),
+                    item.url, 'Use',
+                    () => usePublicCandidate(item.url, !!item.downloadable));
+            });
+        }
+
+        function usePublicCandidate(url, downloadable) {
+            if (downloadable) { fetchPublicDataset(url, url); return; }
+            pdBusy(true);
+            pdSetStatus('Looking for a representative file under ' + url + '\u2026');
+            pdJson('/api/public_dataset/candidate', { url: url }).then(res => {
+                pdBusy(false);
+                if (!res.ok || !res.data.success) {
+                    const storage = res.data.storage_url;
+                    pdSetStatus((res.data.error || 'Could not list that location.') +
+                        (storage ? ' You can still paste ' + storage +
+                            ' into "Data URL / storage location" and generate SQL from a local sample.' : ''),
+                        true);
+                    if (storage) setStorageUrl(storage, true);
+                    return;
+                }
+                pdSetStatus('Found ' + res.data.representative.name + '. Downloading\u2026');
+                fetchPublicDataset(res.data.representative.url, res.data.storage_url || url);
+            }).catch(e => { pdBusy(false); pdSetStatus('Error: ' + e.message, true); });
+        }
+
+        function fetchPublicDataset(url, storageUrl) {
+            pdBusy(true);
+            pdShowList('');
+            pdSetStatus('Downloading ' + url + '\u2026');
+            pdJson('/api/public_dataset/fetch', { url: url, storage_url: storageUrl || '' })
+                .then(res => {
+                    pdBusy(false);
+                    if (!res.ok || !res.data.success) {
+                        pdSetStatus((res.data.error || 'Download failed.') +
+                            ' Fix the URL and try Resolve again.', true);
+                        return;
+                    }
+                    const file = res.data.file;
+                    currentFiles.push(file);
+                    renderFileList();
+                    closePublicDataset();
+                    storageUrlTouched = false;
+                    selectFile(currentFiles.length - 1);
+                    if (res.data.storage_url) setStorageUrl(res.data.storage_url, true);
+                    regenSQL();
+                    setStatus('Downloaded ' + (file.file_name || '') ,
+                        res.data.staging_required
+                            ? 'Stage this file in Azure storage before running cloud SQL'
+                            : '');
+                })
+                .catch(e => { pdBusy(false); pdSetStatus('Error: ' + e.message, true); });
         }
 
         /* ================================================================

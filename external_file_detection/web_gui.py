@@ -31,6 +31,7 @@ except ImportError:
 from .external_file_detector import ExternalFileDetectorApp
 from .file_detector import FileDetector
 from .sql_generator import SQLGenerator
+from . import public_data
 
 
 # Maximum upload size: 200 MB
@@ -305,6 +306,13 @@ class ExternalFileDetectionWebGUI:
                 and os.path.normcase(resolved) != os.path.normcase(upload_root)
             ):
                 shutil.rmtree(resolved, ignore_errors=True)
+
+    def _session_upload_dirs(self) -> List[str]:
+        """Return the upload directories currently owned by this session."""
+        sid = self._sid()
+        with self._sessions_lock:
+            entry = self._sessions.get(sid) or {}
+            return list(entry.get('upload_dirs', []))
 
     def _new_upload_dir(self) -> str:
         session_root = os.path.join(self._upload_root, self._sid())
@@ -641,7 +649,7 @@ class ExternalFileDetectionWebGUI:
                 file_path = _decode_route_path(file_path)
                 data_source = request.args.get('data_source', 'MyDataSource')
                 schema_name = request.args.get('schema', 'dbo')
-                target_platform = request.args.get('target_platform', 'sql_server_2022')
+                target_platform = _requested_target_platform(request.args)
                 table_name = request.args.get('table_name', '') or None
                 storage_url = request.args.get('storage_url', '') or None
                 schema_overrides_raw = request.args.get('schema_overrides', '')
@@ -718,7 +726,14 @@ class ExternalFileDetectionWebGUI:
                 return jsonify({
                     'success': True,
                     'sql_ddl': all_stmts.get('create_external_table', ''),  # legacy
-                    'statements': all_stmts
+                    'statements': all_stmts,
+                    'resolved_table_name': SQLGenerator.resolve_table_name(
+                        gen_metadata, table_name
+                    ),
+                    'derived_table_name': SQLGenerator.resolve_table_name(
+                        gen_metadata, None
+                    ),
+                    'resolved_storage_url': storage_url,
                 })
 
             except (TypeError, ValueError) as e:
@@ -891,6 +906,109 @@ class ExternalFileDetectionWebGUI:
                     self._remove_upload_dirs([upload_dir])
                 logger.exception('Error in /api/analyze-upload')
                 return _error_response('Server error processing upload', 500)
+
+        @self.app.route('/api/public_dataset/resolve', methods=['POST'])
+        def public_dataset_resolve():
+            """Classify a public HTTPS URL without downloading any data."""
+            data = request.get_json(silent=True) or {}
+            url = (data.get('url') or '').strip()
+            try:
+                resolved = public_data.resolve_public_url(url)
+            except public_data.PublicDataError as exc:
+                return jsonify({
+                    'success': False,
+                    'error': exc.message,
+                    'code': exc.code,
+                }), exc.status
+            except Exception:
+                logger.exception('Error in /api/public_dataset/resolve')
+                return _error_response('Server error resolving URL', 500)
+            resolved['success'] = True
+            return jsonify(resolved)
+
+        @self.app.route('/api/public_dataset/candidate', methods=['POST'])
+        def public_dataset_candidate():
+            """Resolve a folder/wildcard candidate to a representative file."""
+            data = request.get_json(silent=True) or {}
+            url = (data.get('url') or '').strip()
+            try:
+                blob = public_data.first_supported_blob(url)
+            except public_data.PublicDataError as exc:
+                return jsonify({
+                    'success': False,
+                    'error': exc.message,
+                    'code': exc.code,
+                    'storage_url': public_data.storage_url_for(url),
+                }), exc.status
+            except Exception:
+                logger.exception('Error in /api/public_dataset/candidate')
+                return _error_response('Server error listing container', 500)
+            if not blob:
+                return jsonify({
+                    'success': False,
+                    'error': (
+                        'No publicly listed supported data file was found '
+                        'under that location.'
+                    ),
+                    'code': 'no_data_candidate',
+                    'storage_url': public_data.storage_url_for(url),
+                }), 422
+            return jsonify({
+                'success': True,
+                'representative': blob,
+                'storage_url': public_data.storage_url_for(url),
+            })
+
+        @self.app.route('/api/public_dataset/fetch', methods=['POST'])
+        def public_dataset_fetch():
+            """Download, analyze and register one public data file."""
+            data = request.get_json(silent=True) or {}
+            url = (data.get('url') or '').strip()
+            # The URL kept for SQL generation may differ from the URL we
+            # download: Open Datasets documents abs:// locations that SQL can
+            # read directly while we fetch one representative file over HTTPS.
+            documented = (data.get('storage_url') or '').strip() or None
+
+            upload_dir = None
+            try:
+                upload_dir = self._new_upload_dir()
+                downloaded = public_data.download_data_file(url, upload_dir)
+                metadata = self.file_detector.analyze_file_metadata(
+                    downloaded['path']
+                )
+                metadata['file_name'] = downloaded['file_name']
+                metadata['uploaded'] = True
+                metadata['source_url'] = url
+                storage_url = (
+                    documented
+                    or public_data.storage_url_for(url)
+                )
+                if storage_url:
+                    metadata['storage_url'] = storage_url
+                self._set_files(
+                    self._get_files() + [metadata],
+                    upload_dirs=self._session_upload_dirs() + [upload_dir],
+                )
+                return jsonify({
+                    'success': True,
+                    'file': _clean_results(metadata),
+                    'bytes': downloaded['bytes'],
+                    'storage_url': storage_url,
+                    'staging_required': not storage_url,
+                })
+            except public_data.PublicDataError as exc:
+                if upload_dir:
+                    self._remove_upload_dirs([upload_dir])
+                return jsonify({
+                    'success': False,
+                    'error': exc.message,
+                    'code': exc.code,
+                }), exc.status
+            except Exception:
+                if upload_dir:
+                    self._remove_upload_dirs([upload_dir])
+                logger.exception('Error in /api/public_dataset/fetch')
+                return _error_response('Server error downloading file', 500)
 
         @self.app.route('/api/analyze-path', methods=['POST'])
         def analyze_path():

@@ -21,6 +21,44 @@ class ExternalFileFormatConfig:
     serde_method: Optional[str] = None
 
 
+_S3_SCHEMES = frozenset({'s3', 's3a', 's3n'})
+
+# Platforms whose OPENROWSET(BULK ...)/BULK INSERT can reach S3-compatible
+# object storage. SQL Server 2019 and the Azure SQL family cannot.
+S3_BULK_PLATFORMS = frozenset({'sql_server_2022', 'sql_server_2025'})
+
+
+def _storage_url_kind(storage_url: Optional[str]) -> str:
+    """Classify *storage_url* as ``azure``/``s3``/``onelake``/``other``/``local``.
+
+    Used to decide whether a platform can reach the file at all, and which kind
+    of external data source the generated script must reference. A local path
+    (or an empty value) is reported as ``local``.
+    """
+    if not storage_url:
+        return 'local'
+
+    normalized = str(storage_url).strip().replace('\\', '/')
+    parsed = urlparse(normalized)
+    scheme = parsed.scheme.lower()
+    host = (parsed.netloc or '').lower()
+
+    if scheme in _S3_SCHEMES:
+        return 's3'
+    if 'fabric.microsoft.com' in host or host.startswith('onelake.'):
+        return 'onelake'
+    if scheme in _AZURE_STORAGE_SCHEMES or scheme == 'azure':
+        return 'azure'
+    if scheme in {'http', 'https'} and (
+        host.endswith('.blob.core.windows.net')
+        or host.endswith('.dfs.core.windows.net')
+    ):
+        return 'azure'
+    if scheme in {'http', 'https', 'gs', 'ftp'}:
+        return 'other'
+    return 'local'
+
+
 def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
                               target_platform: str) -> Tuple[str, str]:
     """Return a SQL Server external data source location and relative file path."""
@@ -165,9 +203,12 @@ def _azure_bulk_storage_parts(storage_url: Optional[str],
                               file_name: str) -> Tuple[str, str]:
     """Return an HTTPS BLOB_STORAGE container root and container-relative path.
 
-    ``BULK INSERT`` on Azure SQL Database / Managed Instance requires a
-    ``DATA_SOURCE`` whose ``LOCATION`` is the blob-endpoint container URL, and a
-    ``FROM`` value that is relative to it.
+    ``BULK INSERT`` and ``OPENROWSET(BULK ...)`` bulk access to Azure Blob
+    Storage require a ``DATA_SOURCE`` created with ``TYPE = BLOB_STORAGE`` whose
+    ``LOCATION`` is an ``https://`` blob-endpoint URL, and a ``FROM``/``BULK``
+    value relative to it. This applies to SQL Server 2017 and later as well as
+    to Azure SQL Database / Managed Instance; ``abs://`` and ``adls://``
+    locations are *not* accepted by a bulk data source.
     """
     account, container, relative_path = _parse_azure_storage_url(
         storage_url, file_name
@@ -493,6 +534,15 @@ class SQLGenerator:
         'JSON': frozenset(),
     }
 
+    # ``FIRST_ROW`` is a CREATE EXTERNAL FILE FORMAT / FORMAT_OPTIONS option on
+    # SQL Server 2022+ and on Fabric SQL Database data virtualization. It is not
+    # documented for SQL Server 2019 or the Azure SQL Database / Managed
+    # Instance external file formats. Note that ``FIRSTROW`` (no underscore) is
+    # a different, widely supported OPENROWSET / BULK INSERT option.
+    FIRST_ROW_FORMAT_PLATFORMS = frozenset({
+        'sql_server_2022', 'sql_server_2025', 'fabric_sql_db',
+    })
+
     COMPRESSION_CODECS = {
         'SNAPPY': 'org.apache.hadoop.io.compress.SnappyCodec',
         'GZIP': 'org.apache.hadoop.io.compress.GzipCodec',
@@ -503,6 +553,90 @@ class SQLGenerator:
     def _supports(self, feature: str, platform: str) -> bool:
         """Return True if *platform* supports *feature*."""
         return platform in self.PLATFORM_FEATURES.get(feature, frozenset())
+
+    # ------------------------------------------------------------------
+    # Shared reader-option builders
+    # ------------------------------------------------------------------
+
+    # Widest option keyword emitted by the CSV reader option builder, so every
+    # generated block lines its ``=`` signs up the same way.
+    CSV_OPTION_WIDTH = len('FIELDTERMINATOR')
+
+    @classmethod
+    def _csv_reader_options(cls, metadata: Dict[str, Any], indent: int = 4,
+                            prefix: str = '',
+                            trailing_comma: bool = False) -> List[str]:
+        """Build the shared CSV reader options from detected file metadata.
+
+        Emits ``FORMAT``, ``FIRSTROW``, ``FIELDTERMINATOR``, ``ROWTERMINATOR``
+        and ``CODEPAGE`` so that ``BULK INSERT`` and every ``OPENROWSET``
+        variant agree on the detected delimiter, header row and code page. Note
+        that ``OPENROWSET``/``BULK INSERT`` use ``FIRSTROW`` (no underscore);
+        ``FIRST_ROW`` is a ``CREATE EXTERNAL FILE FORMAT`` option.
+        """
+        delimiter = metadata.get('delimiter', ',') or ','
+        has_header = metadata.get('has_header', True)
+        encoding = (metadata.get('encoding') or 'utf-8').upper()
+        codepage = metadata.get('codepage', '65001') or '65001'
+        delim_escaped = _quote_literal(_display_delimiter(delimiter))
+        pad = f'{prefix}{" " * indent}'
+        width = cls.CSV_OPTION_WIDTH
+        tail = ',' if trailing_comma else ''
+        return [
+            f'{pad}{"FORMAT":<{width}} = \'CSV\',',
+            f'{pad}{"FIRSTROW":<{width}} = {2 if has_header else 1},'
+            f'{"        -- skip the header row" if has_header else "        -- no header row detected"}',
+            f'{pad}{"FIELDTERMINATOR":<{width}} = \'{delim_escaped}\',',
+            f'{pad}{"ROWTERMINATOR":<{width}} = \'0x0a\','
+            f'        -- LF (use \'0x0d0a\' for CRLF)',
+            f'{pad}{"CODEPAGE":<{width}} = \'{_quote_literal(codepage)}\'{tail}'
+            f'  -- {_sql_comment(encoding)}',
+        ]
+
+    @staticmethod
+    def _json_row_frame_options(indent: int = 4,
+                                row_terminator: str = '0x0b') -> List[str]:
+        """Options that make the CSV reader return whole JSON text per row.
+
+        ``SINGLE_CLOB``/``SINGLE_NCLOB``/``SINGLE_BLOB`` cannot be combined with
+        a ``DATA_SOURCE``, so remote JSON is read through the CSV reader with
+        non-printing field/row framing characters instead.
+        """
+        pad = ' ' * indent
+        width = SQLGenerator.CSV_OPTION_WIDTH
+        return [
+            f'{pad}{"FORMAT":<{width}} = \'CSV\',',
+            f'{pad}{"FIELDTERMINATOR":<{width}} = \'0x0b\',',
+            f'{pad}{"FIELDQUOTE":<{width}} = \'0x0b\',',
+            f'{pad}{"ROWTERMINATOR":<{width}} = \'{row_terminator}\'',
+        ]
+
+    @staticmethod
+    def _bulk_data_source_supported(target_platform: str,
+                                    storage_url: Optional[str]) -> bool:
+        """Return True when bulk access needs a BLOB_STORAGE data source.
+
+        Azure SQL Database / Managed Instance can only bulk-load from Azure
+        storage, and SQL Server 2017+ needs the same ``TYPE = BLOB_STORAGE``
+        source whenever the detected file lives in Azure Blob Storage / ADLS.
+        """
+        if target_platform in SQLGenerator.AZURE_SQL_PLATFORMS:
+            return True
+        if target_platform.startswith('sql_server_'):
+            return _storage_url_kind(storage_url) == 'azure'
+        return False
+
+    def _openrowset_with_schema(self, metadata: Dict[str, Any],
+                                indent: int = 4,
+                                terminator: str = ')') -> List[str]:
+        """Emit an explicit ``WITH (...)`` column list for OPENROWSET.
+
+        Without it the CSV reader returns untyped columns and, when the file has
+        a header row, the header can end up in the result set.
+        """
+        cols = self._generate_column_definitions(metadata, indent=indent)
+        body = ',\n'.join(cols) if cols else f'{" " * indent}[data] NVARCHAR(MAX)'
+        return ['WITH (', body, terminator]
 
     def _not_supported_message(self, feature_label: str,
                                platform: str,
@@ -738,27 +872,34 @@ class SQLGenerator:
             )
 
         delimiter = metadata.get('delimiter', ',') or ','
-        has_header = metadata.get('has_header', True)
-        first_row = 2 if has_header else 1
         delim_escaped = _quote_literal(_display_delimiter(delimiter))
         delim_name = self.DELIMITER_NAMES.get(delimiter, repr(delimiter))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         use_for_note = 'High-speed batch load into ' + platform_label
 
-        is_azure = target_platform in self.AZURE_SQL_PLATFORMS
+        storage_kind = _storage_url_kind(storage_url)
+        needs_bulk_source = self._bulk_data_source_supported(
+            target_platform, storage_url
+        )
         prereq_lines: List[str] = []
         data_source_line = None
-        if is_azure:
-            # Azure SQL BULK INSERT reads through a BLOB_STORAGE external data
-            # source; FROM must be relative to that source's container.
-            bulk_source = f'{_escape_identifier(data_source)}_Bulk'
+
+        if needs_bulk_source:
+            # BULK INSERT reads Azure storage through a TYPE = BLOB_STORAGE
+            # external data source (SQL Server 2017+, Azure SQL DB / MI); FROM
+            # must be relative to that source's container, never an absolute
+            # URL. This source is separate from the abs:// / adls:// data
+            # virtualization source used by external tables.
+            bulk_ident, bulk_literal, bulk_cred_ident = _bulk_data_source_names(
+                data_source
+            )
             source_root, relative_path = _azure_bulk_storage_parts(
                 storage_url, file_name
             )
             from_path = _quote_literal(relative_path)
             data_source_line = (
-                f'    DATA_SOURCE     = \'{_quote_literal(bulk_source)}\','
+                f'    DATA_SOURCE     = \'{bulk_literal}\','
             )
             prereq_note = (
                 'A BLOB_STORAGE external data source is required; '
@@ -767,27 +908,59 @@ class SQLGenerator:
             prereq_lines = [
                 f'-- Step 0: Create the BLOB_STORAGE data source used by BULK INSERT.',
                 f'--         This is separate from the abs:// / adls:// data',
-                f'--         virtualization source used by OPENROWSET.',
-                f'CREATE DATABASE SCOPED CREDENTIAL [cred_{bulk_source}]',
+                f'--         virtualization source used by external tables.',
+                f'CREATE DATABASE SCOPED CREDENTIAL [{bulk_cred_ident}]',
                 f'WITH',
                 f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
                 f'    SECRET   = \'<SAS_token_without_leading_?>\';',
                 f'GO',
                 f'',
-                f'CREATE EXTERNAL DATA SOURCE [{bulk_source}]',
+                f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
                 f'WITH (',
                 f'    TYPE = BLOB_STORAGE,',
                 f'    LOCATION = \'{_quote_literal(source_root)}\',',
-                f'    CREDENTIAL = [cred_{bulk_source}]',
+                f'    CREDENTIAL = [{bulk_cred_ident}]',
                 f');',
                 f'GO',
                 f'',
             ] if include_prereq else [
-                f'-- Step 0: [{bulk_source}] (TYPE = BLOB_STORAGE, LOCATION',
+                f'-- Step 0: [{bulk_ident}] (TYPE = BLOB_STORAGE, LOCATION',
                 f'--         \'{_quote_literal(source_root)}\') is created in the',
                 f'--         prerequisite setup section above.',
                 f'',
             ]
+        elif storage_kind in ('s3', 'onelake', 'other'):
+            # Never emit a remote URL as a local BULK path: BULK INSERT has no
+            # data source type for these locations and would fail at run time.
+            label = {
+                's3': 'S3-compatible object storage',
+                'onelake': 'OneLake',
+                'other': 'this URL scheme',
+            }[storage_kind]
+            from_path = _quote_literal(
+                f'<local_or_UNC_staging_path>/{os.path.basename(str(file_name))}'
+            )
+            prereq_note = (
+                f'BULK INSERT cannot read {label}; stage the file locally first'
+            )
+            prereq_lines = [
+                f'-- Step 0: BULK INSERT cannot read {_sql_comment(label)}.',
+                f'--         TYPE = BLOB_STORAGE data sources only accept Azure',
+                f'--         Blob Storage https:// endpoints.',
+                f'--         Source: {_sql_comment(str(storage_url))}',
+            ]
+            if storage_kind == 's3' and target_platform in S3_BULK_PLATFORMS:
+                prereq_lines += [
+                    '--         Use OPENROWSET with an s3:// data source instead',
+                    '--         (see OPENROWSET tab), or stage the file on a path the',
+                    '--         SQL Server service account can read.',
+                ]
+            else:
+                prereq_lines += [
+                    '--         Stage the file on a local or UNC path the SQL Server',
+                    '--         service account can read, then run the load below.',
+                ]
+            prereq_lines.append('')
         else:
             from_path = _quote_literal(
                 (file_path_override or metadata['file_path']).replace('\\', '/')
@@ -820,13 +993,8 @@ class SQLGenerator:
         ]
         if data_source_line:
             lines.append(data_source_line)
+        lines += self._csv_reader_options(metadata, trailing_comma=True)
         lines += [
-            f'    FORMAT          = \'CSV\',         -- SQL Server 2017 +',
-            f'    FIRSTROW        = {first_row},',
-            f'    FIELDTERMINATOR = \'{delim_escaped}\',',
-            f'    ROWTERMINATOR   = \'0x0a\',        -- LF  (use \'0x0d0a\' for Windows line endings)',
-            f'    CODEPAGE        = \'{_quote_literal(codepage)}\',  '
-            f'-- {_sql_comment(encoding.upper())}',
             f'    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed',
             f'    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads',
             f'    BATCHSIZE       = 50000            -- Tune per available memory',
@@ -879,45 +1047,63 @@ class SQLGenerator:
         if file_type == 'json':
             return '\n'.join(header + [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
-                '-- Read the file as a single text column, then parse it with',
-                '-- OPENJSON (see JSON Functions tab).',
+                '-- SINGLE_CLOB cannot be combined with DATA_SOURCE, so the CSV',
+                '-- reader is framed with non-printing characters to return the',
+                '-- whole document as one value, then parsed with OPENJSON.',
                 '',
                 f'INSERT INTO [{schema_name}].[{table_name}]',
                 'SELECT j.*',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
-                '    FORMAT          = \'CSV\',',
-                '    FIELDTERMINATOR = \'0x0b\',',
-                '    FIELDQUOTE      = \'0x0b\',',
-                '    ROWTERMINATOR   = \'0x0b\'',
+            ] + self._json_row_frame_options() + [
                 ') WITH (json_doc NVARCHAR(MAX)) AS src',
                 'CROSS APPLY OPENJSON(src.json_doc) AS j;',
             ])
 
         format_keyword = _format_keyword(file_type)
-        return '\n'.join(header + [
-            '-- Option 1: SELECT INTO from OPENROWSET (creates a new table)',
-            'SELECT *',
+        column_list = self._column_name_list(metadata)
+        reader_options: List[str]
+        if file_type in ('csv', 'text'):
+            # Reuse the shared CSV option builder so the detected header row,
+            # delimiter and code page are honoured; without FIRSTROW the header
+            # would be loaded as a data row.
+            reader_options = self._csv_reader_options(metadata)
+        else:
+            reader_options = [f'    FORMAT          = \'{format_keyword}\'']
+
+        with_schema = self._openrowset_with_schema(metadata)
+
+        body = [
+            '-- Option 1: SELECT INTO from OPENROWSET (creates a new staging table)',
+            f'SELECT {column_list}',
             f'INTO [{schema_name}].[stg_{table_name}]',
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE = \'{source_name}\',',
-            f'    FORMAT = \'{format_keyword}\'',
-            ') AS src;',
+            f'    DATA_SOURCE     = \'{source_name}\',',
+        ] + reader_options + [')'] + with_schema + [
+            'AS src;',
             '',
-            '-- Option 2: INSERT INTO from OPENROWSET (loads an existing table)',
-            f'INSERT INTO [{schema_name}].[{table_name}]',
-            'SELECT *',
+            '-- Option 2: INSERT INTO from OPENROWSET (loads an existing typed table)',
+            f'INSERT INTO [{schema_name}].[{table_name}] ({column_list})',
+            f'SELECT {column_list}',
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE = \'{source_name}\',',
-            f'    FORMAT = \'{format_keyword}\'',
-            ') AS src;',
+            f'    DATA_SOURCE     = \'{source_name}\',',
+        ] + reader_options + [')'] + with_schema + [
+            'AS src;',
             '',
             f'-- Detected source type: {_sql_comment(detected_type)}',
             '-- For JSON payloads, combine OPENROWSET with OPENJSON (see JSON Functions tab).',
-        ])
+        ]
+        return '\n'.join(header + body)
+
+    def _column_name_list(self, metadata: Dict[str, Any]) -> str:
+        """Return a bracketed comma-separated column list, or ``*`` if unknown."""
+        schema = metadata.get('schema') or []
+        names = [f'[{_escape_identifier(_clean_identifier(name))}]'
+                 for name, _ in schema]
+        return ', '.join(names) if names else '*'
 
     # ------------------------------------------------------------------
     # OPENROWSET
@@ -972,7 +1158,7 @@ class SQLGenerator:
 
         if target_platform == 'sql_server_2019':
             return self._generate_openrowset_sql_server_2019(
-                metadata, lines, local_path, storage_url)
+                metadata, lines, local_path, storage_url, data_source)
 
         # SQL Server 2022 / 2025. Object storage formats always use a data
         # source; text formats do too as soon as a storage URL is known.
@@ -989,8 +1175,9 @@ class SQLGenerator:
     def _generate_openrowset_sql_server_2019(self, metadata: Dict[str, Any],
                                              lines: List[str],
                                              local_path: str,
-                                             storage_url: Optional[str]) -> str:
-        """SQL Server 2019 has no OPENROWSET object-storage file access."""
+                                             storage_url: Optional[str],
+                                             data_source: str = 'MyDataSource') -> str:
+        """SQL Server 2019 OPENROWSET: local paths plus Azure Blob bulk access."""
         file_type = metadata.get('file_type', 'csv')
 
         if file_type in {'parquet', 'delta'}:
@@ -1003,28 +1190,102 @@ class SQLGenerator:
             ]
             return '\n'.join(lines)
 
+        storage_kind = _storage_url_kind(storage_url)
+
+        if storage_kind == 'azure':
+            # SQL Server 2017+ can bulk-read Azure Blob Storage through a
+            # TYPE = BLOB_STORAGE external data source. BULK stays relative to
+            # that source; an absolute URL is never a valid BULK path.
+            return self._openrowset_blob_storage_bulk(
+                metadata, lines, storage_url, data_source, 'sql_server_2019'
+            )
+
         if storage_url:
             # Never emit BULK N'https://...' or BULK 's3://...': SQL Server 2019
-            # OPENROWSET can only read paths the instance can open directly.
+            # OPENROWSET cannot reach S3 or arbitrary URLs.
             lines += [
-                '-- SQL Server 2019 OPENROWSET cannot read object storage URLs.',
+                '-- SQL Server 2019 OPENROWSET cannot read this object storage URL.',
                 f'-- Detected remote source: {_sql_comment(storage_url)}',
-                '-- OPENROWSET(BULK ...) on SQL Server 2019 accepts only a local',
-                '-- path or an SMB/UNC share reachable by the SQL Server service',
-                '-- account. There is no DATA_SOURCE option for BULK on 2019.',
+                '-- Azure Blob Storage is reachable through a TYPE = BLOB_STORAGE',
+                '-- external data source, but s3:// requires SQL Server 2022 or later.',
                 '--',
                 '-- Staging options:',
                 '--   1. Copy the file to a local disk or UNC share, then use',
                 '--      BULK INSERT / OPENROWSET(BULK) against that path.',
-                '--   2. Use PolyBase (TYPE = HADOOP, wasbs:// or abfss://) with',
-                '--      CREATE EXTERNAL TABLE instead of OPENROWSET.',
-                '--   3. Upgrade to SQL Server 2022+ for abs:// / adls:// / s3://',
-                '--      data sources with OPENROWSET DATA_SOURCE support.',
+                '--   2. Copy the file to Azure Blob Storage and use a',
+                '--      TYPE = BLOB_STORAGE data source with OPENROWSET(BULK).',
+                '--   3. Upgrade to SQL Server 2022+ for s3:// data sources and',
+                '--      FORMAT = \'PARQUET\' / \'DELTA\' support.',
             ]
             return '\n'.join(lines)
 
         return self._generate_openrowset_local(
             metadata, lines, local_path, 'sql_server_2019')
+
+    def _openrowset_blob_storage_bulk(self, metadata: Dict[str, Any],
+                                      lines: List[str],
+                                      storage_url: Optional[str],
+                                      data_source: str,
+                                      target_platform: str) -> str:
+        """OPENROWSET(BULK) over an Azure Blob TYPE = BLOB_STORAGE data source.
+
+        This is the only bulk-access shape available to SQL Server 2019 for
+        remote files: ``FORMAT = 'CSV'`` with a container-relative ``BULK``
+        path. ``SINGLE_CLOB``/``SINGLE_NCLOB``/``SINGLE_BLOB`` cannot be
+        combined with a ``DATA_SOURCE``, so JSON is read row-framed instead.
+        """
+        file_type = metadata.get('file_type', 'csv')
+        file_name = metadata.get('file_name', metadata['file_path'])
+        bulk_ident, bulk_literal, bulk_cred_ident = _bulk_data_source_names(
+            data_source
+        )
+        source_root, relative_path = _azure_bulk_storage_parts(
+            storage_url, file_name
+        )
+        bulk_path = _quote_literal(relative_path)
+
+        lines += [
+            '-- Azure Blob Storage bulk access (SQL Server 2017 and later).',
+            '-- BULK is relative to the TYPE = BLOB_STORAGE data source root;',
+            '-- an absolute https:// URL is not a valid BULK path.',
+            f'-- Data source root: {_sql_comment(source_root)}',
+            '',
+            '-- Prerequisite (see the credential setup section):',
+            f'--   CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
+            f'--   WITH (TYPE = BLOB_STORAGE, LOCATION = \'{_quote_literal(source_root)}\',',
+            f'--         CREDENTIAL = [{bulk_cred_ident}]);',
+            '',
+        ]
+
+        if file_type == 'json':
+            lines += [
+                '-- JSON: SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be used',
+                '-- together with DATA_SOURCE. Read the document as one row using',
+                '-- non-printing CSV framing characters, then parse it with OPENJSON.',
+                'SELECT j.*',
+                'FROM OPENROWSET(',
+                f'    BULK \'{bulk_path}\',',
+                f'    DATA_SOURCE     = \'{bulk_literal}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                ') WITH (json_doc NVARCHAR(MAX)) AS src',
+                'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+            ]
+            return '\n'.join(lines)
+
+        lines += [
+            '-- Delimited text (FORMAT = \'CSV\' is the only format available on 2019):',
+            'SELECT TOP 100 *',
+            'FROM OPENROWSET(',
+            f'    BULK \'{bulk_path}\',',
+            f'    DATA_SOURCE     = \'{bulk_literal}\',',
+        ]
+        lines += self._csv_reader_options(metadata, trailing_comma=True)
+        lines += [')']
+        lines += self._openrowset_with_schema(metadata)
+        lines += ['AS src;']
+        return '\n'.join(lines)
 
     # ---- Microsoft Fabric SQL Database --------------------------------
 
@@ -1087,10 +1348,9 @@ class SQLGenerator:
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
-                '    FORMAT          = \'CSV\',',
-                '    FIELDTERMINATOR = \'0x0b\',',
-                '    FIELDQUOTE      = \'0x0b\',',
-                '    ROWTERMINATOR   = \'0x0b\'',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
                 ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
                 'CROSS APPLY OPENJSON(src.json_doc)',
                 'WITH (',
@@ -1110,14 +1370,9 @@ class SQLGenerator:
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
             f'    DATA_SOURCE     = \'{source_name}\',',
-            '    FORMAT          = \'CSV\',',
-            f'    FIRSTROW        = {2 if has_header else 1},',
-            f'    FIELDTERMINATOR = \'{delim_escaped}\',',
-            '    ROWTERMINATOR   = \'0x0a\',',
-            f'    CODEPAGE        = \'{_quote_literal(codepage)}\'  '
-            f'-- {_sql_comment(encoding.upper())}',
-            ') WITH (',
         ]
+        lines += self._csv_reader_options(metadata)
+        lines += [') WITH (']
         cols = self._generate_column_definitions(metadata, indent=4)
         lines.append(',\n'.join(cols) if cols else '    [data] NVARCHAR(MAX)')
         lines += [') AS [result];']
@@ -1169,7 +1424,7 @@ class SQLGenerator:
                 '-- BULK points at the Delta table folder, not a single file.',
                 'SELECT TOP (100) *',
                 'FROM OPENROWSET(',
-                f'    BULK \'{_quote_literal(_folder_of(relative_path))}\',',
+                f'    BULK \'{_quote_literal(_delta_table_folder(relative_path))}\',',
                 f'    DATA_SOURCE = \'{source_name}\',',
                 '    FORMAT = \'DELTA\'',
                 ') AS [result];',
@@ -1204,22 +1459,27 @@ class SQLGenerator:
                     'FROM OPENROWSET(',
                     f'    BULK \'{bulk_path}\',',
                     f'    DATA_SOURCE     = \'{source_name}\',',
-                    '    FORMAT          = \'CSV\',',
-                    '    FIELDTERMINATOR = \'0x0b\',',
-                    '    FIELDQUOTE      = \'0x0b\',',
-                    '    ROWTERMINATOR   = \'0x0a\'   -- LF: one JSON object per line',
-                    ') WITH (doc NVARCHAR(MAX)) AS [src];',
+                ]
+                lines += self._json_row_frame_options(row_terminator='0x0a')
+                lines += [
+                    ') WITH (doc NVARCHAR(MAX)) AS [src];'
+                    '  -- LF: one JSON document per line',
                     '',
                 ]
             lines += [
-                '-- ---- Whole document via SINGLE_CLOB + OPENJSON -----------------------',
+                '-- ---- Whole document -> OPENJSON --------------------------------------',
+                '-- SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined with',
+                '-- DATA_SOURCE, so the CSV reader is framed with non-printing',
+                '-- characters to return the whole document as a single value.',
                 'DECLARE @json NVARCHAR(MAX);',
-                'SELECT @json = BulkColumn',
+                'SELECT @json = json_doc',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
-                f'    DATA_SOURCE = \'{source_name}\',',
-                '    SINGLE_CLOB',
-                ') AS [src];',
+                f'    DATA_SOURCE     = \'{source_name}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
                 '',
                 'SELECT * FROM OPENJSON(@json)',
             ]
@@ -1237,27 +1497,24 @@ class SQLGenerator:
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
             f'    DATA_SOURCE     = \'{source_name}\',',
-            '    FORMAT          = \'CSV\',',
-            f'    FIRSTROW        = {2 if has_header else 1},',
-            f'    FIELDTERMINATOR = \'{delim_escaped}\',',
-            '    ROWTERMINATOR   = \'0x0a\',',
-            f'    CODEPAGE        = \'{_quote_literal(codepage)}\'  '
-            f'-- {_sql_comment(encoding.upper())}',
-            ') WITH (',
         ]
+        lines += self._csv_reader_options(metadata)
+        lines += [') WITH (']
         cols = self._generate_column_definitions(metadata, indent=4)
         lines.append(',\n'.join(cols) if cols else '    [data] NVARCHAR(MAX)')
         lines += [
             ') AS [result];',
             '',
             '-- ---- Whole file as one value (small files) ---------------------------',
-            'SELECT BulkColumn',
+            '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
+            '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
+            'SELECT file_text',
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE = \'{source_name}\',',
-            '    SINGLE_CLOB',
-            ') AS [src];',
+            f'    DATA_SOURCE     = \'{source_name}\',',
         ]
+        lines += self._json_row_frame_options()
+        lines += [') WITH (file_text NVARCHAR(MAX)) AS [src];']
         return '\n'.join(lines)
 
     def _generate_openrowset_local(self, metadata: Dict[str, Any],
@@ -1355,7 +1612,7 @@ class SQLGenerator:
         if file_type in {'parquet', 'delta'}:
             format_keyword = file_type.upper()
             path_literal = (
-                _quote_literal(_folder_of(relative_path))
+                _quote_literal(_delta_table_folder(relative_path))
                 if file_type == 'delta'
                 else bulk_path
             )
@@ -1377,24 +1634,28 @@ class SQLGenerator:
                     'FROM OPENROWSET(',
                     f'    BULK \'{bulk_path}\',',
                     f'    DATA_SOURCE     = \'{source_name}\',',
-                    '    FORMAT          = \'CSV\',',
-                    '    FIELDTERMINATOR = \'0x0b\',',
-                    '    FIELDQUOTE      = \'0x0b\',',
-                    '    ROWTERMINATOR   = \'0x0a\'   -- LF: one JSON object per line',
-                    ') WITH (doc NVARCHAR(MAX)) AS [src];',
+                ]
+                lines += self._json_row_frame_options(row_terminator='0x0a')
+                lines += [
+                    ') WITH (doc NVARCHAR(MAX)) AS [src];'
+                    '  -- LF: one JSON document per line',
                     '',
                 ]
             lines += [
-                '-- SQL Server has no OPENROWSET FORMAT = \'JSON\'. Read the file',
-                '-- as a single value, then parse it with OPENJSON.',
-                '-- ---- JSON via SINGLE_CLOB + OPENJSON ---------------------------------',
+                '-- SQL Server has no OPENROWSET FORMAT = \'JSON\', and SINGLE_CLOB',
+                '-- cannot be combined with DATA_SOURCE. Frame the CSV reader with',
+                '-- non-printing characters so the whole document arrives as one',
+                '-- value, then parse it with OPENJSON.',
+                '-- ---- JSON -> OPENJSON ------------------------------------------------',
                 'DECLARE @json NVARCHAR(MAX);',
-                'SELECT @json = BulkColumn',
+                'SELECT @json = json_doc',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
-                f'    DATA_SOURCE = \'{source_name}\',',
-                '    SINGLE_CLOB',
-                ') AS [src];',
+                f'    DATA_SOURCE     = \'{source_name}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
                 '',
                 'SELECT * FROM OPENJSON(@json)',
             ]
@@ -1412,27 +1673,24 @@ class SQLGenerator:
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
             f'    DATA_SOURCE     = \'{source_name}\',',
-            '    FORMAT          = \'CSV\',',
-            f'    FIRSTROW        = {2 if has_header else 1},',
-            f'    FIELDTERMINATOR = \'{delim_escaped}\',',
-            '    ROWTERMINATOR   = \'0x0a\',',
-            f'    CODEPAGE        = \'{_quote_literal(codepage)}\'  '
-            f'-- {_sql_comment(encoding.upper())}',
-            ') WITH (',
         ]
+        lines += self._csv_reader_options(metadata)
+        lines += [') WITH (']
         cols = self._generate_column_definitions(metadata, indent=4)
         lines.append(',\n'.join(cols) if cols else '    [data] NVARCHAR(MAX)')
         lines += [
             ') AS [result];',
             '',
             '-- ---- Whole file as one value (small files) ---------------------------',
-            'SELECT BulkColumn',
+            '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
+            '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
+            'SELECT file_text',
             'FROM OPENROWSET(',
             f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE = \'{source_name}\',',
-            '    SINGLE_CLOB',
-            ') AS [src];',
+            f'    DATA_SOURCE     = \'{source_name}\',',
         ]
+        lines += self._json_row_frame_options()
+        lines += [') WITH (file_text NVARCHAR(MAX)) AS [src];']
         return '\n'.join(lines)
 
     # ------------------------------------------------------------------
@@ -1472,6 +1730,7 @@ class SQLGenerator:
             )
 
         with_options = [f'    FORMAT_TYPE = {config.format_type}']
+        trailing_notes: List[str] = []
 
         if config.format_type == 'DELIMITEDTEXT':
             delimited_options = []
@@ -1496,7 +1755,19 @@ class SQLGenerator:
                     f'        ENCODING = \'{_quote_literal(config.encoding)}\''
                 )
             if config.first_row != 1:
-                delimited_options.append(f'        FIRST_ROW = {config.first_row}')
+                if target_platform in self.FIRST_ROW_FORMAT_PLATFORMS:
+                    delimited_options.append(f'        FIRST_ROW = {config.first_row}')
+                else:
+                    platform_label = self.PLATFORM_LABELS.get(
+                        target_platform, target_platform)
+                    trailing_notes += [
+                        f'-- FIRST_ROW is not a FORMAT_OPTIONS option on '
+                        f'{_sql_comment(platform_label)}; a header row of '
+                        f'{config.first_row - 1} line(s) was detected.',
+                        '-- Filter the header out in queries (WHERE [col] <> '
+                        '\'<header value>\'), strip it before loading, or use '
+                        'OPENROWSET with FIRSTROW.',
+                    ]
             if delimited_options:
                 with_options.append(
                     '    FORMAT_OPTIONS (\n'
@@ -1517,6 +1788,9 @@ class SQLGenerator:
         sql_parts = [
             f'-- CREATE EXTERNAL FILE FORMAT  '
             f'({_sql_comment(self.PLATFORM_LABELS.get(target_platform, target_platform))})',
+        ]
+        sql_parts += trailing_notes
+        sql_parts += [
             f'CREATE EXTERNAL FILE FORMAT [{format_name}]',
             f'WITH (',
             ',\n'.join(with_options),
@@ -1725,6 +1999,7 @@ class SQLGenerator:
                 alternative,
             )
 
+        data_source_raw = data_source
         data_source = _escape_identifier(data_source)
         file_name = metadata.get(
             'file_name', metadata.get('file_path', '<file>')
@@ -1782,9 +2057,11 @@ class SQLGenerator:
                 f'    SECRET   = \'<storage_account_key>\';',
                 f'GO',
                 f'',
-                f'-- 3. External Data Source',
+                f'-- 3. External Data Source (external tables / PolyBase)',
                 f'-- SQL Server 2019 uses wasbs:// for Azure Blob Storage or',
                 f'-- abfss:// for ADLS Gen2 (CU11+) and requires TYPE = HADOOP.',
+                f'-- TYPE = BLOB_STORAGE sources cannot back external tables, so',
+                f'-- bulk access gets its own source below.',
                 f'CREATE EXTERNAL DATA SOURCE [{data_source}]',
                 f'WITH (',
                 f'    TYPE = HADOOP,',
@@ -1793,6 +2070,10 @@ class SQLGenerator:
                 f');',
                 f'GO',
             ]
+            lines += self._bulk_data_source_block(
+                data_source_raw, storage_url, file_name, target_platform,
+                step_number=4,
+            )
             return '\n'.join(lines)
 
         lines += [
@@ -1826,31 +2107,49 @@ class SQLGenerator:
             f'GO',
         ]
 
-        if target_platform in self.AZURE_SQL_PLATFORMS:
-            bulk_source = _escape_identifier(f'{data_source}_Bulk')
-            bulk_location, _ = _azure_bulk_storage_parts(storage_url, file_name)
-            lines += [
-                f'',
-                f'-- 4. External Data Source for BULK INSERT',
-                f'-- BULK INSERT needs TYPE = BLOB_STORAGE with an https:// endpoint,',
-                f'-- which conflicts with the abs:// / adls:// data virtualization',
-                f'-- source above, so it gets its own name.',
-                f'CREATE DATABASE SCOPED CREDENTIAL [cred_{bulk_source}]',
-                f'WITH',
-                f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
-                f'    SECRET   = \'<SAS_token_without_leading_?>\';',
-                f'GO',
-                f'',
-                f'CREATE EXTERNAL DATA SOURCE [{bulk_source}]',
-                f'WITH (',
-                f'    TYPE = BLOB_STORAGE,',
-                f'    LOCATION = \'{_quote_literal(bulk_location)}\',',
-                f'    CREDENTIAL = [cred_{bulk_source}]',
-                f');',
-                f'GO',
-            ]
+        lines += self._bulk_data_source_block(
+            data_source_raw, storage_url, file_name, target_platform,
+            step_number=4,
+        )
 
         return '\n'.join(lines)
+
+    def _bulk_data_source_block(self, data_source_raw: str,
+                                storage_url: Optional[str],
+                                file_name: str,
+                                target_platform: str,
+                                step_number: int = 4) -> List[str]:
+        """Build the TYPE = BLOB_STORAGE data source used by bulk operations.
+
+        A ``TYPE = BLOB_STORAGE`` source cannot back an external table, and the
+        ``abs://`` / ``adls://`` / ``wasbs://`` sources used by external tables
+        cannot back ``BULK INSERT`` or ``OPENROWSET(BULK ...)``. Both are
+        therefore emitted, under distinct names.
+        """
+        if not self._bulk_data_source_supported(target_platform, storage_url):
+            return []
+
+        bulk_ident, _, bulk_cred_ident = _bulk_data_source_names(data_source_raw)
+        bulk_location, _ = _azure_bulk_storage_parts(storage_url, file_name)
+        return [
+            f'',
+            f'-- {step_number}. External Data Source for BULK INSERT / OPENROWSET(BULK)',
+            f'-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,',
+            f'-- which cannot back an external table, so it gets its own name.',
+            f'CREATE DATABASE SCOPED CREDENTIAL [{bulk_cred_ident}]',
+            f'WITH',
+            f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
+            f'    SECRET   = \'<SAS_token_without_leading_?>\';',
+            f'GO',
+            f'',
+            f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
+            f'WITH (',
+            f'    TYPE = BLOB_STORAGE,',
+            f'    LOCATION = \'{_quote_literal(bulk_location)}\',',
+            f'    CREDENTIAL = [{bulk_cred_ident}]',
+            f');',
+            f'GO',
+        ]
 
     # ------------------------------------------------------------------
     # JSON Functions  (OPENJSON, JSON_VALUE, JSON_QUERY, ISJSON, etc.)
@@ -1915,7 +2214,7 @@ class SQLGenerator:
             f'',
         ]
 
-        # ---- Section 1: SINGLE_CLOB + OPENJSON  (SQL Server 2016+) ------
+        # ---- Section 1: read the document, then OPENJSON -----------------
         openjson_cols = self._generate_openjson_columns(metadata, indent=8)
         openjson_with = ',\n'.join(openjson_cols) if openjson_cols else '        [data] NVARCHAR(MAX)'
 
@@ -1925,14 +2224,19 @@ class SQLGenerator:
                 f'-- 1. OPENROWSET(BULK) + OPENJSON',
                 f'--    BULK is relative to external data source '
                 f'[{json_bulk_source}].',
+                f'--    SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined',
+                f'--    with DATA_SOURCE, so the CSV reader is framed with',
+                f'--    non-printing characters to return the whole document.',
                 f'-- ----------------------------------------------------------------',
                 f'DECLARE @json NVARCHAR(MAX);',
-                f'SELECT @json = BulkColumn',
+                f'SELECT @json = json_doc',
                 f'FROM OPENROWSET(',
                 f'    BULK \'{file_path_sql}\',',
-                f'    DATA_SOURCE = \'{json_bulk_source}\',',
-                f'    SINGLE_CLOB',
-                f') AS j;',
+                f'    DATA_SOURCE     = \'{json_bulk_source}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                f') WITH (json_doc NVARCHAR(MAX)) AS j;',
                 f'',
             ]
         else:
@@ -2237,8 +2541,11 @@ class SQLGenerator:
         size_label = f'{size_mb:.1f} MB'
 
         rows_label = f'{row_count:}' if row_count else 'unknown'
-        resolved_table_name = _clean_identifier(
-            table_name or os.path.splitext(file_name)[0] or 'data'
+        # A caller-supplied table name is the exact name used by CREATE TABLE /
+        # BULK INSERT, so the validation queries below must use it verbatim.
+        # Only a derived name needs cleaning (e.g. a leading digit).
+        resolved_table_name = table_name or _clean_identifier(
+            os.path.splitext(file_name)[0] or 'data'
         )
 
         lines = [
@@ -2336,23 +2643,31 @@ class SQLGenerator:
             storage_url=storage_url,
         )
 
-        ordered_sections = (
+        ordered_sections = [
             'credential_setup',
             'external_file_format',
             'create_external_table',
             'create_table',
             'bulk_insert',
             'openrowset',
-            'json_functions',
+        ]
+        # The JSON parse / DML section only makes sense for JSON input; emitting
+        # it for CSV or Parquet produces statements that reference a file the
+        # script never reads. FOR JSON stays because it exports any table.
+        if metadata.get('file_type') == 'json':
+            ordered_sections.append('json_functions')
+        ordered_sections += [
             'for_json',
             'best_practices',
             'copy_into',
-        )
+        ]
 
         # The prerequisite setup section already creates the BLOB_STORAGE
         # source that BULK INSERT needs, so do not create it twice.
-        if (statements.get('credential_setup') or '').find(
-                'CREATE EXTERNAL DATA SOURCE') != -1:
+        bulk_ident, _, _ = _bulk_data_source_names(data_source or 'MyDataSource')
+        if f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]' in (
+            statements.get('credential_setup') or ''
+        ):
             resolved_table = _clean_identifier(
                 table_name or os.path.splitext(
                     os.path.basename(metadata['file_path']))[0]
@@ -2376,6 +2691,19 @@ class SQLGenerator:
 
         return '\n\n'.join(parts) + '\n'
 
+    @staticmethod
+    def resolve_table_name(metadata: Dict[str, Any],
+                           table_name: str = None) -> str:
+        """Return the regular table name a caller-supplied override resolves to.
+
+        ``None``/blank derives the name from the file name, matching
+        :meth:`generate_all_statements`; anything else is cleaned but kept.
+        """
+        if not table_name:
+            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            return _clean_identifier(base)
+        return _clean_identifier(table_name)
+
     def generate_all_statements(self, metadata: Dict[str, Any],
                                 table_name: str = None,
                                 data_source: str = 'MyDataSource',
@@ -2394,8 +2722,7 @@ class SQLGenerator:
             table_name = _clean_identifier(base)
         else:
             table_name = _clean_identifier(table_name)
-        data_source = data_source or 'MyDataSource'
-        # The external table must not collide with the regular table in the
+        data_source = data_source or 'MyDataSource'        # The external table must not collide with the regular table in the
         # same script, so it always gets its own name.
         external_table_name = f'ext_{table_name}'
 
@@ -2598,6 +2925,63 @@ class SQLGenerator:
                 cols.append(f'{pad}[{clean}] {sql_type} \'{_quote_json_path(col_name)}\'')
         return cols
 
+    # ------------------------------------------------------------------
+    # Multi-file export
+    # ------------------------------------------------------------------
+
+    # Objects that are shared by every file in a multi-file export and must
+    # therefore be created only once.
+    SHARED_OBJECT_PATTERNS = (
+        re.compile(r'^\s*CREATE\s+MASTER\s+KEY\b', re.IGNORECASE | re.MULTILINE),
+        re.compile(r'^\s*CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+(\[[^\]]*\]|\S+)',
+                   re.IGNORECASE | re.MULTILINE),
+        re.compile(r'^\s*CREATE\s+EXTERNAL\s+DATA\s+SOURCE\s+(\[[^\]]*\]|\S+)',
+                   re.IGNORECASE | re.MULTILINE),
+        re.compile(r'^\s*CREATE\s+EXTERNAL\s+FILE\s+FORMAT\s+(\[[^\]]*\]|\S+)',
+                   re.IGNORECASE | re.MULTILINE),
+    )
+
+    @classmethod
+    def _shared_objects_in(cls, batch: str) -> List[str]:
+        """Return keys for the shared prerequisite objects created in *batch*."""
+        keys: List[str] = []
+        for pattern in cls.SHARED_OBJECT_PATTERNS:
+            for match in pattern.finditer(batch):
+                name = match.group(1) if match.groups() else ''
+                keys.append(f'{pattern.pattern}|{name.upper()}')
+        return keys
+
+    @classmethod
+    def deduplicate_shared_prerequisites(cls, script: str,
+                                         seen: Optional[set] = None) -> str:
+        """Comment out shared prerequisite batches that were already created.
+
+        Concatenating per-file complete scripts repeats ``CREATE MASTER KEY``,
+        ``CREATE DATABASE SCOPED CREDENTIAL``, ``CREATE EXTERNAL DATA SOURCE``
+        and ``CREATE EXTERNAL FILE FORMAT``, which makes every file after the
+        first fail. A batch is skipped only when *every* shared object it
+        creates has already been created, so file-specific batches are never
+        dropped.
+
+        *seen* is mutated so a caller can carry state across several scripts.
+        """
+        if seen is None:
+            seen = set()
+
+        kept: List[str] = []
+        for batch in _split_go_batches(script):
+            keys = cls._shared_objects_in(batch)
+            if keys and all(key in seen for key in keys):
+                kept.append(
+                    '-- Skipped: the shared prerequisite object(s) in this batch\n'
+                    '-- are already created earlier in this export.'
+                )
+                continue
+            seen.update(keys)
+            kept.append(batch)
+
+        return '\nGO\n'.join(kept)
+
     def _map_type_to_sql(self, data_type: str, max_length: int = None) -> str:
         """Map a detected Arrow/pandas/Iceberg type name to a SQL Server type."""
         data_type_lower = str(data_type).strip().lower()
@@ -2705,6 +3089,55 @@ def _folder_of(relative_path: str) -> str:
         return ''
     folder = normalized.rsplit('/', 1)[0]
     return f'{folder}/' if folder else ''
+
+
+def _split_go_batches(script: str) -> List[str]:
+    """Split a T-SQL script on its ``GO`` batch separators.
+
+    Only a line whose sole content is ``GO`` is treated as a separator, so a
+    column or literal containing ``GO`` is never split.
+    """
+    batches: List[str] = []
+    current: List[str] = []
+    for line in str(script).splitlines():
+        if line.strip().upper() == 'GO':
+            batches.append('\n'.join(current).strip())
+            current = []
+        else:
+            current.append(line)
+    tail = '\n'.join(current).strip()
+    if tail:
+        batches.append(tail)
+    return [batch for batch in batches if batch]
+
+
+def _delta_table_folder(relative_path: str) -> str:
+    """Return the Delta table folder for a detector-resolved relative path.
+
+    A Delta table is detected as a directory, so the resolved relative path
+    *is* the table folder: only a trailing slash has to be added. Taking the
+    parent folder would point ``OPENROWSET`` at the sibling tables instead, and
+    an empty result would produce an invalid ``BULK ''``.
+    """
+    normalized = str(relative_path).replace('\\', '/').strip('/')
+    if not normalized:
+        return '<delta_table_folder>/'
+    return f'{normalized}/'
+
+
+def _bulk_data_source_names(data_source: str) -> Tuple[str, str, str]:
+    """Return ``(identifier, literal, credential_identifier)`` for a bulk source.
+
+    The raw ``<data_source>_Bulk`` name is escaped once per context: bracket
+    escaping for ``[identifier]`` and quote doubling for ``'literal'``. Escaping
+    first and reusing the result would corrupt names containing ``]`` or ``'``.
+    """
+    raw = f'{data_source}_Bulk'
+    return (
+        _escape_identifier(raw),
+        _quote_literal(raw),
+        _escape_identifier(f'cred_{raw}'),
+    )
 
 
 def _validate_unique_column_names(schema: List[Any]) -> None:

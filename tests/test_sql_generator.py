@@ -3,6 +3,18 @@
 from external_file_detection.sql_generator import SQLGenerator
 
 
+def code_only(sql: str) -> str:
+    """Return *sql* with whole-line ``--`` comments removed.
+
+    Lets assertions check what the script actually executes without
+    matching explanatory comment text.
+    """
+    return '\n'.join(
+        line for line in sql.splitlines()
+        if not line.strip().startswith('--')
+    )
+
+
 def test_csv_file_format_generation():
     """Test CSV file format generation."""
     generator = SQLGenerator()
@@ -671,7 +683,13 @@ def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
         in sql
     )
     assert 'TYPE = HADOOP' not in sql
-    assert "LOCATION = 'https://" not in sql
+    # The data virtualization source must not use https://; the separate
+    # TYPE = BLOB_STORAGE bulk source must.
+    virtualization_source = sql.split('-- 4.')[0]
+    assert "LOCATION = 'https://" not in virtualization_source
+    assert "TYPE = BLOB_STORAGE" in sql
+    assert ("LOCATION = 'https://account.blob.core.windows.net/container'"
+            in sql)
     assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
 
 
@@ -1071,7 +1089,7 @@ def test_best_practices_includes_platform_methods():
 # -------------------------------------------------------------------
 
 def test_openrowset_azure_sql_db_json():
-    """OPENROWSET on Azure SQL DB for JSON produces SINGLE_CLOB + OPENJSON."""
+    """Remote JSON is row-framed, never SINGLE_CLOB + DATA_SOURCE."""
     gen = SQLGenerator()
     meta = {
         'file_type': 'json', 'file_path': 'data.json',
@@ -1080,9 +1098,12 @@ def test_openrowset_azure_sql_db_json():
     }
     sql = gen.generate_openrowset(meta, data_source='LakeDS',
                                   target_platform='azure_sql_db')
-    assert 'SINGLE_CLOB' in sql
+    # SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined with a
+    # DATA_SOURCE, so the CSV reader is framed instead.
+    assert 'SINGLE_CLOB' not in code_only(sql)
     assert 'OPENJSON' in sql
-    assert "DATA_SOURCE = 'LakeDS'" in sql
+    assert "DATA_SOURCE     = 'LakeDS'" in sql
+    assert "FIELDQUOTE      = '0x0b'" in sql
 
 
 def test_openrowset_azure_sql_mi():
@@ -1326,8 +1347,10 @@ def test_openrowset_sql_server_2022_remote_json_uses_data_source():
         storage_url='abfss://raw@acct.dfs.core.windows.net/landing/orders.json',
         data_source='LakeDS', target_platform='sql_server_2022')
     assert "BULK 'landing/orders.json'" in sql
-    assert "DATA_SOURCE = 'LakeDS'" in sql
-    assert 'SINGLE_CLOB' in sql
+    assert "DATA_SOURCE     = 'LakeDS'" in sql
+    # SINGLE_CLOB is invalid together with DATA_SOURCE.
+    assert 'SINGLE_CLOB' not in code_only(sql)
+    assert "FIELDQUOTE      = '0x0b'" in sql
     assert 'OPENJSON' in sql
     assert "BULK N'" not in sql
 
@@ -1341,10 +1364,31 @@ def test_openrowset_sql_server_2019_remote_gives_staging_guidance():
     sql = gen.generate_openrowset(
         meta, storage_url='s3://bucket/landing/orders.csv',
         target_platform='sql_server_2019')
-    assert 'cannot read object storage URLs' in sql
+    assert 'cannot read this object storage URL' in sql
     assert "BULK N'https://" not in sql
     assert "BULK 's3://" not in sql
-    assert 'PolyBase' in sql
+    assert 'SQL Server 2022' in sql
+    assert 'TYPE = BLOB_STORAGE' in sql
+
+
+def test_openrowset_sql_server_2019_azure_blob_uses_bulk_data_source():
+    """SQL Server 2017+ can bulk-read Azure Blob via TYPE = BLOB_STORAGE."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'delimiter': ',', 'has_header': True,
+        'encoding': 'utf-8', 'codepage': '65001',
+    }
+    sql = gen.generate_openrowset(
+        meta,
+        storage_url='https://acct.blob.core.windows.net/raw/landing/orders.csv',
+        data_source='LakeDS', target_platform='sql_server_2019')
+    assert "BULK 'landing/orders.csv'" in sql
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in sql
+    assert "FIRSTROW        = 2" in sql
+    # An absolute URL must never appear as a BULK path.
+    assert "BULK 'https://" not in sql
+    assert "BULK N'https://" not in sql
 
 
 def test_openrowset_local_still_used_without_storage_url():
@@ -1435,9 +1479,40 @@ def test_complete_ddl_contains_all_sections():
     script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
     for marker in ('PREREQUISITE SETUP', 'CREATE EXTERNAL FILE FORMAT',
                    'CREATE EXTERNAL TABLE', 'CREATE TABLE', 'BULK INSERT',
-                   'OPENROWSET', 'JSON FUNCTIONS', 'FOR JSON',
+                   'OPENROWSET', 'FOR JSON',
                    'BEST PRACTICES', 'COPY INTO'):
         assert marker in script, marker
+    # The JSON parse / DML section is gated to JSON input.
+    assert 'JSON FUNCTIONS' not in script
+
+
+def test_complete_ddl_includes_json_functions_for_json_input():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'json', 'file_path': 'orders.json',
+        'file_name': 'orders.json', 'json_format': 'array',
+        'schema': [('id', 'int64')], 'json_nesting': {'id': 'scalar'},
+        'encoding': 'utf-8', 'file_size': 1024,
+    }
+    script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
+    assert 'JSON FUNCTIONS' in script
+
+
+def test_complete_ddl_declares_json_variable_at_most_once_per_batch():
+    """Two DECLARE @json statements in one batch would fail to compile."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'json', 'file_path': 'orders.json',
+        'file_name': 'orders.json', 'json_format': 'array',
+        'schema': [('id', 'int64')], 'json_nesting': {'id': 'scalar'},
+        'encoding': 'utf-8', 'file_size': 1024,
+    }
+    for platform in SQLGenerator.PLATFORMS:
+        script = gen.generate_complete_ddl(
+            meta, target_platform=platform,
+            storage_url='abs://raw@acct.blob.core.windows.net/landing/orders.json')
+        for batch in script.split('\nGO\n'):
+            assert batch.count('DECLARE @json ') <= 1, platform
 
 
 def test_complete_ddl_does_not_duplicate_bulk_data_source():

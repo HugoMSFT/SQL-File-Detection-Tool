@@ -41,6 +41,17 @@ def target_platform_option(func):
     )(func)
 
 
+def storage_url_option(func):
+    """Shared Click option naming where the data is staged for SQL."""
+    return click.option(
+        '--storage-url', default=None,
+        help='Cloud location the data is (or will be) staged at, for '
+             'example abs://container@account.blob.core.windows.net/folder. '
+             'Used verbatim in the generated SQL; local files need this '
+             'because a cloud SQL engine cannot read your disk.',
+    )(func)
+
+
 def storage_options(func):
     """Shared Click options for cloud storage credentials."""
     func = click.option('--azure-connection-string', default=None, envvar='AZURE_STORAGE_CONNECTION_STRING',
@@ -105,8 +116,10 @@ def gui(host, port, debug, root_dir):
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
 @target_platform_option
+@storage_url_option
 @storage_options
 def analyze(location, data_source, output, format, target_platform,
+           storage_url,
            aws_access_key_id,
            aws_secret_access_key, aws_region, azure_account_name,
            azure_account_key, azure_connection_string):
@@ -124,7 +137,8 @@ def analyze(location, data_source, output, format, target_platform,
         # Analyze location
         click.echo(f"Analyzing location: {location}")
         results = app.analyze_location(location, data_source,
-                                       target_platform=target_platform)
+                                       target_platform=target_platform,
+                                       storage_url=storage_url)
         
         # Display summary
         click.echo(f"\nAnalysis completed!")
@@ -173,8 +187,10 @@ def analyze(location, data_source, output, format, target_platform,
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
 @target_platform_option
+@storage_url_option
 @storage_options
 def analyze_files(files, data_source, output, format, target_platform,
+                  storage_url,
                   aws_access_key_id,
                   aws_secret_access_key, aws_region, azure_account_name,
                   azure_account_key, azure_connection_string):
@@ -188,7 +204,8 @@ def analyze_files(files, data_source, output, format, target_platform,
     
     try:
         results = app.analyze_files(list(files), data_source,
-                                    target_platform=target_platform)
+                                    target_platform=target_platform,
+                                    storage_url=storage_url)
         
         click.echo(f"Analyzed {len(results)} files")
         

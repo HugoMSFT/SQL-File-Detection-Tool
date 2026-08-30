@@ -15,6 +15,34 @@ from .storage_handlers import StorageHandler, StorageFactory
 logger = logging.getLogger(__name__)
 
 
+
+def _join_storage_url(base_url: str, file_path: str) -> str:
+    """Resolve the cloud URL of *file_path* under an explicit *base_url*.
+
+    ``base_url`` may already name the file, name the folder that holds it,
+    or be ``None``.  A trailing slash always means "folder"; otherwise the
+    last segment is treated as a file name when it carries an extension.
+    """
+    if not base_url:
+        return None
+
+    file_name = StorageFactory.basename(file_path)
+    if not file_name:
+        return base_url
+
+    trimmed = base_url.rstrip('/')
+    if base_url.endswith('/'):
+        return f'{trimmed}/{file_name}'
+
+    last_segment = trimmed.rsplit('/', 1)[-1]
+    if last_segment == file_name:
+        return trimmed
+    if '.' in last_segment:
+        # Already points at a single file; do not append a second name.
+        return trimmed
+    return f'{trimmed}/{file_name}'
+
+
 class ExternalFileDetectorApp:
     """Main application for external file detection and SQL DDL generation."""
     
@@ -30,7 +58,8 @@ class ExternalFileDetectorApp:
         self.storage_config = storage_config or {}
     
     def analyze_location(self, location: str, data_source: str = None,
-                         target_platform: str = 'sql_server_2022') -> Dict[str, Any]:
+                         target_platform: str = 'sql_server_2022',
+                         storage_url: str = None) -> Dict[str, Any]:
         """
         Analyze files at the given location and generate SQL DDL.
         
@@ -38,6 +67,9 @@ class ExternalFileDetectorApp:
             location: Path to analyze (local, S3, or Azure)
             data_source: Name of the external data source for SQL
             target_platform: SQL platform the generated script targets
+            storage_url: Cloud location the files are (or will be) staged
+                at. Use this when analysing local files that will be
+                uploaded, so the generated SQL references the real path.
             
         Returns:
             Analysis results with file metadata and SQL DDL
@@ -77,6 +109,7 @@ class ExternalFileDetectorApp:
                 file_result = self._analyze_single_file(
                     file_path, storage_handler, data_source, temp_dir,
                     target_platform=target_platform,
+                    storage_url=_join_storage_url(storage_url, file_path),
                 )
                 results['files'].append(file_result)
                 
@@ -93,7 +126,8 @@ class ExternalFileDetectorApp:
     
     def _analyze_single_file(self, file_path: str, storage_handler: StorageHandler,
                            data_source: str = None, temp_dir: str = None,
-                           target_platform: str = 'sql_server_2022') -> Dict[str, Any]:
+                           target_platform: str = 'sql_server_2022',
+                           storage_url: str = None) -> Dict[str, Any]:
         """Analyze a single file and generate SQL DDL."""
         local_path = file_path
         
@@ -107,6 +141,7 @@ class ExternalFileDetectorApp:
                     data_source,
                     owned_temp_dir,
                     target_platform=target_platform,
+                    storage_url=storage_url,
                 )
 
         if is_remote:
@@ -151,7 +186,7 @@ class ExternalFileDetectorApp:
                 data_source,
                 location=None,
                 target_platform=target_platform,
-                storage_url=file_path if is_remote else None,
+                storage_url=storage_url or (file_path if is_remote else None),
             )
         except Exception as e:
             logger.error("Failed to generate DDL for %s: %s", file_path, e)
@@ -206,7 +241,8 @@ class ExternalFileDetectorApp:
         return clean_name
     
     def analyze_files(self, file_paths: List[str], data_source: str = None,
-                      target_platform: str = 'sql_server_2022') -> List[Dict[str, Any]]:
+                      target_platform: str = 'sql_server_2022',
+                      storage_url: str = None) -> List[Dict[str, Any]]:
         """
         Analyze multiple specific files.
         
@@ -214,6 +250,7 @@ class ExternalFileDetectorApp:
             file_paths: List of file paths to analyze
             data_source: Name of the external data source for SQL
             target_platform: SQL platform the generated script targets
+            storage_url: Cloud folder the files are (or will be) staged in.
             
         Returns:
             List of analysis results
@@ -240,6 +277,7 @@ class ExternalFileDetectorApp:
                     data_source,
                     temp_dir,
                     target_platform=target_platform,
+                    storage_url=_join_storage_url(storage_url, file_path),
                 )
                 results.append(result)
         
@@ -322,15 +360,24 @@ class ExternalFileDetectorApp:
             with open(output_file, 'w', encoding='utf-8', newline='\n') as f:
                 f.write("-- External File Detection Results\n")
                 f.write(f"-- Location: {self._sanitize_sql_comment(results['location'])}\n")
-                f.write(f"-- Files found: {results['files_found']}\n\n")
-                
+                f.write(f"-- Files found: {results['files_found']}\n")
+                f.write("-- Shared prerequisite objects (master key, credentials,\n")
+                f.write("-- external data sources, external file formats) are created\n")
+                f.write("-- once and skipped in later files so the whole script runs.\n\n")
+
+                # Track shared objects across every file so file 2 onwards does
+                # not try to re-create a credential / data source / file format
+                # that file 1 already created.
+                seen_shared_objects: set = set()
+
                 for file_result in results['files']:
                     f.write(f"-- File: {self._sanitize_sql_comment(file_result['file_path'])}\n")
                     f.write(f"-- Type: {self._sanitize_sql_comment(file_result['metadata']['file_type'])}\n")
                     if 'error' in file_result:
                         f.write(f"-- Error: {self._sanitize_sql_comment(file_result['error'])}\n\n")
                     else:
-                        f.write(file_result['sql_ddl'])
+                        f.write(SQLGenerator.deduplicate_shared_prerequisites(
+                            file_result['sql_ddl'], seen_shared_objects))
                         f.write("\n\n")
     
     @staticmethod

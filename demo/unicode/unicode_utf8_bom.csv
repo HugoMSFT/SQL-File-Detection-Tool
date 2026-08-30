@@ -1,0 +1,22 @@
+﻿row_id,script,sample_text,code_points,note
+1,Latin,Grüßen aus München,U+00FC U+00DF,German sharp s
+2,Latin-composed,café,U+0063 U+0061 U+0066 U+00E9,NFC single code point
+3,Latin-decomposed,café,U+0063 U+0061 U+0066 U+0065 U+0301,NFD combining acute
+4,Japanese-kanji,日本語の文字列,U+65E5 U+672C U+8A9E,kanji
+5,Japanese-hiragana,ひらがな,U+3072 U+3089 U+304C U+306A,hiragana
+6,Japanese-katakana,カタカナ,U+30AB U+30BF U+30AB U+30CA,full-width katakana
+7,Japanese-halfwidth,ｶﾀｶﾅ,U+FF76 U+FF80 U+FF76 U+FF85,half-width katakana
+8,Chinese,简体中文 / 繁體中文,U+7B80 U+4F53,simplified and traditional
+9,Korean,한국어 문자열,U+D55C U+AD6D U+C5B4,hangul
+10,Arabic,مرحبا بالعالم,U+0645 U+0631 U+062D,right-to-left
+11,Hebrew,שלום עולם,U+05E9 U+05DC U+05D5 U+05DD,right-to-left
+12,Devanagari,नमस्ते दुनिया,U+0928 U+092E U+0938,combining marks
+13,Cyrillic,"Привет, мир",U+041F U+0440 U+0438,Russian
+14,Greek,Γειά σου Κόσμε,U+0393 U+03B5 U+03B9,Greek
+15,Symbols-BMP,☃ ★ ♥,U+2603 U+2605 U+2665,basic multilingual plane symbols
+16,Emoji-supplementary,😀 🚀 𝔘,U+1F600 U+1F680 U+1D518,surrogate pairs in UTF-16
+17,Emoji-ZWJ,👩‍💻 👨‍👩‍👧‍👦,U+1F469 U+200D U+1F4BB,zero-width-joiner sequences
+18,Quoted,"He said ""hello"", then left",U+0022,embedded quotes and comma
+19,Multiline,"line one
+line two",U+000A,embedded newline inside a quoted field
+20,Null-value,,,empty field is NULL
