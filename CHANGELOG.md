@@ -44,6 +44,15 @@ test suites now read the same machine-readable evidence file.
 - **`FIRST_ROW` gating matches the engines.** It is emitted for SQL Server
   2022/2025, Azure SQL Database and Fabric SQL Database, and explained as
   unavailable elsewhere.
+- **A format with no delimiter no longer aborts generation.** The detector
+  reports `delimiter = None` for every non-delimited format - 11 of the 19
+  certification fixtures, including Parquet, JSON, Delta and Excel - and a
+  dictionary default only fills in a key that is *missing*, not one that is
+  present and empty. Generating a best-practices section for such a file raised
+  `TypeError` and took the whole run down. Every optional metadata field is now
+  read through one helper that treats an empty value like an absent one, in both
+  generators, and both suites push real detector output for every committed
+  fixture through every platform.
 
 ### Added
 
