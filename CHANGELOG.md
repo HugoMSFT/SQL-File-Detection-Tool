@@ -59,6 +59,20 @@ test suites now read the same machine-readable evidence file.
   arrives as anything other than a list reached `.filter`/`.slice`, and a null
   `file_path` reached `.split`, in both cases throwing instead of degrading.
   Both generators are now checked against the same absent-and-empty matrix.
+- **The setup section creates the data source a JSON read names.** A file format
+  and a data source are different objects. JSON has no
+  `CREATE EXTERNAL FILE FORMAT` on any engine, and the generator was treating
+  that as "no setup needed" and returning a "not available" message - while the
+  JSON read it generated still said `DATA_SOURCE = '<name>_Bulk'`. The result was
+  a statement referring to an object nothing created, which fails with error
+  12703 / 46501 and reads exactly like a generator defect. The setup now emits
+  the data sources for JSON and states why no external file format follows.
+- **Local JSON reads are encoding-aware, and NDJSON is not slurped as one
+  document.** The local `OPENJSON` path hard-coded `SINGLE_CLOB`, so a UTF-16
+  JSON file failed with error 4806 even though the remote path had already been
+  fixed; and a `.jsonl` file was read as a single malformed document. The local
+  path now picks `SINGLE_NCLOB` by encoding and assembles NDJSON lines into a
+  JSON array before parsing.
 
 ### Added
 
@@ -91,6 +105,22 @@ test suites now read the same machine-readable evidence file.
   at all if the installed driver cannot honour it. Every value that comes back
   from a driver is normalised before it is redacted, so a `bytes` column can
   neither crash the JSON report nor reach an artifact as raw binary.
+- **The harness executes a cell in the state that cell needs.** Statements were
+  being sent as isolated fragments: an `OPENROWSET` before its data source
+  existed, an external table before its file format, a `BULK INSERT` with no
+  table to insert into, and every statement in `master` because no run database
+  was ever created or switched into. The run now owns a lifecycle - create a
+  uniquely named run database, reconnect into it, create the run schema, run each
+  cell's prerequisites, then the cell, then a verification query - and drops the
+  database from `master` at the end, proving with `DB_ID` that it is gone. A
+  prerequisite that fails marks the cell `NOT_EXECUTABLE`, never `FAIL`: a
+  missing precondition is not a product defect.
+- **A DDL statement is judged by the catalog, not by a row count.** Row and
+  column expectations were applied to every cell, so `CREATE EXTERNAL FILE
+  FORMAT` and `CREATE EXTERNAL TABLE` were recorded as failures for returning no
+  rows, which is what they are supposed to do. Result assertions now attach only
+  to the cells that run a query; a DDL cell passes when it raises no error and
+  its object is present in the catalog afterwards.
 
 ### Changed
 

@@ -140,6 +140,7 @@ def _generate(
     external_table_name: Optional[str] = None,
     credential_name: Optional[str] = None,
     auth_method: Optional[str] = None,
+    file_path_override: Optional[str] = None,
 ) -> str:
     _ensure_repo_on_path()
     from external_file_detection.sql_generator import SQLGenerator  # noqa: WPS433
@@ -155,6 +156,7 @@ def _generate(
         external_table_name=external_table_name,
         credential_name=credential_name,
         auth_method=auth_method,
+        file_path_override=file_path_override,
     )
     if statement_kind == 'complete_ddl':
         return generator.generate_complete_ddl(metadata, **common)
@@ -338,6 +340,58 @@ def build_manifest(
     }
 
 
+def _plan_sql_block(
+    sql: str,
+    *,
+    policy: SafetyPolicy,
+    redactor: Redactor,
+    emit_sql: bool,
+) -> Dict[str, Any]:
+    """Gate, split and record one block of generated SQL.
+
+    Returns the batch list together with the two facts the plan verdict needs:
+    whether every batch was allowed, and whether any batch still carries a
+    placeholder.
+    """
+    batches: List[Batch] = split_batches(sql)
+    entries: List[Dict[str, Any]] = []
+    all_allowed = bool(batches)
+    any_substitution = False
+    for batch in batches:
+        report = evaluate_batch(batch.text, policy)
+        batch_entry: Dict[str, Any] = {
+            'batch_index': batch.index,
+            'start_line': batch.start_line,
+            'repeat': batch.repeat,
+            'sql_redacted': redactor.redact(batch.text),
+            'sql_sha256': _sha256(batch.text),
+            'safety': report.as_dict(),
+        }
+        if emit_sql:
+            batch_entry['sql'] = batch.text
+        entries.append(batch_entry)
+        if not report.allowed:
+            all_allowed = False
+        if report.requires_substitution:
+            any_substitution = True
+    return {
+        'batches': entries,
+        'all_allowed': all_allowed,
+        'any_substitution': any_substitution,
+    }
+
+
+#: Which generated statement satisfies each prerequisite. The prerequisites are
+#: produced by the generator under test, with the same run-scoped names, so
+#: satisfying one also exercises the code that made it. Borrowing a hand-written
+#: setup script instead would certify the harness rather than the product.
+PREREQUISITE_STATEMENTS: Dict[str, str] = {
+    'setup': 'credential_setup',
+    'file_format': 'external_file_format',
+    'target_table': 'create_table',
+}
+
+
 def _plan_cell(
     entry: MatrixEntry,
     *,
@@ -368,6 +422,18 @@ def _plan_cell(
         'accepts': list(entry.accepts),
         'notes': entry.notes,
         'expectations': staging.expectations(entry.fixture),
+        'requires': list(entry.requires),
+        'verification_kind': entry.verification,
+        # Row and column counts describe a result set. DDL has none, so the
+        # first live run marked C16 and C20 FAIL for statements that had in
+        # fact succeeded. Success for DDL is "no error, and the object is in
+        # the catalog" - which is what catalog_object below is for.
+        'asserts_result_counts': entry.asserts_result_counts,
+        'catalog_object': entry.catalog_object,
+        'auth_method': entry.auth_method,
+        'names': {},
+        'setup': [],
+        'verification': None,
         'substitutions': [],
         'batches': [],
         'sql_sha256': '',
@@ -398,62 +464,102 @@ def _plan_cell(
     # Cell C30 is the negative control: it deliberately keeps the default,
     # file-derived name so the safety gate has something real to refuse.
     use_default_names = entry.cell_id == 'C30'
-    table_name = None if use_default_names else identity.name(entry.cell_id.lower(), entry.fixture)
+    # Names follow the *naming* cell, not this one. C29 reruns C28's document,
+    # and a rerun that writes to fresh names is a first run wearing a rerun
+    # label.
+    stem = entry.naming_cell.lower()
+    table_name = None if use_default_names else identity.name(stem, entry.fixture)
     schema_name = 'dbo' if use_default_names else identity.schema
-    data_source = identity.name(entry.cell_id.lower(), 'src')
+    data_source = identity.name(stem, 'src')
     # Every generated object gets the run prefix, not just the table. Without
     # this the shared prerequisites (ff_csv_format, cred_<ds>) keep their
     # derived names and the safety gate correctly refuses the whole batch.
-    format_name = None if use_default_names else identity.name(entry.cell_id.lower(), 'fmt')
-    external_table_name = (
-        None if use_default_names else identity.name(entry.cell_id.lower(), 'ext')
-    )
-    credential_name = (
-        None if use_default_names else identity.name(entry.cell_id.lower(), 'cred')
-    )
-    # Managed identity keeps the run secretless: no master key, no SAS token,
-    # nothing secret-shaped for the redactor or the gate to trip over.
-    auth_method = None if use_default_names else 'managed_identity'
+    format_name = None if use_default_names else identity.name(stem, 'fmt')
+    external_table_name = None if use_default_names else identity.name(stem, 'ext')
+    credential_name = None if use_default_names else identity.name(stem, 'cred')
+    # A public container needs no credential and no database master key. The
+    # first live run asked for managed identity everywhere, which minted a
+    # credential per cell that nothing used - and, on SQL Server, tried to do it
+    # in master (error 33158). Managed identity is now its own cell (C26).
+    auth_method = None if use_default_names else entry.auth_method
 
-    sql = _generate(
-        metadata,
-        statement_kind=entry.statement_kind,
+    # A path is engine-local, not client-local: the file is analysed here and
+    # the statement runs there. Where a cell reads a staged server path, the
+    # generator is told that path explicitly instead of interpolating this
+    # machine's worktree (which the first live run did, earning error 4860).
+    engine_local_path = location if entry.access == 'engine_local' else None
+    storage_url = None if entry.access == 'engine_local' else location
+
+    common = dict(
         table_name=table_name,
         schema_name=schema_name,
         data_source=data_source,
         platform=platform,
-        storage_url=location,
+        storage_url=storage_url,
         format_name=format_name,
         external_table_name=external_table_name,
         credential_name=credential_name,
         auth_method=auth_method,
+        file_path_override=engine_local_path,
     )
+
+    planned['names'] = {
+        'schema': schema_name,
+        'table': table_name,
+        'external_table': external_table_name,
+        'external_file_format': format_name,
+        'external_data_source': data_source,
+        'database_scoped_credential': credential_name,
+    }
+
+    sql = _generate(metadata, statement_kind=entry.statement_kind, **common)
 
     planned['sql_sha256'] = _sha256(sql)
     planned['sql_redacted'] = redactor.redact(sql)
 
-    batches: List[Batch] = split_batches(sql)
-    all_allowed = bool(batches)
-    any_substitution = False
-    for batch in batches:
-        report = evaluate_batch(batch.text, policy)
-        batch_entry: Dict[str, Any] = {
-            'batch_index': batch.index,
-            'start_line': batch.start_line,
-            'repeat': batch.repeat,
-            'sql_redacted': redactor.redact(batch.text),
-            'sql_sha256': _sha256(batch.text),
-            'safety': report.as_dict(),
-        }
-        if emit_sql:
-            batch_entry['sql'] = batch.text
-        planned['batches'].append(batch_entry)
-        if not report.allowed:
+    block = _plan_sql_block(sql, policy=policy, redactor=redactor, emit_sql=emit_sql)
+    planned['batches'] = block['batches']
+    all_allowed = block['all_allowed']
+    any_substitution = block['any_substitution']
+
+    # Prerequisites. An OPENROWSET needs its data source, an external table
+    # needs the format too, and a BULK INSERT needs somewhere to insert into.
+    # Running the cell's fragment alone produced errors 12703 / 46501 / 208 /
+    # 2760 in the first live run, and those were filed as generator defects.
+    # They were missing prerequisites.
+    for requirement in entry.requires:
+        statement_kind = PREREQUISITE_STATEMENTS[requirement]
+        setup_sql = _generate(metadata, statement_kind=statement_kind, **common)
+        setup_block = _plan_sql_block(
+            setup_sql, policy=policy, redactor=redactor, emit_sql=emit_sql,
+        )
+        planned['setup'].append({
+            'requirement': requirement,
+            'statement_kind': statement_kind,
+            'sql_sha256': _sha256(setup_sql),
+            'sql_redacted': redactor.redact(setup_sql),
+            'batches': setup_block['batches'],
+        })
+        if not setup_block['all_allowed']:
             all_allowed = False
-        if report.requires_substitution:
+        if setup_block['any_substitution']:
             any_substitution = True
 
-    if not batches:
+    verification_sql = _verification_sql(entry, schema_name, table_name, external_table_name)
+    if verification_sql:
+        verification_block = _plan_sql_block(
+            verification_sql, policy=policy, redactor=redactor, emit_sql=emit_sql,
+        )
+        planned['verification'] = {
+            'kind': entry.verification,
+            'sql_sha256': _sha256(verification_sql),
+            'sql_redacted': redactor.redact(verification_sql),
+            'batches': verification_block['batches'],
+        }
+        if not verification_block['all_allowed']:
+            all_allowed = False
+
+    if not planned['batches']:
         planned['plan_verdict'] = NOT_EXECUTABLE
         planned['reason'] = 'generator produced no executable batch'
     elif all_allowed:
@@ -468,6 +574,28 @@ def _plan_cell(
         planned['reason'] = 'safety gate refused at least one batch'
 
     return planned
+
+
+def _verification_sql(
+    entry: MatrixEntry,
+    schema_name: str,
+    table_name: Optional[str],
+    external_table_name: Optional[str],
+) -> Optional[str]:
+    """The query that proves a load worked, or ``None`` where the cell is its own proof.
+
+    ``SELECT *`` rather than ``COUNT(*)`` on purpose: the row count and the
+    column count both come out of the same result set, and so does the value
+    fidelity the encoding cells care about.
+    """
+    if entry.verification == 'target_table' and table_name:
+        return f'SELECT * FROM [{_escape_ident(schema_name)}].[{_escape_ident(table_name)}];'
+    if entry.verification == 'external_table' and external_table_name:
+        return (
+            f'SELECT * FROM [{_escape_ident(schema_name)}].'
+            f'[{_escape_ident(external_table_name)}];'
+        )
+    return None
 
 
 def write_manifest(manifest: Dict[str, Any], path: str) -> None:

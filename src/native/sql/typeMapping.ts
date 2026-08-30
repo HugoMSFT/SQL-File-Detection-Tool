@@ -176,6 +176,17 @@ export const DDL_ONLY_CERTIFIED_FORMATS: ReadonlySet<ExternalFormatType | ''> =
     new Set<ExternalFormatType | ''>(['ORC']);
 
 /**
+ * Formats that are read without ever creating a `CREATE EXTERNAL FILE FORMAT`.
+ * JSON has no external file format on any engine, but every remote JSON read
+ * goes through `OPENROWSET(BULK ...)` with a `DATA_SOURCE`, so the prerequisite
+ * setup must still create the data sources. Skipping them leaves the read
+ * naming an object nothing creates - error 12703 / 46501 at run time.
+ */
+export const FORMATS_READ_WITHOUT_FILE_FORMAT: ReadonlySet<
+    ExternalFormatType | ''
+> = new Set<ExternalFormatType | ''>(['JSON']);
+
+/**
  * File types that have no `CREATE EXTERNAL FILE FORMAT` representation at all.
  * They must never fall through to `DELIMITEDTEXT`, which would produce a
  * statement the engine accepts but that reads a binary container as text.

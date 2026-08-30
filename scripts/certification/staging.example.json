@@ -11,12 +11,18 @@
     "",
     "Blob paths are case-sensitive. A wrong-case directory fails with error",
     "13807 (directory cannot be listed) rather than returning no rows, so keep",
-    "the casing exactly as the container reports it."
+    "the casing exactly as the container reports it.",
+    "",
+    "An `engine_local` entry is a path on the *engine host*, not on this",
+    "machine. Cells that read a file with no data source (C07, C11, C15) are",
+    "planned NOT_EXECUTABLE until one is supplied, because a client worktree",
+    "path handed to a server earns error 4860, not a certification result."
   ],
   "hosts": [
     "azuremlexamples.blob.core.windows.net",
     "azureopendatastorage.blob.core.windows.net",
-    "azcliprod.blob.core.windows.net"
+    "azcliprod.blob.core.windows.net",
+    "openvmmghtestresults.blob.core.windows.net"
   ],
   "fixtures": {
     "csv_scalar": {
@@ -28,6 +34,16 @@
     "json_array": {
       "blob_storage": "https://azcliprod.blob.core.windows.net/cli/vm/aliases.json",
       "abs": "abs://cli@azcliprod.blob.core.windows.net/vm/aliases.json"
+    },
+    "ndjson": {
+      "_comment": [
+        "Newline-delimited JSON read through abs:// row framing - the shape the",
+        "live run proved (729 rows on both engines). Confirm the blob path",
+        "against the container before executing; an https TYPE = BLOB_STORAGE",
+        "source cannot read this, because that connector rejects the delimiter",
+        "options with error 5369."
+      ],
+      "abs": "abs://results@openvmmghtestresults.blob.core.windows.net/petri.jsonl"
     },
     "parquet_all_types": {
       "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet",

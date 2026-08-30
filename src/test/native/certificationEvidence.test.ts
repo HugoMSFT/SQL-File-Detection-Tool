@@ -24,6 +24,7 @@ import { generateOpenrowset } from '../../native/sql/openrowset';
 import {
     DDL_ONLY_CERTIFIED_FORMATS,
     FIRST_ROW_FORMAT_PLATFORMS,
+    FORMATS_READ_WITHOUT_FILE_FORMAT,
 } from '../../native/sql/typeMapping';
 import {
     AUTH_METHODS,
@@ -191,6 +192,51 @@ describe('live certification evidence', () => {
         assert.match(code(sql), /SINGLE_N?CLOB/);
         assert.match(code(sql), new RegExp(`TestDS${expect.data_source_suffix}`));
         assert.match(sql, new RegExp(`TYPE\\s*=\\s*${expect.data_source_type}`));
+    });
+
+    it('R19: JSON setup still creates the data source its read needs', () => {
+        const expect = rule('R19').expect as {
+            formats_read_without_file_format: string[];
+            setup_must_contain: string;
+            setup_must_not_contain: string;
+        };
+        assert.deepStrictEqual(
+            [...FORMATS_READ_WITHOUT_FILE_FORMAT].sort(),
+            [...expect.formats_read_without_file_format].sort(),
+        );
+
+        const metadata = {
+            ...csvMetadata(),
+            file_name: 'doc.json',
+            file_path: 'C:/data/doc.json',
+            file_type: 'json',
+        } as GeneratorMetadata;
+        const storageUrl =
+            'https://acct.blob.core.windows.net/container/doc.json';
+        for (const platform of ['sql_server_2025', 'azure_sql_db'] as const) {
+            const setup = code(
+                generateCredentialSetup({
+                    dataSource: 'TestDS',
+                    metadata,
+                    targetPlatform: platform,
+                    storageUrl,
+                }),
+            );
+            assert.ok(setup.includes(expect.setup_must_contain), platform);
+            assert.ok(!setup.includes(expect.setup_must_not_contain), platform);
+
+            // The read that names a source must be able to find it.
+            const read = code(
+                generateOpenrowset(metadata, {
+                    dataSource: 'TestDS',
+                    targetPlatform: platform,
+                    storageUrl,
+                }),
+            );
+            for (const match of read.matchAll(/DATA_SOURCE\s*=\s*'([^']+)'/g)) {
+                assert.ok(setup.includes(`[${match[1]}]`), `${platform} ${match[1]}`);
+            }
+        }
     });
 
     it('R05: NDJSON is row framed and never read as one document', () => {

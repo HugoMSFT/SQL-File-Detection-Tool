@@ -584,6 +584,15 @@ class SQLGenerator:
     #: was never proven against a live file.
     DDL_ONLY_CERTIFIED_FORMATS = frozenset({'ORC'})
 
+    #: Formats that are read without any external file format, through
+    #: ``OPENROWSET(BULK ...)`` and a ``DATA_SOURCE``. They still need the
+    #: prerequisite data sources even though no external table is possible, so
+    #: the setup section must not bail out merely because the file format does
+    #: not exist. Live evidence: a remote JSON read whose data source was never
+    #: created fails with error 12703 / 46501, which looks exactly like a
+    #: generator defect and is not one.
+    FORMATS_READ_WITHOUT_FILE_FORMAT = frozenset({'JSON'})
+
 
     # ``FIRST_ROW`` is a CREATE EXTERNAL FILE FORMAT / FORMAT_OPTIONS option on
     # SQL Server 2022+, on Azure SQL Database and on Fabric SQL Database data
@@ -2223,18 +2232,19 @@ class SQLGenerator:
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         metadata = metadata or {}
         config = self._determine_format_config(metadata)
-        if target_platform not in self.EXTERNAL_FORMAT_PLATFORMS.get(
+        format_supported = target_platform in self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
-        ):
-            alternative = (
-                'Use OPENROWSET with SINGLE_CLOB and OPENJSON for JSON text.'
-                if config.format_type == 'JSON'
-                else 'SQL Server 2022 or later is required for this file format.'
-            )
+        )
+        # A file format and a data source are different objects. JSON has no
+        # CREATE EXTERNAL FILE FORMAT anywhere, but every remote JSON read this
+        # generator emits goes through OPENROWSET(BULK ...) with a DATA_SOURCE,
+        # so refusing to emit the data source leaves that statement referring to
+        # an object nothing creates - which is error 12703 / 46501 at run time.
+        if not format_supported and config.format_type not in self.FORMATS_READ_WITHOUT_FILE_FORMAT:
             return self._not_supported_message(
                 f'EXTERNAL DATA SOURCE SETUP ({config.format_type})',
                 target_platform,
-                alternative,
+                'SQL Server 2022 or later is required for this file format.',
             )
 
         data_source_raw = data_source
@@ -2282,6 +2292,16 @@ class SQLGenerator:
             f'-- ====================================================================',
             f'',
         ]
+        if not format_supported:
+            lines += [
+                f'-- NOTE: {_sql_comment(config.format_type)} has no CREATE EXTERNAL FILE FORMAT on',
+                f'-- {_sql_comment(platform_label)}, so no external table is possible and',
+                f'-- the EXTERNAL FILE FORMAT step below is omitted. The data sources',
+                f'-- are still required: the reads for this format go through',
+                f'-- OPENROWSET(BULK ...) with a DATA_SOURCE, which cannot resolve',
+                f'-- unless the source exists (error 12703 / 46501).',
+                f'',
+            ]
         lines += self._cloud_staging_notice(storage_url, target_platform,
                                             file_name)
         if auth_method in ('managed_identity', 'public'):
@@ -2434,8 +2454,15 @@ class SQLGenerator:
                                 schema_name: str = 'dbo',
                                 target_platform: str = DEFAULT_TARGET_PLATFORM,
                                 storage_url: str = None,
-                                data_source: str = 'MyDataSource') -> str:
-        """Generate comprehensive T-SQL JSON function examples using the file's real schema."""
+                                data_source: str = 'MyDataSource',
+                                file_path_override: str = None) -> str:
+        """Generate comprehensive T-SQL JSON function examples using the file's real schema.
+
+        ``file_path_override`` replaces the analysed path in the local
+        ``OPENROWSET(BULK ...)`` read. A file is analysed on the client and the
+        statement runs on the engine, and those are not the same filesystem;
+        without this the script names a path only the client can see.
+        """
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
@@ -2469,8 +2496,9 @@ class SQLGenerator:
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
 
-        file_path_sql = _metadata_text(
-            metadata, 'file_path', r'C:/data/file.json'
+        file_path_sql = (
+            file_path_override
+            or _metadata_text(metadata, 'file_path', r'C:/data/file.json')
         ).replace('\\', '/').replace("'", "''")
         json_bulk_source = None
         # The single-LOB read needs the separate TYPE = BLOB_STORAGE source,
@@ -2590,16 +2618,37 @@ class SQLGenerator:
                 f'',
             ]
         else:
+            lob_keyword = self._single_lob_keyword(metadata)
             lines += [
                 f'-- ----------------------------------------------------------------',
                 f'-- 1. OPENROWSET(BULK) + OPENJSON  (SQL Server 2016+ / Azure SQL)',
                 f'--    Loads the entire file as a single string, then parses as JSON.',
+                f'--    {lob_keyword} is the encoding-correct choice for this file.',
+                f'--    Live evidence: SINGLE_CLOB over a UTF-16 file fails with',
+                f'--    error 4806 because it requires a DBCS file; SINGLE_NCLOB reads it.',
                 f'-- ----------------------------------------------------------------',
                 f'DECLARE @json NVARCHAR(MAX);',
                 f'SELECT @json = BulkColumn',
-                f'FROM OPENROWSET(BULK N\'{file_path_sql}\', SINGLE_CLOB) AS j;',
+                f'FROM OPENROWSET(BULK N\'{file_path_sql}\', {lob_keyword}) AS j;',
                 f'',
             ]
+            if json_format == 'ndjson':
+                # An NDJSON file is not a JSON document, so reading it whole and
+                # handing it to OPENJSON cannot work - it is a sequence of
+                # independent documents, one per line. Wrapping the lines into an
+                # array makes the rest of this script mean what it says.
+                lines += [
+                    '-- NDJSON is a sequence of documents, one per line, not a single',
+                    '-- document. OPENJSON over the raw file text would fail, so the',
+                    '-- lines are wrapped into an array first. STRING_SPLIT does not',
+                    '-- guarantee order; each line is an independent document, so the',
+                    '-- set is the same either way.',
+                    'SELECT @json = N\'[\' + STRING_AGG('
+                    'REPLACE([value], CHAR(13), N\'\'), N\',\') + N\']\'',
+                    'FROM STRING_SPLIT(@json, CHAR(10))',
+                    'WHERE LTRIM(RTRIM(REPLACE([value], CHAR(13), N\'\'))) <> N\'\';',
+                    '',
+                ]
 
         if json_format == 'object':
             # Single object: direct JSON_VALUE
@@ -2989,7 +3038,8 @@ class SQLGenerator:
                               format_name: str = None,
                               external_table_name: str = None,
                               credential_name: str = None,
-                              auth_method: str = None) -> str:
+                              auth_method: str = None,
+                              file_path_override: str = None) -> str:
         """Return every generated section as one runnable, GO-separated script."""
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
@@ -2999,6 +3049,7 @@ class SQLGenerator:
             external_table_name=external_table_name,
             credential_name=credential_name,
             auth_method=auth_method,
+            file_path_override=file_path_override,
         )
 
         ordered_sections = [
@@ -3075,7 +3126,8 @@ class SQLGenerator:
                                 format_name: str = None,
                                 external_table_name: str = None,
                                 credential_name: str = None,
-                                auth_method: str = None) -> Dict[str, str]:
+                                auth_method: str = None,
+                                file_path_override: str = None) -> Dict[str, str]:
         """
         Return a dictionary with all generated SQL statement types:
             create_table, bulk_insert, openrowset, copy_into,
@@ -3115,7 +3167,8 @@ class SQLGenerator:
                                                      storage_url=storage_url,
                                                      data_source=data_source,
                                                      credential_name=credential_name,
-                                                     auth_method=auth_method),
+                                                     auth_method=auth_method,
+                                                     file_path_override=file_path_override),
             'openrowset': self.generate_openrowset(metadata,
                                                    storage_url=storage_url,
                                                    data_source=data_source,
@@ -3133,7 +3186,8 @@ class SQLGenerator:
             'json_functions': self.generate_json_functions(metadata, table_name, schema_name,
                                                           target_platform=target_platform,
                                                           storage_url=storage_url,
-                                                          data_source=data_source),
+                                                          data_source=data_source,
+                                                          file_path_override=file_path_override),
             'for_json': self.generate_for_json_path(metadata, table_name, schema_name,
                                                     target_platform=target_platform),
             'credential_setup': self.generate_credential_setup(data_source, fmt_name,

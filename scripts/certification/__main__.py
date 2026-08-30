@@ -128,7 +128,7 @@ def cmd_execute(args: argparse.Namespace) -> int:
         )
         return 2
 
-    from .execute import ExecutionOptions, execute_cell, probe_engine, read_inventory, run_cleanup
+    from .execute import ExecutionOptions, execute_cell, run_session
 
     with open(args.manifest, 'r', encoding='utf-8') as handle:
         manifest = json.load(handle)
@@ -169,26 +169,22 @@ def cmd_execute(args: argparse.Namespace) -> int:
     )
     redactor = Redactor(extra_literals=settings.redaction_literals())
     password = adapters.take_password()
+    factory = adapters.SessionFactory(settings, password)
+    del password
     try:
-        connection = adapters.connect(settings, password)
-    finally:
-        del password
-
-    with connection:
-        evidence.engine = redactor.redact_obj(probe_engine(connection))
-        evidence.inventory_before = read_inventory(connection, identity)
-        for cell in manifest['cells']:
-            evidence.cells.append(
-                execute_cell(
-                    connection, cell, policy=policy, redactor=redactor, options=options
-                )
-            )
-        cleanup = run_cleanup(
-            connection, identity, redactor=redactor, policy=policy
+        run_session(
+            factory,
+            manifest,
+            identity,
+            policy=policy,
+            redactor=redactor,
+            options=options,
+            evidence=evidence,
         )
-        evidence.inventory_after = cleanup['inventory_after']
-        evidence.cleanup_verified = cleanup['verified']
-        evidence.residue = cleanup['residue']
+    finally:
+        # The factory is the only thing that held the password, and it stops
+        # holding it here whatever happened above.
+        factory.dispose()
 
     _write_reports(evidence, args.out_prefix, redactor)
     summary = evidence.summary()

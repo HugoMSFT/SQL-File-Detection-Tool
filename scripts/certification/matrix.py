@@ -65,6 +65,39 @@ ACCESS_METHODS: Tuple[str, ...] = (
 #: why the platform is carried per-target rather than assumed.
 TARGETS: Tuple[str, ...] = ('vm', 'azure')
 
+#: What a cell needs to exist *before* its own statement can mean anything.
+#: Each name is a statement the generator itself produces, built with this run's
+#: names, so satisfying a prerequisite also certifies the generator that made it.
+#:
+#: The first live run executed every cell as an isolated fragment. An OPENROWSET
+#: with no external data source answers 12703, an external table with no file
+#: format answers 46501, a BULK INSERT with no target answers 208 - and all
+#: nineteen of those were filed as product defects. They were the harness
+#: forgetting to build the thing the statement referred to.
+PREREQUISITES: Tuple[str, ...] = (
+    'setup',          # credential (when needed) + external data sources
+    'file_format',    # CREATE EXTERNAL FILE FORMAT
+    'target_table',   # CREATE TABLE, the destination for a load
+)
+
+#: How a cell proves it did what it claimed.
+#:
+#: ``none``            the statement is DDL; success is "no error, and the
+#:                     object is in the catalog". Row counts do not apply and
+#:                     asserting them fails correct DDL.
+#: ``cell_result``     the cell's own final batch returns the rows; assert on it.
+#: ``target_table``    the cell loaded a table; count it afterwards.
+#: ``external_table``  the cell defined an external table; select from it.
+VERIFICATIONS: Tuple[str, ...] = ('none', 'cell_result', 'target_table', 'external_table')
+
+#: Storage authentication for a cell's generated setup. Public certification
+#: fixtures need no credential at all, and minting one per cell created database
+#: scoped credentials that nothing used - on SQL Server that meant trying to
+#: create them in ``master``, which fails with 33158 because ``master`` has no
+#: database master key. Managed identity keeps its own dedicated cell.
+DEFAULT_AUTH_METHOD = 'public'
+
+
 
 @dataclass(frozen=True)
 class Fixture:
@@ -154,10 +187,38 @@ class MatrixEntry:
     #: cannot be filed as a platform limitation.
     expected_errors: Sequence[int] = ()
     static_assertions: Sequence[Assertion] = field(default_factory=tuple)
+    #: Statements that must run, in this order, before the cell's own SQL. See
+    #: :data:`PREREQUISITES`.
+    requires: Sequence[str] = ()
+    #: How the cell is checked once it has run. See :data:`VERIFICATIONS`.
+    verification: str = 'none'
+    #: Object kind whose presence in the catalog proves a DDL cell worked.
+    #: ``None`` for cells that create nothing.
+    catalog_object: Optional[str] = None
+    #: Storage authentication for this cell's generated setup.
+    auth_method: str = DEFAULT_AUTH_METHOD
+    #: Cell whose object names this cell reuses. Set only where reusing them is
+    #: the point - a rerun is not a rerun if it writes to different names.
+    name_source: Optional[str] = None
     notes: str = ''
 
     def applies_to(self, target: str) -> bool:
         return target in self.targets
+
+    @property
+    def naming_cell(self) -> str:
+        """Cell id whose names this cell's objects carry."""
+        return self.name_source or self.cell_id
+
+    @property
+    def asserts_result_counts(self) -> bool:
+        """True when staged row/column counts are meaningful for this cell.
+
+        False for DDL. ``CREATE EXTERNAL FILE FORMAT`` returns no rows, and the
+        first live run marked C16 and C20 FAIL for returning zero rows from
+        statements that had in fact succeeded.
+        """
+        return self.verification in ('cell_result', 'target_table', 'external_table')
 
 
 def platform_for(target: str, *, vm_platform: str = 'sql_server_2025') -> str:
@@ -183,6 +244,7 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C01', 'csv_scalar', 'create_table', ('vm', 'azure'), 'none', 'H1',
         'A caller-supplied table and schema name must propagate to every '
         'statement so a file called orders.csv can never resolve to dbo.orders.',
+        catalog_object='table',
         static_assertions=(
             A('sql_excludes', '[dbo]', 'no dbo anywhere in generated code'),
             A('sql_matches', r'CREATE TABLE \[sqlfdt_cert_[0-9a-f]{8}\]\.'),
@@ -193,6 +255,8 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C02', 'utf8_bom', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H2',
         'UTF-8 with a BOM must load with CODEPAGE 65001 and the BOM must not '
         'appear in the first column value.',
+        requires=('setup', 'target_table'),
+        verification='target_table',
     ),
     MatrixEntry(
         'C03', 'utf16le_bom', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H2',
@@ -206,6 +270,8 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'available on the VM (an archived ERRORLOG) is not valid CSV, so its '
         "FORMAT = 'CSV' failure cannot be attributed to encoding.",
         accepts=('PASS', 'BLOCKED'),
+        requires=('setup', 'target_table'),
+        verification='target_table',
         static_assertions=(
             A('sql_matches', r"CODEPAGE\s*=\s*'1200'|DATAFILETYPE\s*=\s*'widechar'",
               'a UTF-16 bulk load must select one of the two proven wide paths'),
@@ -218,6 +284,8 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     MatrixEntry(
         'C04', 'cp932', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H2',
         'CP932 must map to CODEPAGE 932 and round-trip kana exactly.',
+        requires=('setup', 'target_table'),
+        verification='target_table',
         static_assertions=(A('sql_matches', r"CODEPAGE\s+=\s+'932'"),),
     ),
     MatrixEntry(
@@ -225,6 +293,7 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'CREATE EXTERNAL FILE FORMAT only accepts ENCODING UTF8 or UTF16; any '
         'other detected encoding must degrade to a documented choice rather '
         'than emit an invalid keyword.',
+        catalog_object='external file format',
         static_assertions=(
             A('sql_matches', r"ENCODING = '(?:UTF8|UTF16)'"),
         ),
@@ -233,15 +302,27 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C06', 'cp932', 'external_file_format', ('vm', 'azure'), 'abs', 'H2',
         'A CP932 file has no external-file-format encoding; the generator must '
         'say so instead of emitting ENCODING = CP932.',
+        catalog_object='external file format',
         static_assertions=(A('sql_excludes', "ENCODING = 'CP932'"),),
     ),
     # -- JSON ------------------------------------------------------------
     MatrixEntry(
-        'C07', 'json_array', 'json_functions', ('vm', 'azure'), 'none', 'H3',
-        'OPENJSON over a literal document must parse arrays and round-trip '
-        'non-ASCII text exactly.',
+        'C07', 'json_array', 'json_functions', ('vm', 'azure'), 'engine_local', 'H3',
+        'OPENJSON over a whole document read from a path the engine can open '
+        'itself must parse arrays and round-trip non-ASCII text exactly.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
-        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
+        verification='cell_result',
+        notes=(
+            'This reads a file, so it is engine_local, not access-free. The '
+            'first live run interpolated the *client* worktree path into a '
+            'statement running on the VM and recorded error 4860 (cannot bulk '
+            'load, file does not exist) as a product defect. It is not one: the '
+            'server was asked for a path only the client can see. The cell is '
+            'NOT_EXECUTABLE until the fixture is staged on the engine host, and '
+            'the staged path is passed through file_path_override. Azure SQL '
+            'Database has no local-file access at all, so it stays '
+            'NOT_EXECUTABLE there permanently.'
+        ),
     ),
     MatrixEntry(
         'C08', 'json_array', 'openrowset', ('vm', 'azure'), 'blob_storage', 'H3',
@@ -249,45 +330,77 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'Live engines accept SINGLE_CLOB with a BLOB_STORAGE DATA_SOURCE, so '
         'the generator must use it instead of framing the document through the '
         'CSV reader with non-printing terminators.',
+        requires=('setup',),
+        verification='cell_result',
         static_assertions=(
             A('sql_matches', r'SINGLE_CLOB',
               'BLOB_STORAGE bulk sources do support SINGLE_CLOB + DATA_SOURCE'),
         ),
     ),
     MatrixEntry(
-        'C09', 'json_array', 'openrowset', ('vm', 'azure'), 'abs', 'H3',
-        'Remote JSON through an abs:// virtualization source. The single-LOB '
-        'options are rejected by that connector - not by DATA_SOURCE as such, '
-        'which a TYPE = BLOB_STORAGE source accepts - so row framing is '
-        'correct here and only here. Live: abs:// row framing passed on both '
-        'engines, so PASS is the only acceptable outcome.',
+        'C09', 'ndjson', 'openrowset', ('vm', 'azure'), 'abs', 'H3',
+        'NDJSON row framing through an abs:// virtualization source. The '
+        'single-LOB options are rejected by that connector - not by DATA_SOURCE '
+        'as such, which a TYPE = BLOB_STORAGE source accepts - so row framing '
+        'is correct here and only here. Live: abs:// row framing returned 729 '
+        'rows of authoritative NDJSON on both engines.',
         accepts=('PASS',),
-        static_assertions=(A('sql_excludes', 'SINGLE_CLOB'),),
-    ),
-    MatrixEntry(
-        'C10', 'ndjson', 'json_functions', ('vm', 'azure'), 'none', 'H3',
-        'NDJSON is not a JSON document; the generator must frame it per line.',
-        accepts=('PASS', 'NOT_EXECUTABLE'),
-        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
+        requires=('setup',),
+        verification='cell_result',
         static_assertions=(
-            A('sql_matches', r"ROWTERMINATOR\s*=\s*'0x0a'"),
+            A('sql_excludes', 'SINGLE_CLOB'),
+            A('sql_matches', r"ROWTERMINATOR\s*=\s*'0x0a'",
+              'one document per line is what makes NDJSON readable'),
+        ),
+        notes=(
+            'This cell used to point at a whole-document JSON array, which the '
+            'generator correctly reads with SINGLE_CLOB - so the assertion that '
+            'SINGLE_CLOB is absent contradicted the live rule the same matrix '
+            'records. Row framing is an NDJSON property, so it takes the NDJSON '
+            'fixture.'
         ),
     ),
     MatrixEntry(
-        'C11', 'json_nested', 'json_functions', ('vm', 'azure'), 'none', 'H3',
+        'C10', 'json_array', 'openrowset', ('vm', 'azure'), 'abs', 'H3',
+        'Source selection by document shape. Given an abs:// URL for a whole '
+        'JSON document, the generator must still route the read through the '
+        'TYPE = BLOB_STORAGE companion source, because the abs:// connector '
+        'rejects the single-LOB options with error 5369 and a whole document '
+        'cannot be framed per line.',
+        requires=('setup',),
+        verification='cell_result',
+        static_assertions=(
+            A('sql_matches', r'SINGLE_CLOB'),
+            A('sql_matches', r"DATA_SOURCE\s*=\s*'[^']*_Bulk'",
+              'the whole-document read must select the BLOB_STORAGE source'),
+        ),
+    ),
+    MatrixEntry(
+        'C11', 'json_nested', 'json_functions', ('vm', 'azure'), 'engine_local', 'H3',
         'Nested objects and arrays must surface as JSON text, not as a silently '
         'flattened scalar.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
-        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
+        verification='cell_result',
+        notes=(
+            'Reads a file, so it is engine_local for the same reason as C07: '
+            'the client path is not a server path. NOT_EXECUTABLE until staged, '
+            'and permanently so on Azure SQL Database.'
+        ),
     ),
     MatrixEntry(
         'C12', 'json_object', 'for_json', ('vm', 'azure'), 'none', 'H3',
         'FOR JSON PATH with INCLUDE_NULL_VALUES must preserve explicit nulls.',
+        requires=('target_table',),
+        notes='FOR JSON selects from a table, so the table has to exist. It is '
+              'created empty on purpose: this cell certifies the shape of the '
+              'generated projection, and row counts belong to the load cells.',
     ),
     # -- CSV through both remote access shapes ---------------------------
     MatrixEntry(
         'C13', 'csv_scalar', 'openrowset', ('vm', 'azure'), 'abs', 'H6',
         'CSV through abs:// virtualization with FORMAT = CSV.',
+        requires=('setup',),
+        verification='cell_result',
         static_assertions=(
             A('sql_matches', r"FORMAT\s*=\s*'CSV'"),
             A('sql_excludes', 'FORMATFILE',
@@ -297,6 +410,8 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     MatrixEntry(
         'C14', 'csv_scalar', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H6',
         'CSV through a BLOB_STORAGE bulk source with BULK INSERT.',
+        requires=('setup', 'target_table'),
+        verification='target_table',
         static_assertions=(A('sql_matches', r"FORMAT\s*=\s*'CSV'"),),
     ),
     MatrixEntry(
@@ -304,6 +419,7 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'CSV from a path the engine can open itself. The generated OPENROWSET '
         'must be runnable, not a FORMATFILE placeholder.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
+        verification='cell_result',
         static_assertions=(
             A('sql_excludes', '<path_to_format_file.xml>',
               'placeholder FORMATFILE makes the statement non-executable'),
@@ -316,20 +432,32 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'A header row must be skipped by the external file format itself. '
         'Without FIRST_ROW the header is converted to the column type and the '
         'query fails with error 4864.',
+        catalog_object='external file format',
         static_assertions=(A('sql_matches', r'FIRST_ROW = 2'),),
+        notes='CREATE EXTERNAL FILE FORMAT returns no rows. The first live run '
+              'asserted a staged row count against it and recorded FAIL for DDL '
+              'that had in fact succeeded; success here is "no error, and the '
+              'format is in sys.external_file_formats".',
     ),
     MatrixEntry(
         'C17', 'csv_scalar', 'create_external_table', ('vm', 'azure'), 'abs', 'H_FIRSTROW',
         'External table over CSV returns the exact row count with no header row.',
+        requires=('setup', 'file_format'),
+        verification='external_table',
+        catalog_object='external table',
     ),
     MatrixEntry(
         'C18', 'parquet_all_types', 'create_external_table', ('vm', 'azure'), 'abs', 'H10',
         'Parquet external table: decimal scale, timestamp precision and nulls '
         'must survive.',
+        requires=('setup', 'file_format'),
+        verification='external_table',
+        catalog_object='external table',
     ),
     MatrixEntry(
         'C19', 'parquet_all_types', 'create_table', ('vm', 'azure'), 'none', 'H10',
         'Parquet logical types map to SQL types that can hold them.',
+        catalog_object='table',
         static_assertions=(
             A('sql_excludes', 'DECIMAL(38,10) NOT NULL',
               'inferred decimals must stay nullable unless proven otherwise'),
@@ -339,6 +467,7 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C20', 'csv_scalar', 'external_file_format', ('vm', 'azure'), 'abs', 'H5',
         'USE_TYPE_DEFAULT = TRUE replaces missing values with 0 / empty string '
         'and destroys null fidelity. The behaviour-safe default is FALSE.',
+        catalog_object='external file format',
         static_assertions=(
             A('sql_matches', r'USE_TYPE_DEFAULT = FALSE'),
         ),
@@ -394,17 +523,21 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'engines accepted and dropped the DDL, so the data path - not the '
         'DDL - is what remains uncertified.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
+        catalog_object='external file format',
     ),
     MatrixEntry(
         'C24', 'text', 'create_table', ('vm', 'azure'), 'none', 'H4',
         'Unstructured text maps to a single wide column, not to a fabricated '
         'delimited schema.',
+        catalog_object='table',
     ),
     # -- Delta -----------------------------------------------------------
     MatrixEntry(
         'C25', 'delta', 'openrowset', ('vm', 'azure'), 'abs', 'H10',
         'Delta must point at the table folder with a trailing slash, and the '
         'result certifies protocol minReader=1 / minWriter=2 only.',
+        requires=('setup',),
+        verification='cell_result',
         static_assertions=(
             A('sql_matches', r"FORMAT\s*=\s*'DELTA'"),
             A('sql_matches', r"BULK\s+'[^']*/'", 'Delta location needs a trailing slash'),
@@ -416,18 +549,29 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'Managed identity must be offered for private storage instead of '
         'forcing a database master key and a SAS secret into the script.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
+        auth_method='managed_identity',
+        catalog_object='external data source',
         static_assertions=(
             A('sql_matches', r"IDENTITY = 'MANAGED IDENTITY'"),
         ),
         notes='The harness never mutates RBAC; this cell certifies the emitted '
               'shape and, where a public container is used, that a '
-              'credential-free data source is offered first.',
+              'credential-free data source is offered first. It is the only '
+              'cell that asks for managed identity: minting a credential for '
+              'every public fixture would create objects nothing needs.',
     ),
     MatrixEntry(
         'C27', 'csv_scalar', 'credential_setup', ('vm', 'azure'), 'abs', 'H8',
         'A public container needs no credential at all; the generator must say '
         'so rather than demand a SAS token.',
         accepts=('PASS', 'NOT_EXECUTABLE'),
+        catalog_object='external data source',
+        static_assertions=(
+            A('sql_excludes', 'CREATE MASTER KEY',
+              'a public container needs no database master key'),
+            A('sql_excludes', 'DATABASE SCOPED CREDENTIAL',
+              'a public container needs no credential'),
+        ),
     ),
     # -- whole document --------------------------------------------------
     MatrixEntry(
@@ -442,6 +586,9 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'contract, not an accident. A rerun that fails is a defect, not a '
         'platform limitation, so UNSUPPORTED_EXPECTED is not on the list.',
         accepts=('PASS', 'EXEC_AFTER_SUBSTITUTION'),
+        name_source='C28',
+        notes='Names come from C28 on purpose. A rerun that invents fresh names '
+              'is a first run wearing a rerun label, and would certify nothing.',
     ),
     # -- negative --------------------------------------------------------
     MatrixEntry(

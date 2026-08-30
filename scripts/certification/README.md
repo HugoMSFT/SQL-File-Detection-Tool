@@ -78,6 +78,44 @@ without opening a socket. `--confirm` is required only when actually connecting.
 `execute` writes three artifacts: redacted JSON evidence, a JUnit XML file so a
 CI run can display the matrix, and a Markdown summary.
 
+## Run lifecycle
+
+A live `execute` does not send the cells as isolated fragments. It owns the
+state each cell needs:
+
+1. Connect to `master` and create a run database whose name carries the run
+   prefix (on a target where `allow_create_database` is set — Azure SQL Database
+   uses the database it was pointed at instead).
+2. Reconnect *into* that database and create the run schema. Nothing scoped is
+   run in `master`, which is also why no database scoped credential is created
+   there: SQL Server rejects that with error 33158.
+3. For each cell, run its prerequisites first — an `OPENROWSET` needs its
+   external data source, an external table needs the file format too, a
+   `BULK INSERT` needs a table to insert into. A prerequisite that fails marks
+   the cell `NOT_EXECUTABLE`, never `FAIL`. Errors 12703, 46501, 208 and 2760
+   are sequencing failures, not generator defects.
+4. Run the cell's own batches, one `GO`-separated batch at a time.
+5. Run the cell's verification query, where it has one, and assert row and
+   column counts against *that* result rather than against the cell. A DDL cell
+   asserts nothing about rows; it passes when it raises no error and its object
+   is present in the catalog afterwards.
+6. Clean up in inverse dependency order, then drop the run database from
+   `master` and prove with `DB_ID` that it is gone.
+
+Cells that read a file the engine cannot reach are planned as `NOT_EXECUTABLE`
+rather than run. A path is engine-local, not client-local: the file is analysed
+on this machine and the statement runs on the server, so interpolating a
+worktree path produces error 4860. Where a fixture is staged on the server, the
+staging file supplies an `engine_local` location and the generator is given that
+path explicitly.
+
+Public fixtures are read anonymously and emit no credential and no database
+master key. Managed identity is one cell of its own, not a blanket default.
+
+Transient connection failures are retried with bounded backoff. Authentication
+failures — 18456, 18452, 40615, 40532, 4060, 916, 18470 — are never retried,
+because retrying a bad credential is how accounts get locked out.
+
 ## Verdicts
 
 | Verdict | Meaning |

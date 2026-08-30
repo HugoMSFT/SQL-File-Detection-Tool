@@ -22,8 +22,9 @@ import getpass
 import inspect
 import os
 import sys
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+import time
+from dataclasses import dataclass, replace
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 from .redaction import normalize_value
 
@@ -41,7 +42,17 @@ ENV_PASSWORD = 'SQLFDT_CERT_PASSWORD'
 
 
 class AdapterUnavailable(RuntimeError):
-    """No usable driver is installed."""
+    """No usable driver is installed, or none of them could connect.
+
+    ``error_numbers`` carries the SQL error numbers the drivers reported. The
+    driver's own message is deliberately dropped - it routinely echoes the whole
+    connection string, login included - but the *number* is both safe and the
+    only reliable way to tell a login failure from a network blip.
+    """
+
+    def __init__(self, message: str, error_numbers: Sequence[int] = ()) -> None:
+        super().__init__(message)
+        self.error_numbers: Tuple[int, ...] = tuple(error_numbers)
 
 
 @dataclass
@@ -245,6 +256,170 @@ def _pymssql_kwargs(module: Any, settings: 'ConnectionSettings') -> Dict[str, An
     return kwargs
 
 
+#: SQL error numbers that mean "the credentials or the database name are wrong".
+#: Retrying any of these is pointless and, for a login failure, actively harmful:
+#: a few automatic retries are how an account gets locked out. They are matched
+#: by number rather than by message so a localised server cannot defeat the check.
+AUTH_ERROR_NUMBERS: FrozenSet[int] = frozenset({
+    18456,  # login failed for user
+    18452,  # login from an untrusted domain
+    40615,  # Azure SQL: client IP not allowed by the firewall
+    40532,  # Azure SQL: login must be in the form user@server
+    4060,   # cannot open the requested database
+    916,    # principal cannot access the database
+    18470,  # login disabled
+})
+
+#: How many times a *transient* connect failure is retried, and how long to wait.
+#: Bounded on purpose: an unbounded retry turns a dead endpoint into a hang, and
+#: the whole point of this harness is that a run either produces evidence or says
+#: plainly why it could not.
+CONNECT_ATTEMPTS = 4
+CONNECT_BACKOFF_S = (1.0, 3.0, 7.0)
+
+
+def _error_number(exc: BaseException) -> Optional[int]:
+    """The SQL error number a driver reported, if it reported one.
+
+    Drivers put it first in ``args``; :class:`AdapterUnavailable` carries the
+    numbers it collected from the drivers it tried, because its own message is
+    deliberately free of driver text.
+    """
+    carried = getattr(exc, 'error_numbers', ()) or ()
+    if carried:
+        return int(carried[0])
+    for value in getattr(exc, 'args', ()) or ():
+        if isinstance(value, int):
+            return value
+    return None
+
+
+def is_transient_connect_error(exc: BaseException) -> bool:
+    """True when retrying the connection could plausibly help.
+
+    Anything that names an authentication, firewall or database-selection
+    problem is permanent by definition, so it returns False and the caller
+    fails immediately - a few automatic retries are how an account gets locked
+    out. Everything else - a TCP timeout, a reset, a DNS blip, an Azure SQL
+    gateway mid-failover - is treated as transient.
+
+    A failure that reported *several* numbers is permanent if any of them is an
+    auth error: retrying cannot fix the one that will not budge.
+    """
+    numbers = [int(n) for n in (getattr(exc, 'error_numbers', ()) or ())]
+    if not numbers:
+        single = _error_number(exc)
+        numbers = [single] if single is not None else []
+    if any(n in AUTH_ERROR_NUMBERS for n in numbers):
+        return False
+    if isinstance(exc, AdapterUnavailable) and not numbers:
+        # "no driver is installed" cannot be fixed by waiting.
+        if 'install pymssql' in str(exc) or 'encryption parameter' in str(exc):
+            return False
+    return True
+
+
+def connect_with_retry(
+    settings: ConnectionSettings,
+    password: str,
+    *,
+    driver: Optional[str] = None,
+    attempts: int = CONNECT_ATTEMPTS,
+    backoff: Sequence[float] = CONNECT_BACKOFF_S,
+    sleep: Any = None,
+) -> Tuple[Connection, List[str]]:
+    """Connect, retrying only transient failures, and report sanitised attempts.
+
+    Azure SQL Database front-ends fail over, and a connection that succeeded by
+    hand a minute earlier can time out on the next try. Losing a whole
+    certification run to that is not evidence of anything. The returned list
+    carries one line per attempt naming the exception type and the SQL error
+    number only - never the host, the login, the password or the driver's
+    message, which routinely echoes the connection string back.
+    """
+    sleeper = sleep if sleep is not None else time.sleep
+    attempt_log: List[str] = []
+    last: Optional[BaseException] = None
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            connection = connect(settings, password, driver=driver)
+            if attempt > 1:
+                attempt_log.append(f'attempt {attempt}: connected')
+            return connection, attempt_log
+        except Exception as exc:
+            last = exc
+            number = _error_number(exc)
+            transient = is_transient_connect_error(exc)
+            attempt_log.append(
+                f'attempt {attempt}: {type(exc).__name__}'
+                + (f' number={number}' if number is not None else '')
+                + ('' if transient else ' (permanent, not retried)')
+            )
+            if not transient or attempt >= max(1, attempts):
+                break
+            delay = backoff[min(attempt - 1, len(backoff) - 1)] if backoff else 0
+            sleeper(delay)
+    raise AdapterUnavailable(
+        'could not connect after ' + str(len(attempt_log)) + ' attempt(s): '
+        + '; '.join(attempt_log)
+    ) from last
+
+
+class SessionFactory:
+    """Opens connections to one server, holding the password for reconnects.
+
+    A SQL Server run needs more than one connection: the disposable run database
+    is created from ``master``, every scoped statement must then run *inside*
+    that database, and the drop has to happen from ``master`` again because a
+    database cannot drop itself. That means the password outlives the first
+    connect, which is exactly the thing the rest of this module works to avoid,
+    so it is held here and nowhere else:
+
+    * it lives in one private attribute of one object with a known lifetime;
+    * :meth:`dispose` overwrites and drops it, and is called from a ``finally``;
+    * it is never an attribute of a :class:`Connection`, never a default
+      argument, never part of ``repr`` and never written to an artifact.
+    """
+
+    __slots__ = ('_settings', '_password', '_driver', 'attempts_log')
+
+    def __init__(
+        self,
+        settings: ConnectionSettings,
+        password: str,
+        *,
+        driver: Optional[str] = None,
+    ) -> None:
+        self._settings = settings
+        self._password = password
+        self._driver = driver
+        self.attempts_log: List[str] = []
+
+    def __repr__(self) -> str:  # pragma: no cover - defensive
+        return f'<SessionFactory database={self._settings.database!r}>'
+
+    @property
+    def default_database(self) -> str:
+        return self._settings.database
+
+    def connect(self, database: Optional[str] = None) -> Connection:
+        """Open a connection, optionally to a different database on the same server."""
+        if self._password is None:
+            raise AdapterUnavailable('this session factory has already been disposed')
+        settings = self._settings
+        if database and database != settings.database:
+            settings = replace(settings, database=database)
+        connection, log = connect_with_retry(
+            settings, self._password, driver=self._driver
+        )
+        self.attempts_log.extend(log)
+        return connection
+
+    def dispose(self) -> None:
+        """Forget the password. Safe to call more than once."""
+        self._password = None
+
+
 def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str] = None) -> Connection:
     """Open an encrypted connection using the first available driver."""
     candidates = [driver] if driver else available_drivers()
@@ -254,6 +429,7 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
             'itself has no database dependency'
         )
     errors: List[str] = []
+    numbers: List[int] = []
     for name in candidates:
         try:
             if name == 'pymssql':
@@ -281,8 +457,16 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
                 return Connection(raw, 'pyodbc')
         except Exception as exc:  # pragma: no cover - environment specific
             # The message can echo the connection string, so never let it out.
-            errors.append(f'{name}: {type(exc).__name__}')
-    raise AdapterUnavailable('could not connect using ' + ', '.join(errors))
+            # The SQL error number is safe and is what tells a login failure
+            # (never retry) from a transport blip (worth one more try).
+            number = _error_number(exc)
+            if number is not None:
+                numbers.append(number)
+            errors.append(
+                f'{name}: {type(exc).__name__}'
+                + (f' number={number}' if number is not None else '')
+            )
+    raise AdapterUnavailable('could not connect using ' + ', '.join(errors), numbers)
 
 
 def _first_odbc_driver(pyodbc_module: Any) -> str:  # pragma: no cover - env specific
@@ -301,6 +485,49 @@ def _first_odbc_driver(pyodbc_module: Any) -> str:  # pragma: no cover - env spe
 # ---------------------------------------------------------------------------
 # Inventory queries
 # ---------------------------------------------------------------------------
+
+#: The database a SQL Server session connects to in order to create or drop the
+#: disposable run database. A database cannot drop itself, so this connection is
+#: unavoidable - but nothing scoped is ever created here, which is why the run
+#: database exists in the first place.
+ADMIN_DATABASE = 'master'
+
+#: Catalog existence checks, keyed by the object kinds
+#: :func:`~.manifest.explicit_cleanup_statements` understands. This is how a DDL
+#: cell is judged: a ``CREATE`` that raised nothing and left the object in the
+#: catalog succeeded, and asking it for a row count instead - which is what the
+#: first live run did - fails a cell whose DDL was perfectly correct.
+#:
+#: ``{schema}`` and ``{name}`` are only ever filled with names
+#: :class:`~.runid.RunIdentity` has already accepted as its own, which is a
+#: closed ``[a-z0-9_]`` shape, so there is no free text here to inject.
+CATALOG_PRESENCE_QUERIES: Dict[str, str] = {
+    'table': (
+        'SELECT COUNT(*) FROM sys.tables AS t '
+        'JOIN sys.schemas AS s ON s.schema_id = t.schema_id '
+        "WHERE s.name = '{schema}' AND t.name = '{name}'"
+    ),
+    'external table': (
+        'SELECT COUNT(*) FROM sys.external_tables AS t '
+        'JOIN sys.schemas AS s ON s.schema_id = t.schema_id '
+        "WHERE s.name = '{schema}' AND t.name = '{name}'"
+    ),
+    'view': (
+        'SELECT COUNT(*) FROM sys.views AS v '
+        'JOIN sys.schemas AS s ON s.schema_id = v.schema_id '
+        "WHERE s.name = '{schema}' AND v.name = '{name}'"
+    ),
+    'external file format': (
+        "SELECT COUNT(*) FROM sys.external_file_formats WHERE name = '{name}'"
+    ),
+    'external data source': (
+        "SELECT COUNT(*) FROM sys.external_data_sources WHERE name = '{name}'"
+    ),
+    'database scoped credential': (
+        "SELECT COUNT(*) FROM sys.database_scoped_credentials WHERE name = '{name}'"
+    ),
+    'schema': "SELECT COUNT(*) FROM sys.schemas WHERE name = '{name}'",
+}
 
 #: Read-only probes captured before any DDL, so the report can state what the
 #: engine actually was rather than what the plan assumed.

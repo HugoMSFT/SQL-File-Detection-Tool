@@ -42,6 +42,7 @@ import {
 import {
     AZURE_SQL_PLATFORMS,
     DDL_ONLY_CERTIFIED_FORMATS,
+    FORMATS_READ_WITHOUT_FILE_FORMAT,
     DEFAULT_TARGET_PLATFORM,
     externalFormatPlatforms,
     FIRST_ROW_FORMAT_PLATFORMS,
@@ -79,6 +80,7 @@ import {
     columnNameList,
     formatSampleRows,
     resolveAuthMethod,
+    singleLobKeyword,
     splitextRoot,
 } from './generatorHelpers';
 import {
@@ -198,6 +200,12 @@ export interface StatementOptions {
     targetPlatform?: TargetPlatform | string | null;
     storageUrl?: string | null;
     dataSource?: string;
+    /**
+     * Path the *engine* can open, replacing the analysed client path. A file is
+     * analysed on the client and the statement runs on the server, and those are
+     * not the same filesystem.
+     */
+    filePathOverride?: string | null;
 }
 
 /** Build platform-specific quick-load guidance appended to CREATE TABLE. */
@@ -1087,15 +1095,19 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         metadata ?? ({ file_path: '' } as GeneratorMetadata),
     );
     const supportedPlatforms = externalFormatPlatforms(config.format_type);
-    if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
-        const alternative =
-            config.format_type === 'JSON'
-                ? 'Use OPENROWSET with SINGLE_CLOB and OPENJSON for JSON text.'
-                : 'SQL Server 2022 or later is required for this file format.';
+    const formatSupported = Boolean(
+        supportedPlatforms && supportedPlatforms.has(targetPlatform),
+    );
+    // A file format and a data source are different objects. JSON has no
+    // CREATE EXTERNAL FILE FORMAT anywhere, but every remote JSON read this
+    // generator emits goes through OPENROWSET(BULK ...) with a DATA_SOURCE, so
+    // refusing to emit the data source leaves that statement referring to an
+    // object nothing creates - which is error 12703 / 46501 at run time.
+    if (!formatSupported && !FORMATS_READ_WITHOUT_FILE_FORMAT.has(config.format_type)) {
         return notSupportedMessage(
             `EXTERNAL DATA SOURCE SETUP (${config.format_type})`,
             targetPlatform,
-            alternative,
+            'SQL Server 2022 or later is required for this file format.',
         );
     }
 
@@ -1140,6 +1152,17 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         '-- ====================================================================',
         '',
     ];
+    if (!formatSupported) {
+        lines.push(
+            `-- NOTE: ${sqlComment(config.format_type)} has no CREATE EXTERNAL FILE FORMAT on`,
+            `-- ${sqlComment(platformLabel)}, so no external table is possible and`,
+            '-- the EXTERNAL FILE FORMAT step below is omitted. The data sources',
+            '-- are still required: the reads for this format go through',
+            '-- OPENROWSET(BULK ...) with a DATA_SOURCE, which cannot resolve',
+            '-- unless the source exists (error 12703 / 46501).',
+            '',
+        );
+    }
     lines.push(...cloudStagingNotice(storageUrl, targetPlatform, fileName));
     lines.push(...masterKeyLines(authMethod));
 
@@ -1266,8 +1289,13 @@ export function generateJsonFunctions(
     );
     const schemaName = escapeIdentifier(options.schemaName ?? 'dbo');
 
+    // A file is analysed on the client and the statement runs on the engine, and
+    // those are not the same filesystem. `filePathOverride` is how a caller
+    // names the path the *server* can open.
     let filePathSql = quoteLiteral(
-        String(metadata.file_path ?? 'C:/data/file.json').split('\\').join('/'),
+        String(options.filePathOverride || metadata.file_path || 'C:/data/file.json')
+            .split('\\')
+            .join('/'),
     );
     let jsonBulkSource: string | null = null;
     // The single-LOB read needs the separate TYPE = BLOB_STORAGE source, which
@@ -1382,16 +1410,38 @@ export function generateJsonFunctions(
         lines.push(...jsonRowFrameOptions());
         lines.push(') WITH (json_doc NVARCHAR(MAX)) AS j;', '');
     } else {
+        const lobKeyword = singleLobKeyword(metadata.encoding);
         lines.push(
             '-- ----------------------------------------------------------------',
             '-- 1. OPENROWSET(BULK) + OPENJSON  (SQL Server 2016+ / Azure SQL)',
             '--    Loads the entire file as a single string, then parses as JSON.',
+            `--    ${lobKeyword} is the encoding-correct choice for this file.`,
+            '--    Live evidence: SINGLE_CLOB over a UTF-16 file fails with',
+            '--    error 4806 because it requires a DBCS file; SINGLE_NCLOB reads it.',
             '-- ----------------------------------------------------------------',
             'DECLARE @json NVARCHAR(MAX);',
             'SELECT @json = BulkColumn',
-            `FROM OPENROWSET(BULK N'${filePathSql}', SINGLE_CLOB) AS j;`,
+            `FROM OPENROWSET(BULK N'${filePathSql}', ${lobKeyword}) AS j;`,
             '',
         );
+        if (jsonFormat === 'ndjson') {
+            // An NDJSON file is not a JSON document, so reading it whole and
+            // handing it to OPENJSON cannot work - it is a sequence of
+            // independent documents, one per line. Wrapping the lines into an
+            // array makes the rest of this script mean what it says.
+            lines.push(
+                '-- NDJSON is a sequence of documents, one per line, not a single',
+                '-- document. OPENJSON over the raw file text would fail, so the',
+                '-- lines are wrapped into an array first. STRING_SPLIT does not',
+                '-- guarantee order; each line is an independent document, so the',
+                '-- set is the same either way.',
+                "SELECT @json = N'[' + STRING_AGG("
+                    + "REPLACE([value], CHAR(13), N''), N',') + N']'",
+                'FROM STRING_SPLIT(@json, CHAR(10))',
+                "WHERE LTRIM(RTRIM(REPLACE([value], CHAR(13), N''))) <> N'';",
+                '',
+            );
+        }
     }
 
     if (jsonFormat === 'object') {

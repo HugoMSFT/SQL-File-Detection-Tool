@@ -118,6 +118,16 @@ class CellResult:
     #: staged (or is unreachable on this target), rather than because anything
     #: about the generated SQL was wrong.
     unstaged: bool = False
+    #: What the cell's prerequisites did. An OPENROWSET needs its data source and
+    #: an external table needs its file format; running the cell's fragment
+    #: alone produces errors 12703 / 46501 / 208 / 2760 that describe the
+    #: harness, not the generator.
+    setup_steps: List[Dict[str, Any]] = field(default_factory=list)
+    #: Set when a prerequisite failed, so the cell never got to run its own SQL.
+    prerequisite_failed: bool = False
+    #: Catalog object the cell was supposed to create, and whether it was there
+    #: afterwards. This is the success criterion for DDL, which returns no rows.
+    catalog_object: Optional[str] = None
 
     @property
     def accepted(self) -> bool:
@@ -129,14 +139,17 @@ class CellResult:
 
     @property
     def not_certified(self) -> bool:
-        """True when nothing was proved because the fixture was not staged.
+        """True when nothing was proved through no fault of the generator.
 
-        This is a coverage gap, not a defect: the generator produced SQL the
-        harness was willing to send, and the only reason it did not run is that
-        no one staged the file or granted access. Reporting these as defects
-        made an offline plan look like 21 broken cells.
+        Two cases. The fixture was never staged, so the SQL the harness was
+        willing to send had nowhere to read from. Or a prerequisite failed, so
+        the cell's own statement never ran - and a statement that never ran
+        cannot have a defect. Reporting these as defects made an offline plan
+        look like 21 broken cells, and made one live run look like 19.
         """
-        return self.verdict == NOT_EXECUTABLE and self.unstaged
+        if self.verdict != NOT_EXECUTABLE:
+            return False
+        return self.unstaged or self.prerequisite_failed
 
     @property
     def is_defect(self) -> bool:
@@ -180,6 +193,9 @@ class CellResult:
             'cleanup': self.cleanup,
             'notes': self.notes,
             'unstaged': self.unstaged,
+            'setup_steps': self.setup_steps,
+            'prerequisite_failed': self.prerequisite_failed,
+            'catalog_object': self.catalog_object,
             'not_certified': self.not_certified,
         }
 
@@ -199,6 +215,10 @@ class RunEvidence:
     cells: List[CellResult] = field(default_factory=list)
     cleanup_verified: bool = False
     residue: List[str] = field(default_factory=list)
+    #: What the run did with its database and schema: whether the disposable
+    #: database was created, whether the run schema was created, whether the
+    #: database was dropped again, and the sanitised connect-attempt log.
+    lifecycle: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def defects(self) -> List[CellResult]:
@@ -226,6 +246,7 @@ class RunEvidence:
             'started_at': self.started_at,
             'finished_at': self.finished_at or datetime.now(timezone.utc).isoformat(),
             'engine': self.engine,
+            'lifecycle': self.lifecycle,
             'inventory_before': self.inventory_before,
             'inventory_after': self.inventory_after,
             'cleanup_verified': self.cleanup_verified,
@@ -277,6 +298,7 @@ def check_result_assertions(
     column_count: Optional[int] = None,
     values: Optional[Dict[str, Any]] = None,
     error_number: Optional[int] = None,
+    catalog_present: Optional[bool] = None,
 ) -> List[AssertionResult]:
     """Check execution-time assertions against what the server returned."""
     values = values or {}
@@ -301,6 +323,14 @@ def check_result_assertions(
         elif assertion.kind == 'error_number':
             results.append(AssertionResult('error_number', assertion.value, error_number,
                                            error_number == assertion.value,
+                                           assertion.detail))
+        elif assertion.kind == 'catalog_present':
+            # The success criterion for DDL. CREATE EXTERNAL FILE FORMAT
+            # returns no rows, so "did it work?" is answered by the catalog,
+            # not by a row count.
+            results.append(AssertionResult('catalog_present', assertion.value,
+                                           catalog_present,
+                                           catalog_present is True,
                                            assertion.detail))
     return results
 

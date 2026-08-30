@@ -287,6 +287,20 @@
           "fabric_sql_db"
         ]
       }
+    },
+    {
+      "id": "R19",
+      "hypothesis": "H3",
+      "evidence": "live",
+      "engines": ["sql_server_2025", "azure_sql_db"],
+      "rule": "data_source_setup_exists_for_formats_read_without_a_file_format",
+      "statement": "A file format and a data source are different objects. JSON has no CREATE EXTERNAL FILE FORMAT on either engine, but every remote JSON read the generator emits goes through OPENROWSET(BULK ...) with a DATA_SOURCE. The setup section must therefore still create the data sources for JSON, and say why no external file format follows.",
+      "expect": {
+        "formats_read_without_file_format": ["JSON"],
+        "setup_must_contain": "CREATE EXTERNAL DATA SOURCE",
+        "setup_must_not_contain": "CREATE EXTERNAL FILE FORMAT"
+      },
+      "why": "A remote JSON cell whose data source nobody created fails with error 12703 / 46501. That reads exactly like a generator defect and is not one: it means the prerequisite was never emitted. Live run v4 produced a run of such failures."
     }
   ]
 }

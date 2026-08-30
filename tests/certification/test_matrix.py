@@ -231,6 +231,52 @@ def test_whole_document_json_uses_a_bulk_blob_storage_source(rules):
     assert not re.search(r'SINGLE_N?CLOB', _code(ndjson))
 
 
+def test_json_setup_still_creates_the_data_source_its_openrowset_needs(rules):
+    """R19. A file format and a data source are different objects.
+
+    JSON has no CREATE EXTERNAL FILE FORMAT anywhere, but the generated JSON
+    read names a DATA_SOURCE. Refusing to emit the setup left that statement
+    referring to an object nothing creates - error 12703 / 46501 at run time,
+    which reads like a generator defect and is not one.
+    """
+    expect = rules['R19']['expect']
+    generator = SQLGenerator()
+    metadata = {
+        'file_path': 'C:/data/doc.json',
+        'file_name': 'doc.json',
+        'file_type': 'json',
+        'json_format': 'array',
+        'encoding': 'utf-8',
+        'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+    }
+    for platform in ('sql_server_2025', 'azure_sql_db'):
+        setup = generator.generate_credential_setup(
+            data_source='TestDS',
+            metadata=metadata,
+            target_platform=platform,
+            storage_url='https://acct.blob.core.windows.net/container/doc.json',
+        )
+        body = _code(setup)
+        assert expect['setup_must_contain'] in body, platform
+        assert expect['setup_must_not_contain'] not in body, platform
+        # The read that needs it must be able to find it by name.
+        read = _code(generator.generate_openrowset(
+            metadata,
+            data_source='TestDS',
+            storage_url='https://acct.blob.core.windows.net/container/doc.json',
+            target_platform=platform,
+        ))
+        for name in re.findall(r"DATA_SOURCE\s*=\s*'([^']+)'", read):
+            assert f'[{name}]' in body, (platform, name)
+
+
+def test_formats_read_without_a_file_format_match_the_evidence(rules):
+    expect = rules['R19']['expect']
+    assert sorted(SQLGenerator.FORMATS_READ_WITHOUT_FILE_FORMAT) == sorted(
+        expect['formats_read_without_file_format']
+    )
+
+
 def test_utf16_bulk_insert_keeps_the_certified_encoding_options(rules):
     expect = rules['R02']['expect']
     sql = SQLGenerator().generate_bulk_insert(
