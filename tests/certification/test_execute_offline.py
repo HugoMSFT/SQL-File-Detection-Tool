@@ -220,6 +220,52 @@ def test_live_execute_still_refuses_without_confirm(tmp_path):
     assert '--confirm' in run.stderr
 
 
+def test_verify_re_gates_prerequisite_and_verification_batches(tmp_path):
+    """`verify` is the human review gate, so it must look at every batch sent.
+
+    Prerequisite SQL is the part that creates credentials and data sources. A
+    manifest whose setup batch had been edited used to pass `verify: OK`
+    because only the cell's own batches were re-evaluated.
+    """
+    env = dict(os.environ)
+    env['PYTHONPATH'] = SCRIPTS
+    manifest = tmp_path / 'plan.json'
+    subprocess.run(
+        [sys.executable, '-m', 'certification', 'plan', '--target', 'azure',
+         '--emit-sql', '--out', str(manifest)],
+        cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=True,
+    )
+    clean = subprocess.run(
+        [sys.executable, '-m', 'certification', 'verify', '--manifest', str(manifest)],
+        cwd=REPO_ROOT, env=env, capture_output=True, text=True,
+    )
+    assert clean.returncode == 0, clean.stdout + clean.stderr
+
+    document = json.loads(manifest.read_text(encoding='utf-8'))
+    tampered = None
+    for cell in document['cells']:
+        for step in cell.get('setup') or []:
+            for batch in step.get('batches') or []:
+                if batch.get('sql'):
+                    batch['sql'] = 'DROP TABLE [dbo].[orders];'
+                    tampered = cell['cell_id']
+                    break
+            if tampered:
+                break
+        if tampered:
+            break
+    assert tampered, 'the plan has no prerequisite batch to tamper with'
+    manifest.write_text(json.dumps(document), encoding='utf-8')
+
+    caught = subprocess.run(
+        [sys.executable, '-m', 'certification', 'verify', '--manifest', str(manifest)],
+        cwd=REPO_ROOT, env=env, capture_output=True, text=True,
+    )
+    assert caught.returncode == 1
+    assert 'setup[' in caught.stdout
+    assert tampered in caught.stdout
+
+
 def test_evidence_documents_are_free_of_secrets(identity, policy, tmp_path):
     from certification.evidence import write_json, write_junit, write_markdown
     from certification.redaction import assert_no_secrets

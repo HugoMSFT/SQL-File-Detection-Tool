@@ -79,6 +79,13 @@ def probe_engine(connection: Connection) -> Dict[str, Any]:
     return facts
 
 
+#: Marks an inventory kind that could not be read at all. It is deliberately
+#: distinguishable, because "nothing is there" and "I could not look" must not
+#: produce the same verdict: the strongest claim this harness makes is that
+#: cleanup is *proved* by difference rather than asserted.
+INVENTORY_UNREAD = '<inventory failed'
+
+
 def read_inventory(connection: Connection, identity: RunIdentity) -> Dict[str, List[str]]:
     """List the objects that exist right now, per object kind."""
     inventory: Dict[str, List[str]] = {}
@@ -88,8 +95,16 @@ def read_inventory(connection: Connection, identity: RunIdentity) -> Dict[str, L
             result = connection.execute(sql, textual=True)
             inventory[kind] = [str(row[0]) for row in result.rows]
         except Exception as exc:
-            inventory[kind] = [f'<inventory failed: {type(exc).__name__}>']
+            inventory[kind] = [f'{INVENTORY_UNREAD}: {type(exc).__name__}>']
     return inventory
+
+
+def unreadable_inventory_kinds(inventory: Dict[str, List[str]]) -> List[str]:
+    """Object kinds whose inventory query failed, so nothing can be proved."""
+    return sorted(
+        kind for kind, names in inventory.items()
+        if any(str(name).startswith(INVENTORY_UNREAD) for name in names)
+    )
 
 
 def certification_residue(inventory: Dict[str, List[str]]) -> List[str]:
@@ -115,6 +130,16 @@ def _decode_error_arg(value: Any) -> str:
     return str(value)
 
 
+#: A native SQL error number as pyodbc reports it. pyodbc raises
+#: ``Error(sqlstate, message)`` with both args as strings and the native number
+#: parenthesised in the message - ``[42000] [Microsoft][ODBC Driver 18 ...]
+#: (102) Incorrect syntax near ...`` - so a cell that expects error 102 must
+#: read the number out of the text. pymssql puts it first in ``args`` as an int.
+#: Without this, every predicted platform refusal was recorded as a FAIL and
+#: counted as a product defect.
+_NATIVE_NUMBER_RE = re.compile(r'\((\d{3,5})\)')
+
+
 def _error_facts(exc: Exception) -> Dict[str, Any]:
     """Extract number / SQLSTATE / message without leaking the connection."""
     number: Optional[int] = None
@@ -136,6 +161,10 @@ def _error_facts(exc: Exception) -> Dict[str, Any]:
                     message = _decode_error_arg(args[1])
     if not message:
         message = _decode_error_arg(exc)
+    if number is None:
+        found = _NATIVE_NUMBER_RE.search(message)
+        if found:
+            number = int(found.group(1))
     return {'error_number': number, 'sqlstate': sqlstate, 'error_message': message}
 
 
@@ -589,11 +618,17 @@ def run_cleanup(
             )
     after = read_inventory(connection, identity)
     residue = [name for name in certification_residue(after) if identity.owns(name.split(':', 1)[1])]
+    # An inventory that could not be read proves nothing. Reporting
+    # ``verified: True`` off the back of a failed query would turn the harness's
+    # strongest claim - cleanup demonstrated by before/after difference - into a
+    # bare assertion the moment a connection drops or a permission is missing.
+    unreadable = unreadable_inventory_kinds(after)
     return {
         'statements': executed,
         'inventory_after': after,
         'residue': residue,
-        'verified': not residue,
+        'unreadable_inventory': unreadable,
+        'verified': not residue and not unreadable,
         'database_dropped': bool(drop_database),
     }
 
@@ -700,68 +735,78 @@ def run_session(
     work: Optional[Connection] = None
 
     try:
-        if create_database:
-            admin = factory.connect(ADMIN_DATABASE)
-            evidence.engine = redactor.redact_obj(probe_engine(admin))
-            created = create_run_database(admin, identity)
-            lifecycle['created_database'] = bool(created.get('ok'))
-            if not created.get('ok'):
-                lifecycle['create_error'] = redactor.redact(str(created.get('error', '')))
-                evidence.lifecycle = lifecycle
+        try:
+            if create_database:
+                admin = factory.connect(ADMIN_DATABASE)
+                evidence.engine = redactor.redact_obj(probe_engine(admin))
+                created = create_run_database(admin, identity)
+                lifecycle['created_database'] = bool(created.get('ok'))
+                if not created.get('ok'):
+                    lifecycle['create_error'] = redactor.redact(
+                        str(created.get('error', ''))
+                    )
+                    evidence.cleanup_verified = False
+                    return evidence
+                work = factory.connect(identity.database)
+            else:
+                work = factory.connect()
+                evidence.engine = redactor.redact_obj(probe_engine(work))
+
+            schema = _ensure_schema(work, identity)
+            lifecycle['schema'] = identity.schema
+            lifecycle['schema_created'] = bool(schema.get('ok'))
+            if not schema.get('ok'):
+                lifecycle['schema_error'] = redactor.redact(str(schema.get('error', '')))
                 evidence.cleanup_verified = False
                 return evidence
-            work = factory.connect(identity.database)
-        else:
-            work = factory.connect()
-            evidence.engine = redactor.redact_obj(probe_engine(work))
 
-        schema = _ensure_schema(work, identity)
-        lifecycle['schema'] = identity.schema
-        lifecycle['schema_created'] = bool(schema.get('ok'))
-        if not schema.get('ok'):
-            lifecycle['schema_error'] = redactor.redact(str(schema.get('error', '')))
-            evidence.lifecycle = lifecycle
-            evidence.cleanup_verified = False
-            return evidence
+            evidence.inventory_before = read_inventory(work, identity)
+            for cell in manifest['cells']:
+                evidence.cells.append(
+                    execute_cell(
+                        work, cell, policy=policy, redactor=redactor, options=options
+                    )
+                )
 
-        evidence.inventory_before = read_inventory(work, identity)
-        for cell in manifest['cells']:
-            evidence.cells.append(
-                execute_cell(work, cell, policy=policy, redactor=redactor, options=options)
-            )
-
-        cleanup = run_cleanup(work, identity, redactor=redactor, policy=policy)
-        evidence.inventory_after = cleanup['inventory_after']
-        evidence.cleanup_verified = cleanup['verified']
-        evidence.residue = cleanup['residue']
-    finally:
-        if work is not None:
-            work.close()
-
-    if create_database:
-        # The drop happens from master because a database cannot drop itself,
-        # and it happens after the work connection is closed so nothing is
-        # still holding it.
-        try:
-            if admin is None:
-                admin = factory.connect(ADMIN_DATABASE)
-            dropped = drop_run_database(admin, identity)
-            lifecycle['dropped_database'] = bool(dropped.get('dropped'))
-            if dropped.get('errors'):
-                lifecycle['drop_errors'] = [
-                    redactor.redact(str(e)) for e in dropped['errors']
-                ]
-            if not dropped.get('dropped'):
-                evidence.cleanup_verified = False
-                evidence.residue = list(evidence.residue) + [
-                    f'database:{identity.database}'
-                ]
+            cleanup = run_cleanup(work, identity, redactor=redactor, policy=policy)
+            evidence.inventory_after = cleanup['inventory_after']
+            evidence.cleanup_verified = cleanup['verified']
+            evidence.residue = cleanup['residue']
+            if cleanup.get('unreadable_inventory'):
+                lifecycle['unreadable_inventory'] = cleanup['unreadable_inventory']
         finally:
+            if work is not None:
+                work.close()
+            # The drop belongs in a finally, not after the try. An early return
+            # from a failed schema, an exception from a cell, or a Ctrl-C would
+            # otherwise leave a live database on the server that no artifact
+            # even names. It is guarded on this run having created it, so it can
+            # only ever drop what it made.
+            if lifecycle['created_database']:
+                try:
+                    if admin is None:
+                        admin = factory.connect(ADMIN_DATABASE)
+                    dropped = drop_run_database(admin, identity)
+                    lifecycle['dropped_database'] = bool(dropped.get('dropped'))
+                    if dropped.get('errors'):
+                        lifecycle['drop_errors'] = [
+                            redactor.redact(str(e)) for e in dropped['errors']
+                        ]
+                    if not dropped.get('dropped'):
+                        evidence.cleanup_verified = False
+                        evidence.residue = list(evidence.residue) + [
+                            f'database:{identity.database}'
+                        ]
+                except Exception as exc:  # pragma: no cover - defensive
+                    lifecycle['drop_errors'] = [redactor.redact(str(exc))]
+                    evidence.cleanup_verified = False
+                    evidence.residue = list(evidence.residue) + [
+                        f'database:{identity.database}'
+                    ]
             if admin is not None:
                 admin.close()
-    elif admin is not None:  # pragma: no cover - defensive
-        admin.close()
+    finally:
+        lifecycle['connect_attempts'] = list(factory.attempts_log)
+        evidence.lifecycle = lifecycle
 
-    lifecycle['connect_attempts'] = list(factory.attempts_log)
-    evidence.lifecycle = lifecycle
     return evidence

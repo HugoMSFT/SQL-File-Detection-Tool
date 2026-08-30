@@ -121,6 +121,20 @@ test suites now read the same machine-readable evidence file.
   rows, which is what they are supposed to do. Result assertions now attach only
   to the cells that run a query; a DDL cell passes when it raises no error and
   its object is present in the catalog afterwards.
+- **The harness cannot mistake an unanswered question for a "no".** A catalog
+  presence check that could not be read is now recorded as unverified rather than
+  as an absent object, and a cleanup inventory that could not be read leaves
+  `cleanup_verified` false and names the unreadable inventory kinds - previously
+  a permission error would have reported a clean teardown. Both driver exception
+  shapes are decoded, so an error number is recovered whether the driver passes
+  it as an integer (pymssql) or parenthesised inside the message (pyodbc); until
+  now every predicted refusal was read as a defect under pyodbc, and an
+  unrecognised login failure could be retried. Retry classification fails closed:
+  an unclassifiable failure is not replayed unless it also looks like a transport
+  failure. The run database is dropped in a `finally`, so a failure to create the
+  run schema can no longer leave a live database behind, and `verify` re-gates
+  every batch a run would send - prerequisite setup and verification queries
+  included - naming the block it refused.
 
 ### Changed
 

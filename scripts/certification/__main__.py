@@ -68,6 +68,20 @@ def cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _all_batch_blocks(cell):
+    """Every named batch list a cell will send, in execution order.
+
+    A cell is no longer one block of SQL: prerequisites run first, then the
+    cell, then a verification query. All three go to the server, so all three
+    have to pass the same gate.
+    """
+    for index, step in enumerate(cell.get('setup') or []):
+        yield f'setup[{index}]:{step.get("requirement", "?")}', step.get('batches') or []
+    yield 'cell', cell.get('batches') or []
+    verification = cell.get('verification') or {}
+    yield 'verification', verification.get('batches') or []
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     with open(args.manifest, 'r', encoding='utf-8') as handle:
         manifest = json.load(handle)
@@ -79,19 +93,24 @@ def cmd_verify(args: argparse.Namespace) -> int:
     )
     problems = 0
     for cell in manifest['cells']:
-        for batch in cell.get('batches', []):
-            sql = batch.get('sql')
-            if sql is None:
-                continue
-            report = evaluate_batch(sql, policy)
-            recorded = batch['safety']['allowed']
-            if report.allowed != recorded:
-                problems += 1
-                print(
-                    f'{cell["cell_id"]} batch {batch["batch_index"]}: manifest says '
-                    f'allowed={recorded}, gate says allowed={report.allowed} '
-                    f'({", ".join(report.codes)})'
-                )
+        # Every batch the run will send, not just the cell's own. Prerequisite
+        # SQL is the part that creates credentials and data sources, and the
+        # verification query names the objects it reads - reporting "verify: OK"
+        # without looking at those would be reviewing the wrong thing.
+        for block, batches in _all_batch_blocks(cell):
+            for batch in batches:
+                sql = batch.get('sql')
+                if sql is None:
+                    continue
+                report = evaluate_batch(sql, policy)
+                recorded = batch['safety']['allowed']
+                if report.allowed != recorded:
+                    problems += 1
+                    print(
+                        f'{cell["cell_id"]} {block} batch {batch["batch_index"]}: '
+                        f'manifest says allowed={recorded}, gate says '
+                        f'allowed={report.allowed} ({", ".join(report.codes)})'
+                    )
     missing = uncovered_hypotheses()
     if missing:
         problems += len(missing)

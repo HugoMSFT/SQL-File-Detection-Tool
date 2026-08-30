@@ -22,8 +22,10 @@ from certification.adapters import (
     AdapterUnavailable,
     Connection,
     ConnectionSettings,
+    _error_number,
     _pymssql_kwargs,
     connect,
+    is_transient_connect_error,
 )
 
 
@@ -197,6 +199,65 @@ def test_connect_failure_never_echoes_the_connection_arguments(monkeypatch):
     assert 'not-a-real-password' not in message
     assert 'certuser' not in message
     assert 'cert.example.invalid' not in message
+
+
+# -- retry classification ----------------------------------------------------
+#
+# Retrying a login is how an account gets locked out, so the classifier has to
+# see the error number whatever shape the driver reports it in. pymssql puts an
+# int first in `args`; pyodbc puts a SQLSTATE string first and parenthesises the
+# native number inside the message.
+
+@pytest.mark.parametrize('exc', [
+    Exception(18456, b"Login failed for user 'certuser'."),
+    Exception(
+        '42000',
+        "[42000] [Microsoft][ODBC Driver 18 for SQL Server](18456) "
+        "Login failed for user 'certuser'.",
+    ),
+    AdapterUnavailable('could not connect using pymssql: number=18456', [18456]),
+])
+def test_a_login_failure_is_never_retried(exc):
+    assert is_transient_connect_error(exc) is False
+
+
+@pytest.mark.parametrize('exc', [
+    Exception(20003, b'Adaptive Server connection timed out'),
+    Exception('HYT00', '[HYT00] [Microsoft][ODBC Driver 18] Login timeout expired'),
+    TimeoutError('timed out'),
+    ConnectionResetError('connection reset by peer'),
+])
+def test_a_transport_failure_is_retried(exc):
+    assert is_transient_connect_error(exc) is True
+
+
+def test_an_unclassifiable_failure_fails_closed():
+    """Better to stop and report than to spend four attempts on a maybe-login."""
+    assert is_transient_connect_error(Exception('something went wrong')) is False
+
+
+def test_a_permanent_adapter_condition_is_not_retried():
+    exc = AdapterUnavailable('no driver installed', permanent=True)
+    assert is_transient_connect_error(exc) is False
+
+
+def test_a_driver_that_cannot_encrypt_is_permanent_through_connect(monkeypatch):
+    """The condition used to be swallowed by connect() and then retried."""
+    fake = _FakePymssql(supports_encryption=False)
+
+    def _reflect(**kwargs):
+        raise TypeError("unexpected keyword argument 'encryption'")
+
+    fake.connect = _reflect
+    monkeypatch.setitem(__import__('sys').modules, 'pymssql', fake)
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect(_settings(), 'not-a-real-password', driver='pymssql')
+    assert is_transient_connect_error(excinfo.value) is False
+
+
+def test_pyodbc_shaped_error_numbers_are_recovered():
+    exc = Exception('42000', '[42000] [Microsoft][ODBC Driver 18](102) Incorrect syntax.')
+    assert _error_number(exc) == 102
 
 
 # -- optional live smoke -----------------------------------------------------

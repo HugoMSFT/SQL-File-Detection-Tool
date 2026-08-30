@@ -20,9 +20,11 @@ from certification.execute import (
     ExecutionOptions,
     _error_facts,
     execute_cell,
+    run_cleanup,
     run_session,
 )
 from certification.redaction import Redactor
+from certification.matrix import MATRIX_BY_ID
 from certification.safety import SafetyPolicy
 
 
@@ -317,6 +319,48 @@ def test_undecodable_error_bytes_do_not_raise():
     assert "b'" not in facts['error_message']
 
 
+def test_a_pyodbc_shaped_error_still_yields_its_native_number():
+    """pyodbc puts SQLSTATE first and the number inside the message.
+
+    Without recovering it, `expected_errors` never matches and every cell that
+    exists to record a *predicted* platform refusal is reported as a defect.
+    """
+    facts = _error_facts(Exception(
+        '42000',
+        '[42000] [Microsoft][ODBC Driver 18 for SQL Server](102) '
+        "Incorrect syntax near 'JSON'.",
+    ))
+    assert facts['error_number'] == 102
+    assert facts['sqlstate'] == '42000'
+
+
+def test_a_predicted_refusal_is_not_a_defect_under_either_driver(identity, policy):
+    entry = MATRIX_BY_ID['C32']
+    expected = sorted(entry.expected_errors)[0]
+    sql = "SELECT 'JSON is not available as an external file format; use OPENJSON';"
+    shapes = [
+        Exception(expected, b'Incorrect syntax.'),
+        Exception('42000', f'[42000] [Microsoft][ODBC Driver 18]({expected}) Incorrect syntax.'),
+    ]
+    verdicts = []
+    for exc in shapes:
+        planned = _planned(
+            identity, 'C32',
+            statement_kind='external_file_format',
+            accepts=list(entry.accepts),
+            sql_redacted=sql,
+            batches=[_batch(sql)],
+        )
+        connection = FakeConnection(responses={'JSON is not available': exc})
+        result = execute_cell(
+            connection, planned, policy=policy, redactor=Redactor(),
+            options=ExecutionOptions(),
+        )
+        verdicts.append(result.verdict)
+    assert verdicts[0] == verdicts[1], verdicts
+    assert FAIL not in verdicts
+
+
 # ---------------------------------------------------------------------------
 # Database and schema lifecycle
 # ---------------------------------------------------------------------------
@@ -408,3 +452,110 @@ def test_schema_failure_stops_the_run_before_any_cell(identity, policy):
     assert evidence.cells == []
     assert evidence.lifecycle['schema_created'] is False
     assert "b'" not in evidence.lifecycle['schema_error']
+
+
+# ---------------------------------------------------------------------------
+# The run database must never outlive the run
+# ---------------------------------------------------------------------------
+
+def _vm_manifest(cells=()):
+    return {
+        'target': 'vm',
+        'platform': 'sql_server_2025',
+        'allow_create_database': True,
+        'cells': list(cells),
+    }
+
+
+def test_schema_failure_still_drops_the_database_it_created(identity, policy):
+    """An early return must not leave a live database on the server.
+
+    The drop used to sit after the try/finally, so any early return skipped it
+    and the run database survived with nothing in the artifacts naming it.
+    """
+    admin = FakeConnection(database='master')
+    work = FakeConnection(database=identity.database)
+    work.responses = {'CREATE SCHEMA': Exception(2760, b'invalid schema')}
+    factory = FakeFactory([admin, work, admin])
+    evidence = RunEvidence(run_id=identity.run_id, target='vm', platform='sql_server_2025')
+    run_session(
+        factory, _vm_manifest(), identity,
+        policy=policy, redactor=Redactor(),
+        options=ExecutionOptions(), evidence=evidence,
+    )
+    assert evidence.lifecycle['created_database'] is True
+    assert evidence.lifecycle['dropped_database'] is True
+    assert any('DROP DATABASE' in s for s in admin.statements)
+
+
+def test_an_exception_mid_run_still_drops_the_database(identity, policy):
+    """A manifest cell the matrix does not know raises out of the cell loop."""
+    admin = FakeConnection(database='master')
+    work = FakeConnection(database=identity.database)
+    factory = FakeFactory([admin, work, admin])
+    bogus = _planned(identity, 'C14')
+    bogus['cell_id'] = 'C99'  # not in MATRIX_BY_ID
+    evidence = RunEvidence(run_id=identity.run_id, target='vm', platform='sql_server_2025')
+    with pytest.raises(KeyError):
+        run_session(
+            factory, _vm_manifest([bogus]), identity,
+            policy=policy, redactor=Redactor(),
+            options=ExecutionOptions(), evidence=evidence,
+        )
+    assert any('DROP DATABASE' in s for s in admin.statements)
+    assert evidence.lifecycle['dropped_database'] is True
+
+
+def test_a_run_that_never_created_a_database_never_drops_one(identity, policy):
+    """The drop is guarded on this run having made it, so it cannot hit a real one."""
+    admin = FakeConnection(database='master')
+    admin.responses = {'CREATE DATABASE': Exception(262, b'CREATE DATABASE permission denied')}
+    factory = FakeFactory([admin])
+    evidence = RunEvidence(run_id=identity.run_id, target='vm', platform='sql_server_2025')
+    run_session(
+        factory, _vm_manifest(), identity,
+        policy=policy, redactor=Redactor(),
+        options=ExecutionOptions(), evidence=evidence,
+    )
+    assert evidence.lifecycle['created_database'] is False
+    assert not any('DROP DATABASE' in s for s in admin.statements)
+    assert evidence.cleanup_verified is False
+
+
+# ---------------------------------------------------------------------------
+# An unanswerable question is not a failure, and an unreadable inventory is
+# not a clean bill of health
+# ---------------------------------------------------------------------------
+
+def test_unreadable_catalog_does_not_fail_a_ddl_cell(identity, policy):
+    """`None` means "could not ask", which the contract says must not fail a cell."""
+    fmt = identity.name('c16', 'fmt')
+    planned = _planned(
+        identity,
+        'C16',
+        statement_kind='external_file_format',
+        sql_redacted="CREATE EXTERNAL FILE FORMAT WITH (FORMAT_OPTIONS (FIRST_ROW = 2));",
+        catalog_object='external file format',
+        names={'schema': identity.schema, 'external_file_format': fmt},
+        batches=[_batch(f'CREATE EXTERNAL FILE FORMAT [{fmt}] WITH (FORMAT_TYPE = DELIMITEDTEXT);')],
+    )
+    connection = FakeConnection({
+        'sys.external_file_formats': Exception(4060, b'cannot open database'),
+    })
+    result = execute_cell(
+        connection, planned, policy=policy, redactor=Redactor(),
+        options=ExecutionOptions(),
+    )
+    assert result.verdict != FAIL
+    catalog = [a for a in result.assertions if a.kind == 'catalog_present']
+    assert catalog and catalog[0].ok is True
+    assert 'not verified' in (catalog[0].detail or '')
+
+
+def test_cleanup_is_not_verified_when_the_inventory_cannot_be_read(identity, policy):
+    connection = FakeConnection()
+    connection.responses = {'sys.': Exception(10054, b'connection reset by peer')}
+    outcome = run_cleanup(connection, identity, redactor=Redactor(), policy=policy)
+    assert outcome['verified'] is False
+    assert outcome['unreadable_inventory']
+

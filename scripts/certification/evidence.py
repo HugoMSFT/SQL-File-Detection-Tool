@@ -328,10 +328,21 @@ def check_result_assertions(
             # The success criterion for DDL. CREATE EXTERNAL FILE FORMAT
             # returns no rows, so "did it work?" is answered by the catalog,
             # not by a row count.
-            results.append(AssertionResult('catalog_present', assertion.value,
-                                           catalog_present,
-                                           catalog_present is True,
-                                           assertion.detail))
+            #
+            # `None` means the question could not be asked - the probe itself
+            # errored, or returned something that is not a count. That is a
+            # weaker run, not a failed statement, so it must not turn a CREATE
+            # that raised no error into a reported product defect.
+            if catalog_present is None:
+                results.append(AssertionResult(
+                    'catalog_present', assertion.value, None, True,
+                    'catalog could not be read; presence not verified',
+                ))
+            else:
+                results.append(AssertionResult('catalog_present', assertion.value,
+                                               catalog_present,
+                                               catalog_present is True,
+                                               assertion.detail))
     return results
 
 

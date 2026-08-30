@@ -21,6 +21,8 @@ from __future__ import annotations
 import getpass
 import inspect
 import os
+import re
+import socket
 import sys
 import time
 from dataclasses import dataclass, replace
@@ -48,11 +50,23 @@ class AdapterUnavailable(RuntimeError):
     driver's own message is deliberately dropped - it routinely echoes the whole
     connection string, login included - but the *number* is both safe and the
     only reliable way to tell a login failure from a network blip.
+
+    ``permanent`` marks a condition that waiting cannot fix - no driver
+    installed, a driver that cannot honour the required encryption, a disposed
+    factory - so the retry loop stops immediately instead of sleeping through
+    three pointless attempts.
     """
 
-    def __init__(self, message: str, error_numbers: Sequence[int] = ()) -> None:
+    def __init__(
+        self,
+        message: str,
+        error_numbers: Sequence[int] = (),
+        *,
+        permanent: bool = False,
+    ) -> None:
         super().__init__(message)
         self.error_numbers: Tuple[int, ...] = tuple(error_numbers)
+        self.permanent = permanent
 
 
 @dataclass
@@ -86,7 +100,8 @@ class ConnectionSettings:
         ]
         if missing:
             raise AdapterUnavailable(
-                'missing connection settings; set ' + ', '.join(missing)
+                'missing connection settings; set ' + ', '.join(missing),
+                permanent=True,
             )
         return settings
 
@@ -112,7 +127,8 @@ def take_password(*, prompt: bool = True) -> str:
     if prompt:
         return getpass.getpass('certification login password: ')
     raise AdapterUnavailable(
-        f'no password supplied; set {ENV_PASSWORD} or pipe it on standard input'
+        f'no password supplied; set {ENV_PASSWORD} or pipe it on standard input',
+        permanent=True,
     )
 
 
@@ -249,7 +265,8 @@ def _pymssql_kwargs(module: Any, settings: 'ConnectionSettings') -> Dict[str, An
             raise AdapterUnavailable(
                 'the installed pymssql has no encryption parameter; install '
                 'pymssql 2.3 or newer, or pyodbc, rather than connecting '
-                'unencrypted'
+                'unencrypted',
+                permanent=True,
             )
         return kwargs
     kwargs['encryption'] = 'require' if settings.encrypt else 'off'
@@ -278,12 +295,26 @@ CONNECT_ATTEMPTS = 4
 CONNECT_BACKOFF_S = (1.0, 3.0, 7.0)
 
 
+#: A native SQL error number as pyodbc reports it. pyodbc raises
+#: ``Error(sqlstate, message)`` with both args as strings and the native number
+#: parenthesised inside the message - `[42000] [Microsoft][ODBC ...](18456)
+#: Login failed for user 'x'.` - so the number has to be read out of the text.
+#: pymssql, by contrast, puts it first in ``args`` as an int.
+_NATIVE_NUMBER_RE = re.compile(r'\((\d{3,5})\)')
+
+
+def _numbers_from_text(text: str) -> List[int]:
+    """Every native error number parenthesised in a driver message."""
+    return [int(m) for m in _NATIVE_NUMBER_RE.findall(text or '')]
+
+
 def _error_number(exc: BaseException) -> Optional[int]:
     """The SQL error number a driver reported, if it reported one.
 
-    Drivers put it first in ``args``; :class:`AdapterUnavailable` carries the
-    numbers it collected from the drivers it tried, because its own message is
-    deliberately free of driver text.
+    pymssql puts it first in ``args``; pyodbc embeds it in the message text.
+    :class:`AdapterUnavailable` carries the numbers it collected from the
+    drivers it tried, because its own message is deliberately free of driver
+    text.
     """
     carried = getattr(exc, 'error_numbers', ()) or ()
     if carried:
@@ -291,6 +322,12 @@ def _error_number(exc: BaseException) -> Optional[int]:
     for value in getattr(exc, 'args', ()) or ():
         if isinstance(value, int):
             return value
+    for value in getattr(exc, 'args', ()) or ():
+        text = value.decode('utf-8', 'replace') if isinstance(value, bytes) else value
+        if isinstance(text, str):
+            found = _numbers_from_text(text)
+            if found:
+                return found[0]
     return None
 
 
@@ -300,23 +337,57 @@ def is_transient_connect_error(exc: BaseException) -> bool:
     Anything that names an authentication, firewall or database-selection
     problem is permanent by definition, so it returns False and the caller
     fails immediately - a few automatic retries are how an account gets locked
-    out. Everything else - a TCP timeout, a reset, a DNS blip, an Azure SQL
-    gateway mid-failover - is treated as transient.
+    out. A TCP timeout, a reset, a DNS blip or an Azure SQL gateway
+    mid-failover is transient.
+
+    It fails *closed*: a failure whose number could not be read at all is
+    treated as permanent. Guessing wrong in the other direction spends four
+    login attempts on what may be a bad password.
 
     A failure that reported *several* numbers is permanent if any of them is an
     auth error: retrying cannot fix the one that will not budge.
     """
+    if isinstance(exc, AdapterUnavailable) and getattr(exc, 'permanent', False):
+        return False
     numbers = [int(n) for n in (getattr(exc, 'error_numbers', ()) or ())]
     if not numbers:
-        single = _error_number(exc)
-        numbers = [single] if single is not None else []
+        for value in getattr(exc, 'args', ()) or ():
+            if isinstance(value, int):
+                numbers.append(value)
+            else:
+                text = (
+                    value.decode('utf-8', 'replace')
+                    if isinstance(value, bytes) else value
+                )
+                if isinstance(text, str):
+                    numbers.extend(_numbers_from_text(text))
     if any(n in AUTH_ERROR_NUMBERS for n in numbers):
         return False
-    if isinstance(exc, AdapterUnavailable) and not numbers:
-        # "no driver is installed" cannot be fixed by waiting.
-        if 'install pymssql' in str(exc) or 'encryption parameter' in str(exc):
-            return False
+    if not numbers:
+        # Unclassifiable. Fail closed rather than retry what may be a login.
+        return _looks_like_transport_failure(exc)
     return True
+
+
+#: Phrases that identify a failure as transport-level even when no driver
+#: number came with it. Matching is on the exception text, so it is a
+#: best-effort widening of the fail-closed default rather than the primary
+#: signal.
+_TRANSPORT_PHRASES = (
+    'timed out', 'timeout', 'connection reset', 'reset by peer',
+    'connection refused', 'temporarily unavailable', 'name or service not known',
+    'getaddrinfo', 'network is unreachable', 'broken pipe', 'eof',
+    'server is not found or not accessible', 'unable to connect',
+)
+
+
+def _looks_like_transport_failure(exc: BaseException) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError, socket.timeout, socket.error)):
+        return True
+    text = str(exc).lower()
+    if 'login failed' in text or 'password' in text:
+        return False
+    return any(phrase in text for phrase in _TRANSPORT_PHRASES)
 
 
 def connect_with_retry(
@@ -405,7 +476,9 @@ class SessionFactory:
     def connect(self, database: Optional[str] = None) -> Connection:
         """Open a connection, optionally to a different database on the same server."""
         if self._password is None:
-            raise AdapterUnavailable('this session factory has already been disposed')
+            raise AdapterUnavailable(
+                'this session factory has already been disposed', permanent=True,
+            )
         settings = self._settings
         if database and database != settings.database:
             settings = replace(settings, database=database)
@@ -426,10 +499,12 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
     if not candidates:
         raise AdapterUnavailable(
             'install pymssql or pyodbc in the runner environment; the harness '
-            'itself has no database dependency'
+            'itself has no database dependency',
+            permanent=True,
         )
     errors: List[str] = []
     numbers: List[int] = []
+    permanent = False
     for name in candidates:
         try:
             if name == 'pymssql':
@@ -455,6 +530,14 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
                 )
                 raw = pyodbc.connect(conn_str, autocommit=True)
                 return Connection(raw, 'pyodbc')
+        except AdapterUnavailable as exc:
+            # Raised by this module, not by a driver: it carries no connection
+            # string, and its own permanence is already known. Preserving that
+            # flag is what stops "this pymssql cannot encrypt" being retried
+            # four times.
+            permanent = permanent or exc.permanent
+            numbers.extend(exc.error_numbers)
+            errors.append(f'{name}: {exc}')
         except Exception as exc:  # pragma: no cover - environment specific
             # The message can echo the connection string, so never let it out.
             # The SQL error number is safe and is what tells a login failure
@@ -466,7 +549,11 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
                 f'{name}: {type(exc).__name__}'
                 + (f' number={number}' if number is not None else '')
             )
-    raise AdapterUnavailable('could not connect using ' + ', '.join(errors), numbers)
+    raise AdapterUnavailable(
+        'could not connect using ' + ', '.join(errors),
+        numbers,
+        permanent=permanent,
+    )
 
 
 def _first_odbc_driver(pyodbc_module: Any) -> str:  # pragma: no cover - env specific
@@ -479,7 +566,9 @@ def _first_odbc_driver(pyodbc_module: Any) -> str:  # pragma: no cover - env spe
     for name in preferred:
         if name in installed:
             return name
-    raise AdapterUnavailable('no Microsoft ODBC driver for SQL Server is installed')
+    raise AdapterUnavailable(
+        'no Microsoft ODBC driver for SQL Server is installed', permanent=True,
+    )
 
 
 # ---------------------------------------------------------------------------

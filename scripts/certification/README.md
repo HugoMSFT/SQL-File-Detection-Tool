@@ -70,7 +70,10 @@ python -m certification report --evidence certification-evidence.json
 
 `plan` builds a manifest of cells from real generator output. `verify` checks
 that the manifest is internally complete — every hypothesis is covered, every
-cell has a target and a cleanup path. `execute --dry-run` is fully offline: it
+cell has a target and a cleanup path — and re-runs the safety gate over *every*
+batch the run would send, including prerequisite setup and verification queries,
+naming the offending block (`setup[0]:external_data_source`, `cell`,
+`verification`) when one is refused. `execute --dry-run` is fully offline: it
 gates, hashes and classifies every batch without reading any environment
 variable, without asking for a password, without loading a database adapter and
 without opening a socket. `--confirm` is required only when actually connecting.
@@ -114,7 +117,23 @@ master key. Managed identity is one cell of its own, not a blanket default.
 
 Transient connection failures are retried with bounded backoff. Authentication
 failures — 18456, 18452, 40615, 40532, 4060, 916, 18470 — are never retried,
-because retrying a bad credential is how accounts get locked out.
+because retrying a bad credential is how accounts get locked out. The
+classifier reads both driver shapes: pymssql raises the native number as an
+integer argument, pyodbc puts it in parentheses inside the message text. A
+failure it cannot classify is *not* retried unless it also looks like a
+transport failure, so an unrecognised login error can never be replayed.
+
+The run database is dropped in a `finally`. If the schema cannot be created, or
+anything at all raises, the database this harness made is still removed and the
+lifecycle record still says so.
+
+Two answers are deliberately distinguished from "no":
+
+- A catalog presence check that could not be *read* is recorded as unverified
+  and does not fail the cell. Only an object that is genuinely absent fails it.
+- A cleanup inventory that could not be read leaves `cleanup_verified` false and
+  names the inventory kinds that were unreadable. Silence is never treated as
+  proof that nothing was left behind.
 
 ## Verdicts
 
