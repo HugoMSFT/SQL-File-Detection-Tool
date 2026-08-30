@@ -14,6 +14,24 @@ test suites now read the same machine-readable evidence file.
 
 ### Fixed
 
+- **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`
+  is consulted.** `chardet` is a statistical guess, and on some builds it scores
+  the demo UTF-8 fixtures as Windows-1254 with roughly 0.46 confidence. Reading
+  them back through that charmap codec failed on byte `0x81`, so the file
+  arrived with an `error` in its metadata and a codepage of `ACP`. What the
+  bytes *are* is now established first - the byte order mark, then a
+  pure-ASCII check, then a strict UTF-8 decode - and `chardet` is left to do
+  the one job only it can do, which is naming a legacy codepage such as CP932.
+  A multi-byte character sliced in half by the 64 KiB read cap is tolerated
+  rather than mistaken for corruption. Files that are already detected as
+  ASCII stay ASCII; this is not a reclassification.
+- **A redirect verdict is no longer destroyed by closing a bodyless error.**
+  On Python 3.9 `HTTPError` leaves `fp` as `None` when it is constructed
+  without a body, and calling `close()` on it raises `KeyError: 'file'` from
+  deep inside `tempfile`. That escaped the public-data fetcher and replaced the
+  real "this redirect points somewhere private" error with an unrelated one.
+  The body is now closed only when there is a body to close. Python 3.10 and
+  later substitute an empty `BytesIO` and so never showed the bug.
 - **The complete document survives being run twice, without emptying a table it
   did not create.** Every `CREATE` in the generated end-to-end script - table,
   external table, external data source, external file format, database scoped

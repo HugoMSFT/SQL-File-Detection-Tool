@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 import external_file_detection.file_detector as file_detector_module
 from external_file_detection.file_detector import FileDetector
@@ -670,3 +671,115 @@ def test_iceberg_detects_modern_metadata_filenames(temp_dir):
         '00001-table.metadata.json'
     )
     assert detector.scan_directory(table_dir)[0]['file_type'] == 'iceberg'
+
+# ---------------------------------------------------------------------------
+# Encoding detection must not depend on which chardet build is installed.
+#
+# Under Python 3.9 CI, chardet classified valid UTF-8 demo fixtures as a
+# charmap codec; every later read then died with "'charmap' codec can't decode
+# byte 0x81". A byte-order mark, pure ASCII and valid UTF-8 are facts about the
+# bytes, so they are settled before the statistical guess is consulted.
+# ---------------------------------------------------------------------------
+
+class _WrongChardet:
+    """Stands in for a chardet build that guesses badly."""
+
+    def __init__(self, encoding='Windows-1252', confidence=0.99):
+        self.encoding = encoding
+        self.confidence = confidence
+        self.calls = 0
+
+    def detect(self, raw):
+        self.calls += 1
+        return {'encoding': self.encoding, 'confidence': self.confidence}
+
+
+@pytest.fixture
+def sabotaged_chardet(monkeypatch):
+    import sys as _sys
+    fake = _WrongChardet()
+    monkeypatch.setitem(_sys.modules, 'chardet', fake)
+    return fake
+
+
+@pytest.mark.parametrize(
+    'payload, expected',
+    [
+        ('row_id,name\n1,caf\u00e9 na\u00efve\n', 'utf-8'),
+        ('row_id,name\n1,\u3053\u3093\u306b\u3061\u306f\n', 'utf-8'),
+        ('row_id,name\n1,\U0001f600 emoji\n', 'utf-8'),
+        ('row_id,name\n1,plain ascii\n', 'ascii'),
+    ],
+)
+def test_certain_encodings_ignore_a_misbehaving_chardet(
+        tmp_path, sabotaged_chardet, payload, expected):
+    path = tmp_path / 'sample.csv'
+    path.write_bytes(payload.encode('utf-8'))
+
+    encoding, confidence = FileDetector().detect_encoding(str(path))
+
+    assert encoding == expected
+    assert confidence == 1.0
+    assert sabotaged_chardet.calls == 0, 'chardet must not be consulted'
+
+
+@pytest.mark.parametrize(
+    'payload, expected',
+    [
+        (b'\xef\xbb\xbfid,name\n', 'utf-8-sig'),
+        (b'\xff\xfei\x00d\x00', 'utf-16'),
+        (b'\xfe\xff\x00i\x00d', 'utf-16'),
+        (b'\xff\xfe\x00\x00i\x00\x00\x00', 'utf-32'),
+        (b'\x00\x00\xfe\xff\x00\x00\x00i', 'utf-32'),
+    ],
+)
+def test_a_byte_order_mark_settles_the_encoding(
+        tmp_path, sabotaged_chardet, payload, expected):
+    # The UTF-32LE mark begins with the UTF-16LE mark, so the longer mark has
+    # to be tested first or every UTF-32LE file reads as UTF-16LE.
+    path = tmp_path / 'sample.csv'
+    path.write_bytes(payload)
+
+    encoding, _ = FileDetector().detect_encoding(str(path))
+
+    assert encoding == expected
+    assert sabotaged_chardet.calls == 0
+
+
+def test_chardet_still_names_a_legacy_codepage():
+    """Naming CP932 is the job only the statistical guess can do.
+
+    Uses the committed fixture rather than a synthetic one: chardet needs
+    enough representative text to be confident, and this is the file whose
+    classification must not regress.
+    """
+    pytest.importorskip('chardet')
+    fixture = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'demo', 'unicode', 'japanese_cp932.csv')
+
+    detector = FileDetector()
+    encoding, _ = detector.detect_encoding(fixture)
+
+    assert encoding not in ('utf-8', 'ascii')
+    assert detector.encoding_to_codepage(encoding) == '932'
+
+
+def test_a_multibyte_character_split_by_the_read_cap_is_still_utf8(tmp_path):
+    """A capped read can slice a character in half; that is not a verdict."""
+    from external_file_detection import file_detector as fd
+
+    path = tmp_path / 'big.csv'
+    body = ('row_id,name\n' + '1,\u00e9\u00e9\u00e9\u00e9\u00e9\n' * 4000).encode('utf-8')
+    path.write_bytes(body)
+
+    # Force the cap to land inside a two-byte character.
+    cut = body.rindex('\u00e9'.encode('utf-8')) + 1
+    monkey = pytest.MonkeyPatch()
+    try:
+        monkey.setattr(fd, 'ENCODING_DETECTION_BYTES', cut)
+        encoding, _ = FileDetector().detect_encoding(str(path))
+    finally:
+        monkey.undo()
+
+    assert encoding == 'utf-8'

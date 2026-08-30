@@ -1,6 +1,7 @@
 ﻿"""File type detection and metadata analysis module."""
 
 import os
+import codecs
 import json
 import csv
 import math
@@ -244,8 +245,48 @@ class FileDetector:
     # Encoding detection
     # ------------------------------------------------------------------
 
+    #: Byte-order marks that settle the encoding outright. Ordered longest
+    #: first so the UTF-32LE mark is never read as UTF-16LE followed by NULs.
+    _BOM_ENCODINGS: Tuple[Tuple[bytes, str], ...] = (
+        (codecs.BOM_UTF8, 'utf-8-sig'),
+        (codecs.BOM_UTF32_LE, 'utf-32'),
+        (codecs.BOM_UTF32_BE, 'utf-32'),
+        (codecs.BOM_UTF16_LE, 'utf-16'),
+        (codecs.BOM_UTF16_BE, 'utf-16'),
+    )
+
+    @staticmethod
+    def _decodes_as_utf8(raw: bytes, truncated: bool) -> bool:
+        """Return True when *raw* is valid UTF-8.
+
+        A capped read can slice a multi-byte character in half, which is an
+        artefact of the cap and not evidence the file is something else, so a
+        failure in the final three bytes of a truncated read is retried
+        without the incomplete tail.
+        """
+        try:
+            raw.decode('utf-8')
+            return True
+        except UnicodeDecodeError as exc:
+            if not (truncated and exc.end >= len(raw) and exc.start >= len(raw) - 3):
+                return False
+            try:
+                raw[: exc.start].decode('utf-8')
+                return True
+            except UnicodeDecodeError:
+                return False
+
     def detect_encoding(self, file_path: str) -> Tuple[str, float]:
-        """Detect file encoding using chardet when available."""
+        """Detect a file's encoding.
+
+        A byte-order mark, pure ASCII and valid UTF-8 are *facts about the
+        bytes*; ``chardet`` is a statistical guess. Asking the guess first made
+        the answer depend on which chardet build happened to be installed --
+        under Python 3.9 it classified valid UTF-8 fixtures as a charmap codec,
+        and every later read of those files then died on byte 0x81. The
+        certain answers are therefore established first, and chardet is left to
+        do the job only it can do: naming a legacy codepage such as CP932.
+        """
         signature = self._get_file_signature(file_path)
         if signature:
             with self._cache_lock:
@@ -253,37 +294,49 @@ class FileDetector:
                 if cached is not None:
                     return cached
 
-        try:
-            import chardet
-            with open(file_path, 'rb') as f:
-                raw = f.read(ENCODING_DETECTION_BYTES)
-            result = chardet.detect(raw)
-            encoding = (result.get('encoding') or 'utf-8').lower()
-            confidence = float(result.get('confidence') or 0.0)
-            detected = (encoding, confidence)
-            if signature:
-                with self._cache_lock:
-                    self._cache_set(self._encoding_cache, signature, detected)
-            return detected
-        except ImportError:
-            pass
-
-        for enc in ['utf-8-sig', 'utf-8', 'cp1252', 'latin-1']:
-            try:
-                with open(file_path, 'r', encoding=enc) as f:
-                    f.read(4096)
-                detected = (enc, 0.5)
-                if signature:
-                    with self._cache_lock:
-                        self._cache_set(self._encoding_cache, signature, detected)
-                return detected
-            except (UnicodeDecodeError, LookupError):
-                continue
-        detected = ('utf-8', 0.0)
+        detected = self._detect_encoding_uncached(file_path)
         if signature:
             with self._cache_lock:
                 self._cache_set(self._encoding_cache, signature, detected)
         return detected
+
+    def _detect_encoding_uncached(self, file_path: str) -> Tuple[str, float]:
+        try:
+            import chardet
+        except ImportError:
+            chardet = None
+
+        with open(file_path, 'rb') as handle:
+            raw = handle.read(ENCODING_DETECTION_BYTES)
+            truncated = bool(handle.read(1))
+
+        for bom, encoding in self._BOM_ENCODINGS:
+            if raw.startswith(bom):
+                return (encoding, 1.0)
+
+        if raw:
+            # ASCII is a subset of UTF-8 but maps to a different SQL Server
+            # codepage, so it keeps its own answer rather than being folded in.
+            if max(raw) < 0x80:
+                return ('ascii', 1.0)
+            if self._decodes_as_utf8(raw, truncated):
+                return ('utf-8', 1.0)
+
+        if chardet is not None:
+            result = chardet.detect(raw) or {}
+            return (
+                (result.get('encoding') or 'utf-8').lower(),
+                float(result.get('confidence') or 0.0),
+            )
+
+        for enc in ['utf-8-sig', 'utf-8', 'cp1252', 'latin-1']:
+            try:
+                with open(file_path, 'r', encoding=enc) as handle:
+                    handle.read(4096)
+                return (enc, 0.5)
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return ('utf-8', 0.0)
 
     def encoding_to_codepage(self, encoding: str) -> str:
         """Return the SQL Server codepage string for a given Python encoding name."""

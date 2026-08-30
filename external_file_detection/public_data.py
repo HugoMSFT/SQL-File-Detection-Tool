@@ -209,6 +209,24 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
+def _release(error: urllib.error.HTTPError) -> None:
+    """Release the body of an error response, if it has one.
+
+    An ``HTTPError`` can be constructed without a body -- handlers raise them
+    that way, and so does any test transport that reports a status without a
+    payload. On Python 3.9 the inherited ``close()`` is resolved through
+    ``tempfile._TemporaryFileWrapper.__getattr__``, which reads
+    ``self.__dict__['file']``; that key only exists when the parent
+    ``__init__`` ran, which it does not when ``fp`` is ``None``. Calling
+    ``close()`` unconditionally therefore raised ``KeyError: 'file'`` out of
+    ``_open`` on 3.9, which discarded the redirect verdict this function
+    exists to produce. Nothing is caught here: the body is closed when there
+    is one, and skipped when there is not.
+    """
+    if getattr(error, 'fp', None) is not None:
+        error.close()
+
+
 def _open(url: str, accept: str, opener=None):
     """Open *url*, revalidating the target of every redirect."""
     current = url
@@ -225,14 +243,14 @@ def _open(url: str, accept: str, opener=None):
         except urllib.error.HTTPError as exc:
             if exc.code in (301, 302, 303, 307, 308):
                 location = exc.headers.get('Location')
-                exc.close()
+                _release(exc)
                 if not location:
                     _reject('Redirect response had no Location header.',
                             status=502, code='bad_redirect')
                 current = urllib.parse.urljoin(current, location)
                 continue
             detail = f'{exc.code} {exc.reason}'
-            exc.close()
+            _release(exc)
             _reject(f'The server returned {detail}.', status=502,
                     code='upstream_error')
         except urllib.error.URLError as exc:

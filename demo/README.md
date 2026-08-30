@@ -344,8 +344,14 @@ Two details the generator handles for you:
 
 ## 6. Determinism
 
-* Text based samples (CSV, TSV, JSON, NDJSON, `.txt`, `.sql`, the Delta log
-  and the Iceberg metadata) are byte-for-byte identical on every run.
+* Text based samples (CSV, TSV, JSON, NDJSON, `.txt`, `.sql` and the Iceberg
+  metadata) are byte-for-byte identical on every run.
+* The Delta log is byte-for-byte identical on every run **on a given PyArrow
+  build**, and no further than that. It records the byte length of the Parquet
+  file it describes in `add.size`, so a PyArrow upgrade that changes the
+  encoded size by twenty bytes changes the log too. The invariant that actually
+  holds across versions, and the one the tests assert, is that `add.size`
+  equals the real length of the file it names.
 * `demo/.gitattributes` pins those files to LF and marks the UTF-16LE
   fixtures as binary, so `core.autocrlf` cannot rewrite them on checkout and
   regenerating after a fresh clone is a no-op.

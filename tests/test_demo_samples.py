@@ -11,6 +11,7 @@ decoded content rather than on raw bytes.
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -449,6 +450,29 @@ def _read_bytes(path):
         return handle.read()
 
 
+#: The Delta log records the byte length of the Parquet file it describes, so
+#: this one committed fixture is a function of the PyArrow build that wrote it
+#: -- two versions in CI produced a valid 1579-byte and a valid 1559-byte file
+#: for identical data. That is a true property of the bytes, not a
+#: nondeterminism to stamp out, and asserting the committed number is a claim
+#: that generated binary output is byte-identical across PyArrow versions,
+#: which is not true and was never intended. The length is normalised out of
+#: the committed-fixture comparison -- everything else in the log is still
+#: compared byte for byte -- and the real invariant, that the number equals the
+#: file it names, is asserted directly by
+#: ``test_delta_log_size_matches_the_parquet_it_describes``.
+DELTA_LOG_SAMPLE = 'tables/events_delta/_delta_log/00000000000000000000.json'
+_DELTA_SIZE_RE = re.compile(rb'("size":\s*)\d+')
+
+
+def _normalise_binary_derived_sizes(relative, blob):
+    if relative != DELTA_LOG_SAMPLE:
+        return blob
+    normalised, count = _DELTA_SIZE_RE.subn(rb'\g<1>"<parquet-size>"', blob)
+    assert count == 1, f'expected exactly one size field in {relative}, got {count}'
+    return normalised
+
+
 def test_generator_is_idempotent_for_text_samples(tmp_path):
     first_dir = tmp_path / 'first'
     second_dir = tmp_path / 'second'
@@ -462,6 +486,8 @@ def test_generator_is_idempotent_for_text_samples(tmp_path):
         left = first_dir / relative
         right = second_dir / relative
         assert left.exists(), relative
+        # Deliberately *not* normalised: within one environment the generator
+        # must still be byte-for-byte deterministic, size field included.
         assert _read_bytes(str(left)) == _read_bytes(str(right)), relative
 
 
@@ -469,8 +495,39 @@ def test_generator_output_matches_committed_text_samples(tmp_path):
     fresh = tmp_path / 'fresh'
     generate_samples.generate_all(str(fresh))
     for relative in TEXT_SAMPLES:
-        assert _read_bytes(str(fresh / relative)) == \
-            _read_bytes(os.path.join(DEMO_DIR, relative)), relative
+        produced = _normalise_binary_derived_sizes(
+            relative, _read_bytes(str(fresh / relative)))
+        committed = _normalise_binary_derived_sizes(
+            relative, _read_bytes(os.path.join(DEMO_DIR, relative)))
+        assert produced == committed, relative
+
+
+def test_delta_log_size_matches_the_parquet_it_describes(tmp_path):
+    """Every ``add.size`` must be the real length of the file it names.
+
+    The committed-fixture byte comparison used to assert this by accident, and
+    could only do so for as long as every machine produced the same Parquet
+    bytes. This checks the property itself, for both the freshly generated tree
+    and the committed one, so a PyArrow upgrade that changes the file length
+    keeps the log correct instead of merely keeping it unchanged.
+    """
+    fresh = tmp_path / 'fresh'
+    generate_samples.generate_all(str(fresh))
+
+    for root in (str(fresh), DEMO_DIR):
+        table = os.path.join(root, 'tables', 'events_delta')
+        log = os.path.join(table, '_delta_log', '00000000000000000000.json')
+        with open(log, encoding='utf-8') as handle:
+            adds = [json.loads(line)['add'] for line in handle
+                    if line.strip() and 'add' in json.loads(line)]
+
+        assert adds, f'no add actions recorded in {log}'
+        for add in adds:
+            data_file = os.path.join(table, add['path'])
+            assert os.path.exists(data_file), data_file
+            assert add['size'] == os.path.getsize(data_file), (
+                f"{root}: log records {add['size']} for {add['path']} but the "
+                f"file is {os.path.getsize(data_file)} bytes")
 
 
 def test_generator_binary_samples_are_content_stable(tmp_path):

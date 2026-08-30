@@ -514,3 +514,80 @@ def test_list_public_blobs_rejects_non_azure(public_dns):
 ])
 def test_storage_url_for(url, expected):
     assert public_data.storage_url_for(url) == expected
+
+
+def test_release_skips_close_when_the_error_has_no_body():
+    """An HTTPError built without a body has nothing to close.
+
+    Python 3.10+ quietly substitutes an empty ``BytesIO`` for a ``None`` body,
+    so ``close()`` is harmless there and this bug is invisible. Python 3.9
+    leaves ``fp`` as ``None`` and never runs the parent ``__init__``, so
+    ``close()`` resolves through ``tempfile._TemporaryFileWrapper.__getattr__``,
+    which reads ``self.__dict__['file']`` and raises ``KeyError: 'file'``. That
+    escaped ``_open`` and destroyed the redirect verdict it was meant to
+    support. The 3.9 shape is reproduced here so the guard is pinned on every
+    interpreter rather than only on the one that happens to break.
+    """
+    import urllib.error
+
+    class _Python39Shape(urllib.error.HTTPError):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.fp = None
+
+        def close(self):
+            raise KeyError('file')
+
+    error = _Python39Shape('https://example.com/x', 302, 'Found',
+                           {'Location': 'https://example.com/y'}, None)
+
+    public_data._release(error)  # must not raise
+
+
+def test_release_closes_a_body_when_there_is_one():
+    import io
+    import urllib.error
+
+    closed = []
+
+    class _Body(io.BytesIO):
+        def close(self):
+            closed.append(True)
+            super().close()
+
+    error = urllib.error.HTTPError('https://example.com/x', 502, 'Bad Gateway',
+                                   {}, _Body(b'boom'))
+    public_data._release(error)
+    assert closed == [True]
+
+
+def test_redirect_validation_survives_a_bodyless_error(monkeypatch, tmp_path):
+    """The redirect verdict must reach the caller, not a KeyError from close.
+
+    This is the end-to-end shape of the Python 3.9 failure: a transport that
+    reports a redirect with no payload, whose per-hop SSRF check must still be
+    the thing that decides the outcome.
+    """
+    import urllib.error
+
+    hosts = {
+        'files.example.com': ['93.184.216.34'],
+        'internal.example.com': ['169.254.169.254'],
+    }
+    monkeypatch.setattr(public_data, '_resolve_host', lambda h: hosts[h])
+
+    class _BodylessRedirector:
+        def open(self, request, timeout=None):
+            raise urllib.error.HTTPError(
+                request.full_url, 302, 'Found',
+                {'Location': 'https://internal.example.com/secret.csv'},
+                None,
+            )
+
+    with pytest.raises(public_data.PublicDataError) as excinfo:
+        public_data.download_data_file(
+            'https://files.example.com/data.csv', str(tmp_path),
+            opener=_BodylessRedirector(),
+        )
+    assert excinfo.value.code == 'host_not_allowed'
+    assert not list(tmp_path.iterdir())
