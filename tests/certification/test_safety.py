@@ -796,3 +796,61 @@ def test_the_identifier_grammar_does_not_backtrack_pathologically():
         pattern.match(probe)
         timings.append(time.perf_counter() - start)
     assert timings[-1] < 1.0, timings
+
+
+# ---------------------------------------------------------------------------
+# The gate and the server must read a name the same way.
+#
+# Every breach found in this file so far was one parser disagreeing with the
+# other about where an identifier ended. These three close the remaining places
+# where that could still happen, none of which had a working exploit -- the
+# point is to stop the disagreement existing at all rather than to argue each
+# time about whether it is currently reachable.
+# ---------------------------------------------------------------------------
+
+OMITTED_PART_NAMES = [
+    '[{schema}]..[{obj}]',
+    '[{schema}]...[{obj}]',
+    '{schema}..{obj}',
+]
+
+
+@pytest.mark.parametrize('template', OMITTED_PART_NAMES)
+def test_an_omitted_name_part_is_refused_rather_than_normalised(identity, policy, template):
+    # `a..b` is schema+object to a naive split but database + defaulted schema
+    # + object to the server, and `a...b` reaches a linked server. Dropping the
+    # empty parts silently made the gate agree with neither.
+    name = template.format(schema=identity.schema, obj=identity.name('c01', 'tbl'))
+    report = evaluate_batch(f'DROP TABLE {name};', policy)
+    assert not report.allowed
+    assert 'EMPTY_QUALIFIER_PART' in report.codes
+
+
+def test_a_fully_qualified_owned_name_is_still_allowed(identity, policy):
+    # The empty-part rule must not catch ordinary qualification.
+    name = f'[{identity.database}].[{identity.schema}].[{identity.name("c01", "tbl")}]'
+    report = evaluate_batch(f'DROP TABLE {name};', policy)
+    assert report.allowed, [v.code for v in report.violations]
+
+
+def test_the_tail_allowlist_does_not_admit_an_opening_parenthesis(identity, policy):
+    # `(` was in the allowlist with no emitter behind it. No list verb is ever
+    # followed by a parenthesis against the object name, and the shape that
+    # looked like a counterexample is admitted by the space before WITH.
+    owned = f'[{identity.schema}].[{identity.name("c01", "tbl")}]'
+    report = evaluate_batch(f'DROP TABLE {owned}(, [sales].[invoices];', policy)
+    assert not report.allowed
+    assert 'UNPARSED_TARGET_LIST' in report.codes
+
+    partitions = evaluate_batch(f'TRUNCATE TABLE {owned} WITH (PARTITIONS (1));', policy)
+    assert partitions.allowed, [v.code for v in partitions.violations]
+
+
+@pytest.mark.parametrize('lead', ['\u00e9', '\u4e2d', '\u0430', '\u00c5'])
+def test_a_batch_opening_with_a_unicode_letter_is_head_checked(policy, lead):
+    # The batch scan required an ASCII first character, so such a batch matched
+    # nothing and was never head-checked at all. It must fail closed like any
+    # other verb the scanner cannot name.
+    report = evaluate_batch(f'{lead}xec [sales].[invoices];', policy)
+    assert not report.allowed
+    assert 'UNKNOWN_STATEMENT' in report.codes

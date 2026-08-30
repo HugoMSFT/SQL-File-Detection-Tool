@@ -410,7 +410,13 @@ _LIST_HEAD_RE = re.compile(rf'(?P<name>{_QNAME})', re.I)
 #: single non-ASCII letter walked straight past it, because a denylist can only
 #: name the gaps somebody already found. An allowlist turns the next identifier
 #: grammar surprise into a refusal instead of a third silent bypass.
-_LIST_TAIL_BENIGN_RE = re.compile(r'\s|[;(]|\Z')
+#: `(` was in this set originally, and nothing emits it: no list verb is
+#: followed by a parenthesis directly against the object name, and the one
+#: shape that looked like a counterexample -- `TRUNCATE ... WITH (PARTITIONS
+#: (1))` -- is admitted by the space before `WITH`, not by the paren. An
+#: allowlist is only worth what it excludes, so it is kept exactly as wide as
+#: the shapes that are actually generated.
+_LIST_TAIL_BENIGN_RE = re.compile(r'\s|;|\Z')
 
 _USE_RE = re.compile(rf'\bUSE\s+(?P<name>{_IDENT})', re.I)
 #: ``CREATE DATABASE`` proper — the negative lookahead keeps ``CREATE DATABASE
@@ -509,9 +515,24 @@ class SafetyPolicy:
 
     def _scope_violation(self, kind: str, name: str, needs_schema: bool) -> Optional[Violation]:
         parts = _split_qualified(name)
-        parts = [p for p in parts if p != '']
-        if not parts:
+        nonempty = [p for p in parts if p != '']
+        if not nonempty:
             return Violation('EMPTY_IDENTIFIER', f'{kind} target could not be parsed: {name!r}')
+        # An omitted part (`a..b`, `a...b`, `.b`) is not the same name to the
+        # gate and to the server. Dropping the empties made `<run>..<owned>`
+        # read as schema+object here while a server reads it as database +
+        # defaulted schema + object -- and `<run>...<owned>` as a linked server
+        # reference. Nothing legitimately emits an empty part, and every
+        # previous breach in this file came from the two parsers disagreeing
+        # about a name, so this is refused rather than normalised away.
+        if len(nonempty) != len(parts):
+            return Violation(
+                'EMPTY_QUALIFIER_PART',
+                f'{kind} target {name!r} omits a name part; the server would resolve '
+                f'the gap to a defaulted database, schema or linked server, so the '
+                f'gate and the server would not agree on what is being touched',
+            )
+        parts = nonempty
 
         if len(parts) >= 3:
             database = parts[0]
@@ -804,7 +825,11 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
     # rule for. Line starts are scanned too (below) but only for known verbs,
     # since ordinary continuation lines legitimately begin with FROM, WITH (,
     # column lists and the like.
-    for match in re.finditer(r'(?:\A|;)\s*(?=(?P<word>[A-Za-z_][A-Za-z_0-9]{1,29}))', masked):
+    # The word class matches `_IDENT`'s unquoted alternative rather than ASCII
+    # only. A batch opening with a Unicode letter previously produced no match
+    # at all and so was never head-checked; now it fails closed as an
+    # unrecognised verb, which is what every other unnameable head does.
+    for match in re.finditer(r'(?:\A|;)\s*(?=(?P<word>[^\W\d]\w{1,29}))', masked):
         word = match.group('word').lower()
         if any(word == token or token.startswith(word + ' ') for token in _HEAD_TOKENS):
             continue

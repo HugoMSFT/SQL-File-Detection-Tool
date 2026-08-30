@@ -133,8 +133,18 @@ only, T-SQL regular identifiers accept Unicode letters, and one non-ASCII letter
 truncated the name exactly the way an unescaped `]` had. The grammar is
 Unicode-aware now, but the durable fix is that the tail check stopped being a
 denylist of the desync characters somebody had already found and became an
-allowlist of what may legitimately follow an object list — whitespace, `;`, `(`,
-or the end of the batch. A denylist only ever knows about the last bug.
+allowlist of what may legitimately follow an object list — whitespace, `;`, or
+the end of the batch. A denylist only ever knows about the last bug.
+
+The allowlist is deliberately kept exactly as wide as the shapes something
+actually emits, which is why `(` was later removed from it: no list verb is ever
+followed by a parenthesis against the object name, and `TRUNCATE ... WITH
+(PARTITIONS (1))` is admitted by the space before `WITH`, not by the paren. An
+allowlist is only worth what it excludes. For the same reason a name with an
+omitted part — `a..b`, `a...b` — is refused rather than having its empty pieces
+dropped: the gate would read schema plus object where a server reads a defaulted
+schema or a linked server, and a name that means two different things to the two
+parsers is the one thing every breach in this gate has had in common.
 
 Layer 1 is a scanner, which means it is position dependent, which means it must
 not be the only thing refusing a verb. Its line scan used to separate its

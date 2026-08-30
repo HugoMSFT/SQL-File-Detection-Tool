@@ -178,9 +178,24 @@ test suites now read the same machine-readable evidence file.
   tail backstop was a denylist of the three characters the *then-known* desyncs
   left behind. A Cyrillic homoglyph makes such a payload invisible in review.
   The grammar is Unicode-aware now, and - the more important half - the tail
-  backstop became an allowlist: whitespace, `;`, `(` or end of batch may follow
-  a parsed object list, and anything else is refused. A denylist can only name
+  backstop became an allowlist: whitespace, `;` or end of batch may follow a
+  parsed object list, and anything else is refused. A denylist can only name
   the gaps somebody has already found, which is how the same bug arrived twice.
+- **The gate and the server now read a qualified name the same way.** Three
+  places where the two parsers could still disagree are closed. An omitted name
+  part (`a..b`, `a...b`) had its empty pieces dropped before the part count was
+  checked, so the gate read schema plus object while a server reads a database
+  with a defaulted schema, or a linked server; it is refused now instead of
+  being normalised away. `(` was removed from the tail allowlist, because no
+  list verb is ever followed by a parenthesis against the object name - the
+  shape that looked like a counterexample, `TRUNCATE ... WITH (PARTITIONS (1))`,
+  is admitted by the space before `WITH`. And the batch-start scan required an
+  ASCII first character, so a batch opening with a Unicode letter matched
+  nothing and was never head-checked; it fails closed now like any other verb
+  the scanner cannot name. None of the three had a working exploit. They are
+  fixed because every breach found in this gate so far came from exactly this
+  disagreement, and the cost of removing it is lower than the cost of arguing
+  each time about whether it happens to be reachable.
 - **A statement head could be swallowed by the line above it.** Layer 1's line
   scan separated its two-word phrase with `\s+`, which matches a newline, and it
   *consumed* what it matched. A one-word head on one line therefore absorbed the
