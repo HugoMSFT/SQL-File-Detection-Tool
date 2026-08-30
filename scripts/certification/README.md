@@ -10,6 +10,32 @@ evidence. It exists because the alternative — hand-pasting generated SQL into 
 production server that holds real TPC-H data — is how you drop someone's
 `dbo.orders`.
 
+## Final run
+
+| | SQL Server 2025 | Azure SQL Database |
+| --- | --- | --- |
+| PASS | 16 | 17 |
+| FAIL | 0 | 0 |
+| NOT_EXECUTABLE | 14 | 12 |
+| BLOCKED (negative control) | 1 | 1 |
+| Accepted verdicts | 24 | 23 |
+| Confirmed defects | 0 | 0 |
+
+Cleanup was verified independently after each run: residue zero, and the
+pre-existing external object counts unchanged.
+
+The `NOT_EXECUTABLE` cells are the byte-fidelity ones — the all-types, Unicode,
+Delta, ORC, Excel and Iceberg fixtures. Proving those needs those exact bytes
+readable by the engine itself, and the run had neither writable storage it was
+authorised to create nor permission to change the server's configuration to
+reach a local path. Recording them as not executable is the honest answer;
+claiming coverage from a differently-shaped public file would not be. Each
+engine's single `BLOCKED` cell is the deliberate negative control: a statement
+the gate is meant to refuse, which proves the gate was live throughout.
+
+No live run certifies an engine version it did not run against. These numbers
+cover SQL Server 2025 and Azure SQL Database only.
+
 ## Safety model
 
 The harness assumes the connection it is handed points at a database that

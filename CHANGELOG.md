@@ -186,6 +186,15 @@ test suites now read the same machine-readable evidence file.
   is made for SQL Server 2019 or 2022, which were not present.
 - The Delta result certifies protocol `minReader = 1` / `minWriter = 2` and the
   `FORMAT_TYPE = DELTA` DDL, not newer Delta features.
+- Final certification runs closed with **no failures on either engine**: SQL
+  Server 2025 at 16 PASS / 0 FAIL / 14 NOT_EXECUTABLE / 1 negative control, and
+  Azure SQL Database at 17 PASS / 0 FAIL / 12 NOT_EXECUTABLE / 1 negative
+  control. Zero confirmed defects, and cleanup independently verified with zero
+  residue on both. The `NOT_EXECUTABLE` cells are the byte-fidelity fixtures,
+  which need those exact bytes readable by the engine itself; the run had no
+  authorised writable storage and would not change the server's configuration to
+  reach a local path, so they record what could not be proven instead of
+  claiming coverage from a differently-shaped file.
 
 ## [2.0.0]
 

@@ -400,6 +400,30 @@ The harness that produced this evidence lives in `scripts/certification/` and is
 not part of the published package. See its
 [README](scripts/certification/README.md) for the safety model.
 
+Final run, both engines, no failures:
+
+| | SQL Server 2025 | Azure SQL Database |
+| --- | --- | --- |
+| PASS | 16 | 17 |
+| FAIL | 0 | 0 |
+| NOT_EXECUTABLE | 14 | 12 |
+| BLOCKED (negative control) | 1 | 1 |
+| Accepted verdicts | 24 | 23 |
+| Confirmed defects | 0 | 0 |
+
+Cleanup was verified independently after both runs: zero residual certification
+schemas, objects, credentials, data sources, file formats, databases or agent
+jobs, and the pre-existing external object counts were unchanged.
+
+`NOT_EXECUTABLE` is honest coverage rather than a failure. Those cells need
+specific bytes staged where the engine itself can read them, and staging them
+would have meant either writable storage the run was not authorised to create or
+a change to the server's own configuration. Neither is something a certification
+run should do to a machine holding real data, so the cells say what they could
+not prove instead of guessing. A `BLOCKED` cell on each engine is the deliberate
+negative control: a statement the safety gate is supposed to refuse, proving the
+gate was live for the whole run.
+
 Export generated output:
 
 ```bash
