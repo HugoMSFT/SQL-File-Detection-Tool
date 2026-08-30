@@ -6,6 +6,13 @@ by [`generate_samples.py`](generate_samples.py), so the folder can be
 regenerated at any time and the results do not depend on the machine, the
 clock, or the network.
 
+Canonical public copies are mapped in
+[`scripts/certification/public-demo-fixtures.json`](../scripts/certification/public-demo-fixtures.json).
+The mapping preserves every relative path required by Delta and Iceberg. Its
+`publication_status` and anonymous container status are authoritative: local
+fixtures remain the deterministic offline source until every public object has
+been uploaded and hash-verified.
+
 ```bash
 python demo/generate_samples.py            # regenerate everything in place
 python demo/generate_samples.py --quiet    # no file listing

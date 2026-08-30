@@ -412,7 +412,8 @@ export function polyBaseGuidance(
     statement: StatementKind,
 ): PolyBaseGuidance {
     const requiresPolyBase =
-        statement === 'create_external_table' && platform === 'sql_server_2019';
+        statement === 'create_external_table'
+        && (platform === 'sql_server_2019' || platform === 'sql_server_2022');
     return {
         visible: requiresPolyBase,
         detail: requiresPolyBase

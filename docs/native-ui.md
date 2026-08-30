@@ -85,8 +85,8 @@ blob path and suggests sanitized credential, data source, and file-format names.
 Anonymous access marks the credential as not required. Local files never produce
 readiness for fabricated cloud objects: SQL Server targets show direct
 local/UNC-read requirements, while cloud targets show explicit staging.
-PolyBase installation guidance appears only when SQL Server 2019 external-table
-generation selects the legacy construct that requires it. The guidance
+PolyBase installation guidance appears only when SQL Server 2019 or 2022
+external-table generation selects a construct that requires it. The guidance
 distinguishes installing **PolyBase Query Service for External Data** in SQL
 Server Setup from enabling the already-installed feature with
 `sp_configure 'polybase enabled'`.

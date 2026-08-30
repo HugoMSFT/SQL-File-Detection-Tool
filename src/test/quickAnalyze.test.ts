@@ -134,12 +134,14 @@ test('PolyBase guidance is visible only for a construct that requires it', () =>
     ] as const) {
         assert.equal(polyBaseGuidance(platform, 'create_external_table').visible, false);
     }
-    assert.equal(polyBaseGuidance('sql_server_2022', 'create_external_table').visible, false);
-    assert.equal(polyBaseGuidance('sql_server_2019', 'openrowset').visible, false);
-    const guidance = polyBaseGuidance('sql_server_2019', 'create_external_table');
-    assert.equal(guidance.visible, true);
-    assert.match(guidance.detail ?? '', /SQL Server Setup/);
-    assert.match(guidance.detail ?? '', /sp_configure does not install/i);
+    for (const platform of ['sql_server_2019', 'sql_server_2022'] as const) {
+        assert.equal(polyBaseGuidance(platform, 'openrowset').visible, false);
+        assert.equal(polyBaseGuidance(platform, 'bulk_insert').visible, false);
+        const guidance = polyBaseGuidance(platform, 'create_external_table');
+        assert.equal(guidance.visible, true);
+        assert.match(guidance.detail ?? '', /SQL Server Setup/);
+        assert.match(guidance.detail ?? '', /sp_configure does not install/i);
+    }
 });
 
 test('generator defaults are byte-identical while optional overrides reach production SQL', () => {

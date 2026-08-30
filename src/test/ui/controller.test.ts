@@ -234,6 +234,8 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
         });
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
         assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
+        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2025' });
         assert.equal(snapshot(record).quickAnalyze.polybase.visible, false);
     } finally {
