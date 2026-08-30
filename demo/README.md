@@ -1,6 +1,6 @@
 # Demo samples
 
-Small, deterministic fixtures that let you try SQL External File Detector
+Small, deterministic fixtures that let you try SQL File Detection Tool
 without hunting for data. Every file here is generated from constant values
 by [`generate_samples.py`](generate_samples.py), so the folder can be
 regenerated at any time and the results do not depend on the machine, the
@@ -205,6 +205,22 @@ python -m external_file_detection.cli analyze demo/tables/events_iceberg
 
 ### Generate SQL per platform
 
+Azure SQL Database is the default, so it needs no `--target-platform`:
+
+```bash
+# Azure SQL Database - the default target platform
+python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
+    --storage-url abs://raw@myaccount.blob.core.windows.net/demo/sales_scalars.csv \
+    --data-source LakeDS
+```
+
+Analysing a local demo file without `--storage-url` still targets Azure SQL
+Database, and the generated script says so: the prerequisite section explains
+that the file must be uploaded to Azure Storage first, because Azure SQL cannot
+read a local path.
+
+Every other platform is selected explicitly:
+
 ```bash
 # SQL Server 2022 / 2025 - external table + OPENROWSET + BULK INSERT
 python -m external_file_detection.cli analyze demo/parquet/sales.parquet \
@@ -218,9 +234,9 @@ python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
     --storage-url https://myaccount.blob.core.windows.net/raw/demo/sales_scalars.csv \
     --data-source LakeDS
 
-# Azure SQL Database / Managed Instance
+# Azure SQL Managed Instance
 python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
-    --target-platform azure_sql_db \
+    --target-platform azure_sql_mi \
     --storage-url abs://raw@myaccount.blob.core.windows.net/demo/sales_scalars.csv \
     --data-source LakeDS
 

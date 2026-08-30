@@ -16,7 +16,7 @@ def code_only(sql: str) -> str:
 
 
 def test_csv_file_format_generation():
-    """Test CSV file format generation."""
+    """Test CSV file format generation on a platform that supports FIRST_ROW."""
     generator = SQLGenerator()
     
     metadata = {
@@ -27,7 +27,9 @@ def test_csv_file_format_generation():
         'schema': [('id', 'int64'), ('name', 'object'), ('age', 'int64')]
     }
     
-    ddl = generator.generate_external_file_format(metadata, 'test_csv_format')
+    ddl = generator.generate_external_file_format(
+        metadata, 'test_csv_format', target_platform='sql_server_2022'
+    )
     
     assert 'CREATE EXTERNAL FILE FORMAT [test_csv_format]' in ddl
     assert 'FORMAT_TYPE = DELIMITEDTEXT' in ddl
@@ -35,6 +37,29 @@ def test_csv_file_format_generation():
     assert "FIELD_TERMINATOR = ','" in ddl
     assert 'FIRST_ROW = 2' in ddl
     assert 'USE_TYPE_DEFAULT = TRUE' in ddl
+
+
+def test_csv_file_format_default_platform_is_azure_sql_database():
+    """With no explicit platform the generator targets Azure SQL Database.
+
+    Azure SQL Database has no FIRST_ROW format option, so the default output
+    must explain that instead of emitting an option the platform rejects.
+    """
+    generator = SQLGenerator()
+
+    metadata = {
+        'file_type': 'csv',
+        'delimiter': ',',
+        'has_header': True,
+        'encoding': 'utf-8',
+        'schema': [('id', 'int64'), ('name', 'object')],
+    }
+
+    ddl = generator.generate_external_file_format(metadata, 'test_csv_format')
+
+    assert 'Azure SQL Database' in ddl
+    assert 'FIRST_ROW = 2' not in ddl
+    assert 'FORMAT_TYPE = DELIMITEDTEXT' in ddl
 
 
 def test_json_file_format_generation():

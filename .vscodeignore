@@ -1,0 +1,39 @@
+# Node / TypeScript build inputs
+node_modules/**
+src/**
+out/test/**
+tsconfig.json
+.eslintrc.json
+.vscode/**
+.vscode-test/**
+dist/**
+
+# Git / CI
+.git/**
+.github/**
+.gitignore
+.gitattributes
+
+# Python build + test artefacts (the runtime package itself is shipped)
+tests/**
+test_data/**
+scripts/**
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+.pytest_cache/**
+*.egg-info/**
+build/**
+.venv/**
+venv/**
+
+# Docs that are not part of the packaged extension
+AGENTS.md
+demo/**/*.ipynb
+
+# Never ship anything credential-shaped
+**/.env
+**/*.pem
+**/*.key
+**/*.pfx
+**/secrets*

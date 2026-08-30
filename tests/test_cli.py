@@ -5,6 +5,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from external_file_detection.cli import main
+from external_file_detection.sql_generator import DEFAULT_TARGET_PLATFORM
 
 
 def test_analyze_files_forwards_cloud_credentials():
@@ -33,9 +34,41 @@ def test_analyze_files_forwards_cloud_credentials():
     app_type.return_value.analyze_files.assert_called_once_with(
         ['s3://bucket/data.csv'],
         None,
-        target_platform='sql_server_2022',
+        target_platform=DEFAULT_TARGET_PLATFORM,
         storage_url=None,
     )
+
+
+def test_default_target_platform_is_azure_sql_database():
+    """An unspecified --target-platform resolves to Azure SQL Database."""
+    assert DEFAULT_TARGET_PLATFORM == 'azure_sql_db'
+    runner = CliRunner()
+    with patch(
+        'external_file_detection.cli.ExternalFileDetectorApp'
+    ) as app_type:
+        app_type.return_value.analyze_files.return_value = []
+        result = runner.invoke(main, ['analyze-files', 'local.csv'])
+
+    assert result.exit_code == 0
+    _args, kwargs = app_type.return_value.analyze_files.call_args
+    assert kwargs['target_platform'] == 'azure_sql_db'
+
+
+def test_explicit_target_platform_is_preserved():
+    """An explicit platform selection is never overridden by the default."""
+    runner = CliRunner()
+    with patch(
+        'external_file_detection.cli.ExternalFileDetectorApp'
+    ) as app_type:
+        app_type.return_value.analyze_files.return_value = []
+        result = runner.invoke(main, [
+            'analyze-files', 'local.csv',
+            '--target-platform', 'sql_server_2019',
+        ])
+
+    assert result.exit_code == 0
+    _args, kwargs = app_type.return_value.analyze_files.call_args
+    assert kwargs['target_platform'] == 'sql_server_2019'
 
 
 def test_analyze_files_returns_nonzero_when_any_file_fails():

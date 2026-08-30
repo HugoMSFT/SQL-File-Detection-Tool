@@ -1,4 +1,4 @@
-SQL External File Detector - plain text sample
+SQL File Detection Tool - plain text sample
 ==============================================
 
 This file exercises the 'text' detector path. It contains ASCII text

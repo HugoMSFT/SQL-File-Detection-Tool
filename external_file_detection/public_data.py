@@ -51,7 +51,7 @@ MAX_REDIRECTS = 5
 REQUEST_TIMEOUT_SECONDS = 15
 MAX_DOWNLOAD_BYTES = 200 * 1024 * 1024      # matches MAX_UPLOAD_SIZE
 MAX_HTML_BYTES = 4 * 1024 * 1024            # catalog pages are far smaller
-USER_AGENT = 'SQLExternalFileDetector/public-dataset-resolver'
+USER_AGENT = 'SQLFileDetectionTool/public-dataset-resolver'
 
 # --- allowlists -------------------------------------------------------
 LEARN_HOST = 'learn.microsoft.com'

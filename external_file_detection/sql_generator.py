@@ -21,6 +21,14 @@ class ExternalFileFormatConfig:
     serde_method: Optional[str] = None
 
 
+#: Canonical product-wide default SQL target platform.
+#:
+#: Every entry point (CLI, Flask API, web UI, VS Code extension) resolves an
+#: unspecified ``target_platform`` to this single constant so the default can
+#: never drift between layers. Explicit platform selection is untouched.
+DEFAULT_TARGET_PLATFORM = 'azure_sql_db'
+
+
 _S3_SCHEMES = frozenset({'s3', 's3a', 's3n'})
 
 # Platforms whose OPENROWSET(BULK ...)/BULK INSERT can reach S3-compatible
@@ -141,6 +149,20 @@ _AZURE_PLACEHOLDER_ACCOUNT = '<storage_account>.dfs.core.windows.net'
 _AZURE_STORAGE_SCHEMES = frozenset(
     {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss'}
 )
+
+
+_CLOUD_URL_SCHEMES = frozenset(
+    {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss', 'azure',
+     's3', 's3a', 's3n', 'gs', 'http', 'https', 'onelake'}
+)
+
+
+def _looks_like_cloud_url(storage_url: Optional[str]) -> bool:
+    """Return True when *storage_url* points at remote object storage."""
+    if not storage_url:
+        return False
+    scheme = urlparse(str(storage_url).strip().replace('\\', '/')).scheme.lower()
+    return scheme in _CLOUD_URL_SCHEMES
 
 
 def _parse_azure_storage_url(storage_url: Optional[str],
@@ -434,6 +456,17 @@ class SQLGenerator:
         'fabric_sql_db',
     )
 
+    #: Product-wide default platform, mirrored from the module constant so
+    #: callers holding a generator instance need not import it separately.
+    DEFAULT_PLATFORM = DEFAULT_TARGET_PLATFORM
+
+    @staticmethod
+    def normalize_platform(target_platform: Optional[str]) -> str:
+        """Return a supported platform, falling back to the product default."""
+        if target_platform in SQLGenerator.PLATFORMS:
+            return target_platform
+        return DEFAULT_TARGET_PLATFORM
+
     # Feature availability per platform.
     # Each key maps to a frozenset of platforms that support it.
     PLATFORM_FEATURES = {
@@ -660,7 +693,7 @@ class SQLGenerator:
     def generate_create_table(self, metadata: Dict[str, Any],
                               table_name: str = None,
                               schema_name: str = 'dbo',
-                              target_platform: str = 'sql_server_2022',
+                              target_platform: str = DEFAULT_TARGET_PLATFORM,
                               storage_url: str = None,
                               data_source: str = 'MyDataSource') -> str:
         """
@@ -671,7 +704,7 @@ class SQLGenerator:
         Nullable columns (detected from sample data) use NULL; others use NOT NULL.
         """
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('create_table', target_platform):
             return self._not_supported_message(
@@ -829,13 +862,13 @@ class SQLGenerator:
                              table_name: str = None,
                              schema_name: str = 'dbo',
                              file_path_override: str = None,
-                             target_platform: str = 'sql_server_2022',
+                             target_platform: str = DEFAULT_TARGET_PLATFORM,
                              storage_url: str = None,
                              data_source: str = 'MyDataSource',
                              include_prereq: bool = True) -> str:
         """Generate a BULK INSERT statement (CSV / delimited text files only)."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('bulk_insert', target_platform):
             if target_platform == 'fabric_sql_db':
@@ -1113,13 +1146,13 @@ class SQLGenerator:
                             storage_url: str = None,
                             credential_name: str = 'MyStorageCredential',
                             data_source: str = 'MyDataSource',
-                            target_platform: str = 'sql_server_2022') -> str:
+                            target_platform: str = DEFAULT_TARGET_PLATFORM) -> str:
         """
         Generate OPENROWSET queries.
         Supports CSV, Parquet, Delta, JSON.
         """
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('openrowset', target_platform):
             alts = []
@@ -1699,10 +1732,10 @@ class SQLGenerator:
 
     def generate_external_file_format(self, metadata: Dict[str, Any],
                                       format_name: str = None,
-                                      target_platform: str = 'sql_server_2022') -> str:
+                                      target_platform: str = DEFAULT_TARGET_PLATFORM) -> str:
         """Generate CREATE EXTERNAL FILE FORMAT statement."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('external_table', target_platform):
             return self._not_supported_message(
@@ -1808,11 +1841,11 @@ class SQLGenerator:
                                 location: str = None,
                                 file_format: str = None,
                                 schema_name: str = 'dbo',
-                                target_platform: str = 'sql_server_2022',
+                                target_platform: str = DEFAULT_TARGET_PLATFORM,
                                 storage_url: str = None) -> str:
         """Generate CREATE EXTERNAL TABLE statement (PolyBase / data virtualization)."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('external_table', target_platform):
             alts = []
@@ -1914,6 +1947,40 @@ class SQLGenerator:
             return _azure_virtualization_parts(storage_url, file_name)
         return _sql_server_storage_parts(storage_url, file_name, target_platform)
 
+    def _cloud_staging_notice(self, storage_url: Optional[str],
+                              target_platform: str,
+                              file_name: str) -> List[str]:
+        """Return comment lines telling the user to stage local files in Azure.
+
+        Azure SQL Database and Azure SQL Managed Instance cannot read a path on
+        the machine that ran the analysis. When the analyzed file is local, the
+        generated script uses ``<container>``/``<path>`` placeholders, so make
+        the upload step explicit instead of letting the placeholders imply the
+        script is runnable as-is.
+        """
+        if target_platform not in self.AZURE_SQL_PLATFORMS:
+            return []
+        if storage_url and _looks_like_cloud_url(storage_url):
+            return []
+        base_name = os.path.basename(str(file_name).replace('\\', '/')) or '<file>'
+        label = self.PLATFORM_LABELS.get(target_platform, target_platform)
+        return [
+            '-- --------------------------------------------------------------------',
+            f'-- STAGE THE DATA IN AZURE STORAGE FIRST',
+            f'-- {_sql_comment(label)} runs in Azure and cannot read a path on',
+            '-- your workstation or an on-premises file share. The analyzed source',
+            f'-- ({_sql_comment(base_name)}) is a local file, so this script uses',
+            '-- <storage_account>, <container> and <path> placeholders.',
+            '--   1. Upload the file to an Azure Blob Storage or ADLS Gen2 container.',
+            '--   2. Replace the placeholders below with the real account,',
+            '--      container and blob path.',
+            '--   3. Grant the credential (SAS or Managed Identity) read access.',
+            '-- Tip: attach the storage account in the app and analyze the blob',
+            '--      directly to get a script with the real location filled in.',
+            '-- --------------------------------------------------------------------',
+            '',
+        ]
+
     # ------------------------------------------------------------------
     # COPY INTO  (Synapse Dedicated Pool / Fabric Data Warehouse)
     # ------------------------------------------------------------------
@@ -1922,10 +1989,10 @@ class SQLGenerator:
                            table_name: str = None,
                            schema_name: str = 'dbo',
                            storage_url: str = None,
-                           target_platform: str = 'sql_server_2022') -> str:
+                           target_platform: str = DEFAULT_TARGET_PLATFORM) -> str:
         """Explain COPY INTO availability for the exposed SQL targets."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         lines = [
@@ -1969,12 +2036,12 @@ class SQLGenerator:
     def generate_credential_setup(self, data_source: str = 'MyDataSource',
                                   file_format: str = 'ff_csv_format',
                                   metadata: Dict[str, Any] = None,
-                                  target_platform: str = 'sql_server_2022',
+                                  target_platform: str = DEFAULT_TARGET_PLATFORM,
                                   storage_url: str = None) -> str:
         """Generate prerequisite CREATE CREDENTIAL, CREATE EXTERNAL DATA SOURCE,
         and CREATE EXTERNAL FILE FORMAT statements."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('credential_setup', target_platform):
             return self._not_supported_message(
@@ -2041,6 +2108,10 @@ class SQLGenerator:
             f'-- with a DATA_SOURCE reference.',
             f'-- ====================================================================',
             f'',
+        ]
+        lines += self._cloud_staging_notice(storage_url, target_platform,
+                                            file_name)
+        lines += [
             f'-- 1. Master key (required once per database)',
             f'IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = \'##MS_DatabaseMasterKey##\')',
             f'    CREATE MASTER KEY ENCRYPTION BY PASSWORD = \'<StrongPassword!>\';',
@@ -2158,12 +2229,12 @@ class SQLGenerator:
     def generate_json_functions(self, metadata: Dict[str, Any],
                                 table_name: str = None,
                                 schema_name: str = 'dbo',
-                                target_platform: str = 'sql_server_2022',
+                                target_platform: str = DEFAULT_TARGET_PLATFORM,
                                 storage_url: str = None,
                                 data_source: str = 'MyDataSource') -> str:
         """Generate comprehensive T-SQL JSON function examples using the file's real schema."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('json_openjson', target_platform):
             alts = []
@@ -2422,10 +2493,10 @@ class SQLGenerator:
     def generate_for_json_path(self, metadata: Dict[str, Any],
                                table_name: str = None,
                                schema_name: str = 'dbo',
-                               target_platform: str = 'sql_server_2022') -> str:
+                               target_platform: str = DEFAULT_TARGET_PLATFORM) -> str:
         """Generate FOR JSON PATH examples for SQL-to-JSON export."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         if not self._supports('for_json', target_platform):
             return self._not_supported_message(
@@ -2520,12 +2591,12 @@ class SQLGenerator:
     # ------------------------------------------------------------------
 
     def generate_best_practices(self, metadata: Dict[str, Any],
-                                target_platform: str = 'sql_server_2022',
+                                target_platform: str = DEFAULT_TARGET_PLATFORM,
                                 table_name: str = None,
                                 schema_name: str = 'dbo') -> str:
         """Generate a best-practices guide for ingesting / querying this file type."""
         if target_platform not in self.PLATFORMS:
-            target_platform = 'sql_server_2022'
+            target_platform = DEFAULT_TARGET_PLATFORM
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         file_type = metadata.get('file_type', 'csv')
@@ -2634,7 +2705,7 @@ class SQLGenerator:
                               data_source: str = None,
                               location: str = None,
                               schema_name: str = 'dbo',
-                              target_platform: str = 'sql_server_2022',
+                              target_platform: str = DEFAULT_TARGET_PLATFORM,
                               storage_url: str = None) -> str:
         """Return every generated section as one runnable, GO-separated script."""
         statements = self.generate_all_statements(
@@ -2709,7 +2780,7 @@ class SQLGenerator:
                                 data_source: str = 'MyDataSource',
                                 location: str = None,
                                 schema_name: str = 'dbo',
-                                target_platform: str = 'sql_server_2022',
+                                target_platform: str = DEFAULT_TARGET_PLATFORM,
                                 storage_url: str = None) -> Dict[str, str]:
         """
         Return a dictionary with all generated SQL statement types:
@@ -3316,7 +3387,7 @@ def _best_practices_validation_sql(metadata: Dict[str, Any],
 
 def _best_practices_csv(size_mb: float, encoding: str, delimiter: str,
                         has_header: bool, compression: str,
-                        target_platform: str = 'sql_server_2022') -> List[str]:
+                        target_platform: str = DEFAULT_TARGET_PLATFORM) -> List[str]:
     delim_name = {',' : 'comma', '\t': 'tab', '|': 'pipe', ';': 'semicolon'}.get(delimiter, repr(delimiter))
     display_delimiter = _sql_comment(_display_delimiter(delimiter))
     is_fabric = target_platform == 'fabric_sql_db'
@@ -3423,7 +3494,7 @@ def _best_practices_csv(size_mb: float, encoding: str, delimiter: str,
 
 def _best_practices_parquet(size_mb: float, compression: str,
                              metadata: Dict[str, Any],
-                             target_platform: str = 'sql_server_2022') -> List[str]:
+                             target_platform: str = DEFAULT_TARGET_PLATFORM) -> List[str]:
     row_groups = (metadata.get('parquet_metadata') or {}).get('num_row_groups', 'unknown')
     comp_label = compression or 'UNCOMPRESSED'
 
@@ -3555,7 +3626,7 @@ def _best_practices_delta(metadata: Dict[str, Any],
 
 
 def _best_practices_json(size_mb: float,
-                         target_platform: str = 'sql_server_2022') -> List[str]:
+                         target_platform: str = DEFAULT_TARGET_PLATFORM) -> List[str]:
     if target_platform == 'fabric_sql_db':
         remote_example = [
             '-- 3. FABRIC SQL DATABASE — JSON via OPENROWSET + OPENJSON',

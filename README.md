@@ -1,8 +1,30 @@
-# SQL External File Detector
+# SQL File Detection Tool
 
-SQL External File Detector analyzes data files and generates platform-aware
+SQL File Detection Tool analyzes data files and generates platform-aware
 T-SQL loading and external-table guidance. It supports local files, Amazon S3,
-and Azure Blob Storage through a CLI and a local web interface.
+and Azure Blob Storage through a CLI, a local web interface, and a VS Code
+extension.
+
+**Azure SQL Database is the default target platform.** Every entry point - CLI,
+web UI, Python API, and VS Code extension - generates Azure SQL Database output
+unless another platform is selected explicitly.
+
+## Names and compatibility
+
+The project was previously called *SQL External File Detector*. The rename is
+deliberately non-breaking:
+
+| Thing | Current name | Still accepted |
+| --- | --- | --- |
+| Product | SQL File Detection Tool | - |
+| Repository | `HugoMSFT/SQL-File-Detection-Tool` | old URL redirects |
+| Python distribution | `sql-file-detection-tool` | - |
+| Import package | `external_file_detection` | unchanged, no migration needed |
+| Console script | `sql-file-detection-tool` | `external-file-detector` |
+| Application class | `SQLFileDetectionApp` | `ExternalFileDetectorApp` |
+| Web GUI class | `SQLFileDetectionWebGUI` | `ExternalFileDetectionWebGUI` |
+
+Existing scripts, imports and automation continue to work unchanged.
 
 ## Features
 
@@ -16,6 +38,10 @@ and Azure Blob Storage through a CLI and a local web interface.
 - Keeps generated SQL aligned with SQL Server, Azure SQL, and Fabric SQL
   Database feature differences.
 - Provides local, S3, and Azure Blob storage handlers.
+- Signs in to Azure Storage the way Azure Storage Explorer does: Microsoft Entra
+  ID, managed identity, SAS, connection string, or account key.
+- Ships as an installable VS Code extension that bundles and manages the
+  Python backend.
 
 Generated SQL is a starting point. Review data types, credentials, paths, and
 platform requirements before running it in a database.
@@ -115,25 +141,40 @@ in the separate `test` extra.
 
 ## CLI
 
+The primary console script is `sql-file-detection-tool`. `external-file-detector`
+remains as an alias for existing automation; both accept identical arguments.
+
 Analyze a local directory:
 
 ```bash
-external-file-detector analyze C:\data --data-source MyDataSource \
+sql-file-detection-tool analyze C:\data --data-source MyDataSource
+```
+
+That command targets Azure SQL Database, the default. Pass
+`--target-platform sql_server_2022` to select something else:
+
+```bash
+sql-file-detection-tool analyze C:\data --data-source MyDataSource \
   --target-platform sql_server_2022
 ```
 
 Analyze selected local or remote files:
 
 ```bash
-external-file-detector analyze-files orders.csv events.ndjson --format json
-external-file-detector analyze-files s3://my-bucket/data/orders.csv \
-  --target-platform azure_sql_db
+sql-file-detection-tool analyze-files orders.csv events.ndjson --format json
+sql-file-detection-tool analyze-files s3://my-bucket/data/orders.csv \
+  --target-platform sql_server_2025
 ```
 
 `--target-platform` is available on `analyze`, `analyze-files`, and
 `generate-data-source`. Accepted values are `sql_server_2019`,
 `sql_server_2022`, `sql_server_2025`, `azure_sql_db`, `azure_sql_mi`, and
-`fabric_sql_db`. The default is `sql_server_2022`.
+`fabric_sql_db`. **The default is `azure_sql_db`.**
+
+Because Azure SQL Database cannot read a local path, analyzing a local file with
+the default platform adds an explicit "stage the data in Azure Storage first"
+prerequisite block to the generated script instead of presenting the local path
+as directly runnable.
 
 Generated SQL output is now complete rather than a single statement. Each file
 produces one script containing every applicable section - prerequisite
@@ -193,29 +234,28 @@ Behaviour worth knowing when you consume `generate_complete_ddl` or the
 Export generated output:
 
 ```bash
-external-file-detector analyze C:\data --output analysis.sql
-external-file-detector analyze C:\data --format json --output analysis.json
+sql-file-detection-tool analyze C:\data --output analysis.sql
+sql-file-detection-tool analyze C:\data --format json --output analysis.json
 ```
 
 Point the generated SQL at a cloud location with `--storage-url`:
 
 ```bash
-external-file-detector analyze-files C:\data\orders.csv \
-  --storage-url "abs://data@acct.blob.core.windows.net/raw/orders.csv" \
-  --target-platform azure_sql_db
+sql-file-detection-tool analyze-files C:\data\orders.csv \
+  --storage-url "abs://data@acct.blob.core.windows.net/raw/orders.csv"
 ```
 
 List a location or inspect supported types:
 
 ```bash
-external-file-detector list-files C:\data
-external-file-detector supported-types
+sql-file-detection-tool list-files C:\data
+sql-file-detection-tool supported-types
 ```
 
 Generate an external data source statement:
 
 ```bash
-external-file-detector generate-data-source MyDataSource azure \
+sql-file-detection-tool generate-data-source MyDataSource azure \
   "https://account.blob.core.windows.net/container"
 ```
 
@@ -225,19 +265,161 @@ Cloud credential options are available on `analyze`, `analyze-files`, and
 | Provider | Environment variables |
 | --- | --- |
 | AWS | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` |
-| Azure | `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, `AZURE_STORAGE_CONNECTION_STRING` |
+| Azure | `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_SAS_TOKEN` |
 
-Run `external-file-detector COMMAND --help` for complete command options.
+`--azure-auth-mode` selects the sign-in explicitly - `entra_default`,
+`entra_interactive`, `managed_identity`, `sas`, `connection_string`,
+`account_key` or `anonymous`. See
+[Azure Storage authentication](#azure-storage-authentication).
+
+Run `sql-file-detection-tool COMMAND --help` for complete command options.
+
+## Azure Storage authentication
+
+The tool attaches to Azure Storage the same way Azure Storage Explorer does.
+Every mode is chosen explicitly; a failed Microsoft Entra ID sign-in is **never**
+silently downgraded to anonymous or shared-key access.
+
+| Mode | Id | Use it for |
+| --- | --- | --- |
+| Microsoft Entra ID (recommended) | `entra_default` | Reuses an existing Azure CLI, Azure PowerShell or VS Code developer sign-in |
+| Microsoft Entra ID (interactive) | `entra_interactive` | Opens a browser sign-in; the refresh token is cached in the OS-protected store where the platform supports it |
+| Managed identity | `managed_identity` | **The production choice.** Selects `ManagedIdentityCredential` explicitly, optionally user-assigned via `AZURE_CLIENT_ID` |
+| VS Code sign-in | `vscode_token` | The extension brokers a token from VS Code's Microsoft auth provider |
+| Shared access signature | `sas` | A SAS URL or bare SAS token |
+| Connection string | `connection_string` | A full storage connection string |
+| Account key | `account_key` | Least preferred; use only when nothing else is possible |
+| Anonymous | `anonymous` | Public read-only containers |
+
+### Recommended: Azure RBAC
+
+Grant the signed-in identity **Storage Blob Data Reader** on the storage account
+or container. That is the minimum required for read-only browsing and analysis.
+Owner/Contributor on the *control plane* does not grant data-plane access.
+
+```bash
+az role assignment create \
+  --role "Storage Blob Data Reader" \
+  --assignee "<object-id>" \
+  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<account>"
+```
+
+### Production guidance
+
+`entra_default` is intentionally limited to local and developer use: an
+unpredictable credential chain is not acceptable in production. In an Azure-hosted
+deployment select `managed_identity`, which builds `ManagedIdentityCredential`
+directly:
+
+```bash
+export AZURE_CLIENT_ID="<user-assigned-identity-client-id>"   # omit for system-assigned
+sql-file-detection-tool analyze abs://data@acct.blob.core.windows.net/raw \
+  --azure-auth-mode managed_identity
+```
+
+### How secrets are handled
+
+- SAS tokens, connection strings and account keys are held **in memory only**,
+  scoped to one browser session, and dropped on disconnect or when the
+  connection's TTL expires.
+- Nothing secret is written to a setting, a log line, a URL, a response body,
+  `localStorage`, a file, or Git.
+- SAS query strings and connection strings are redacted from every displayed
+  path, error message and generated diagnostic.
+- Access tokens are never placed in a URL, an environment variable, or a
+  command-line argument.
+- Credential inputs in the web UI are password fields, and the connection status
+  shows only a masked hint such as `****3f9c`.
+
+No Microsoft Entra application registration is created. The tool uses VS Code's
+built-in Microsoft authentication provider and the Azure Identity public-client
+developer flows, so there is no client secret anywhere in this project.
+
+### Azure explorer in the web UI
+
+The **Azure Storage** button opens an explorer showing the current sign-in and
+identity, connect/disconnect, a subscription picker (when an ARM token is
+available), a storage-account picker, containers, prefix/folder navigation,
+blobs, and an **Analyze** action. Listing is bounded and paged.
+
+Subscription enumeration needs an ARM token. When it is unavailable - a SAS,
+connection string or account-key attachment, for example - the picker is hidden
+and you can still browse a known account by name.
+
+## VS Code extension
+
+The repository root is also a VS Code extension. Build and install it locally:
+
+```bash
+npm install
+npm run package          # writes dist/sql-file-detection-tool-<version>.vsix
+code --install-extension dist/sql-file-detection-tool-<version>.vsix
+```
+
+Commands (Command Palette, prefix **SQL File Detection Tool**):
+
+| Command | Purpose |
+| --- | --- |
+| `Open` | Starts the backend and opens the UI |
+| `Analyze Current File` | Opens the UI with the active editor's file analyzed |
+| `Analyze Workspace Folder` | Analyzes a workspace folder |
+| `Connect to Azure Storage` | Signs in through VS Code and brokers the token to the backend |
+| `Disconnect Azure Storage` | Clears the brokered token and every connection |
+| `Stop Backend` | Stops the Python process |
+| `Set Up Backend` | Creates or repairs the managed Python environment |
+| `Show Output` | Reveals the output channel |
+
+Supported files and Delta/Iceberg directories also get an **Analyze with SQL File
+Detection Tool** entry in the Explorer context menu.
+
+### Settings
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
+| `sqlFileDetectionTool.pythonPath` | `""` | Interpreter used to *create* the managed environment |
+| `sqlFileDetectionTool.backendInterpreter` | `""` | Escape hatch: run the backend with an existing interpreter instead of the managed one |
+| `sqlFileDetectionTool.installAzureExtras` | `true` | Install the `[azure]` extra into the managed environment |
+| `sqlFileDetectionTool.host` | `127.0.0.1` | Loopback bind address |
+| `sqlFileDetectionTool.rootDirectory` | `""` | Directory the backend may read local files from. Empty means "pick automatically" (see below) |
+| `sqlFileDetectionTool.openIn` | `simpleBrowser` | `simpleBrowser` or `externalBrowser` |
+
+### How the extension works
+
+- On first use it creates a virtual environment under the extension's
+  `globalStorageUri` and installs the bundled project with the `[azure]` extra.
+  Your workspace interpreter is never modified.
+- The backend is spawned with an argument array (never a shell string) on a
+  dynamically chosen free loopback port, and the extension waits on
+  `/api/health` before opening anything.
+- The backend confines every local read to one **analysis root**, passed as
+  `--root-dir`. When `sqlFileDetectionTool.rootDirectory` is empty the extension
+  picks the workspace folder containing the file you asked about, falling back to
+  the first workspace folder and then your home directory. Analyzing a file
+  outside the current root restarts the backend with a root that contains it.
+- A cryptographically random per-process control token is passed to the backend
+  through its environment, read once at start-up and removed from the
+  environment. Control endpoints compare it with `hmac.compare_digest`.
+- `Connect to Azure Storage` acquires Microsoft tokens through
+  `vscode.authentication.getSession('microsoft', ...)` and posts them to the
+  protected control endpoint over loopback. Tokens live in memory, are refreshed
+  before expiry, and are cleared on sign-out and on deactivate.
+- The status bar and output channel report backend state with every secret
+  redacted.
 
 ## Web interface
 
 ```bash
-external-file-detector gui --root-dir C:\data
+sql-file-detection-tool gui --root-dir C:\data
 ```
 
 Open `http://127.0.0.1:5000`. The built-in Flask server is intentionally
 loopback-only because its filesystem APIs do not provide authentication.
 `--root-dir` limits browsing and analysis to one directory tree.
+
+State-changing and Azure endpoints additionally require a per-browser-session
+token sent in the `X-SQLFDT-Session` header. The token is rendered into the page
+and available from `GET /api/session`; CORS stays closed.
 
 ### Web UI controls
 
@@ -259,6 +441,20 @@ loopback-only because its filesystem APIs do not provide authentication.
   left blank for local ones, with a reminder that cloud SQL needs the file
   staged in reachable storage.
 - **Public dataset URL.** See below.
+- **Target platform.** The selector lists Azure SQL Database first and
+  preselects it. Compatibility indicators reflect the selected platform.
+- **Azure Storage.** Opens the Azure explorer described above.
+
+### Deep links
+
+The UI accepts query parameters so the VS Code commands can open it on a
+specific target:
+
+| Parameter | Effect |
+| --- | --- |
+| `?path=<file>` | Selects and analyses that file |
+| `?folder=<dir>` | Browses and analyses that folder |
+| `?azure=1` | Opens the Azure Storage explorer on load |
 
 ### Public dataset URL workflow
 
@@ -318,16 +514,30 @@ Production WSGI guidance:
   per process start, which invalidates every existing session cookie on restart.
   Generate one once with `python -c "import secrets; print(secrets.token_hex(32))"`
   and supply it through the environment or your secret store.
+- **Use `managed_identity` for Azure Storage**, not `entra_default`.
 
 ## Python API
 
 ```python
-from external_file_detection import FileDetector, SQLGenerator
+from external_file_detection import (
+    DEFAULT_TARGET_PLATFORM, FileDetector, SQLGenerator,
+)
+
+assert DEFAULT_TARGET_PLATFORM == "azure_sql_db"
 
 detector = FileDetector()
 metadata = detector.analyze_file_metadata("orders.parquet")
 
 generator = SQLGenerator()
+
+# Azure SQL Database by default.
+statements = generator.generate_all_statements(
+    metadata,
+    table_name="orders",
+    data_source="MyDataSource",
+)
+
+# Another platform, selected explicitly.
 statements = generator.generate_all_statements(
     metadata,
     table_name="orders",
@@ -341,10 +551,19 @@ print(statements["create_external_table"])
 For location-level analysis:
 
 ```python
-from external_file_detection import ExternalFileDetectorApp
+from external_file_detection import SQLFileDetectionApp
 
-app = ExternalFileDetectorApp()
+app = SQLFileDetectionApp()  # ExternalFileDetectorApp still works
 result = app.analyze_location(r"C:\data", data_source="MyDataSource")
+```
+
+Attach to Azure Storage programmatically:
+
+```python
+from external_file_detection import azure_auth
+
+connection = azure_auth.connect(azure_auth.AUTH_ENTRA_DEFAULT)
+containers = azure_auth.list_containers(connection, account_name="myaccount")
 ```
 
 ## Analysis behavior
@@ -363,10 +582,20 @@ result = app.analyze_location(r"C:\data", data_source="MyDataSource")
 
 ## Development
 
-Run the test suite:
+Run the Python test suite:
 
 ```bash
 python -m pytest -q
+```
+
+Build the VS Code extension and run its tests:
+
+```bash
+npm install
+npm run typecheck
+npm run lint
+npm test
+npm run package
 ```
 
 Build distributable packages:
@@ -382,7 +611,18 @@ CI runs the tests on Linux and Windows and builds the wheel from
 ## Project layout
 
 ```text
+package.json                 VS Code extension manifest
+src/                         extension TypeScript sources
+|-- extension.ts             activation and commands
+|-- backend.ts               Python backend lifecycle
+|-- pythonEnv.ts             managed virtual environment
+|-- azureSignIn.ts           VS Code Microsoft token brokering
+|-- process.ts               spawn helpers (no vscode import)
+|-- azureScopes.ts           token scopes and expiry math
+|-- util.ts                  ports, URLs, redaction
+`-- test/                    node --test suites
 external_file_detection/
+|-- azure_auth.py
 |-- cli.py
 |-- external_file_detector.py
 |-- file_detector.py

@@ -44,4 +44,26 @@ jobs:
       - run: python -m pip install --upgrade build pip
       - run: python -m build
       - run: python -m pip install --force-reinstall dist/*.whl
+      # Both console scripts must keep working: the new primary name and the
+      # backward-compatible alias.
+      - run: sql-file-detection-tool --version
       - run: external-file-detector --version
+      - name: Default target platform must be Azure SQL Database
+        run: |
+          python -c "from external_file_detection import DEFAULT_TARGET_PLATFORM as p; assert p == 'azure_sql_db', p; print(p)"
+
+  extension:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run package

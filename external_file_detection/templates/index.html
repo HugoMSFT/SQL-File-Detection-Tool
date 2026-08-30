@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>External File Detection Tool</title>
+    <title>SQL File Detection Tool</title>
     <script>
         /* Applied before first paint so the page never flashes the wrong theme. */
         (function () {
@@ -18,6 +18,7 @@
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
+    <script id="appConfig" type="application/json">{{ app_config | tojson }}</script>
     <style>
         /* ---- theme tokens: dark (default) and light ---- */
         :root {
@@ -935,6 +936,57 @@
             border-bottom: none;
         }
 
+        /* ---- Azure Storage explorer ---- */
+        .az-selectors select {
+            flex: 1 1 220px;
+            padding: 7px 10px;
+            border: 1px solid var(--c-border-strong);
+            border-radius: 4px;
+            background: var(--c-bg);
+            color: var(--c-text);
+        }
+
+        .az-selectors label,
+        .az-auth label {
+            align-self: center;
+            flex: 0 0 auto;
+            min-width: 120px;
+        }
+
+        .az-item {
+            cursor: pointer;
+            justify-content: flex-start;
+        }
+
+        .az-item:hover {
+            background: var(--c-surface-4);
+        }
+
+        .az-item.selected {
+            background: var(--c-surface-4);
+            outline: 1px solid var(--c-accent);
+            outline-offset: -1px;
+        }
+
+        .az-item.az-dim {
+            opacity: .6;
+        }
+
+        .az-icon {
+            flex: 0 0 auto;
+        }
+
+        .az-name {
+            flex: 1 1 auto;
+            overflow-wrap: anywhere;
+        }
+
+        .az-meta {
+            flex: 0 0 auto;
+            font-size: 12px;
+            opacity: .75;
+        }
+
         .pd-item:hover {
             background: var(--c-row-hover);
         }
@@ -1083,7 +1135,7 @@
         <!-- header -->
         <div class="header">
             <div>
-                <h1>External File Detection Tool</h1>
+                <h1>SQL File Detection Tool</h1>
                 <div class="subtitle">Preview files &bull; Generate T-SQL &bull; Understand metadata</div>
             </div>
             <div class="wizard-steps" id="wizardSteps">
@@ -1103,17 +1155,19 @@
         <div class="toolbar">
             <button class="btn btn-primary" onclick="showBrowser()">Browse Files</button>
             <button class="btn" onclick="analyzeFolder()">Analyze Folder</button>
+            <button class="btn" onclick="showAzureExplorer()" id="btnAzure"
+                title="Attach an Azure Storage account and browse containers and blobs">Azure Storage</button>
             <div class="input-group">
                 <label>Platform:</label>
                 <select id="selPlatform">
-                    <optgroup label="SQL Server">
-                        <option value="sql_server_2025">SQL Server 2025</option>
-                        <option value="sql_server_2022" selected>SQL Server 2022</option>
-                        <option value="sql_server_2019">SQL Server 2019</option>
-                    </optgroup>
                     <optgroup label="Azure SQL">
                         <option value="azure_sql_db">Azure SQL Database</option>
                         <option value="azure_sql_mi">Azure SQL Managed Instance</option>
+                    </optgroup>
+                    <optgroup label="SQL Server">
+                        <option value="sql_server_2025">SQL Server 2025</option>
+                        <option value="sql_server_2022">SQL Server 2022</option>
+                        <option value="sql_server_2019">SQL Server 2019</option>
                     </optgroup>
                     <optgroup label="Microsoft Fabric">
                         <option value="fabric_sql_db">Fabric SQL Database</option>
@@ -1301,6 +1355,54 @@
         </div>
     </div>
 
+    <!-- Azure Storage explorer modal (hidden) -->
+    <div id="azureModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Azure Storage</h2>
+                <div class="browser-path" id="azPath">Not connected</div>
+            </div>
+            <div class="modal-body">
+                <div class="az-auth" id="azAuthPanel">
+                    <div class="pd-form">
+                        <label class="field-help" for="selAzMode">Sign in / attach with</label>
+                        <select id="selAzMode" onchange="azModeChanged()"></select>
+                        <button class="btn btn-primary" id="btnAzConnect" onclick="azConnect()">Connect</button>
+                    </div>
+                    <div class="az-fields" id="azFields"></div>
+                    <div class="pd-status" id="azStatus">Microsoft Entra ID is recommended. Grant the signed-in
+                        identity <strong>Storage Blob Data Reader</strong> on the account or container for read-only
+                        browsing. Secrets are held in memory for this session only and are never written to disk,
+                        logs or the page.</div>
+                </div>
+                <div class="az-browse hidden" id="azBrowsePanel">
+                    <div class="pd-form az-selectors">
+                        <label class="field-help" for="selAzSubscription">Subscription</label>
+                        <select id="selAzSubscription" onchange="azSubscriptionChanged()"></select>
+                        <label class="field-help" for="selAzAccount">Storage account</label>
+                        <select id="selAzAccount" onchange="azAccountChanged()"></select>
+                    </div>
+                    <div class="pd-form az-selectors">
+                        <label class="field-help" for="inpAzAccountName">Or account name</label>
+                        <input id="inpAzAccountName" type="text" spellcheck="false" placeholder="mystorageaccount"
+                            onkeydown="if (event.key === 'Enter') azUseTypedAccount();">
+                        <button class="btn" onclick="azUseTypedAccount()">Browse</button>
+                    </div>
+                    <div class="pd-list" id="azList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="btnAzUp" onclick="azNavigateUp()" style="display:none">Up</button>
+                <button class="btn" id="btnAzMore" onclick="azLoadMore()" style="display:none">Load more</button>
+                <button class="btn" id="btnAzDisconnect" onclick="azDisconnect()"
+                    style="display:none">Disconnect</button>
+                <button class="btn" onclick="closeAzureExplorer()">Close</button>
+                <button class="btn btn-primary" id="btnAzAnalyze" onclick="azAnalyzeSelected()"
+                    style="display:none">Analyze selected</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /* ================================================================
            STATE
@@ -1316,6 +1418,29 @@
         let tableNameTouched = false;
         let storageUrlTouched = false;
         let pdState = { catalogUrl: '', catalogTitle: '' };
+
+        /* ================================================================
+           APP CONFIG — server-rendered, includes the per-session CSRF token
+           ================================================================ */
+        const APP_CONFIG = (function () {
+            const fallback = {
+                sessionToken: '', defaultPlatform: 'azure_sql_db',
+                productName: 'SQL File Detection Tool', productVersion: '',
+                azureExtras: false, authModes: []
+            };
+            const el = document.getElementById('appConfig');
+            if (!el) return fallback;
+            try { return Object.assign(fallback, JSON.parse(el.textContent || '{}')); }
+            catch (e) { return fallback; }
+        })();
+
+        function sessionHeaders(extra) {
+            const headers = Object.assign({}, extra || {});
+            if (APP_CONFIG.sessionToken) {
+                headers['X-SQLFDT-Session'] = APP_CONFIG.sessionToken;
+            }
+            return headers;
+        }
 
         /* ================================================================
            THEME — CSS custom properties, persisted choice, OS default
@@ -1526,6 +1651,15 @@
         /* ================================================================
            BOOT
            ================================================================ */
+        (function applyDefaultPlatform() {
+            const sel = document.getElementById('selPlatform');
+            if (!sel) return;
+            const wanted = APP_CONFIG.defaultPlatform || 'azure_sql_db';
+            if (Array.prototype.some.call(sel.options, o => o.value === wanted)) {
+                sel.value = wanted;
+            }
+        })();
+
         fetch('/api/initial_path').then(r => r.json()).then(d => {
             if (d.success) initialPath = d.path;
         }).catch(() => { });
@@ -1701,7 +1835,7 @@
         function loadSQL(f) {
             const ds = 'MyDataSource';
             const sc = 'dbo';
-            const pl = document.getElementById('selPlatform').value || 'sql_server_2022';
+            const pl = document.getElementById('selPlatform').value || APP_CONFIG.defaultPlatform;
             const tnInput = document.getElementById('inpTableName');
             const tn = tnInput ? tnInput.value || '' : '';
             const su = currentStorageUrl();
@@ -1951,7 +2085,7 @@
             const platformLabel = pl.options[pl.selectedIndex].text;
             const fileName = selectedIdx >= 0 ? (currentFiles[selectedIdx].file_path || 'file').split(/[\\/]/).pop() : 'file';
             let content = '-- ==========================================================================\n';
-            content += '-- External File Detection Tool  —  Generated T-SQL\n';
+            content += '-- SQL File Detection Tool  —  Generated T-SQL\n';
             content += '-- File     : ' + fileName + '\n';
             content += '-- Platform : ' + platformLabel + '\n';
             content += '-- Date     : ' + new Date().toISOString().slice(0, 10) + '\n';
@@ -2445,6 +2579,424 @@
             if (d.includes('decimal') || d.includes('numeric')) return 'DECIMAL(18,4)';
             return 'NVARCHAR(255)';
         }
+
+        /* ================================================================
+           AZURE STORAGE EXPLORER
+           Storage Explorer-style attach: pick an explicit auth mode, then
+           browse subscription -> account -> container -> prefix -> blob.
+           No credential value is ever stored by this page: fields are read
+           once, posted over the loopback connection and cleared.
+           ================================================================ */
+        const AZ_FIELDS = {
+            entra_default: [],
+            entra_interactive: [
+                { id: 'tenant_id', label: 'Tenant ID (optional)', type: 'text' }
+            ],
+            managed_identity: [
+                { id: 'client_id', label: 'User-assigned client ID (optional)', type: 'text' }
+            ],
+            vscode_token: [],
+            sas: [
+                { id: 'sas', label: 'SAS URL or token', type: 'password', required: true }
+            ],
+            connection_string: [
+                { id: 'connection_string', label: 'Connection string', type: 'password', required: true }
+            ],
+            account_key: [
+                { id: 'account_name', label: 'Storage account name', type: 'text', required: true },
+                { id: 'account_key', label: 'Account key (least preferred)', type: 'password', required: true }
+            ],
+            anonymous: [
+                { id: 'account_name', label: 'Storage account name', type: 'text', required: true }
+            ]
+        };
+
+        const AZ_MODE_HELP = {
+            entra_default: 'Reuses your Azure CLI, Azure PowerShell or VS Code developer sign-in.',
+            entra_interactive: 'Opens a browser sign-in on this machine and caches the token securely where supported.',
+            managed_identity: 'Recommended for production hosts. Uses the managed identity assigned to the machine.',
+            vscode_token: 'Uses the Microsoft account you signed into VS Code with. Sign in from the extension first.',
+            sas: 'Attach with a shared access signature. The signature is never shown or logged.',
+            connection_string: 'Attach with a full connection string. The key portion is never shown or logged.',
+            account_key: 'Least preferred: prefer Microsoft Entra ID with Storage Blob Data Reader.',
+            anonymous: 'Public read-only containers only. No credential is sent.'
+        };
+
+        let azState = {
+            connected: false, account: '', container: '', prefix: '',
+            selected: null, continuation: null, items: [], level: 'containers'
+        };
+
+        function azSetStatus(message, isError) {
+            const el = document.getElementById('azStatus');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.toggle('pd-error', !!isError);
+        }
+
+        function azBusy(busy, label) {
+            const btn = document.getElementById('btnAzConnect');
+            if (btn) { btn.disabled = !!busy; btn.textContent = busy ? (label || 'Working\u2026') : 'Connect'; }
+        }
+
+        function azApi(url, options) {
+            const opts = Object.assign({}, options || {});
+            opts.headers = sessionHeaders(opts.headers);
+            if (opts.body) opts.headers['Content-Type'] = 'application/json';
+            return fetch(url, opts).then(r => r.json().then(d => {
+                if (!r.ok || d.success === false) {
+                    throw new Error(d.error || ('Request failed (' + r.status + ')'));
+                }
+                return d;
+            }));
+        }
+
+        function showAzureExplorer() {
+            document.getElementById('azureModal').classList.remove('hidden');
+            azApi('/api/azure/status').then(d => {
+                azRenderModes(d.modes || [], d.vscode || {});
+                if (d.connection && d.connection.connected) azOnConnected(d.connection);
+                else azShowAuthPanel();
+                if (!d.azure_extras) {
+                    azSetStatus('Azure SDK extras are not installed. Run: pip install '
+                        + '"sql-file-detection-tool[azure]"', true);
+                }
+            }).catch(e => azSetStatus(e.message, true));
+        }
+
+        function closeAzureExplorer() {
+            document.getElementById('azureModal').classList.add('hidden');
+            azClearCredentialInputs();
+        }
+
+        function azClearCredentialInputs() {
+            document.querySelectorAll('#azFields input').forEach(i => { i.value = ''; });
+        }
+
+        function azRenderModes(modes, vscode) {
+            const sel = document.getElementById('selAzMode');
+            if (!sel || sel.options.length) { azModeChanged(); return; }
+            modes.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.label;
+                if (m.id === 'vscode_token' && !(vscode && vscode.available)) opt.disabled = true;
+                sel.appendChild(opt);
+            });
+            sel.value = (vscode && vscode.available) ? 'vscode_token' : 'entra_default';
+            azModeChanged();
+        }
+
+        function azModeChanged() {
+            const mode = document.getElementById('selAzMode').value;
+            const host = document.getElementById('azFields');
+            host.innerHTML = '';
+            (AZ_FIELDS[mode] || []).forEach(f => {
+                const wrap = document.createElement('div');
+                wrap.className = 'pd-form';
+                const label = document.createElement('label');
+                label.className = 'field-help';
+                label.setAttribute('for', 'azf_' + f.id);
+                label.textContent = f.label;
+                const input = document.createElement('input');
+                input.id = 'azf_' + f.id;
+                input.type = f.type;
+                input.spellcheck = false;
+                input.autocomplete = 'off';
+                input.dataset.field = f.id;
+                if (f.required) input.required = true;
+                wrap.appendChild(label);
+                wrap.appendChild(input);
+                host.appendChild(wrap);
+            });
+            azSetStatus(AZ_MODE_HELP[mode] || '');
+        }
+
+        function azConnect() {
+            const mode = document.getElementById('selAzMode').value;
+            const payload = { mode: mode };
+            let missing = null;
+            (AZ_FIELDS[mode] || []).forEach(f => {
+                const el = document.getElementById('azf_' + f.id);
+                const value = el ? el.value.trim() : '';
+                if (f.required && !value) missing = missing || f.label;
+                if (value) payload[f.id] = value;
+            });
+            if (missing) { azSetStatus(missing + ' is required.', true); return; }
+            azBusy(true, 'Connecting\u2026');
+            azApi('/api/azure/connect', { method: 'POST', body: JSON.stringify(payload) })
+                .then(d => { azClearCredentialInputs(); azOnConnected(d.connection); })
+                .catch(e => azSetStatus(e.message, true))
+                .finally(() => azBusy(false));
+        }
+
+        function azDisconnect() {
+            azApi('/api/azure/disconnect', { method: 'POST', body: JSON.stringify({}) })
+                .then(() => {
+                    azState = {
+                        connected: false, account: '', container: '', prefix: '',
+                        selected: null, continuation: null, items: [], level: 'containers'
+                    };
+                    azShowAuthPanel();
+                    azSetStatus('Disconnected. Credentials for this session were discarded.');
+                    setStatus('Azure Storage disconnected');
+                })
+                .catch(e => azSetStatus(e.message, true));
+        }
+
+        function azShowAuthPanel() {
+            document.getElementById('azAuthPanel').classList.remove('hidden');
+            document.getElementById('azBrowsePanel').classList.add('hidden');
+            document.getElementById('azPath').textContent = 'Not connected';
+            ['btnAzUp', 'btnAzMore', 'btnAzDisconnect', 'btnAzAnalyze']
+                .forEach(id => { document.getElementById(id).style.display = 'none'; });
+        }
+
+        function azOnConnected(connection) {
+            connection = connection || {};
+            azState.connected = true;
+            azState.account = connection.account_name || azState.account || '';
+            document.getElementById('azAuthPanel').classList.add('hidden');
+            document.getElementById('azBrowsePanel').classList.remove('hidden');
+            document.getElementById('btnAzDisconnect').style.display = '';
+            const bits = [connection.mode_label || connection.mode || 'connected'];
+            if (connection.identity) bits.push(connection.identity);
+            if (connection.credential_hint) bits.push(connection.credential_hint);
+            document.getElementById('azPath').textContent = bits.join('  \u2022  ');
+            const nameInput = document.getElementById('inpAzAccountName');
+            if (nameInput && azState.account) nameInput.value = azState.account;
+            setStatus('Azure Storage connected');
+            azLoadSubscriptions();
+            if (azState.account) azLoadContainers();
+        }
+
+        function azLoadSubscriptions() {
+            const sel = document.getElementById('selAzSubscription');
+            sel.innerHTML = '';
+            azApi('/api/azure/subscriptions').then(d => {
+                if (!d.available || !(d.subscriptions || []).length) {
+                    const opt = document.createElement('option');
+                    opt.textContent = d.reason || 'Subscription list unavailable';
+                    opt.value = '';
+                    sel.appendChild(opt);
+                    sel.disabled = true;
+                    return;
+                }
+                sel.disabled = false;
+                d.subscriptions.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id || s.subscription_id || '';
+                    opt.textContent = s.name || opt.value;
+                    sel.appendChild(opt);
+                });
+                azSubscriptionChanged();
+            }).catch(() => { sel.disabled = true; });
+        }
+
+        function azSubscriptionChanged() {
+            const subscription = document.getElementById('selAzSubscription').value;
+            const sel = document.getElementById('selAzAccount');
+            sel.innerHTML = '';
+            if (!subscription) { sel.disabled = true; return; }
+            azApi('/api/azure/storage-accounts?subscription_id=' + encodeURIComponent(subscription))
+                .then(d => {
+                    sel.disabled = false;
+                    (d.accounts || []).forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.name;
+                        opt.textContent = a.name + (a.location ? '  (' + a.location + ')' : '');
+                        sel.appendChild(opt);
+                    });
+                    if (sel.options.length) azAccountChanged();
+                })
+                .catch(e => { sel.disabled = true; azSetStatus(e.message, true); });
+        }
+
+        function azAccountChanged() {
+            const account = document.getElementById('selAzAccount').value;
+            if (!account) return;
+            azState.account = account;
+            document.getElementById('inpAzAccountName').value = account;
+            azLoadContainers();
+        }
+
+        function azUseTypedAccount() {
+            const value = document.getElementById('inpAzAccountName').value.trim();
+            if (!value) { azSetStatus('Enter a storage account name.', true); return; }
+            azState.account = value;
+            azLoadContainers();
+        }
+
+        function azQuery(extra) {
+            const params = new URLSearchParams(extra || {});
+            if (azState.account) params.set('account', azState.account);
+            return params.toString();
+        }
+
+        function azLoadContainers(continuation) {
+            azState.level = 'containers';
+            azState.container = '';
+            azState.prefix = '';
+            azState.selected = null;
+            const extra = continuation ? { continuation: continuation } : {};
+            azApi('/api/azure/containers?' + azQuery(extra)).then(d => {
+                const rows = (d.containers || []).map(c => ({ kind: 'container', name: c.name }));
+                azState.items = continuation ? azState.items.concat(rows) : rows;
+                azState.continuation = d.continuation || null;
+                azRenderList();
+                azUpdatePath();
+            }).catch(e => azBrowseError(e));
+        }
+
+        function azLoadBlobs(continuation) {
+            azState.level = 'blobs';
+            azState.selected = null;
+            const extra = { container: azState.container, prefix: azState.prefix };
+            if (continuation) extra.continuation = continuation;
+            azApi('/api/azure/blobs?' + azQuery(extra)).then(d => {
+                const rows = (d.folders || []).map(p => ({ kind: 'folder', name: p.name, prefix: p.prefix }))
+                    .concat((d.blobs || []).map(b => ({
+                        kind: 'blob', name: b.name, path: b.path,
+                        size: b.size, supported: b.supported
+                    })));
+                azState.items = continuation ? azState.items.concat(rows) : rows;
+                azState.continuation = d.continuation || null;
+                azRenderList();
+                azUpdatePath();
+            }).catch(e => azBrowseError(e));
+        }
+
+        function azBrowseError(err) {
+            const list = document.getElementById('azList');
+            list.innerHTML = '<div class="placeholder">' + esc(err.message) + '</div>';
+            azSetStatus(err.message, true);
+            setStatus('Azure: ' + err.message);
+        }
+
+        function azUpdatePath() {
+            const parts = [azState.account || '(account)'];
+            if (azState.container) parts.push(azState.container);
+            if (azState.prefix) parts.push(azState.prefix.replace(/\/$/, ''));
+            document.getElementById('azPath').textContent = parts.join(' / ');
+            document.getElementById('btnAzUp').style.display =
+                (azState.container || azState.prefix) ? '' : 'none';
+            document.getElementById('btnAzMore').style.display =
+                azState.continuation ? '' : 'none';
+            document.getElementById('btnAzAnalyze').style.display =
+                azState.selected ? '' : 'none';
+        }
+
+        function azRenderList() {
+            const list = document.getElementById('azList');
+            if (!azState.items.length) {
+                list.innerHTML = '<div class="placeholder">Nothing to show here</div>';
+                return;
+            }
+            list.innerHTML = azState.items.map((item, i) => {
+                const icon = item.kind === 'blob' ? '&#128196;' : '&#128193;';
+                const meta = item.kind === 'blob'
+                    ? ('<span class="az-meta">' + fmtSize(item.size || 0)
+                        + (item.supported ? '' : ' &bull; unsupported type') + '</span>')
+                    : '';
+                const cls = 'pd-item az-item'
+                    + (azState.selected === i ? ' selected' : '')
+                    + (item.kind === 'blob' && !item.supported ? ' az-dim' : '');
+                return '<div class="' + cls + '" data-i="' + i + '" onclick="azClick(' + i + ')">'
+                    + '<span class="az-icon" aria-hidden="true">' + icon + '</span>'
+                    + '<span class="az-name">' + esc(item.name) + '</span>' + meta + '</div>';
+            }).join('');
+        }
+
+        function azClick(i) {
+            const item = azState.items[i];
+            if (!item) return;
+            if (item.kind === 'container') {
+                azState.container = item.name;
+                azState.prefix = '';
+                azLoadBlobs();
+                return;
+            }
+            if (item.kind === 'folder') {
+                azState.prefix = item.prefix;
+                azLoadBlobs();
+                return;
+            }
+            azState.selected = (azState.selected === i) ? null : i;
+            azRenderList();
+            azUpdatePath();
+        }
+
+        function azNavigateUp() {
+            if (azState.prefix) {
+                const trimmed = azState.prefix.replace(/\/$/, '');
+                const cut = trimmed.lastIndexOf('/');
+                azState.prefix = cut >= 0 ? trimmed.slice(0, cut + 1) : '';
+                azLoadBlobs();
+                return;
+            }
+            if (azState.container) { azLoadContainers(); }
+        }
+
+        function azLoadMore() {
+            if (!azState.continuation) return;
+            if (azState.level === 'containers') azLoadContainers(azState.continuation);
+            else azLoadBlobs(azState.continuation);
+        }
+
+        function azAnalyzeSelected() {
+            const item = azState.items[azState.selected];
+            if (!item || item.kind !== 'blob') return;
+            setStatus('Downloading ' + item.name + ' from Azure Storage\u2026');
+            azApi('/api/azure/analyze', {
+                method: 'POST',
+                body: JSON.stringify({
+                    account: azState.account,
+                    container: azState.container,
+                    blob: item.path
+                })
+            }).then(d => {
+                closeAzureExplorer();
+                currentFiles.push(d.file);
+                renderFileList();
+                if (d.storage_url) setStorageUrl(d.storage_url, false);
+                selectFile(currentFiles.length - 1);
+                setStatus('Analyzed ' + item.name);
+            }).catch(e => azBrowseError(e));
+        }
+
+        /* ================================================================
+           DEEP LINKS — used by the VS Code "Analyze Current File/Folder"
+           commands: ?path=<file> or ?folder=<directory>
+           ================================================================ */
+        (function handleDeepLink() {
+            let params;
+            try { params = new URLSearchParams(window.location.search); }
+            catch (e) { return; }
+            const folder = params.get('folder');
+            const path = params.get('path');
+            if (params.get('azure') === '1') {
+                setTimeout(showAzureExplorer, 200);
+            }
+            if (folder) { setTimeout(() => analyzeFolder(folder), 150); return; }
+            if (!path) return;
+            setTimeout(() => {
+                setStatus('Analyzing ' + path + '\u2026');
+                fetch('/api/analyze_files', {
+                    method: 'POST',
+                    headers: sessionHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ files: [path] })
+                }).then(r => r.json()).then(d => {
+                    if (!d.success || !(d.files || []).length) {
+                        setStatus('Error: ' + (d.error || 'could not analyze ' + path));
+                        return;
+                    }
+                    currentFiles = d.files;
+                    renderFileList();
+                    selectFile(0);
+                    setStatus('Analyzed ' + path);
+                }).catch(e => setStatus('Error: ' + e.message));
+            }, 150);
+        })();
     </script>
 </body>
 

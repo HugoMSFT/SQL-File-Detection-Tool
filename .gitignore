@@ -33,10 +33,19 @@ env.bak/
 venv.bak/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+
+# Node / VS Code extension build output
+node_modules/
+out/
+*.vsix
+.vscode-test/
 
 # Testing
 .pytest_cache/

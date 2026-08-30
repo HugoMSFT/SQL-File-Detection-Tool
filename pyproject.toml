@@ -3,13 +3,13 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "external-file-detection"
+name = "sql-file-detection-tool"
 dynamic = ["version"]
-description = "Detect external data files and generate platform-aware SQL DDL"
+description = "SQL File Detection Tool - detect data files and generate platform-aware SQL DDL, defaulting to Azure SQL Database"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE*"]
 authors = [{name = "HugoMSFT"}]
 keywords = [
     "sql-server",
@@ -63,11 +63,14 @@ all = [
 ]
 
 [project.scripts]
+# Primary CLI for the product. ``external-file-detector`` is retained as a
+# backward-compatible alias for existing scripts and CI.
+sql-file-detection-tool = "external_file_detection.cli:main"
 external-file-detector = "external_file_detection.cli:main"
 
 [project.urls]
-Repository = "https://github.com/HugoMSFT/SQLExternalFileDetector"
-Issues = "https://github.com/HugoMSFT/SQLExternalFileDetector/issues"
+Repository = "https://github.com/HugoMSFT/SQL-File-Detection-Tool"
+Issues = "https://github.com/HugoMSFT/SQL-File-Detection-Tool/issues"
 
 [tool.setuptools.packages.find]
 include = ["external_file_detection*"]

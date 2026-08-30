@@ -1,15 +1,17 @@
-﻿"""Web-based GUI for External File Detection.
+"""Web-based GUI for the SQL File Detection Tool.
 
-Inspired by ParquetViewer, this provides a user-friendly web interface for:
-- Selecting files or folders
-- Previewing file metadata 
-- Generating T-SQL DDL statements
+Provides a user-friendly local web interface for:
+- Selecting files or folders (local disk or Azure Blob Storage)
+- Previewing file metadata
+- Generating T-SQL DDL statements for the selected target platform
 """
 
+import hmac
 import os
 import io
 import json
 import logging
+import secrets
 import shutil
 import uuid
 import time
@@ -28,14 +30,28 @@ try:
 except ImportError:
     FLASK_AVAILABLE = False
 
+from . import azure_auth
+from . import public_data
 from .external_file_detector import ExternalFileDetectorApp
 from .file_detector import FileDetector
-from .sql_generator import SQLGenerator
-from . import public_data
+from .sql_generator import DEFAULT_TARGET_PLATFORM, SQLGenerator
+from . import __product_name__, __version__
 
 
 # Maximum upload size: 200 MB
 MAX_UPLOAD_SIZE = 200 * 1024 * 1024
+
+#: Environment variable the VS Code extension uses to hand this process its
+#: control-endpoint secret. It is read once at start-up and never echoed.
+CONTROL_TOKEN_ENV = 'SQLFDT_CONTROL_TOKEN'
+
+#: Header carrying the control secret on ``/api/control/*`` requests.
+CONTROL_TOKEN_HEADER = 'X-Control-Token'
+
+#: Header carrying the per-browser-session token on state-changing Azure
+#: endpoints, so another local origin cannot drive this app through the user's
+#: browser.
+CSRF_HEADER = 'X-SQLFDT-Session'
 
 
 # Hosts that keep the server bound to the local machine only.
@@ -179,8 +195,37 @@ def _clean_results(results):
 
 
 def _error_response(message: str, status: int):
-    """Return a consistent JSON API error payload."""
-    return jsonify({'success': False, 'error': message}), status
+    """Return a consistent JSON API error payload.
+
+    Every message is redacted so that a SAS query string, connection string or
+    account key embedded in an SDK exception can never reach the client.
+    """
+    return jsonify({'success': False,
+                    'error': azure_auth.redact(message)}), status
+
+
+def _safe_error(exc: Exception) -> str:
+    """Render *exc* as text with any credential material removed."""
+    return azure_auth.redact(str(exc))
+
+
+def _azure_extras_available() -> bool:
+    """Return whether the optional Azure SDKs are importable."""
+    try:  # pragma: no cover - depends on the installed extras
+        import azure.storage.blob  # noqa: F401
+        import azure.identity  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _page_size(raw: Any) -> int:
+    """Clamp a caller-supplied page size into a safe range."""
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return azure_auth.DEFAULT_PAGE_SIZE
+    return max(1, min(value, azure_auth.MAX_PAGE_SIZE))
 
 
 def _requested_target_platform(source: Any) -> str:
@@ -191,19 +236,19 @@ def _requested_target_platform(source: Any) -> str:
             requested = source.get('target_platform')
         except AttributeError:
             requested = None
-    if requested in SQLGenerator.PLATFORMS:
-        return requested
-    return 'sql_server_2022'
+    return SQLGenerator.normalize_platform(requested)
 
 
 class ExternalFileDetectionWebGUI:
-    """Web-based GUI application for External File Detection."""
-    
-    def __init__(self, root_dir: str = None):
+    """Local web application for the SQL File Detection Tool."""
+
+    def __init__(self, root_dir: str = None, control_token: str = None):
         """Initialize the web GUI application.
-        
+
         Args:
             root_dir: If set, restrict all file access to this directory tree.
+            control_token: Secret required by ``/api/control/*``. Defaults to
+                ``$SQLFDT_CONTROL_TOKEN`` or a fresh random per-process value.
         """
         if not FLASK_AVAILABLE:
             raise ImportError("Flask is required for the web GUI. Install with: pip install flask")
@@ -213,12 +258,31 @@ class ExternalFileDetectionWebGUI:
         self.app = Flask(__name__, template_folder='templates', static_folder=None)
         self.app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_SIZE
         self.app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())
-        self._upload_tempdir = tempfile.TemporaryDirectory(prefix='efd_web_')
+        self.app.config['SESSION_COOKIE_HTTPONLY'] = True
+        self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+        self._upload_tempdir = tempfile.TemporaryDirectory(prefix='sqlfdt_web_')
         self._upload_root = self._upload_tempdir.name
         self.detector_app = ExternalFileDetectorApp()
         self.file_detector = FileDetector()
         self.sql_generator = self.detector_app.sql_generator
-        
+
+        # Control endpoint secret. A cryptographically random per-process
+        # value is used when the host process did not supply one, so the
+        # endpoints are never open by accident.
+        self._control_token = (
+            control_token
+            or os.environ.get(CONTROL_TOKEN_ENV)
+            or secrets.token_urlsafe(32)
+        )
+        # The environment copy is dropped once read so it cannot leak into a
+        # child process or a crash dump of this app's environment.
+        os.environ.pop(CONTROL_TOKEN_ENV, None)
+
+        # Tokens brokered by the VS Code Microsoft authentication provider.
+        self._vscode_tokens = azure_auth.VSCodeTokenStore()
+        # Live Azure Storage connections, one per browser session.
+        self._azure_connections = azure_auth.ConnectionRegistry()
+
         # Thread-safe per-session file store
         self._sessions_lock = threading.Lock()
         self._sessions: Dict[str, Dict[str, Any]] = {}
@@ -226,6 +290,36 @@ class ExternalFileDetectionWebGUI:
         self._retired_upload_dirs: Dict[str, float] = {}
         
         self.setup_routes()
+
+    # --- control / CSRF helpers ---
+
+    @property
+    def control_token(self) -> str:
+        """Return the control-endpoint secret (for the launching process)."""
+        return self._control_token
+
+    def _control_authorized(self) -> bool:
+        """Constant-time check of the control-endpoint secret."""
+        supplied = request.headers.get(CONTROL_TOKEN_HEADER, '')
+        if not supplied:
+            return False
+        return hmac.compare_digest(str(supplied), self._control_token)
+
+    def _session_token(self) -> str:
+        """Return (or create) the per-browser-session request token."""
+        token = session.get('csrf')
+        if not token:
+            token = secrets.token_urlsafe(32)
+            session['csrf'] = token
+        return token
+
+    def _session_token_valid(self) -> bool:
+        supplied = request.headers.get(CSRF_HEADER, '')
+        expected = session.get('csrf')
+        if not supplied or not expected:
+            return False
+        return hmac.compare_digest(str(supplied), str(expected))
+
 
     # --- thread-safe session helpers ---
 
@@ -395,7 +489,92 @@ class ExternalFileDetectionWebGUI:
         @self.app.route('/')
         def index():
             """Main page."""
-            return render_template('index.html')
+            return render_template(
+                'index.html',
+                app_config={
+                    'sessionToken': self._session_token(),
+                    'defaultPlatform': DEFAULT_TARGET_PLATFORM,
+                    'productName': __product_name__,
+                    'productVersion': __version__,
+                    'azureExtras': _azure_extras_available(),
+                    'authModes': [
+                        {'value': mode,
+                         'label': azure_auth.AUTH_MODE_LABELS.get(mode, mode)}
+                        for mode in azure_auth.AUTH_MODES
+                    ],
+                },
+                session_token=self._session_token(),
+                default_platform=DEFAULT_TARGET_PLATFORM,
+                product_name=__product_name__,
+                product_version=__version__,
+            )
+
+        @self.app.route('/api/health')
+        def health():
+            """Liveness probe used by the VS Code extension before opening."""
+            return jsonify({
+                'status': 'ok',
+                'product': __product_name__,
+                'version': __version__,
+                'default_platform': DEFAULT_TARGET_PLATFORM,
+                'platforms': list(SQLGenerator.PLATFORMS),
+                'azure_extras': _azure_extras_available(),
+            })
+
+        @self.app.route('/api/session')
+        def session_info():
+            """Return the per-session request token for this browser."""
+            return jsonify({
+                'success': True,
+                'session_token': self._session_token(),
+                'default_platform': DEFAULT_TARGET_PLATFORM,
+            })
+
+        # ---- protected control endpoints (VS Code extension only) ----
+
+        @self.app.route('/api/control/azure/token', methods=['POST'])
+        def control_azure_token():
+            """Accept a Microsoft Entra ID token brokered by VS Code.
+
+            The token only ever travels in this request body over loopback and
+            is held in memory. It is never written to a setting, a log line, a
+            URL or a response.
+            """
+            if not self._control_authorized():
+                return _error_response('Control token rejected', 403)
+            data = request.get_json(silent=True) or {}
+            try:
+                self._vscode_tokens.set_tokens(
+                    storage_token=data.get('storage_token') or '',
+                    storage_expires_on=data.get('storage_expires_on'),
+                    arm_token=data.get('arm_token') or None,
+                    arm_expires_on=data.get('arm_expires_on'),
+                    account=data.get('identity') or data.get('account') or '',
+                    tenant_id=data.get('tenant_id') or '',
+                )
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            return jsonify({'success': True,
+                            'status': self._vscode_tokens.status()})
+
+        @self.app.route('/api/control/azure/signout', methods=['POST'])
+        def control_azure_signout():
+            """Forget every brokered token and close every connection."""
+            if not self._control_authorized():
+                return _error_response('Control token rejected', 403)
+            self._vscode_tokens.clear()
+            self._azure_connections.clear()
+            return jsonify({'success': True,
+                            'status': self._vscode_tokens.status()})
+
+        @self.app.route('/api/control/status')
+        def control_status():
+            """Report brokered-token status without revealing any secret."""
+            if not self._control_authorized():
+                return _error_response('Control token rejected', 403)
+            return jsonify({'success': True,
+                            'status': self._vscode_tokens.status()})
 
         @self.app.route('/api/initial_path')
         def initial_path():
@@ -403,6 +582,237 @@ class ExternalFileDetectionWebGUI:
             path = self._root_dir or os.getcwd()
             return jsonify({'success': True, 'path': path})
             
+        # ---- Azure Storage explorer ----
+
+        def _azure_guard():
+            """Reject Azure requests that lack the per-session token."""
+            if not self._session_token_valid():
+                return _error_response(
+                    'Session token missing or invalid. Reload the page.', 403
+                )
+            return None
+
+        @self.app.route('/api/azure/status')
+        def azure_status():
+            """Report the current Azure connection without any secret."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            connection = self._azure_connections.get(self._sid())
+            payload = {
+                'success': True,
+                'azure_extras': _azure_extras_available(),
+                'vscode': self._vscode_tokens.status(),
+                'modes': [
+                    {'id': mode, 'label': azure_auth.AUTH_MODE_LABELS[mode]}
+                    for mode in azure_auth.AUTH_MODES
+                ],
+            }
+            payload['connection'] = (
+                connection.describe() if connection
+                else {'connected': False}
+            )
+            return jsonify(payload)
+
+        @self.app.route('/api/azure/connect', methods=['POST'])
+        def azure_connect():
+            """Attach to Azure Storage using an explicitly chosen mode."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            data = request.get_json(silent=True) or {}
+            mode = str(data.get('mode') or '')
+            try:
+                connection = azure_auth.connect(
+                    mode,
+                    account_name=data.get('account_name') or None,
+                    sas=data.get('sas') or None,
+                    connection_string=data.get('connection_string') or None,
+                    account_key=data.get('account_key') or None,
+                    client_id=data.get('client_id') or None,
+                    tenant_id=data.get('tenant_id') or None,
+                    token_store=self._vscode_tokens,
+                )
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                logger.exception('Error in /api/azure/connect')
+                return _error_response('Server error connecting to Azure', 500)
+            self._azure_connections.set(self._sid(), connection)
+            logger.info('Connected to Azure Storage using mode %s.',
+                        azure_auth.redact(mode))
+            return jsonify({'success': True,
+                            'connection': connection.describe()})
+
+        @self.app.route('/api/azure/disconnect', methods=['POST'])
+        def azure_disconnect():
+            """Drop the connection and forget every secret it held."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            removed = self._azure_connections.remove(self._sid())
+            return jsonify({'success': True, 'was_connected': removed,
+                            'connection': {'connected': False}})
+
+        @self.app.route('/api/azure/subscriptions')
+        def azure_subscriptions():
+            """List subscriptions when an ARM token is available."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            try:
+                connection = self._azure_connections.require(self._sid())
+                token = connection.arm_token()
+                if not token:
+                    return jsonify({
+                        'success': True,
+                        'subscriptions': [],
+                        'available': False,
+                        'reason': (
+                            'Subscription enumeration is unavailable for this '
+                            'sign-in. Enter a storage account name to browse '
+                            'it directly.'
+                        ),
+                    })
+                subscriptions = azure_auth.list_subscriptions(token)
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                logger.exception('Error in /api/azure/subscriptions')
+                return _error_response('Server error listing subscriptions',
+                                       500)
+            return jsonify({'success': True, 'available': True,
+                            'subscriptions': subscriptions})
+
+        @self.app.route('/api/azure/storage-accounts')
+        def azure_storage_accounts():
+            """List the storage accounts in a subscription."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            try:
+                connection = self._azure_connections.require(self._sid())
+                token = connection.arm_token()
+                if not token:
+                    raise azure_auth.AzureAuthError(
+                        'This sign-in cannot enumerate storage accounts. '
+                        'Enter the account name directly.',
+                        code='arm_unavailable', status=409,
+                    )
+                accounts = azure_auth.list_storage_accounts(
+                    token, request.args.get('subscription_id', '')
+                )
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                logger.exception('Error in /api/azure/storage-accounts')
+                return _error_response('Server error listing accounts', 500)
+            return jsonify({'success': True, 'accounts': accounts})
+
+        @self.app.route('/api/azure/containers')
+        def azure_containers():
+            """List blob containers for the selected storage account."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            try:
+                connection = self._azure_connections.require(self._sid())
+                result = azure_auth.list_containers(
+                    connection,
+                    account_name=request.args.get('account') or None,
+                    page_size=_page_size(request.args.get('page_size')),
+                    continuation=request.args.get('continuation') or None,
+                )
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                logger.exception('Error in /api/azure/containers')
+                return _error_response('Server error listing containers', 500)
+            return jsonify({'success': True, **result})
+
+        @self.app.route('/api/azure/blobs')
+        def azure_blobs():
+            """List one page of folders and blobs under a prefix."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            try:
+                connection = self._azure_connections.require(self._sid())
+                result = azure_auth.list_blobs(
+                    connection,
+                    container=request.args.get('container', ''),
+                    prefix=request.args.get('prefix', ''),
+                    account_name=request.args.get('account') or None,
+                    page_size=_page_size(request.args.get('page_size')),
+                    continuation=request.args.get('continuation') or None,
+                )
+            except azure_auth.AzureAuthError as exc:
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                logger.exception('Error in /api/azure/blobs')
+                return _error_response('Server error listing blobs', 500)
+            return jsonify({'success': True, **result})
+
+        @self.app.route('/api/azure/analyze', methods=['POST'])
+        def azure_analyze():
+            """Download one blob through the active connection and analyse it."""
+            guard = _azure_guard()
+            if guard is not None:
+                return guard
+            data = request.get_json(silent=True) or {}
+            container = data.get('container', '')
+            blob_name = data.get('blob', '')
+            account = data.get('account') or None
+            upload_dir = None
+            try:
+                connection = self._azure_connections.require(self._sid())
+                resolved_account = account or connection.account_name
+                upload_dir = self._new_upload_dir()
+                safe_name = secure_filename(Path(str(blob_name)).name) or 'blob'
+                destination = os.path.join(
+                    upload_dir, f'{uuid.uuid4().hex}_{safe_name}'
+                )
+                azure_auth.download_blob(
+                    connection, container, str(blob_name), destination,
+                    account_name=account,
+                )
+                metadata = self.file_detector.analyze_file_metadata(destination)
+                metadata['file_name'] = safe_name
+                metadata['uploaded'] = True
+                storage_url = azure_auth.storage_url_for(
+                    resolved_account, container, str(blob_name)
+                )
+                metadata['storage_url'] = storage_url
+                # Displayed paths never carry a SAS query string.
+                metadata['source_display'] = azure_auth.redact_url(
+                    azure_auth.blob_url(resolved_account, container,
+                                        str(blob_name))
+                )
+                self._set_files(
+                    self._get_files() + [metadata],
+                    upload_dirs=self._session_upload_dirs() + [upload_dir],
+                )
+            except azure_auth.AzureAuthError as exc:
+                if upload_dir:
+                    self._remove_upload_dirs([upload_dir])
+                return jsonify({'success': False, 'error': exc.message,
+                                'code': exc.code}), exc.status
+            except Exception:
+                if upload_dir:
+                    self._remove_upload_dirs([upload_dir])
+                logger.exception('Error in /api/azure/analyze')
+                return _error_response('Server error analysing blob', 500)
+            return jsonify(_clean_results({
+                'success': True,
+                'file': metadata,
+                'storage_url': storage_url,
+            }))
+
         @self.app.route('/api/browse')
         def browse_files():
             """Browse files in a directory."""
@@ -894,7 +1304,7 @@ class ExternalFileDetectionWebGUI:
                     except Exception as e:
                         results.append({
                             'file_name': file_name,
-                            'error': str(e),
+                            'error': _safe_error(e),
                             'success': False,
                         })
                 return jsonify({
@@ -1031,7 +1441,7 @@ class ExternalFileDetectionWebGUI:
                     location = _validate_path(location, root_dir=self._root_dir,
                                               allow_files=True, allow_dirs=True)
                 except ValueError as e:
-                    return jsonify({'error': str(e)}), 400
+                    return jsonify({'error': _safe_error(e)}), 400
 
             data_source = data.get('data_source', '')
             storage_config = {}
@@ -1042,9 +1452,21 @@ class ExternalFileDetectionWebGUI:
                 ('azure_account_name', 'azure_account_name'),
                 ('azure_account_key', 'azure_account_key'),
                 ('azure_connection_string', 'azure_connection_string'),
+                ('azure_sas_token', 'azure_sas_token'),
+                ('azure_auth_mode', 'azure_auth_mode'),
             ]:
                 if data.get(src_key):
                     storage_config[dst_key] = data[src_key]
+
+            # Reuse the session's attached Azure connection when the caller did
+            # not pass explicit credentials, so browsing and analysing share
+            # one authenticated client.
+            if is_remote and not any(
+                key.startswith('azure_') for key in storage_config
+            ):
+                connection = self._azure_connections.get(self._sid())
+                if connection is not None:
+                    storage_config['azure_connection'] = connection
 
             try:
                 app_instance = ExternalFileDetectorApp(storage_config)
@@ -1056,7 +1478,7 @@ class ExternalFileDetectionWebGUI:
                 clean_results = _clean_results(results)
                 return jsonify(clean_results)
             except Exception as e:
-                return jsonify({'error': str(e)}), 500
+                return jsonify({'error': _safe_error(e)}), 500
 
         @self.app.route('/api/generate-data-source', methods=['POST'])
         def generate_data_source():
@@ -1074,11 +1496,11 @@ class ExternalFileDetectionWebGUI:
                 ddl = self.detector_app.generate_data_source_ddl(
                     data['name'], data['storage_type'],
                     data['location'], data.get('credential'),
-                    data.get('target_platform', 'sql_server_2022'),
+                    _requested_target_platform(data),
                 )
                 return jsonify({'sql_ddl': ddl})
             except Exception as e:
-                return jsonify({'error': str(e)}), 500
+                return jsonify({'error': _safe_error(e)}), 500
 
         @self.app.route('/api/generate-ddl', methods=['POST'])
         def generate_ddl():
@@ -1109,7 +1531,7 @@ class ExternalFileDetectionWebGUI:
                 )
                 return jsonify({'sql_ddl': ddl})
             except Exception as e:
-                return jsonify({'error': str(e)}), 500
+                return jsonify({'error': _safe_error(e)}), 500
 
         @self.app.route('/api/export', methods=['POST'])
         def export_results():
@@ -1129,7 +1551,7 @@ class ExternalFileDetectionWebGUI:
 
             return send_file(
                 payload, as_attachment=True,
-                download_name=f'external_file_detection.{fmt}',
+                download_name=f'sql_file_detection.{fmt}',
                 mimetype='text/plain' if fmt == 'sql' else 'application/json',
             )
 
@@ -1197,10 +1619,22 @@ class ExternalFileDetectionWebGUI:
             )
         
         debug = _safe_debug(host, debug)
-        print(f"Starting External File Detection Web GUI...")
+        print(f"Starting {__product_name__}...")
+        print(f"Default SQL target platform: "
+              f"{SQLGenerator.PLATFORM_LABELS[DEFAULT_TARGET_PLATFORM]}")
         print(f"Open your browser and go to: http://{host}:{port}")
-        
-        self.app.run(host=host, port=port, debug=debug)
+
+        try:
+            self.app.run(host=host, port=port, debug=debug)
+        finally:
+            # Never leave live credentials behind when the server stops.
+            self._azure_connections.clear()
+            self._vscode_tokens.clear()
+
+
+#: Product-named alias. ``ExternalFileDetectionWebGUI`` is kept because it is
+#: part of the published API of earlier releases.
+SQLFileDetectionWebGUI = ExternalFileDetectionWebGUI
 
 
 def main():
@@ -1211,7 +1645,8 @@ def main():
         return
         
     import argparse
-    parser = argparse.ArgumentParser(description='External File Detection Web GUI')
+    parser = argparse.ArgumentParser(
+        description=f'{__product_name__} web interface')
     parser.add_argument('--root-dir', default=None,
                         help='Restrict file browsing to this directory tree')
     parser.add_argument('--host', default='127.0.0.1')
@@ -1221,3 +1656,7 @@ def main():
     
     app = ExternalFileDetectionWebGUI(root_dir=args.root_dir)
     app.run(host=args.host, port=args.port, debug=args.debug)
+
+
+if __name__ == '__main__':
+    main()

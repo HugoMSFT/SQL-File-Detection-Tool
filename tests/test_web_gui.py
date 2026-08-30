@@ -51,10 +51,21 @@ class TestWebGUI(unittest.TestCase):
         """Test home page loads correctly."""
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'External File Detection Tool', response.data)
+        self.assertIn(b'SQL File Detection Tool', response.data)
         self.assertIn(b'Best Practices', response.data)
         self.assertIn(b'Schema Editor', response.data)
         self.assertIn(b"adls://", response.data)
+
+    def test_home_page_defaults_to_azure_sql_database(self):
+        """The rendered page must advertise the Azure SQL Database default."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        body = response.data.decode('utf-8')
+        marker = '<script id="appConfig" type="application/json">'
+        start = body.index(marker) + len(marker)
+        config = json.loads(body[start:body.index('</script>', start)])
+        self.assertEqual(config['defaultPlatform'], 'azure_sql_db')
+        self.assertTrue(config['sessionToken'])
 
     def test_initial_path_api(self):
         """Test /api/initial_path returns a valid directory."""

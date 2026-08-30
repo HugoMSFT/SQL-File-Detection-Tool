@@ -1,0 +1,183 @@
+{
+  "name": "sql-file-detection-tool",
+  "displayName": "SQL File Detection Tool",
+  "description": "Detect data files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Browse Azure Storage with Storage Explorer-style sign-in.",
+  "version": "1.1.0",
+  "publisher": "HugoMSFT",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Data Science",
+    "Other"
+  ],
+  "keywords": [
+    "sql",
+    "azure sql",
+    "parquet",
+    "delta lake",
+    "azure storage"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HugoMSFT/SQL-File-Detection-Tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HugoMSFT/SQL-File-Detection-Tool/issues"
+  },
+  "homepage": "https://github.com/HugoMSFT/SQL-File-Detection-Tool#readme",
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "sqlFileDetectionTool.open",
+        "title": "Open",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.analyzeCurrentFile",
+        "title": "Analyze Current File",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.analyzeWorkspaceFolder",
+        "title": "Analyze Workspace Folder",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.connectAzureStorage",
+        "title": "Connect to Azure Storage",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.disconnectAzureStorage",
+        "title": "Disconnect Azure Storage",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.stopBackend",
+        "title": "Stop Backend",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.setupBackend",
+        "title": "Set Up Python Backend",
+        "category": "SQL File Detection Tool"
+      },
+      {
+        "command": "sqlFileDetectionTool.analyzeSelected",
+        "title": "Analyze with SQL File Detection Tool"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "sqlFileDetectionTool.analyzeSelected",
+          "when": "resourceExtname =~ /^\\.(csv|tsv|txt|json|jsonl|ndjson|parquet|orc|avro|xlsx|xls)$/i || explorerResourceIsFolder",
+          "group": "7_modification"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "sqlFileDetectionTool.analyzeCurrentFile",
+          "group": "7_modification"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sqlFileDetectionTool.analyzeSelected",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SQL File Detection Tool",
+      "properties": {
+        "sqlFileDetectionTool.defaultPlatform": {
+          "type": "string",
+          "default": "azure_sql_db",
+          "enum": [
+            "azure_sql_db",
+            "azure_sql_mi",
+            "sql_server_2025",
+            "sql_server_2022",
+            "sql_server_2019",
+            "fabric_sql_db"
+          ],
+          "enumDescriptions": [
+            "Azure SQL Database (default)",
+            "Azure SQL Managed Instance",
+            "SQL Server 2025",
+            "SQL Server 2022",
+            "SQL Server 2019",
+            "Fabric SQL Database"
+          ],
+          "markdownDescription": "Target SQL platform used when generating T-SQL. Defaults to **Azure SQL Database**."
+        },
+        "sqlFileDetectionTool.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a Python interpreter used to create the managed backend environment. Leave empty to auto-detect."
+        },
+        "sqlFileDetectionTool.backendInterpreter": {
+          "type": "string",
+          "default": "",
+          "description": "Optional escape hatch: absolute path to an existing interpreter that already has the sql-file-detection-tool package installed. When set, no managed environment is created."
+        },
+        "sqlFileDetectionTool.installAzureExtras": {
+          "type": "boolean",
+          "default": true,
+          "description": "Install the [azure] extras (azure-identity, azure-storage-blob) into the managed environment so Azure Storage browsing is available."
+        },
+        "sqlFileDetectionTool.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "enum": [
+            "127.0.0.1",
+            "localhost"
+          ],
+          "description": "Loopback host the bundled backend binds to. Remote (non-loopback) binding is not supported."
+        },
+        "sqlFileDetectionTool.rootDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Directory the backend is allowed to read local files from. Leave empty to use the workspace folder that contains the file being analyzed (falling back to the first workspace folder, then your home directory)."
+        },
+        "sqlFileDetectionTool.openIn": {
+          "type": "string",
+          "default": "simpleBrowser",
+          "enum": [
+            "simpleBrowser",
+            "externalBrowser"
+          ],
+          "enumDescriptions": [
+            "Open inside VS Code using the Simple Browser",
+            "Open in the system default browser"
+          ],
+          "description": "Where to open the SQL File Detection Tool user interface."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "typecheck": "tsc -p ./ --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "npm run compile && node scripts/run-tests.js",
+    "package": "node scripts/ensure-dist.js && vsce package --out dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "@vscode/vsce": "^2.24.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.3"
+  }
+}
