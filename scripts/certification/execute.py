@@ -38,6 +38,7 @@ from .adapters import (
     ENGINE_PROBES,
     INVENTORY_QUERIES,
     SessionFactory,
+    flatten_exception_args,
 )
 from .evidence import (
     BLOCKED,
@@ -124,10 +125,24 @@ def _decode_error_arg(value: Any) -> str:
     produces ``b'Cannot bulk load...'``, and that ``b'`` prefix reached the
     markdown and JSON artifacts of a live run. Decoding first keeps the message
     readable and keeps the redactor working on text rather than on a repr.
+
+    A nested argument - pymssql raised ``args == ((40613, b'...'),)`` during an
+    Azure SQL failover - would otherwise be stringified whole, which puts the
+    same ``b'`` prefix back. Sequences are decoded element by element.
     """
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value).decode('utf-8', 'replace')
+    if isinstance(value, (tuple, list)):
+        return ' '.join(_decode_error_arg(item) for item in value).strip()
     return str(value)
+
+
+def _decode_exception(exc: BaseException) -> str:
+    """The text of an exception, nested byte arguments included."""
+    leaves = flatten_exception_args(exc)
+    if not leaves:
+        return _decode_error_arg(exc)
+    return ' '.join(_decode_error_arg(leaf) for leaf in leaves).strip()
 
 
 #: A native SQL error number as pyodbc reports it. pyodbc raises
@@ -141,18 +156,28 @@ _NATIVE_NUMBER_RE = re.compile(r'\((\d{3,5})\)')
 
 
 def _error_facts(exc: Exception) -> Dict[str, Any]:
-    """Extract number / SQLSTATE / message without leaking the connection."""
+    """Extract number / SQLSTATE / message without leaking the connection.
+
+    ``args`` is flattened first, because the shape a driver uses is not
+    stable: pymssql normally raises ``(number, message)`` but an Azure SQL
+    gateway failover produced ``((number, message),)``, one argument that is
+    itself the pair. Reading only the top level found neither the number nor
+    the text, so the number went unrecorded and the message reached the
+    artifacts as a Python repr.
+    """
     number: Optional[int] = None
     sqlstate: Optional[str] = None
-    args = getattr(exc, 'args', ())
-    message = _decode_error_arg(exc) if not args else ''
+    args = flatten_exception_args(exc)
+    message = _decode_exception(exc) if not args else ''
     if args:
         first = args[0]
         message = _decode_error_arg(first)
-        if isinstance(first, int):
+        if isinstance(first, int) and not isinstance(first, bool):
             number = first
             if len(args) > 1:
-                message = _decode_error_arg(args[1])
+                message = ' '.join(
+                    _decode_error_arg(value) for value in args[1:]
+                ).strip()
         else:
             text = _decode_error_arg(first)
             if len(text) == 5:
@@ -160,7 +185,7 @@ def _error_facts(exc: Exception) -> Dict[str, Any]:
                 if len(args) > 1:
                     message = _decode_error_arg(args[1])
     if not message:
-        message = _decode_error_arg(exc)
+        message = _decode_exception(exc)
     if number is None:
         found = _NATIVE_NUMBER_RE.search(message)
         if found:

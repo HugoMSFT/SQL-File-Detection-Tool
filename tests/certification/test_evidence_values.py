@@ -408,3 +408,77 @@ def test_no_renderer_prints_a_python_bytes_repr(tmp_path):
         text = open(path, encoding='utf-8').read()
         assert "b'" not in text, f'{path} carries a Python bytes repr'
         assert 'could not be opened' in text, f'{path} lost the message'
+
+
+# -- the nested pymssql shape ------------------------------------------------
+
+_FAILOVER = (
+    b"Database 'contoso_warehouse' on server 'sqldemo-server' is not currently available. "
+    b'Please retry the connection later. DB-Lib error message 20002'
+)
+
+
+def test_a_nested_number_and_bytes_pair_is_read_not_repr_ed():
+    """``args == ((40613, b'...'),)`` - one argument holding the pair.
+
+    Reading only the top level found neither the number nor the text, so the
+    number went unrecorded and the message reached the artifacts as a repr.
+    """
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_PymssqlShapedError((40613, _FAILOVER)))
+
+    assert facts['error_number'] == 40613
+    assert facts['error_message'].startswith('Database')
+    assert "b'" not in facts['error_message']
+    assert '(40613' not in facts['error_message']
+
+
+def test_the_nested_and_flat_shapes_produce_the_same_facts():
+    from certification.execute import _error_facts
+
+    nested = _error_facts(_PymssqlShapedError((40613, _FAILOVER)))
+    flat = _error_facts(_PymssqlShapedError(40613, _FAILOVER))
+
+    assert nested['error_number'] == flat['error_number']
+    assert nested['error_message'] == flat['error_message']
+
+
+def test_a_nested_error_is_redacted_in_every_artifact(tmp_path):
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_PymssqlShapedError((40613, _FAILOVER)))
+    cell = CellResult(
+        cell_id='C01',
+        target='azure',
+        platform='azure_sql_db',
+        fixture='csv_scalar',
+        statement_kind='create_table',
+        access='abs',
+        hypothesis='H9',
+        intent='gateway failover',
+        verdict='BLOCKED',
+        accepts=('PASS',),
+        sql_sha256='a' * 64,
+        sql_redacted='SELECT 1;',
+    )
+    cell.batches = [BatchResult(
+        index=0, start_line=1, verdict='BLOCKED',
+        error_number=facts['error_number'],
+        error_message=facts['error_message'],
+    )]
+    evidence = RunEvidence(run_id='0123abcd', target='azure', platform='azure_sql_db')
+    evidence.cells = [cell]
+    redactor = Redactor(extra_literals=('sqldemo-server', 'contoso_warehouse'))
+
+    paths = [str(tmp_path / name) for name in ('n.json', 'n.xml', 'n.md')]
+    write_json(evidence, paths[0], redactor=redactor)
+    write_junit(evidence, paths[1], redactor=redactor)
+    write_markdown(evidence, paths[2], redactor=redactor)
+
+    for path in paths:
+        text = open(path, encoding='utf-8').read()
+        assert "b'" not in text, path
+        assert 'sqldemo-server' not in text, path
+        assert 'contoso_warehouse' not in text, path
+        assert 'not currently available' in text, path

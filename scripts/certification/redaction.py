@@ -56,6 +56,20 @@ _REDACTION = '[redacted]'
 #: rule keep the keyword and drop only the value.
 _FILTERS: Tuple[Tuple[str, Pattern[str], str], ...] = (
     (
+        # Azure SQL's transient-failure messages end with a session tracing ID:
+        # "contact customer support, and provide them the session tracing ID of
+        # {2B8...}". It identifies the connection, so it does not belong in a
+        # committed artifact even though it is not a secret.
+        'session_tracing_id',
+        re.compile(
+            r'\b(session\s+(?:tracing\s+)?id|trace\s+id)\b\s*(?:of|[:=])?\s*'
+            r'\{?[0-9A-Fa-f]{8}-?(?:[0-9A-Fa-f]{4}-?){3}[0-9A-Fa-f]{12}\}?'
+            r'|\bsession\s+id\s*[:=]\s*0x[0-9A-Fa-f]+',
+            re.IGNORECASE,
+        ),
+        'session tracing ID ' + _REDACTION,
+    ),
+    (
         'sql_secret',
         re.compile(r"(\bSECRET\s*=\s*)'(?:[^']|'')*'", re.IGNORECASE),
         r"\1'" + _REDACTION + "'",

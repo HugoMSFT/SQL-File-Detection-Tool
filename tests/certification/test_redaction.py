@@ -81,3 +81,33 @@ def test_assert_no_secrets_raises_with_the_kind_only():
     message = str(excinfo.value)
     assert 'cell C01' in message
     assert 'AbCdEf0123456789abcdef' not in message
+
+
+# -- Azure SQL session tracing IDs -------------------------------------------
+
+def test_a_session_tracing_id_does_not_reach_an_artifact():
+    """The real 40613 message ends with one, and it identifies the connection."""
+    redactor = Redactor()
+    text = (
+        "Database 'x' on server 'y' is not currently available. Please retry "
+        'the connection later. If the problem persists, contact customer '
+        'support, and provide them the session tracing ID of '
+        '{2B8A1C4E-9F03-4D2A-B7E1-556677889900}.'
+    )
+
+    out = redactor.redact(text)
+
+    assert '2B8A1C4E' not in out
+    assert '556677889900' not in out
+    assert 'not currently available' in out, 'the useful part must survive'
+
+
+def test_a_hex_session_id_is_redacted_too():
+    out = Redactor().redact('Login timeout expired. Session ID: 0x3F2A9C11D4')
+    assert '3F2A9C11D4' not in out
+
+
+def test_an_ordinary_guid_in_a_run_id_is_left_alone():
+    # Run identities are ours and appear in every artifact by design.
+    out = Redactor().redact('run 0123abcd used schema sqlfdt_cert_0123abcd')
+    assert 'sqlfdt_cert_0123abcd' in out

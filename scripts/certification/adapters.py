@@ -298,6 +298,41 @@ AUTH_ERROR_NUMBERS: FrozenSet[int] = frozenset({
     18470,  # login disabled
 })
 
+#: SQL error numbers that mean "this endpoint is momentarily busy, ask again".
+#:
+#: 40613 is the one that cost a live Azure run. The gateway answers "Database
+#: '<db>' on server '<srv>' is not currently available. Please retry the
+#: connection later" while it moves a replica; the same connection succeeds
+#: seconds later, and a manual attempt proved exactly that - attempt 1 failed
+#: with 40613, attempt 2 passed after five seconds. The harness had classified
+#: it permanent and never asked again.
+TRANSIENT_ERROR_NUMBERS: FrozenSet[int] = frozenset({
+    40613,  # database is not currently available - gateway failover
+    40197,  # the service encountered an error processing your request
+    40501,  # the service is currently busy
+    40540,  # the service encountered an error - retry
+    40549,  # session terminated: long-running transaction
+    40550,  # session terminated: too many locks
+    40551,  # session terminated: excessive TEMPDB usage
+    40552,  # session terminated: excessive transaction log usage
+    40553,  # session terminated: excessive memory usage
+    49918,  # cannot process request: not enough resources
+    49919,  # cannot process create or update request: too many operations
+    49920,  # cannot process request: too many operations
+    10928,  # resource ID limit reached
+    10929,  # minimum guarantee not met, server busy
+    10053,  # transport-level error: connection aborted
+    10054,  # transport-level error: connection reset by peer
+    10060,  # network-related error: connection timed out
+    233,    # no process on the other end of the pipe
+    64,     # connection was successfully established but then failed
+    20,     # the instance does not support encryption / handshake blip
+    4221,   # login to read-secondary failed: replica not available
+    615,    # could not find database ID - momentary during failover
+    913,    # could not find database ID
+    921,    # database has not been recovered yet
+})
+
 #: How many times a *transient* connect failure is retried, and how long to wait.
 #: Bounded on purpose: an unbounded retry turns a dead endpoint into a hang, and
 #: the whole point of this harness is that a run either produces evidence or says
@@ -319,6 +354,64 @@ def _numbers_from_text(text: str) -> List[int]:
     return [int(m) for m in _NATIVE_NUMBER_RE.findall(text or '')]
 
 
+def flatten_exception_args(exc: BaseException, _depth: int = 0) -> List[Any]:
+    """Every leaf argument of an exception, however the driver nested them.
+
+    pymssql does not always raise ``OperationalError(number, message)``. A live
+    Azure SQL failover produced::
+
+        OperationalError.args == ((40613, b'Database ... Please retry ...'),)
+
+    - a single argument that is itself the ``(number, bytes)`` pair. Scanning
+    ``args`` one level deep found no int and no text, so the number was never
+    read, the failure was classified permanent, and the retry that would have
+    succeeded never happened. Flattening first makes the nested and the flat
+    shapes indistinguishable to every caller.
+
+    The recursion is depth-bounded because an exception argument can, in
+    principle, contain itself.
+    """
+    leaves: List[Any] = []
+    if _depth > 4:
+        return leaves
+    for value in getattr(exc, 'args', ()) or ():
+        leaves.extend(_flatten_value(value, _depth + 1))
+    return leaves
+
+
+def _flatten_value(value: Any, depth: int) -> List[Any]:
+    if depth > 4:
+        return []
+    if isinstance(value, (bytes, bytearray, memoryview, str)):
+        return [value]
+    if isinstance(value, (tuple, list)):
+        leaves: List[Any] = []
+        for item in value:
+            leaves.extend(_flatten_value(item, depth + 1))
+        return leaves
+    return [value]
+
+
+def _numbers_from_exception(exc: BaseException) -> List[int]:
+    """Every error number an exception carries, nested arguments included."""
+    numbers = [int(n) for n in (getattr(exc, 'error_numbers', ()) or ())]
+    if numbers:
+        return numbers
+    for value in flatten_exception_args(exc):
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            numbers.append(value)
+            continue
+        text = (
+            bytes(value).decode('utf-8', 'replace')
+            if isinstance(value, (bytes, bytearray, memoryview)) else value
+        )
+        if isinstance(text, str):
+            numbers.extend(_numbers_from_text(text))
+    return numbers
+
+
 def _error_number(exc: BaseException) -> Optional[int]:
     """The SQL error number a driver reported, if it reported one.
 
@@ -330,16 +423,8 @@ def _error_number(exc: BaseException) -> Optional[int]:
     carried = getattr(exc, 'error_numbers', ()) or ()
     if carried:
         return int(carried[0])
-    for value in getattr(exc, 'args', ()) or ():
-        if isinstance(value, int):
-            return value
-    for value in getattr(exc, 'args', ()) or ():
-        text = value.decode('utf-8', 'replace') if isinstance(value, bytes) else value
-        if isinstance(text, str):
-            found = _numbers_from_text(text)
-            if found:
-                return found[0]
-    return None
+    numbers = _numbers_from_exception(exc)
+    return numbers[0] if numbers else None
 
 
 def is_transient_connect_error(exc: BaseException) -> bool:
@@ -370,18 +455,14 @@ def is_transient_connect_error(exc: BaseException) -> bool:
         )
     numbers = [int(n) for n in (getattr(exc, 'error_numbers', ()) or ())]
     if not numbers:
-        for value in getattr(exc, 'args', ()) or ():
-            if isinstance(value, int):
-                numbers.append(value)
-            else:
-                text = (
-                    value.decode('utf-8', 'replace')
-                    if isinstance(value, bytes) else value
-                )
-                if isinstance(text, str):
-                    numbers.extend(_numbers_from_text(text))
+        numbers = _numbers_from_exception(exc)
     if any(n in AUTH_ERROR_NUMBERS for n in numbers):
         return False
+    if any(n in TRANSIENT_ERROR_NUMBERS for n in numbers):
+        # Named explicitly rather than left to the permissive default below, so
+        # a gateway failover stays retryable even if the surrounding logic is
+        # ever tightened.
+        return True
     if not numbers:
         # Unclassifiable. Fail closed rather than retry what may be a login.
         return _looks_like_transport_failure(exc)

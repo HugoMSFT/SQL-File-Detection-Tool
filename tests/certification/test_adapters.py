@@ -370,3 +370,123 @@ def test_a_mixed_failure_is_actually_retried(monkeypatch):
             attempts=3, backoff=(0.0,), sleep=slept.append,
         )
     assert len(slept) == 2, 'a retryable aggregate must be retried'
+
+
+# -- the nested (number, bytes) shape ----------------------------------------
+
+FAILOVER_MESSAGE = (
+    b"Database 'contoso_warehouse' on server 'sqldemo-server' is not currently available. "
+    b'Please retry the connection later. If the problem persists, contact '
+    b'customer support. (40613) DB-Lib error message 20002, severity 9'
+)
+
+
+def _nested_failover():
+    """Exactly what pymssql raised on the live Azure run.
+
+    One argument, and that argument is the ``(number, message)`` pair. Reading
+    ``args`` a single level deep found no int and no text at all.
+    """
+    return OSError((40613, FAILOVER_MESSAGE))
+
+
+def test_the_nested_pair_still_yields_its_error_number():
+    assert _error_number(_nested_failover()) == 40613
+
+
+def test_a_gateway_failover_is_transient():
+    assert is_transient_connect_error(_nested_failover()) is True
+
+
+def test_the_flat_pair_behaves_identically():
+    flat = OSError(40613, FAILOVER_MESSAGE)
+    assert _error_number(flat) == 40613
+    assert is_transient_connect_error(flat) is True
+
+
+def test_a_nested_login_failure_is_still_permanent():
+    """Flattening must not turn an auth failure into four login attempts."""
+    nested = OSError((18456, b"Login failed for user 'certuser'."))
+    assert _error_number(nested) == 18456
+    assert is_transient_connect_error(nested) is False
+
+
+def test_a_doubly_nested_pair_is_still_read():
+    assert _error_number(OSError(((40613, FAILOVER_MESSAGE),))) == 40613
+
+
+def test_flattening_is_bounded_against_a_self_referential_argument():
+    from certification.adapters import flatten_exception_args
+
+    args = []
+    args.append(args)
+    exc = OSError(args)
+    assert flatten_exception_args(exc) == []
+
+
+def test_40613_is_named_rather_than_left_to_the_default():
+    from certification.adapters import TRANSIENT_ERROR_NUMBERS
+    from certification.adapters import AUTH_ERROR_NUMBERS as auth
+
+    assert 40613 in TRANSIENT_ERROR_NUMBERS
+    assert not (TRANSIENT_ERROR_NUMBERS & auth)
+
+
+def test_a_failover_on_the_first_attempt_connects_on_the_second(monkeypatch):
+    """The whole point: attempt 1 fails with 40613, attempt 2 succeeds.
+
+    This is the manual behaviour the parent reproduced by hand - one failure,
+    then a clean connection five seconds later - which the harness had been
+    turning into a permanent AdapterUnavailable.
+    """
+    from certification.adapters import connect_with_retry
+
+    class _FlakyPymssql:
+        def __init__(self):
+            self.attempts = 0
+
+        def connect(self, **_kwargs):
+            self.attempts += 1
+            if self.attempts == 1:
+                raise OSError((40613, FAILOVER_MESSAGE))
+            return _FakeRaw()
+
+    flaky = _FlakyPymssql()
+    monkeypatch.setitem(__import__('sys').modules, 'pymssql', flaky)
+    slept = []
+
+    connection, log = connect_with_retry(
+        _settings(), 'not-a-real-password',
+        driver='pymssql', backoff=(0.0,), sleep=slept.append,
+    )
+
+    assert flaky.attempts == 2
+    assert connection is not None
+    assert len(slept) == 1
+    assert log[0].startswith('attempt 1:')
+    assert 'number=40613' in log[0]
+    assert 'permanent' not in log[0]
+    assert log[-1] == 'attempt 2: connected'
+
+
+def test_the_attempt_log_never_carries_the_servers_message(monkeypatch):
+    from certification.adapters import connect_with_retry
+
+    class _AlwaysFailingOver:
+        @staticmethod
+        def connect(**_kwargs):
+            raise OSError((40613, FAILOVER_MESSAGE))
+
+    monkeypatch.setitem(__import__('sys').modules, 'pymssql', _AlwaysFailingOver())
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect_with_retry(
+            _settings(), 'not-a-real-password',
+            driver='pymssql', attempts=2, backoff=(0.0,), sleep=lambda _s: None,
+        )
+
+    text = str(excinfo.value)
+    assert 'number=40613' in text
+    assert 'contoso_warehouse' not in text
+    assert 'sqldemo-server' not in text
+    assert "b'" not in text
+    assert 'not-a-real-password' not in text

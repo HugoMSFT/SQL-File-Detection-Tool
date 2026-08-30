@@ -82,6 +82,16 @@ permanent because permanence was OR-ed across candidates, and the retry that
 would have succeeded never happened. An authentication or certificate failure
 anywhere still makes the aggregate permanent, because retrying cannot fix it.
 
+Exception arguments are flattened before anything reads them. pymssql does not
+use one stable shape: it normally raises `OperationalError(number, message)`,
+but an Azure SQL gateway failover produced `args == ((40613, b'...'),)` — a
+single argument that is itself the pair. Reading one level deep found no number
+and no text, so the failure was classified permanent and recorded with a `b'...'`
+repr. Azure's retryable numbers, 40613 among them, are named explicitly in
+`TRANSIENT_ERROR_NUMBERS` rather than left to the permissive default, and
+`AUTH_ERROR_NUMBERS` still wins wherever both appear. Azure SQL's session
+tracing ID is redacted out of the message it arrives in.
+
 ## Commands
 
 Run from the repository root with `scripts` on the path:
