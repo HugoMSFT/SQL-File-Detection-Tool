@@ -407,3 +407,111 @@ def test_case_folding_does_not_smuggle_a_second_drop(identity):
         identity, {'external table': [name], 'table': [name.upper()]}
     )
     assert len(statements) == 1
+
+
+# ---------------------------------------------------------------------------
+# Object lists
+# ---------------------------------------------------------------------------
+#
+# DROP TABLE, DROP VIEW, DROP EXTERNAL TABLE, DROP SCHEMA and TRUNCATE TABLE all
+# take a comma-separated list. Every scope rule captures one name per verb, so a
+# statement whose *first* target was legitimately run-owned carried every later
+# name straight past the scope check - schema scoping, prefix scoping and the
+# foreign-database check alike. `DROP TABLE [<run>].[<owned>], [sales].[invoices]`
+# was allowed with no violations at all.
+#
+# Only the two text-wide scans still applied, so `dbo` and the TPC-H names stayed
+# safe and every other schema on the instance did not. That is the whole of
+# application data on a normal Azure SQL database.
+
+import certification.safety as safety_module  # noqa: E402
+
+
+LIST_EXPLOITS = (
+    'DROP TABLE [{s}].[{t}], [sales].[invoices];',
+    'DROP TABLE IF EXISTS [{s}].[{t}],[sales].[invoices],[hr].[salary];',
+    'DROP TABLE [{s}].[{t}], sales.invoices;',
+    'DROP VIEW [{s}].[{t}], [sales].[v];',
+    'DROP EXTERNAL TABLE [{s}].[{t}], [sales].[v];',
+    'DROP SCHEMA [{s}], [sales];',
+    'TRUNCATE TABLE [{s}].[{t}], [sales].[x];',
+)
+
+
+def _owned(identity):
+    return {'s': identity.schema, 't': identity.name('c01', 'tbl')}
+
+
+@pytest.mark.parametrize('template', LIST_EXPLOITS)
+def test_a_foreign_object_hidden_in_a_list_is_refused(identity, policy, template):
+    report = evaluate_batch(template.format(**_owned(identity)), policy=policy)
+    assert not report.allowed, template
+
+
+def test_a_three_part_name_in_a_list_cannot_reach_another_database(identity, policy):
+    sql = 'DROP TABLE [{s}].[{t}], [prod].[sales].[invoices];'.format(**_owned(identity))
+    assert not evaluate_batch(sql, policy=policy).allowed
+
+
+@pytest.mark.parametrize('template', LIST_EXPLOITS)
+def test_the_scope_walk_stands_without_the_shape_rule(identity, policy, template, monkeypatch):
+    # Two independent defences, so each is tested with the other removed. The
+    # shape rule refuses multi-object statements outright; this proves the scope
+    # check would still catch the foreign object if that rule were ever relaxed.
+    monkeypatch.setattr(
+        safety_module,
+        '_FORBIDDEN',
+        tuple(rule for rule in safety_module._FORBIDDEN if rule[0] != 'MULTI_TARGET'),
+    )
+    report = evaluate_batch(template.format(**_owned(identity)), policy=policy)
+    assert not report.allowed, template
+    assert 'MULTI_TARGET' not in {v.code for v in report.violations}
+
+
+def test_every_name_in_a_list_is_recorded_as_a_target(identity, policy):
+    sql = 'DROP TABLE [{s}].[{t}], [sales].[invoices];'.format(**_owned(identity))
+    report = evaluate_batch(sql, policy=policy)
+    names = [name for _kind, name in report.targets]
+    assert '[sales].[invoices]' in names
+
+
+def test_a_list_of_objects_this_run_owns_is_still_refused(identity, policy):
+    # Not a scope problem - the cleanup planner emits one statement per object
+    # so that each outcome can be recorded on its own, so the shape is refused
+    # even when every name in it is ours.
+    owned = _owned(identity)
+    sql = f'DROP TABLE [{owned["s"]}].[{owned["t"]}], [{owned["s"]}].[{owned["t"]}2];'
+    assert not evaluate_batch(sql, policy=policy).allowed
+
+
+@pytest.mark.parametrize('sql', [
+    'DROP TABLE [{s}].[{t}];',
+    'DROP TABLE IF EXISTS [{s}].[{t}];',
+    'DROP EXTERNAL TABLE [{s}].[{t}];',
+    'DROP SCHEMA [{s}];',
+    'TRUNCATE TABLE [{s}].[{t}];',
+    'CREATE TABLE [{s}].[{t}] (a INT, b INT, c NVARCHAR(50));',
+    'INSERT INTO [{s}].[{t}] (a, b) VALUES (1, 2);',
+    'SELECT a, b, c FROM [{s}].[{t}];',
+])
+def test_a_comma_in_a_column_list_is_not_an_object_list(identity, policy, sql):
+    report = evaluate_batch(sql.format(**_owned(identity)), policy=policy)
+    assert report.allowed, [v.code for v in report.violations]
+
+
+def test_select_into_without_whitespace_before_from_is_scope_checked(policy):
+    # T-SQL does not require whitespace after the target, so `\s+FROM` missed
+    # both of these and let them create an object outside the run schema that
+    # cleanup - which only removes names the run owns - would never take away.
+    assert not evaluate_batch(
+        'SELECT * INTO [sales].[victim]FROM sys.objects;', policy=policy
+    ).allowed
+    assert not evaluate_batch(
+        'SELECT * INTO [sales].[victim](a)FROM sys.objects;', policy=policy
+    ).allowed
+
+
+def test_select_into_an_owned_table_still_passes(identity, policy):
+    owned = _owned(identity)
+    sql = f'SELECT * INTO [{owned["s"]}].[{owned["t"]}2] FROM [{owned["s"]}].[{owned["t"]}];'
+    assert evaluate_batch(sql, policy=policy).allowed

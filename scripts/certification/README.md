@@ -96,6 +96,25 @@ admitted only in that exact shape — a bare `TRUNCATE`, or one aimed at a
 variable, is still refused — and the name still has to pass the scope rules, so
 it can only ever empty a table the run itself created.
 
+A statement gets **one** object. `DROP TABLE`, `DROP VIEW`,
+`DROP EXTERNAL TABLE`, `DROP SCHEMA` and `TRUNCATE TABLE` all accept a
+comma-separated list, and the scope rules capture one name per verb, so for a
+while a statement opening with a legitimately run-owned table carried every
+later name past the scope check with no violation recorded at all:
+
+```sql
+DROP TABLE [<run schema>].[<run table>], [sales].[invoices];
+```
+
+Only the `dbo` and TPC-H scans still applied, which left every other schema on
+the instance unprotected — and a three-part name in the list reached another
+database entirely. There are now two independent defences. The shape is refused
+outright, because neither generator emits a multi-object drop and cleanup
+deliberately emits one statement per object so that each outcome can be judged
+and recorded on its own; and the scope check walks the whole list, because a
+scope check that depends on another rule holding is not a scope check. Each is
+tested with the other disabled.
+
 A cell may not create an object its own prerequisite setup already created.
 That is what C14 did on the first live run: the setup step created the
 BLOB_STORAGE data source, and the `BULK INSERT` statement was generated with

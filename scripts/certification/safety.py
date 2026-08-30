@@ -183,6 +183,28 @@ _FORBIDDEN: Tuple[Tuple[str, Pattern[str], str], ...] = (
     ('DROP_DATABASE', re.compile(r'\bDROP\s+DATABASE\b(?!\s+SCOPED\s+CREDENTIAL\b)', re.I),
      'DROP DATABASE is only produced by the cleanup planner for the disposable '
      'certification database and is never accepted from generated SQL'),
+    # A comma-separated object list is refused outright.
+    #
+    # `DROP TABLE a, b` is one statement with two targets, and a scope rule that
+    # captures one name per verb only ever checked `a`. Everything after the
+    # comma reached the server unexamined, so a statement opening with a
+    # legitimately run-owned table could drop anything in any schema - or, with
+    # a three-part name, in another database - while the gate reported no
+    # violations at all.
+    #
+    # The scope check now walks the whole list, but this rule stays in front of
+    # it because neither generator has any reason to emit a multi-object drop:
+    # cleanup emits one statement per object precisely so that each one can be
+    # judged and its outcome recorded on its own. Refusing the shape is a
+    # smaller thing to get right than parsing it.
+    ('MULTI_TARGET',
+     re.compile(
+         r'\b(?:DROP\s+(?:TABLE|VIEW|EXTERNAL\s+TABLE|SCHEMA)|TRUNCATE\s+TABLE)\s+'
+         rf'(?:IF\s+EXISTS\s+)?{_QNAME}\s*,',
+         re.I,
+     ),
+     'dropping or truncating several objects in one statement is never generated, '
+     'and only the first name in such a list can be scope-checked reliably'),
     # ALTER needs no such exception: layer 1 refuses every ALTER outright, and
     # nothing the harness generates alters a credential. Narrowing this rule to
     # match would widen the gate for a statement that is never emitted.
@@ -258,9 +280,29 @@ _TARGET_RULES: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
     ('bulk insert target', True, re.compile(rf'\bBULK\s+INSERT\s+(?P<name>{_QNAME})', re.I)),
     ('insert target', True,
      re.compile(rf'\bINSERT\s+(?:INTO\s+)?(?P<name>{_QNAME})', re.I)),
+    # `\s+FROM` would have been wrong: T-SQL does not require whitespace after
+    # the target, so `SELECT * INTO [sales].[victim]FROM sys.objects` and
+    # `... [sales].[victim](a)FROM ...` are both valid and both slipped past the
+    # rule entirely, creating an object outside the run schema that cleanup -
+    # which only removes names `identity.owns()` - would never take away.
     ('select into target', True,
-     re.compile(rf'\bINTO\s+(?P<name>{_QNAME})\s+FROM\b', re.I)),
+     re.compile(rf'\bINTO\s+(?P<name>{_QNAME})\s*(?=FROM\b|\()', re.I)),
 )
+
+#: Verbs whose object is a *list*. See :data:`_MULTI_TARGET_RE`.
+_LIST_VERB_KINDS: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
+    ('table', True, re.compile(r'\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('view', True, re.compile(r'\bDROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('external table', True,
+     re.compile(r'\bDROP\s+EXTERNAL\s+TABLE\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('schema', False, re.compile(r'\bDROP\s+SCHEMA\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('truncate target', True, re.compile(r'\bTRUNCATE\s+TABLE\s+', re.I)),
+)
+
+#: One more name in a comma-separated object list.
+_NEXT_IN_LIST_RE = re.compile(rf'\s*,\s*(?P<name>{_QNAME})', re.I)
+#: The first name after a list verb, matched from a position rather than anchored.
+_LIST_HEAD_RE = re.compile(rf'(?P<name>{_QNAME})', re.I)
 
 _USE_RE = re.compile(rf'\bUSE\s+(?P<name>{_IDENT})', re.I)
 #: ``CREATE DATABASE`` proper — the negative lookahead keeps ``CREATE DATABASE
@@ -557,6 +599,49 @@ def evaluate_batch(sql: str, policy: SafetyPolicy) -> SafetyReport:
                         line=_line_of(masked, match.start()),
                     )
                 )
+
+    # -- Layer 3b': every name in an object *list*, not just the first
+    #
+    # `DROP TABLE`, `DROP VIEW`, `DROP EXTERNAL TABLE`, `DROP SCHEMA` and
+    # `TRUNCATE TABLE` all take a comma-separated list. The rules above capture
+    # one name each, so a statement whose *first* target was legitimately
+    # run-owned carried every later name straight past the scope check:
+    #
+    #     DROP TABLE [<run schema>].[<run table>], [sales].[invoices];
+    #
+    # was allowed with no violations at all - and with a three-part name in the
+    # list, into another database. Only the two text-wide scans still applied,
+    # so `dbo` and the TPC-H names were safe and every other schema on the
+    # instance was not.
+    #
+    # Each additional name is now scope-checked under the same rule as the
+    # first. `_MULTI_TARGET` in the forbidden list refuses the shape outright as
+    # well; this stays because a scope check that depends on another rule
+    # holding is not a scope check.
+    for kind, needs_schema, verb in _LIST_VERB_KINDS:
+        for match in verb.finditer(masked):
+            # `.match(text, pos)` already anchors at `pos`; an `\A` here would
+            # anchor at the start of the whole batch instead and never match.
+            first = _LIST_HEAD_RE.match(masked, match.end())
+            if first is None:
+                continue
+            cursor = first.end()
+            while True:
+                following = _NEXT_IN_LIST_RE.match(masked, cursor)
+                if following is None:
+                    break
+                name = following.group('name')
+                report.targets.append((kind, name.strip()))
+                violation = policy._scope_violation(kind, name, needs_schema)
+                if violation is not None:
+                    report.violations.append(
+                        Violation(
+                            violation.code,
+                            violation.message,
+                            line=_line_of(masked, following.start()),
+                        )
+                    )
+                cursor = following.end()
 
     # -- Layer 3c: external locations must point at allowed hosts
     if policy._hosts:

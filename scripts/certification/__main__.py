@@ -289,16 +289,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         # through the redactor; the one remaining way for an endpoint to reach a
         # console or a CI log is a crash, so this is that gap closed.
         #
-        # Seeded from the arguments rather than bare. A pattern-only redactor
-        # scrubs the endpoint shapes it knows and leaves everything else - an
-        # on-prem host name, a login, a database name - in the message. Those
-        # values are right here on `args`, so they are handed over as literals.
-        # A password never is: it is not an argument, by design.
+        # Seeded from the effective connection values, not just from `args`.
+        # A pattern-only redactor scrubs the endpoint shapes it knows and leaves
+        # everything else - an on-prem host name, a login, a database name - in
+        # the message. Those are exactly the values that identify the target.
+        #
+        # Reading the environment matters as much as reading `args`. The
+        # documented way to configure a run is SQLFDT_CERT_HOST and friends;
+        # `--host` and the rest are overrides with no defaults, and the redactor
+        # that `execute` builds from the resolved settings is local to it. So on
+        # the normal path `args.host` is None and seeding from it alone would
+        # have left this handler doing nothing it could not already do.
+        #
+        # A password is in neither source. It is not an argument, by design, and
+        # it is popped out of the environment before any of this can run.
         redactor = Redactor(extra_literals=[
             value for value in (
                 getattr(args, 'host', None),
                 getattr(args, 'database', None),
                 getattr(args, 'user', None),
+                os.environ.get(adapters_env('HOST')),
+                os.environ.get(adapters_env('DATABASE')),
+                os.environ.get(adapters_env('USER')),
             ) if value
         ])
         print(

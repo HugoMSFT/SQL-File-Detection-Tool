@@ -125,6 +125,39 @@ test suites now read the same machine-readable evidence file.
   refused looked identical to one that succeeded. Every cleanup statement is now
   recorded with its outcome, redacted, in the JSON and named in the Markdown when
   it did not run.
+- **The safety gate checked only the first object in a list.** `DROP TABLE`,
+  `DROP VIEW`, `DROP EXTERNAL TABLE`, `DROP SCHEMA` and `TRUNCATE TABLE` all
+  accept a comma-separated list of objects, and every scope rule captured one
+  name per verb. A statement whose first target was legitimately run-owned
+  therefore carried every later name past the scope check untouched - schema
+  scoping, prefix scoping and the foreign-database check alike - and the gate
+  reported no violations at all:
+
+  ```sql
+  DROP TABLE [<run schema>].[<run table>], [sales].[invoices];
+  ```
+
+  Only the two text-wide scans still applied, so `dbo` and the TPC-H names
+  stayed protected and every other schema on the instance did not. With a
+  three-part name in the list it reached another database. Two defences now:
+  the shape is refused outright, because neither generator has any reason to
+  emit a multi-object drop and cleanup deliberately emits one statement per
+  object so each outcome can be recorded on its own; and the scope check walks
+  the whole list, because a scope check that depends on another rule holding is
+  not a scope check. Each is tested with the other disabled.
+- **`SELECT ... INTO` needed no whitespace to escape its scope rule.** The rule
+  required `INTO <name> FROM`, and T-SQL does not require a space after the
+  target, so `SELECT * INTO [sales].[victim]FROM sys.objects` matched nothing
+  and created a table outside the run schema that cleanup - which only removes
+  names the run owns - would never have taken away.
+- **The crash handler could not see the values it existed to hide.** It is the
+  last thing between a driver exception, which routinely echoes the connection
+  target back, and a console or CI log. It seeded its redactor from `args`, but
+  `--host`, `--database` and `--user` are overrides with no defaults and the
+  documented way to configure a run is the environment, so on the normal path it
+  was seeding from `None` and falling back to pattern matching that has no
+  generic-hostname or generic-login filter by design. It now reads both sources.
+  A password is in neither, by design.
 - **Each object is dropped exactly once.** Recording those outcomes immediately
   exposed a second cleanup bug that the residue count had been hiding: a run that
   removed everything it created reported 34 of 36 statements successful. An

@@ -297,3 +297,30 @@ def test_a_crash_does_not_print_a_traceback(monkeypatch, capsys):
 
     assert cert_main([]) == 2
     assert 'Traceback' not in capsys.readouterr().err
+
+
+def test_a_crash_scrubs_values_that_came_from_the_environment(monkeypatch, capsys):
+    # The documented way to configure a run is SQLFDT_CERT_HOST and friends;
+    # --host and the rest are overrides with no defaults. Seeding the handler
+    # from `args` alone left it doing nothing on the normal path, because
+    # `args.host` is None there and the redactor `execute` builds from the
+    # resolved settings is local to it.
+    host = 'sql2025vm.corp.example'
+    monkeypatch.setenv('SQLFDT_CERT_HOST', host)
+    monkeypatch.setenv('SQLFDT_CERT_DATABASE', 'warehouse_prod')
+    monkeypatch.setenv('SQLFDT_CERT_USER', 'certops')
+
+    namespace = _exploding_command(
+        f'connection to {host} for warehouse_prod as certops failed'
+    )
+    monkeypatch.setattr(
+        'certification.__main__.build_parser',
+        lambda: type('P', (), {'parse_args': staticmethod(lambda argv: namespace)})(),
+    )
+
+    assert cert_main([]) == 2
+
+    err = capsys.readouterr().err
+    assert host not in err
+    assert 'warehouse_prod' not in err
+    assert 'certops' not in err
