@@ -2,7 +2,7 @@
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
   "description": "Analyze CSV, JSON, Parquet, Delta, Iceberg and Excel files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",

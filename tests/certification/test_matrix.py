@@ -27,6 +27,7 @@ FIRST_ROW_FORMAT_PLATFORMS = SQLGenerator.FIRST_ROW_FORMAT_PLATFORMS
 NO_EXTERNAL_FORMAT_FILE_TYPES = SQLGenerator.NO_EXTERNAL_FORMAT_FILE_TYPES
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
 
 
 @pytest.fixture(scope='module')
@@ -165,3 +166,66 @@ def test_version_attribution_matches_the_engines_that_ran(expected, rules):
     assert set(LIVE_CERTIFIED_PLATFORMS) == set(expect['live_certified_platforms'])
     assert set(STATIC_ONLY_PLATFORMS) == set(expect['static_only_platforms'])
     assert set(expected['static_only_platforms']) == set(STATIC_ONLY_PLATFORMS)
+
+
+def test_placeholder_script_never_implies_it_is_runnable(rules):
+    """H7 / R17.
+
+    A local file cannot be read by Azure SQL Database. The generated script
+    therefore carries <storage_account>/<container>/<path> placeholders, and it
+    must tell the reader to stage and substitute them. Emitting placeholders
+    silently is how someone ends up pasting a script that fails halfway through
+    after having already created objects.
+    """
+    import re
+
+    from external_file_detection.file_detector import FileDetector
+
+    expect = rules['R17']['expect']
+    metadata = FileDetector().analyze_file_metadata(
+        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+    )
+    script = SQLGenerator().generate_complete_ddl(
+        metadata, target_platform='azure_sql_db'
+    )
+
+    placeholders = set(re.findall(expect['placeholder_pattern'], script))
+    assert placeholders, 'a local file on Azure SQL must produce placeholders'
+    assert 'STAGE THE DATA IN AZURE STORAGE FIRST' in script
+    assert 'Replace the placeholders' in script
+    lowered = script.lower()
+    for phrase in expect['forbidden_when_placeholders_present']:
+        assert phrase not in lowered, phrase
+
+
+def test_staged_cloud_script_has_no_placeholders_and_no_staging_notice():
+    from external_file_detection.file_detector import FileDetector
+
+    metadata = FileDetector().analyze_file_metadata(
+        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+    )
+    script = SQLGenerator().generate_complete_ddl(
+        metadata,
+        target_platform='azure_sql_db',
+        storage_url='https://acct.blob.core.windows.net/raw/sales_scalars.csv',
+    )
+    assert 'STAGE THE DATA IN AZURE STORAGE FIRST' not in script
+    assert '<storage_account>' not in script
+    assert '<container>' not in script
+
+
+def test_blob_paths_keep_their_case(rules):
+    """R14: Blob paths are case sensitive (Yellow/ vs yellow/ -> error 13807)."""
+    from external_file_detection.file_detector import FileDetector
+
+    assert rules['R14']['expect']['paths_are_case_sensitive'] is True
+    metadata = FileDetector().analyze_file_metadata(
+        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+    )
+    script = SQLGenerator().generate_complete_ddl(
+        metadata,
+        target_platform='azure_sql_db',
+        storage_url='https://acct.blob.core.windows.net/Raw/Yellow/Sales_Scalars.csv',
+    )
+    assert 'Yellow/Sales_Scalars.csv' in script
+    assert 'yellow/sales_scalars.csv' not in script

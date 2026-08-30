@@ -321,6 +321,77 @@ Behaviour worth knowing when you consume `generate_complete_ddl` or the
   Database/Managed Instance a comment explains that it is not a valid
   `FORMAT_OPTIONS` entry there. `FIRSTROW` (no underscore) in `OPENROWSET` and
   `BULK INSERT` is unaffected.
+- **`USE_TYPE_DEFAULT` is `FALSE` and always stated.** The default the engine
+  would otherwise apply replaces a missing value with `0` or an empty string,
+  which silently destroys the difference between "no value" and "zero". The
+  generator writes the option out explicitly so the choice is visible in the
+  script rather than inherited.
+- **Storage paths are reproduced with their original case.** Blob and ADLS
+  paths are case sensitive: asking for `Yellow/` when the container holds
+  `yellow/` fails with error 13807, "the directory cannot be listed". Nothing in
+  the generator normalises the case of a path you pass in.
+- **Whole-file reads pick the single-LOB keyword from the encoding.** A UTF-16
+  file read with `SINGLE_CLOB` fails with error 4806 because that keyword wants
+  a DBCS file; the generated script uses `SINGLE_NCLOB` for UTF-16 input.
+
+#### Naming and authentication
+
+Every generated object name is caller-controlled, on both the CLI and the
+extension. This matters more than it sounds: without an explicit schema, a file
+called `orders.csv` produces a table called `dbo.orders`, and on a warehouse
+that is very likely an existing table.
+
+| CLI option | Effect |
+| --- | --- |
+| `--schema` | Schema every generated object is created in. Set it to keep output out of `dbo`. |
+| `--table` | Explicit table name instead of one derived from the file name. |
+| `--credential-name` | Name for the generated database scoped credential. |
+| `--auth-method` | `managed_identity` (default where supported), `sas`, or `public`. |
+
+`managed_identity` is the default because it stores no secret. A credential
+created with `IDENTITY = 'MANAGED IDENTITY'` needs no database master key, so
+there is no master key password to invent, store or rotate, and the generated
+script does not create one. Choose `sas` only when a managed identity is not
+available; the master key section returns when you do. Grant the identity
+**Storage Blob Data Reader** on the container.
+
+### Certified against live engines
+
+The behaviour described above is not inferred from documentation. It was run
+against a live Azure SQL Database (12.0.2000.8) and a live SQL Server 2025
+instance (17.0.4065.4), and the findings are recorded as machine-readable rules
+in `tests/certification/expected-matrix.json`. Both test suites read that file,
+so neither the TypeScript nor the Python generator can drift away from what the
+engines actually did.
+
+What the live runs settled:
+
+- **Whole-document JSON** reads through a `TYPE = BLOB_STORAGE` data source with
+  `SINGLE_CLOB`. The widely repeated claim that `SINGLE_CLOB` cannot be combined
+  with `DATA_SOURCE` is wrong on both engines.
+- **NDJSON** does not. An `https` `BLOB_STORAGE` source rejects row-framing
+  options with error 5369, so newline-delimited JSON is read through an `abs://`
+  virtualization source with CSV row framing instead. The generator picks the
+  source by the shape of the JSON.
+- **ORC**: `CREATE EXTERNAL FILE FORMAT ... FORMAT_TYPE = ORC` is accepted and
+  dropped cleanly by both engines, but no maintained public ORC dataset was
+  available to read, so the data path is **not** certified. The generator says
+  exactly that rather than claiming full support. This is separate from the
+  native reader, which recognises ORC without parsing it.
+- **RCFile** is rejected outright (error 46506), and there is no JSON external
+  file format (error 102) - both as expected.
+- **Excel and Iceberg** never fall through to a `DELIMITEDTEXT` format. They
+  produce explicit guidance instead of a statement that would misread the file.
+- **`DATETIMEOFFSET` fidelity holds**: an offset survives round-tripping and
+  `DATEPART(TZOFFSET)` returns it. A test that reads it back with `CONVERT`
+  style 127 will disagree, because style 127 normalises to UTC - use style 121.
+- **UTF-16 `BULK INSERT` with `CODEPAGE = '1200'` preserves content**, so the
+  generator does not force `DATAFILETYPE = 'widechar'`. Exact UTF-16 CSV
+  certification remains open pending a valid staged fixture.
+
+The harness that produced this evidence lives in `scripts/certification/` and is
+not part of the published package. See its
+[README](scripts/certification/README.md) for the safety model.
 
 Export generated output:
 
@@ -809,7 +880,8 @@ src/                         extension TypeScript sources
 scripts/
 |-- build.js                 esbuild bundle + shipped-artifact verification
 |-- generate-notices.js      THIRD_PARTY_NOTICES.md from the real bundle
-`-- audit-vsix.js            mechanical VSIX content audit
+|-- audit-vsix.js            mechanical VSIX content audit
+`-- certification/           live-engine certification harness (not shipped)
 docs/
 |-- native-core.md           native core architecture and parity notes
 `-- native-ui.md             native UI, message flow, and threat models

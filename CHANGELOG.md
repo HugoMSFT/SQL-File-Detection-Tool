@@ -4,6 +4,91 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [2.0.1]
+
+Generated SQL was certified against live engines - an Azure SQL Database
+(12.0.2000.8) and a SQL Server 2025 instance (17.0.4065.4) - and this release
+fixes everything the runs found wrong. Both the native TypeScript generator and
+the optional Python generator carry every fix; neither can drift, because both
+test suites now read the same machine-readable evidence file.
+
+### Fixed
+
+- **A file named `orders.csv` no longer targets `dbo.orders`.** Every generated
+  object name is caller-controlled: `--schema`, `--table` and
+  `--credential-name` on the CLI, with the same options in the extension. A
+  derived name landing in `dbo` on a warehouse that already has that table is
+  not a hypothetical problem, and the default was doing it.
+- **The local CSV `OPENROWSET` can actually be run.** It used to emit a
+  `FORMATFILE = '<format_file>'` placeholder, which meant the statement could
+  never execute as written. It now emits `FORMAT = 'CSV'` with an inline `WITH`
+  schema, and keeps the bcp format-file route as a comment for the cases that
+  need it.
+- **`USE_TYPE_DEFAULT` is now `FALSE` and always written out.** The inherited
+  default rewrites a missing value as `0` or an empty string, which quietly
+  destroys the difference between absent and zero.
+- **Newline-delimited JSON reads through the right kind of data source.** An
+  `https` `TYPE = BLOB_STORAGE` source rejects row-framing options with error
+  5369 on both engines. NDJSON now goes through an `abs://` virtualization
+  source with CSV row framing, while whole-document JSON keeps the
+  `BLOB_STORAGE` source with `SINGLE_CLOB`. The generator chooses by the shape
+  of the JSON.
+- **UTF-16 whole-file reads use `SINGLE_NCLOB`.** `SINGLE_CLOB` on a UTF-16 file
+  fails with error 4806 because it requires a DBCS file.
+- **Excel and Iceberg no longer fall through to a `DELIMITEDTEXT` external file
+  format.** A format that would misread the file is worse than no format; they
+  emit explicit guidance instead.
+- **`FIRST_ROW` gating matches the engines.** It is emitted for SQL Server
+  2022/2025, Azure SQL Database and Fabric SQL Database, and explained as
+  unavailable elsewhere.
+
+### Added
+
+- **Managed identity is the default way the generated SQL reaches private
+  storage.** `CREATE DATABASE SCOPED CREDENTIAL ... WITH IDENTITY = 'MANAGED
+  IDENTITY'` stores no secret, so no database master key is created and there is
+  no master key password to invent or rotate. This was verified live: the
+  master key count stayed at zero before, during and after the credential
+  existed. `--auth-method sas` restores the previous behaviour, and
+  `--auth-method public` covers anonymous containers.
+- **`tests/certification/expected-matrix.json`** records each live finding as a
+  rule tagged `live`, `live-negative` or `static`, with the engines that
+  produced it. `tests/certification/test_matrix.py` and
+  `src/test/native/certificationEvidence.test.ts` both read it, so a change to
+  either generator that contradicts the evidence fails the build.
+- **`scripts/certification/`**, the harness that produced the evidence. It is
+  not shipped - `.vscodeignore` is an allowlist, so nothing under `scripts/`
+  can enter the package - and it refuses to send any statement that touches
+  `dbo`, names an unprefixed object, or targets a TPC-H table. Its
+  `execute --dry-run` mode is fully offline: no environment variable, no
+  password, no adapter, no socket.
+
+### Changed
+
+- **ORC is documented as "DDL accepted, data path not certified"** rather than
+  supported or unsupported. Both engines accept and drop
+  `FORMAT_TYPE = ORC` cleanly, but no maintained public ORC dataset was
+  available to read through it. The native reader still recognises ORC without
+  parsing it, which is a separate limitation.
+- **Storage paths keep their original case**, and the README says why: blob
+  paths are case sensitive, and asking for `Yellow/` when the container holds
+  `yellow/` fails with error 13807.
+- **A script that still contains placeholders says so.** Output for a local file
+  targeting Azure SQL leads with the staging step and the substitutions to make,
+  instead of leaving placeholders to imply the script is ready to run.
+
+### Notes
+
+- The rubber-duck hypothesis that `CODEPAGE = '1200'` was wrong for UTF-16 bulk
+  paths was **disproven** live: it preserved content, as did
+  `DATAFILETYPE = 'widechar'`. The generator was left alone rather than changed
+  on the strength of the claim. Exact UTF-16 CSV certification is still open,
+  pending a valid staged fixture.
+- Live certification covers the two engine versions that actually ran. No claim
+  is made for SQL Server 2019 or 2022, which were not present.
+- The Delta result certifies protocol `minReader = 1` / `minWriter = 2` and the
+  `FORMAT_TYPE = DELTA` DDL, not newer Delta features.
+
 ## [2.0.0]
 
 The extension is now a genuinely native VS Code extension. This is a major

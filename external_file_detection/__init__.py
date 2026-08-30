@@ -5,7 +5,7 @@ scripts keep working; the product, distribution and CLI are named
 "SQL File Detection Tool" / ``sql-file-detection-tool``.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 #: Display name used in page titles, CLI help, log messages and docs.
 __product_name__ = "SQL File Detection Tool"

@@ -14,6 +14,7 @@ import * as path from 'path';
 import { describe, it } from 'node:test';
 
 import {
+    generateCompleteDdl,
     generateCredentialSetup,
     generateExternalFileFormat,
 } from '../../native/sql/generator';
@@ -233,5 +234,55 @@ describe('live certification evidence', () => {
                 assert.ok(certified.has(engine), `${rec.id} cites uncertified ${engine}`);
             }
         }
+    });
+
+    it('R17: a script with placeholders left in it says so', () => {
+        // A local path cannot be read from Azure. The script therefore has to
+        // carry placeholders, and it has to admit that, or someone pastes a
+        // half-runnable script and finds out after the first object exists.
+        const expect = rule('R17').expect as {
+            placeholder_pattern: string;
+            forbidden_when_placeholders_present: string[];
+        };
+        const script = generateCompleteDdl(csvMetadata(), {
+            targetPlatform: 'azure_sql_db' as TargetPlatform,
+        });
+        const found = script.match(new RegExp(expect.placeholder_pattern, 'g'));
+        assert.ok(found && found.length > 0, 'expected staging placeholders');
+        assert.match(script, /STAGE THE DATA IN AZURE STORAGE FIRST/);
+        assert.match(script, /Replace the placeholders/);
+        const lowered = script.toLowerCase();
+        for (const phrase of expect.forbidden_when_placeholders_present) {
+            assert.ok(!lowered.includes(phrase), phrase);
+        }
+    });
+
+    it('R17: a script pointed at real storage has nothing left to fill in', () => {
+        const script = generateCompleteDdl(csvMetadata(), {
+            targetPlatform: 'azure_sql_db' as TargetPlatform,
+            storageUrl: 'https://acct.blob.core.windows.net/raw/sales.csv',
+        });
+        assert.ok(!script.includes('STAGE THE DATA IN AZURE STORAGE FIRST'));
+        assert.ok(!script.includes('<storage_account>'));
+        assert.ok(!script.includes('<container>'));
+    });
+
+    it('R14: blob paths keep the case they were given', () => {
+        // Live negative: yellow/ -> Yellow/ returns 13807 on both engines,
+        // so lower-casing a path in the generator would produce a script that
+        // cannot list its own directory.
+        const expected = rule('R14').expect as {
+            paths_are_case_sensitive: boolean;
+            error_number: number;
+        };
+        assert.strictEqual(expected.paths_are_case_sensitive, true);
+        assert.strictEqual(expected.error_number, 13807);
+        const script = generateCompleteDdl(csvMetadata(), {
+            targetPlatform: 'azure_sql_db' as TargetPlatform,
+            storageUrl:
+                'https://acct.blob.core.windows.net/Raw/Yellow/Sales.csv',
+        });
+        assert.ok(script.includes('Yellow/Sales.csv'));
+        assert.ok(!script.includes('yellow/sales.csv'));
     });
 });
