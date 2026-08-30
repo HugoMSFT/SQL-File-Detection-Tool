@@ -26,6 +26,7 @@ import {
     cleanIdentifier,
     escapeIdentifier,
     quoteLiteral,
+    safeSqlType,
     splitGoBatches,
     validateUniqueColumnNames,
 } from '../../native/sql/escaping';
@@ -37,6 +38,36 @@ import {
 import { PLATFORMS } from '../../native/sql/typeMapping';
 import type { GeneratorMetadata } from '../../native/types';
 import { REPO_ROOT, fixturePath } from './parityInvariants';
+
+/**
+ * How a naive client cuts a script into batches: split on line terminators,
+ * then treat any line that trims to `GO` as a separator. No awareness of
+ * quotes, brackets or comments.
+ *
+ * This is the adversary's model, not ours, and it exists so the escaping tests
+ * can prove their payloads were genuinely dangerous. `splitGoBatches` is
+ * region-aware and would refuse to split inside a bracketed identifier even
+ * with no escaping at all, so using it as the oracle would make those
+ * assertions pass for the wrong reason.
+ */
+function naiveClientSplit(script: string): string[] {
+    const batches: string[] = [];
+    let current: string[] = [];
+    // Deliberately the widest reasonable set: different clients disagree, and
+    // a defence that only holds for one of them is not a defence.
+    // eslint-disable-next-line no-control-regex -- modelling a naive client's line splitting is the point
+    const lines = script.split(/\r\n|\r|\n|\u000b|\u000c|\u001c|\u001d|\u001e|\u0085|\u2028|\u2029/);
+    for (const line of lines) {
+        if (/^\s*go\s*$/i.test(line)) {
+            batches.push(current.join('\n'));
+            current = [];
+            continue;
+        }
+        current.push(line);
+    }
+    batches.push(current.join('\n'));
+    return batches.filter((batch) => batch.trim() !== '');
+}
 
 /** Payloads that try to break out of an identifier, literal or comment. */
 const MALICIOUS_STRINGS: readonly string[] = [
@@ -287,8 +318,95 @@ describe('identifier and literal escaping', () => {
         );
     });
 
-    it('leaves printable characters in escaped identifiers untouched', () => {
-        assert.strictEqual(escapeIdentifier('Order Total (¥)'), 'Order Total (¥)');
+    it('collapses every character a reader might treat as a line ending', () => {
+        // U+0085 (NEL), U+2028 and U+2029 sit outside the C0/C1 ranges a naive
+        // filter uses, but Python's `str.splitlines()` — and therefore the
+        // compatibility CLI's own GO splitter — breaks on all three. Escaping
+        // that depends on which reader splits the script is not escaping, so
+        // the collapse set is deliberately wider than JavaScript's own idea of
+        // a line terminator.
+        // Characters some real client treats as ending a line. For these the
+        // negative control below can fire, so the test proves the collapse is
+        // what defuses the payload.
+        const lineTerminators = [
+            '\r', '\n', '\u000b', '\u000c', '\u001c', '\u001d', '\u001e',
+            '\u0085', '\u2028', '\u2029',
+        ];
+        // Control characters no client splits on. They are collapsed anyway,
+        // for hygiene and because a terminal or log viewer may still mangle
+        // them, but no batch-splitting claim is made for them.
+        const otherControls = ['\u0000', '\u007f'];
+        for (const terminator of [...lineTerminators, ...otherControls]) {
+            const payload = `id${terminator}GO${terminator}DROP TABLE users;--`;
+            const identifier = escapeIdentifier(payload);
+            assert.strictEqual(
+                identifier,
+                'id GO DROP TABLE users;--',
+                `escapeIdentifier kept ${JSON.stringify(terminator)}`,
+            );
+            assert.ok(
+                !quoteLiteral(payload).includes(terminator),
+                `quoteLiteral kept ${JSON.stringify(terminator)}`,
+            );
+            assert.strictEqual(
+                splitGoBatches(`CREATE TABLE [t] ([${identifier}] INT)`).length,
+                1,
+                `${JSON.stringify(terminator)} still splits a batch`,
+            );
+            if (!lineTerminators.includes(terminator)) {
+                continue;
+            }
+            // Negative control. `splitGoBatches` is region-aware, so it would
+            // refuse to split inside brackets even without the collapse — which
+            // makes the assertion above unable to fail for the right reason on
+            // its own. A naive sqlcmd-style splitter has no such scruples, so
+            // running the *unescaped* payload through it proves the payload was
+            // genuinely dangerous and the collapse is what defuses it.
+            assert.ok(
+                naiveClientSplit(`CREATE TABLE [t] ([${payload}] INT)`).length > 1,
+                `${JSON.stringify(terminator)} was never dangerous, so this proves nothing`,
+            );
+            assert.strictEqual(
+                naiveClientSplit(`CREATE TABLE [t] ([${identifier}] INT)`).length,
+                1,
+                `${JSON.stringify(terminator)} survives into a naive client split`,
+            );
+        }
+    });
+
+    it('never lets a type override carry a line break into DDL', () => {
+        // `safeSqlType` returns the accepted candidate verbatim, so it is the
+        // one generator path that does not run through the control-character
+        // collapse. Its internal whitespace must therefore be space and tab
+        // only - `\s` would admit `\n`, `\r`, `\v`, `\f` and, in JavaScript,
+        // U+00A0, U+2028, U+2029 and U+FEFF.
+        const rejected = [
+            'NVARCHAR\n(255)',
+            'NVARCHAR\r\n(255)',
+            'NVARCHAR\u000b(255)',
+            'NVARCHAR\u000c(255)',
+            'NVARCHAR\u00a0(255)',
+            'NVARCHAR\u2028(255)',
+            'NVARCHAR\u2029(255)',
+            'NVARCHAR\ufeff(255)',
+            'DECIMAL(18,\n4)',
+            'INT\nGO\nDROP TABLE users;\nGO\n--',
+        ];
+        for (const candidate of rejected) {
+            assert.strictEqual(
+                safeSqlType(candidate),
+                'NVARCHAR(MAX)',
+                `safeSqlType accepted ${JSON.stringify(candidate)}`,
+            );
+        }
+        // Space and tab stay legitimate, and a plain type is returned as given.
+        assert.strictEqual(safeSqlType('NVARCHAR (255)'), 'NVARCHAR (255)');
+        assert.strictEqual(safeSqlType('NVARCHAR\t(255)'), 'NVARCHAR\t(255)');
+        assert.strictEqual(safeSqlType('DECIMAL(18,4)'), 'DECIMAL(18,4)');
+        assert.strictEqual(safeSqlType('VARBINARY(MAX)'), 'VARBINARY(MAX)');
+    });
+
+    it('leaves printable characters in escaped identifiers untouched', () => {        assert.strictEqual(escapeIdentifier('Order Total (¥)'), 'Order Total (¥)');
         assert.strictEqual(escapeIdentifier('a]b'), 'a]]b');
         assert.strictEqual(quoteLiteral("O'Brien"), "O''Brien");
         assert.strictEqual(quoteLiteral('https://a.blob.core.windows.net/c/f.csv'),

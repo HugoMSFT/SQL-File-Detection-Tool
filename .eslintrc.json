@@ -17,5 +17,21 @@
     "eqeqeq": ["error", "smart"],
     "no-console": "error"
   },
-  "ignorePatterns": ["out/**", "dist/**", "node_modules/**"]
+  "ignorePatterns": ["out/**", "dist/**", "node_modules/**"],
+  "overrides": [
+    {
+      "files": ["scripts/**/*.js"],
+      "parserOptions": {
+        "sourceType": "script"
+      },
+      "env": {
+        "node": true,
+        "browser": true
+      },
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off",
+        "no-console": "off"
+      }
+    }
+  ]
 }

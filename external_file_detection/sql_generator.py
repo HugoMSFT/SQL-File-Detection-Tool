@@ -3123,25 +3123,54 @@ def _clean_identifier(name: str) -> str:
     return clean or 'column_1'
 
 
+_CONTROL_CHARACTERS = re.compile(r'[\x00-\x1f\x7f\x85\u2028\u2029]+')
+
+
+def _collapse_control_characters(value: str) -> str:
+    """Collapse the characters that can never appear safely in generated SQL.
+
+    Line terminators are the important ones. ``GO`` is not a T-SQL keyword: it
+    is a *client-side* batch separator, so every tool that runs a script
+    (sqlcmd, SSMS, Azure Data Studio, and :func:`_split_go_batches` below)
+    splits on a line whose only content is ``GO``. A newline smuggled into a
+    bracketed identifier or a quoted literal would therefore cut the statement
+    in half and let whatever follows run as its own batch, even though the
+    server-side parser accepts the identifier perfectly happily.
+
+    No legitimate identifier, path, URL or delimiter contains a control
+    character - delimiters are rendered through :func:`_display_delimiter`
+    before they reach :func:`_quote_literal` - so collapsing them to a space is
+    lossless in practice and closes the batch-injection vector at its source.
+
+    U+0085 (NEL), U+2028 and U+2029 are included even though they sit outside
+    the C0/C1 ranges a naive filter would use: all three are line terminators to
+    some readers (Python's own ``str.splitlines()`` among them), and a defence
+    that depends on which reader splits the script is not a defence.
+    """
+    return _CONTROL_CHARACTERS.sub(' ', str(value))
+
+
 def _escape_identifier(name: str) -> str:
     """Escape a value for safe use inside a T-SQL bracket-quoted ``[identifier]``.
 
     Bracket-quoting requires that any closing bracket be doubled so a value can
-    never terminate the identifier early. Unlike :func:`_clean_identifier`, the
-    original characters are preserved so caller-supplied names (table, schema,
-    data source, ...) keep their intended form while remaining injection-safe.
+    never terminate the identifier early, and control characters are collapsed
+    first so a value can never terminate the *batch* early either. Unlike
+    :func:`_clean_identifier`, the printable characters are preserved so
+    caller-supplied names (table, schema, data source, ...) keep their intended
+    form while remaining injection-safe.
     """
-    return str(name).replace(']', ']]')
+    return _collapse_control_characters(name).replace(']', ']]')
 
 
 def _quote_literal(value: Any) -> str:
     """Escape a value for safe use inside a T-SQL single-quoted ``'string'`` literal."""
-    return str(value).replace("'", "''")
+    return _collapse_control_characters(value).replace("'", "''")
 
 
 def _sql_comment(value: Any) -> str:
     """Collapse untrusted text to one line before placing it in a SQL comment."""
-    return re.sub(r'[\x00-\x1f\x7f\u2028\u2029]+', ' ', str(value)).strip()
+    return _collapse_control_characters(value).strip()
 
 
 def _display_delimiter(value: str) -> str:
@@ -3162,19 +3191,80 @@ def _folder_of(relative_path: str) -> str:
     return f'{folder}/' if folder else ''
 
 
+_SCRIPT_LINES = re.compile(r'\r\n|\r|\n')
+
+
 def _split_go_batches(script: str) -> List[str]:
     """Split a T-SQL script on its ``GO`` batch separators.
 
-    Only a line whose sole content is ``GO`` is treated as a separator, so a
-    column or literal containing ``GO`` is never split.
+    Only a line whose sole content is ``GO`` separates batches, and a ``GO``
+    that falls inside a ``'literal'``, a ``[identifier]`` or a block comment is
+    not a separator at all. :func:`_escape_identifier` and
+    :func:`_quote_literal` already make it impossible to smuggle a line break
+    into either region, so this scan is defence in depth: it keeps the splitter
+    correct even for a script this module did not generate.
+
+    Lines are split on CR/LF only, not with ``str.splitlines()``. ``splitlines``
+    also breaks on U+000B, U+000C, U+001C-U+001E and U+0085, none of which
+    sqlcmd, SSMS or the native TypeScript splitter treat as a line ending. Using
+    it here would make this function disagree with every client that actually
+    runs the script - and with the native implementation it is kept in parity
+    with.
     """
     batches: List[str] = []
     current: List[str] = []
-    for line in str(script).splitlines():
-        if line.strip().upper() == 'GO':
+    state = {'literal': False, 'bracket': False, 'comment_depth': 0}
+
+    def advance(line: str) -> None:
+        """Track which quoting region the *end* of *line* is inside."""
+        index = 0
+        length = len(line)
+        while index < length:
+            character = line[index]
+            following = line[index + 1] if index + 1 < length else ''
+            if state['literal']:
+                if character == "'":
+                    if following == "'":
+                        index += 1
+                    else:
+                        state['literal'] = False
+            elif state['bracket']:
+                if character == ']':
+                    if following == ']':
+                        index += 1
+                    else:
+                        state['bracket'] = False
+            elif state['comment_depth'] > 0:
+                if character == '*' and following == '/':
+                    state['comment_depth'] -= 1
+                    index += 1
+                elif character == '/' and following == '*':
+                    state['comment_depth'] += 1
+                    index += 1
+            elif character == '-' and following == '-':
+                # A line comment runs to the end of the line and cannot change
+                # the region the next line starts in.
+                return
+            elif character == '/' and following == '*':
+                state['comment_depth'] += 1
+                index += 1
+            elif character == "'":
+                state['literal'] = True
+            elif character == '[':
+                state['bracket'] = True
+            index += 1
+
+    for line in _SCRIPT_LINES.split(str(script)):
+        separable = (
+            not state['literal']
+            and not state['bracket']
+            and state['comment_depth'] == 0
+        )
+        if separable and line.strip().upper() == 'GO':
             batches.append('\n'.join(current).strip())
             current = []
         else:
+            advance(line)
             current.append(line)
     tail = '\n'.join(current).strip()
     if tail:
@@ -3222,7 +3312,7 @@ def _validate_unique_column_names(schema: List[Any]) -> None:
         seen.add(key)
 
 
-_SIMPLE_JSON_KEY = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+_SIMPLE_JSON_KEY = re.compile(r'\A[A-Za-z_][A-Za-z0-9_]*\Z')
 
 
 def _quote_json_path(name: str) -> str:
@@ -3239,16 +3329,29 @@ def _quote_json_path(name: str) -> str:
     else:
         esc = n.replace('\\', '\\\\').replace('"', '\\"')
         path = f'$."{esc}"'
-    return path.replace("'", "''")
+    return _quote_literal(path)
 
 
 # Allowed shape for a SQL data type: a type name optionally followed by a
 # parenthesised length/precision such as NVARCHAR(255), DECIMAL(18,4) or
 # VARBINARY(MAX). Anything else (e.g. a value smuggled in from the web schema
 # editor) is rejected and replaced with a safe default.
+#
+# ``\A``/``\Z`` rather than ``^``/``$`` because Python's ``$`` also matches
+# before a trailing newline, and ``re.ASCII`` because Python's ``\d`` otherwise
+# accepts non-ASCII digits. Both keep the allowlist exactly as narrow as the
+# native TypeScript implementation, which JavaScript's regular expressions give
+# for free.
+#
+# The internal whitespace is ``[ \t]``, never ``\s``. The accepted candidate is
+# interpolated into DDL verbatim, so this is the one generator path that does
+# not run through ``_collapse_control_characters``; ``\s`` would admit ``\n``,
+# ``\r``, ``\x0b`` and ``\x0c``, putting a real line break inside CREATE TABLE.
+# The JavaScript mirror uses the same class, where ``\s`` would additionally
+# have admitted U+00A0, U+2028, U+2029 and U+FEFF.
 _VALID_SQL_TYPE = re.compile(
-    r'^[A-Za-z][A-Za-z0-9_]*\s*(\(\s*(\d+|MAX)\s*(,\s*\d+\s*)?\))?$',
-    re.IGNORECASE,
+    r'\A[A-Za-z][A-Za-z0-9_]*[ \t]*(\([ \t]*(\d+|MAX)[ \t]*(,[ \t]*\d+[ \t]*)?\))?\Z',
+    re.IGNORECASE | re.ASCII,
 )
 
 

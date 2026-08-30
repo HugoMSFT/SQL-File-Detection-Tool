@@ -3,8 +3,7 @@
  *
  * These deliberately have no `vscode` import so they can be unit tested with
  * plain `node --test`, and no network or process import so that everything here
- * is safe to reach from the native activation path. Helpers that only make
- * sense for the deprecated Python backend live in `legacyBackendUrl.ts`.
+ * is safe to reach from the native activation path.
  */
 
 import * as path from 'path';

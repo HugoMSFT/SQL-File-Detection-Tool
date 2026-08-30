@@ -1,8 +1,8 @@
 {
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
-  "description": "Detect data files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Browse Azure Storage with Storage Explorer-style sign-in.",
-  "version": "1.1.1",
+  "description": "Analyze CSV, JSON, Parquet, Delta, Iceberg and Excel files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
+  "version": "2.0.0",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -28,7 +28,7 @@
     "url": "https://github.com/HugoMSFT/SQL-File-Detection-Tool/issues"
   },
   "homepage": "https://github.com/HugoMSFT/SQL-File-Detection-Tool#readme",
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "activationEvents": [
     "onView:sqlFileDetectionTool.sidebar"
   ],
@@ -142,30 +142,87 @@
           "markdownDescription": "Target SQL platform used when generating T-SQL. Defaults to **Azure SQL Database**."
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "sqlFileDetectionTool.getStarted",
+        "title": "Get started with SQL File Detection Tool",
+        "description": "Analyze data files and generate Azure SQL Database T-SQL. Nothing to install: the extension runs natively in VS Code.",
+        "steps": [
+          {
+            "id": "openTool",
+            "title": "Open the tool",
+            "description": "Select the SQL File Detection Tool icon in the Activity Bar. The interface renders immediately — there is no setup step, no interpreter check and no server to wait for.\n[Open the tool](command:sqlFileDetectionTool.open)",
+            "media": {
+              "markdown": "media/walkthrough/open.md"
+            },
+            "completionEvents": [
+              "onCommand:sqlFileDetectionTool.open"
+            ]
+          },
+          {
+            "id": "analyzeFile",
+            "title": "Analyze a data file",
+            "description": "Open any CSV, TSV, JSON, NDJSON, Parquet, Excel, Delta or Iceberg file and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
+            "media": {
+              "markdown": "media/walkthrough/analyze.md"
+            },
+            "completionEvents": [
+              "onCommand:sqlFileDetectionTool.analyzeCurrentFile"
+            ]
+          },
+          {
+            "id": "reviewSql",
+            "title": "Review the generated T-SQL",
+            "description": "CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Azure SQL Database is the default; switch platforms at any time.",
+            "media": {
+              "markdown": "media/walkthrough/sql.md"
+            }
+          },
+          {
+            "id": "connectAzure",
+            "title": "Attach Azure Storage",
+            "description": "Sign in with your Microsoft account, a SAS URL, a connection string, or browse anonymously, then analyze blobs in place.\n[Connect to Azure Storage](command:sqlFileDetectionTool.connectAzureStorage)",
+            "media": {
+              "markdown": "media/walkthrough/azure.md"
+            },
+            "completionEvents": [
+              "onCommand:sqlFileDetectionTool.connectAzureStorage"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "node scripts/build.js",
+    "bundle:dev": "node scripts/build.js --dev",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "typecheck": "tsc -p ./ --noEmit",
-    "lint": "eslint src --ext .ts",
-    "bundle": "esbuild src/extension.ts --bundle --platform=node --target=node20 --format=cjs --external:vscode --outfile=dist/extension.js",
-    "test": "npm run compile && node scripts/run-tests.js",
-    "package": "node scripts/ensure-dist.js && vsce package --out dist"
+    "lint": "eslint src scripts --ext .ts,.js",
+    "notices": "node scripts/generate-notices.js",
+    "test": "npm run compile && npm run bundle && node scripts/run-tests.js",
+    "package": "node scripts/ensure-dist.js && vsce package --out dist",
+    "audit:vsix": "node scripts/audit-vsix.js",
+    "capture:gif": "npm run compile && node scripts/capture-walkthrough.js"
   },
   "devDependencies": {
+    "@azure/core-auth": "^1.11.0",
     "@types/node": "^20.11.30",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
-    "@vscode/vsce": "^2.24.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.25.12",
     "eslint": "^8.57.0",
+    "gifenc": "^1.0.3",
+    "playwright-core": "^1.62.1",
+    "pngjs": "^7.0.0",
     "typescript": "^5.4.3"
   },
   "dependencies": {
-    "@azure/core-auth": "^1.11.0",
     "@azure/storage-blob": "^12.33.0",
     "chardet": "^2.2.0",
     "fflate": "^0.8.3",

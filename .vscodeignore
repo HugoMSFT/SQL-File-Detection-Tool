@@ -1,49 +1,33 @@
-# Node / TypeScript build inputs
-node_modules/**
-src/**
-out/test/**
-tsconfig.json
-.eslintrc.json
-.vscode/**
-.vscode-test/**
-dist/**
+# What ships in the VSIX
+#
+# This file is an allowlist, not a blocklist. Everything in the repository is
+# excluded first, then the extension payload is added back one entry at a time.
+#
+# The reason is the whole point of version 2.0: the extension is native, so the
+# package must be provably free of the Python distribution that shares this
+# repository. A blocklist can only exclude what someone remembered to name, and
+# a new Python module, notebook or fixture added later would silently ship. An
+# allowlist cannot fail that way — a new file has to be named here to be
+# included. `scripts/audit-vsix.js` re-checks the built archive mechanically.
+#
+# vsce always includes package.json, and README.md / CHANGELOG.md / LICENSE are
+# listed below so the Marketplace page and the license notice are present.
 
-# Git / CI
-.git/**
-.github/**
-.gitignore
-.gitattributes
+**
 
-# Python build + test artefacts (the runtime package itself is shipped)
-tests/**
-test_data/**
-scripts/**
-**/__pycache__/**
-**/*.pyc
-**/*.pyo
-.pytest_cache/**
-*.egg-info/**
-build/**
-.venv/**
-venv/**
+!dist/extension.js
 
-# Docs that are not part of the packaged extension
-AGENTS.md
-docs/**
-demo/**/*.ipynb
+!media/icon.png
+!media/activity-bar.svg
+!media/sql-file-detection-tool-walkthrough.gif
+!media/webview/main.js
+!media/webview/main.css
+!media/walkthrough/open.md
+!media/walkthrough/analyze.md
+!media/walkthrough/sql.md
+!media/walkthrough/azure.md
 
-# Capture scratch: raw walkthrough frames and tooling never ship.
-# The finished media/activity-bar.svg and the walkthrough GIF DO ship, because
-# the Activity Bar icon and the README's "See it in action" section need them.
-media/frames/**
-media/**/*.psd
-**/frames/**
-capture*.py
-assemble*.py
-
-# Never ship anything credential-shaped
-**/.env
-**/*.pem
-**/*.key
-**/*.pfx
-**/secrets*
+!README.md
+!CHANGELOG.md
+!LICENSE
+!THIRD_PARTY_NOTICES.md

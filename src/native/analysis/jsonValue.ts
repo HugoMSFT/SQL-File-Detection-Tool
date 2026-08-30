@@ -262,8 +262,19 @@ export function pythonStringRepr(value: string): string {
             continue;
         }
         const code = char.codePointAt(0) ?? 0;
-        if (code < 0x20 || code === 0x7f) {
+        // Everything a client might read as a line terminator is escaped, not
+        // just the C0 range CPython escapes. U+0085, U+2028 and U+2029 end a
+        // line for `str.splitlines()` and for sqlcmd, so leaving them literal
+        // would let a value break out of the single line its caller assumes it
+        // occupies. Today every caller wraps the result in `sqlComment()`,
+        // which already collapses them; escaping here means a future caller
+        // that forgets cannot reintroduce the vector.
+        if (code < 0x20 || code === 0x7f || code === 0x85) {
             out += `\\x${code.toString(16).padStart(2, '0')}`;
+            continue;
+        }
+        if (code === 0x2028 || code === 0x2029) {
+            out += `\\u${code.toString(16).padStart(4, '0')}`;
             continue;
         }
         out += char;

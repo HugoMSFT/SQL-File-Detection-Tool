@@ -284,6 +284,14 @@ function text(
     }
     // A control character has no place in an identifier, a URL or a label and
     // is a classic way to smuggle a terminator past a downstream parser.
+    //
+    // Tab, newline and carriage return are deliberately *not* rejected here,
+    // because a schema override description or a pasted label may legitimately
+    // contain them. That is only safe because every SQL sink runs its input
+    // through `collapseControlCharacters` in `src/native/sql/escaping.ts`
+    // first, which is what actually prevents a smuggled `GO` batch separator.
+    // If a value validated here ever reaches generated SQL without passing
+    // through that function, this allowance becomes a vulnerability.
     // eslint-disable-next-line no-control-regex -- matching control characters is the point
     if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) {
         return undefined;

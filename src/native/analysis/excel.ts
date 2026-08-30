@@ -288,6 +288,32 @@ function readCell(
     return numeric;
 }
 
+/**
+ * Find the `Target` of the relationship with the given `Id`.
+ *
+ * Every pattern here is a literal. The caller's id is matched with `===`
+ * against a captured attribute rather than being compiled into a pattern, so a
+ * hostile workbook can choose which relationship is selected but never how the
+ * search is performed.
+ */
+function relationshipTarget(relsXml: string, wantedId: string): string | null {
+    const elements = relsXml.match(/<Relationship\b[^>]*>/g);
+    if (!elements) {
+        return null;
+    }
+    for (const element of elements) {
+        const id = /\bId="([^"]*)"/.exec(element);
+        if (!id || id[1] !== wantedId) {
+            continue;
+        }
+        const target = /\bTarget="([^"]*)"/.exec(element);
+        if (target && target[1] !== '') {
+            return target[1];
+        }
+    }
+    return null;
+}
+
 /** Locate the first worksheet part named by the workbook. */
 function firstSheetPath(
     workbookXml: string | null,
@@ -297,12 +323,17 @@ function firstSheetPath(
     if (workbookXml !== null && relsXml !== null) {
         const sheetMatch = /<sheet\b[^>]*?\br:id="([^"]+)"[^>]*\/?>/.exec(workbookXml);
         if (sheetMatch) {
-            const relationship = new RegExp(
-                `<Relationship\\b[^>]*Id="${sheetMatch[1]}"[^>]*Target="([^"]+)"`,
-            ).exec(relsXml);
-            if (relationship) {
-                const target = relationship[1].replace(/^\/?xl\//, '').replace(/^\//, '');
-                const candidate = `xl/${target}`;
+            // The relationship id comes out of an untrusted workbook, so it is
+            // compared, never compiled. Interpolating it into a `new RegExp`
+            // would hand the file's author control of the pattern as well as
+            // the subject: `Id="(a+)+X"` is catastrophic backtracking on the
+            // extension-host thread, and `Id="\"` is a SyntaxError thrown from
+            // a path that only expects a parse miss.
+            const wanted = sheetMatch[1];
+            const target = relationshipTarget(relsXml, wanted);
+            if (target !== null) {
+                const relative = target.replace(/^\/?xl\//, '').replace(/^\//, '');
+                const candidate = `xl/${relative}`;
                 if (parts[candidate]) {
                     return candidate;
                 }

@@ -98,10 +98,15 @@ export function cleanIdentifier(name: unknown): string {
  * character — delimiters are rendered through {@link displayDelimiter} before
  * they reach {@link quoteLiteral} — so collapsing them to a space is lossless in
  * practice and closes the batch-injection vector at its source.
+ *
+ * U+0085 (NEL), U+2028 and U+2029 are included even though they are outside the
+ * C0/C1 control ranges a naive filter would use: all three are line terminators
+ * to some readers (Python's `str.splitlines()` among them), and a defence that
+ * depends on which reader splits the script is not a defence.
  */
 function collapseControlCharacters(value: string): string {
     // eslint-disable-next-line no-control-regex
-    return value.replace(/[\x00-\x1f\x7f\u2028\u2029]+/g, ' ');
+    return value.replace(/[\x00-\x1f\x7f\x85\u2028\u2029]+/g, ' ');
 }
 
 /**
@@ -320,8 +325,17 @@ export function quoteJsonPath(name: unknown): string {
  * parenthesised length/precision such as `NVARCHAR(255)`, `DECIMAL(18,4)` or
  * `VARBINARY(MAX)`. Anything else (for example a value smuggled in through the
  * schema editor) is rejected and replaced with a safe default.
+ *
+ * The internal whitespace is `[ \t]`, never `\s`. The accepted candidate is
+ * interpolated into DDL verbatim, so this is the one generator path that does
+ * not run through {@link collapseControlCharacters}; `\s` would admit `\n`,
+ * `\r`, `\v`, `\f` — and in JavaScript also U+00A0, U+2028, U+2029 and U+FEFF —
+ * putting a real line break inside `CREATE TABLE`. Restricting it to space and
+ * tab keeps the allowlist fail-closed and keeps it identical to the Python
+ * mirror in `external_file_detection/sql_generator.py`, whose `re.ASCII` flag
+ * narrows `\s` differently. Anchored with `^`/`$` and no `m` flag.
  */
-const VALID_SQL_TYPE = /^[A-Za-z][A-Za-z0-9_]*\s*(\(\s*(\d+|MAX)\s*(,\s*\d+\s*)?\))?$/i;
+const VALID_SQL_TYPE = /^[A-Za-z][A-Za-z0-9_]*[ \t]*(\([ \t]*(\d+|MAX)[ \t]*(,[ \t]*\d+[ \t]*)?\))?$/i;
 
 /** Return *sqlType* only if it matches the allowed pattern, else *fallback*. */
 export function safeSqlType(sqlType: unknown, fallback = 'NVARCHAR(MAX)'): string {

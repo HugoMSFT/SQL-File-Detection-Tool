@@ -11,32 +11,44 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![A walkthrough of SQL File Detection Tool: opening it from the VS Code Activity
-Bar, previewing a Parquet file, reviewing the detected column types, generating
-Azure SQL Database T-SQL, and attaching Azure Storage.](media/sql-file-detection-tool-walkthrough.gif)
+![Walkthrough of the native VS Code extension: selecting the SQL File Detection
+Tool icon in the Activity Bar, the interface rendering immediately with no setup
+step, a Parquet file analysed in place, the detected column types, Azure SQL
+Database preselected as the target platform with the generated CREATE TABLE and
+OPENROWSET scripts, the Azure Storage sign-in modes and public dataset URL box,
+and the same screen following a light VS Code theme.](media/sql-file-detection-tool-walkthrough.gif)
 
 The walkthrough above, in text:
 
 1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
    full interface appears immediately, rendered natively — no Python, no server
-   and no browser tab.
-2. Drop in any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a Delta
-   or Iceberg table directory.
+   and no browser tab. There is no install or setup step to sit through.
+2. Point it at any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a
+   Delta or Iceberg table directory. The walkthrough analyses
+   `demo/parquet/sales.parquet` from this repository.
 3. The **Preview** tab shows real rows read straight from the file. No import
    and no database connection are required.
 4. The **Metadata** tab shows the detected column types, precision, nullability,
    encoding, and collation.
-5. The **Platform** selector is preset to **Azure SQL Database**. Switch to SQL
-   Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database at any
-   time.
-6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **EXT TABLE** tabs hold
-   the generated T-SQL. Azure SQL output for a local file includes an explicit
-   "stage the data in Azure Storage first" prerequisite block.
-7. **Azure Storage** offers four explicit extension sign-in modes - VS Code
+5. The **Target platform** selector is preset to **Azure SQL Database**. Switch
+   to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
+   at any time.
+6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **External table** tabs
+   hold the generated T-SQL. Azure SQL output for a local file includes an
+   explicit "stage the data in Azure Storage first" prerequisite block.
+7. **Azure & URLs** offers four explicit extension sign-in modes - VS Code
    Microsoft sign-in, SAS, connection string, or anonymous - with no silent
-   fallback between them. The Python web application keeps its wider set,
-   including managed identity.
-8. **Public dataset URL** analyzes any `https://` data file directly.
+   fallback between them, plus a **Public dataset or HTTPS URL** box that
+   analyzes any `https://` data file directly. The Python web application keeps
+   its wider set, including managed identity.
+8. The whole surface follows the active VS Code theme.
+
+Every panel in the recording is the real native webview, driven by the real
+analysis engine: the column types, the row values and the T-SQL are what the
+shipped code produces for that file. The Azure connection shown is a synthetic
+`contoso.example` identity with no token, SAS or account key. Regenerate the
+recording with `npm run capture:gif` (see
+[`scripts/capture-walkthrough.js`](scripts/capture-walkthrough.js)).
 
 ## Names and compatibility
 
@@ -78,16 +90,37 @@ platform requirements before running it in a database.
 
 ## Supported inputs
 
-| Input | Analysis |
-| --- | --- |
-| CSV and TSV | Delimiter, encoding, sampled schema, logical row count |
-| JSON, JSONL, and NDJSON | Bounded schema sample, nesting, row count where available |
-| Parquet | Arrow schema, row groups, compression, row count |
-| Delta Lake directories | Delta metadata, or a bounded Parquet schema fallback |
-| Apache Iceberg directories | Current schema, partition spec, snapshot row count |
-| Excel | Bounded worksheet sample |
-| Text | Encoding and streamed line count |
-| ORC and RCFile | Format recognition and SQL format guidance |
+| Input | Analysis | Extension | Python CLI |
+| --- | --- | --- | --- |
+| CSV and TSV | Delimiter, encoding, sampled schema, logical row count | yes | yes |
+| JSON, JSONL, and NDJSON | Bounded schema sample, nesting, row count where available | yes | yes |
+| Parquet | Arrow schema, row groups, compression, row count | yes | yes |
+| Delta Lake directories | Delta metadata, or a bounded Parquet schema fallback | yes | yes |
+| Apache Iceberg directories | Current schema, partition spec, snapshot row count | yes | yes |
+| Excel | Bounded worksheet sample | yes | yes |
+| Text | Encoding and streamed line count | yes | yes |
+| ORC and RCFile | Format recognition and SQL format guidance | recognition only | recognition only |
+
+That table is not a description; it is a test. `src/test/native/demoMatrix.test.ts` walks
+every fixture committed under `demo/`, analyses it through the shipped native
+service, and asserts the detected format, the recovered column count, and whether
+the file was genuinely parsed or only recognised. Adding a demo fixture without
+adding its row fails the suite, so the matrix cannot quietly drift away from what
+the code actually does.
+
+### The ORC limitation, stated plainly
+
+ORC and RCFile are **recognised, not parsed**. The extension identifies the
+format, reports it, and generates the correct external file format and
+`OPENROWSET`/external-table guidance for it - but it cannot read an ORC file's
+embedded schema, so it cannot tell you the column names and types the way it can
+for Parquet or CSV. There is no pure-JavaScript ORC reader worth shipping, and
+bundling a native one would reintroduce exactly the platform-specific install
+step version 2.0 exists to remove.
+
+The optional Python CLI has the same limitation by default. If you need ORC
+schema extraction, use the CLI with `pip install ".[spark]"`, which reads ORC
+through PySpark.
 
 The SQL generator targets:
 
@@ -143,6 +176,34 @@ Constraints reflected in generated output:
   `PARSER_VERSION` or `HEADER_ROW`.
 
 ## Installation
+
+### VS Code extension (no Python required)
+
+The extension is self-contained. Installing it does not create a virtual
+environment, install a package, start a server, choose a port or open a browser
+tab. Nothing outside the `.vsix` is downloaded or executed.
+
+```bash
+npm install
+npm run package     # writes dist/sql-file-detection-tool-2.0.0.vsix
+code --install-extension dist/sql-file-detection-tool-2.0.0.vsix --force
+```
+
+The package contains a single bundled JavaScript file, the webview assets, the
+icons and the documentation. It contains no `.py` file, no `pyproject.toml`, no
+wheel, no `node_modules` and no test fixture, and this is asserted mechanically
+on every test run rather than left to review:
+
+```bash
+npm run audit:vsix
+```
+
+### Optional Python CLI
+
+The CLI and the local web application are **separate, optional compatibility
+tooling**. Install them only if you want to script analysis outside VS Code or
+need one of the Python-only integrations (managed identity, ORC, Spark). The
+extension never installs, launches or requires any of this.
 
 Python 3.9 or newer is required.
 
@@ -382,18 +443,36 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension. Build and install it locally:
-
-```bash
-npm install
-npm run package          # writes dist/sql-file-detection-tool-<version>.vsix
-code --install-extension dist/sql-file-detection-tool-<version>.vsix
-```
+The repository root is also a VS Code extension, version **2.0.0**. See
+[Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
 install a package, start a server, choose a port or open a browser. Everything
 runs in the extension host in TypeScript. Python is not required, and is never
 installed or launched on your behalf.
+
+### Startup and analysis cost
+
+Measured against the packaged bundle, with `PATH` emptied and `child_process`,
+`http`, `https`, `net` and `dns` all sabotaged, so nothing can be attributed to
+a subprocess or the network. These are the numbers from the reference machine
+(Windows, Node 20); they are also asserted as regression guards with enough
+slack for a shared CI runner.
+
+| Step | Measured | Guard |
+| --- | --- | --- |
+| Load the bundle (cold `require`) | 86 ms | < 1500 ms |
+| `activate()` | 0.8 ms | < 500 ms |
+| Activity Bar click to rendered shell | 0.8 ms | < 400 ms |
+| Subsequent Activity Bar click | 0.2 ms | < 100 ms |
+| First analysis of a 5-column CSV | 30 ms | < 8000 ms |
+| Re-analysis of the same file | 4 ms | < 2000 ms |
+| Heap retained after 20 repeat analyses | 3.0 MiB | < 96 MiB |
+| Packaged `.vsix` | 619 KiB (17 files) | < 5 MB |
+
+There is no setup step to measure, because there is no setup step. Activation
+is triggered by the Activity Bar view, a command or a context-menu action -
+never at VS Code startup.
 
 Commands (Command Palette, prefix **SQL File Detection Tool**):
 
@@ -412,8 +491,9 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 Selecting the **SQL File Detection Tool** container reveals the complete
 interface immediately, rendered from bundled assets: file list, preview,
 metadata, every statement tab, the schema override editor, export, the platform
-selector, the public dataset URL box, and the Azure Storage browser. On the
-reference machine activation and first render each take under a millisecond.
+selector, the public dataset URL box, and the Azure Storage browser. There is no
+loading state to wait through and nothing to install; see
+[Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
 
 - The webview has a strict, nonce-bound Content Security Policy with
   `default-src 'none'` and no `connect-src`, so the renderer has no network
@@ -421,7 +501,10 @@ reference machine activation and first render each take under a millisecond.
   remote assets.
 - The webview can never name a file. It sends an opaque, host-minted random id;
   the extension host resolves it to a path and its own allowed root and
-  re-applies a realpath containment check on every read.
+  re-applies a realpath containment check on every read. File paths shown in the
+  UI are rewritten to be root-relative first, though an operating-system error
+  message surfaced after a failed read can still quote the full path back to the
+  same user in the same window.
 - No token, account key or SAS signature ever reaches the webview, the output
   channel, a setting, a URL or generated SQL.
 
@@ -454,13 +537,18 @@ stored secret. Managed identity is deliberately **not** offered in the desktop
 extension, because a desktop extension does not have one - it remains a
 deployment concern for the CLI and the web application below.
 
-### Optional legacy Python runtime
+### Relationship to the Python CLI
 
 The CLI and the Flask web application documented elsewhere in this README still
-work and are still tested, but they are now **optional compatibility**, not part
-of the extension. No command, view or menu in the extension reaches them.
-`src/backend.ts`, `src/pythonEnv.ts`, `src/process.ts` and
-`src/legacyBackendUrl.ts` remain as deprecated, unreferenced transition code.
+work and are still tested, but they are **optional compatibility tooling**, not
+part of the extension. No command, view or menu in the extension reaches them,
+and version 2.0.0 removed the last of the backend-lifecycle code: there is no
+`backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
+module left in the extension sources.
+
+The two distributions version independently. The extension is at 2.0.0; the
+Python distribution keeps its own version line, because nothing about the CLI
+changed when the extension stopped using it.
 
 For the full design - message flow, CSP, file-identity model, Azure threat model
 and SSRF policy - see [`docs/native-ui.md`](docs/native-ui.md).
@@ -655,9 +743,16 @@ Build the VS Code extension and run its tests:
 npm install
 npm run typecheck
 npm run lint
-npm test
-npm run package
+npm test               # compiles, bundles, then runs the node --test suites
+npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
+npm audit --omit=dev         # production dependency tree
+npm run package        # writes dist/sql-file-detection-tool-2.0.0.vsix
+npm run audit:vsix     # mechanical content audit of that .vsix
 ```
+
+`npm test` runs the bundle step first on purpose: `src/test/bundleRuntime.test.ts`
+loads and activates `dist/extension.js` itself, so the artifact that ships is the
+artifact that is tested, not just the `tsc` output beside it.
 
 Build distributable packages:
 
@@ -672,8 +767,10 @@ CI runs the tests on Linux and Windows and builds the wheel from
 ### Native TypeScript core
 
 `src/native/` holds the in-process TypeScript analysis and T-SQL generation
-engine. It is the only engine the extension uses, and it is proven against the
-Python implementation by a parity baseline:
+engine. It is the only engine the extension uses, and it is verified against the
+Python implementation by a parity baseline - a golden-file comparison over the
+committed fixtures, which is strong evidence of agreement rather than a proof of
+equivalence:
 
 ```bash
 python scripts/generate_parity_baselines.py --check   # baseline still matches Python
@@ -708,11 +805,11 @@ src/                         extension TypeScript sources
 |   |-- service.ts           NativeAnalysisService facade
 |   |-- analysis/            per-format analyzers
 |   `-- sql/                 platform-aware T-SQL generator
-|-- backend.ts               deprecated: Python backend lifecycle
-|-- pythonEnv.ts             deprecated: managed virtual environment
-|-- process.ts               deprecated: spawn helpers
-|-- legacyBackendUrl.ts      deprecated: ports, loopback URLs, health polling
 `-- test/                    node --test suites
+scripts/
+|-- build.js                 esbuild bundle + shipped-artifact verification
+|-- generate-notices.js      THIRD_PARTY_NOTICES.md from the real bundle
+`-- audit-vsix.js            mechanical VSIX content audit
 docs/
 |-- native-core.md           native core architecture and parity notes
 `-- native-ui.md             native UI, message flow, and threat models

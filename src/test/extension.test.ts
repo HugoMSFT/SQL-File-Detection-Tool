@@ -1,5 +1,5 @@
-/**
- * Tests for the process helpers and the manifest's command wiring.
+﻿/**
+ * Tests for the manifest's command wiring and the Azure scope helpers.
  *
  * These avoid importing anything that requires the `vscode` module at runtime.
  */
@@ -9,7 +9,6 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { candidateInterpreters, run, venvPython } from '../process';
 import { ARM_SCOPES, STORAGE_SCOPES, expiryFromJwt, refreshDelayMs } from '../azureScopes';
 
 const manifest = JSON.parse(
@@ -24,49 +23,6 @@ const manifest = JSON.parse(
         menus: Record<string, Array<{ command: string; when?: string }>>;
     };
 };
-
-test('venvPython points at the platform-correct interpreter', () => {
-    const resolved = venvPython(path.join('a', 'b'));
-    if (process.platform === 'win32') {
-        assert.equal(resolved, path.join('a', 'b', 'Scripts', 'python.exe'));
-    } else {
-        assert.equal(resolved, path.join('a', 'b', 'bin', 'python'));
-    }
-});
-
-test('candidateInterpreters puts the configured interpreter first', () => {
-    const candidates = candidateInterpreters('/usr/bin/python3.12');
-    assert.equal(candidates[0], '/usr/bin/python3.12');
-    assert.ok(candidates.length > 1);
-    assert.equal(new Set(candidates).size, candidates.length);
-});
-
-test('candidateInterpreters works with no configuration', () => {
-    const candidates = candidateInterpreters('');
-    assert.ok(candidates.length >= 2);
-    assert.ok(candidates.every((c) => typeof c === 'string' && c.length > 0));
-});
-
-test('run executes with an argument array and no shell interpretation', async () => {
-    // If a shell were involved, the `&&` and `;` below would be operators.
-    const marker = 'a && b ; c | d';
-    const result = await run(process.execPath, [
-        '-e',
-        'process.stdout.write(process.argv[1])',
-        marker,
-    ]);
-    assert.equal(result.code, 0);
-    assert.equal(result.stdout, marker);
-});
-
-test('run reports a non-zero exit code without throwing', async () => {
-    const result = await run(process.execPath, ['-e', 'process.exit(3)']);
-    assert.equal(result.code, 3);
-});
-
-test('run rejects when the command does not exist', async () => {
-    await assert.rejects(() => run('definitely-not-a-real-command-xyz', []));
-});
 
 test('expiryFromJwt reads the exp claim', () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -166,5 +122,7 @@ test('the explorer context menu is wired to the analyze command', () => {
 test('the manifest metadata is Marketplace-ready', () => {
     assert.equal(manifest.publisher, 'HugoMSFT');
     assert.equal(manifest.name, 'sql-file-detection-tool');
-    assert.equal(manifest.main, './out/extension.js');
+    // Version 2.0 ships a single bundled file rather than the `out/` tree, so
+    // `node_modules` never has to be packaged.
+    assert.equal(manifest.main, './dist/extension.js');
 });

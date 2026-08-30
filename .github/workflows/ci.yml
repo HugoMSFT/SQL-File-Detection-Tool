@@ -66,4 +66,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # The notices must describe the bundle that was just built, not a bundle
+      # from whenever someone last remembered to regenerate them.
+      - run: npm run notices -- --check
+      # Production dependencies only: the packaging toolchain is not shipped.
+      # Gated at `high` so an upstream low/moderate advisory reds the build for
+      # the maintainer to triage on a schedule rather than blocking an unrelated
+      # pull request. `npm audit --omit=dev` with no gate is the local command.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run package
+      # Mechanical proof that the package carries no Python, no sources, no
+      # fixtures and no credentials.
+      - run: npm run audit:vsix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: dist/*.vsix
+          if-no-files-found: error

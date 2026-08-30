@@ -4,7 +4,150 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0]
+
+The extension is now a genuinely native VS Code extension. This is a major
+version because the runtime architecture changed completely: the Python
+interpreter check, the managed virtual environment, `pip`, the Flask server, the
+localhost port, the health polling and the Simple Browser are all gone, and the
+extension now ships as a single bundled JavaScript file.
+
+The Python distribution versions independently and is unchanged by this release.
+It remains supported as optional compatibility tooling.
+
+### Changed
+
+- **Version 2.0.0**, and the extension is bundled with esbuild. `main` is now
+  `./dist/extension.js`: one CommonJS file with every runtime dependency inlined
+  and minified, so the ESM-only `hyparquet` reader and the Azure SDK execute
+  correctly under VS Code's Node runtime. `vscode:prepublish` runs the bundle.
+- **`.vscodeignore` is a strict allowlist.** It starts from `**` and re-admits
+  named files only, so a new file cannot leak into the package by default. The
+  `.vsix` contains 17 entries and weighs 619 KiB: the bundle, the webview assets,
+  the icons, the walkthrough GIF and markdown, `package.json`, `README.md`,
+  `CHANGELOG.md`, `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+- **The README leads with the extension.** Installation is split so the VSIX
+  install stands alone and the Python CLI has its own clearly optional section.
+  The startup and analysis measurements, the supported-format matrix and the ORC
+  limitation are stated explicitly rather than implied.
+- **The walkthrough GIF was recaptured from the native UI.** The previous one
+  showed the Flask browser interface that no longer exists. The new recording
+  (960x540, 19.5 s, 0.20 MB) is driven by the real controller against
+  `demo/parquet/sales.parquet`, so the column types, row values and generated
+  T-SQL in the frames are what the shipped engine produces. The Azure beat uses
+  a synthetic `contoso.example` identity with no token, SAS or account key.
+
+### Added
+
+- **`scripts/build.js`** — the esbuild bundler, with a `verifyBundle()` step that
+  fails the build if a dependency was left unbundled, if `require("vscode")` is
+  missing, or if `child_process` or `worker_threads` appear in the output.
+- **`scripts/audit-vsix.js` and `npm run audit:vsix`** — a mechanical audit of
+  the built archive. It fails on any `.py` file, `pyproject.toml`, wheel, venv,
+  `node_modules`, test, fixture, raw TypeScript, source map, cache or credential
+  file; on backend vocabulary in the bundle; and on a package over 5 MB.
+- **`scripts/generate-notices.js` and `THIRD_PARTY_NOTICES.md`** — notices
+  derived from the real bundle metafile, so they always describe what actually
+  ships. `npm run notices -- --check` fails CI if they drift. All 33 bundled
+  packages are MIT.
+- **`src/test/packaging.test.ts`** — packaging guards: the manifest, the version,
+  the activation events, the dependency set, the allowlist shape, the absence of
+  backend vocabulary in the bundle, dependency inlining, bundle size, notices
+  coverage, and the full VSIX audit when a package is present.
+- **`src/test/bundleRuntime.test.ts`** — loads and activates `dist/extension.js`
+  itself, with `PATH` emptied and `child_process`, `http`, `https`, `net` and
+  `dns` all sabotaged, so the artifact that ships is the artifact that is tested
+  and offline activation is proven rather than assumed. It records load,
+  activation, first render, warm render, first analysis, repeat analysis and
+  retained-heap measurements as regression guards.
+- **`src/test/native/demoMatrix.test.ts`** — turns the supported-format table in
+  the README into an executable claim. Every fixture committed under `demo/` is
+  analysed through the shipped service and checked for its detected format,
+  recovered column count and whether it was genuinely parsed or only recognised.
+  Adding a fixture without adding its row fails the suite.
+- **A "Get started" walkthrough** contributed to VS Code's welcome page, with
+  four steps covering opening the view, analysing a file, reading the generated
+  SQL, and connecting Azure Storage.
+- **`scripts/capture-walkthrough.js` and `npm run capture:gif`** — regenerates
+  the README GIF from the current native webview, using an already-installed
+  Edge or Chrome. No browser download and no ffmpeg.
+- F5 debugging now builds and launches the bundle. `main` moved to
+  `dist/extension.js`, so the old `npm: compile` pre-launch task and
+  `out/**/*.js` source-map roots would have attached a debugger to files VS Code
+  was not running. A `npm: bundle:dev` task builds with an inline source map.
+
+### Removed
+
+- `src/backend.ts`, `src/pythonEnv.ts`, `src/process.ts` and
+  `src/legacyBackendUrl.ts` are deleted, together with their tests. No module in
+  the repository can now start a process, choose a port, build a loopback URL or
+  poll a health endpoint on behalf of the extension.
+- Every Python file, `pyproject.toml`, demo fixture, test and source file is
+  excluded from the package. The extension carries no Python payload of any kind.
+
+### Security
+
+- **The Python `GO`-batch injection gap is closed.** `GO` is a client-side batch
+  separator, not a T-SQL keyword, so a newline smuggled into a bracketed
+  identifier or a quoted literal is accepted by the server-side parser but cuts
+  the statement in half in sqlcmd, SSMS and Azure Data Studio — letting whatever
+  follows run as its own batch. `external_file_detection/sql_generator.py` now
+  collapses control characters fail-closed in `_escape_identifier`,
+  `_quote_literal` and `_sql_comment`, and `_split_go_batches` is region-aware
+  (literal, bracket, block comment, line comment) and splits on CR/LF only. The
+  JSON-path and SQL-type allowlists are anchored with `\A`/`\Z` and compiled
+  ASCII-only, because Python's `$` matches before a trailing newline and its
+  `\d` is Unicode-aware — both would have been wider than the native engine.
+- The collapse set in both implementations now also covers U+0085, U+000B,
+  U+000C and U+001C-U+001E. Python's `str.splitlines()` breaks on all of them; a
+  defence that depends on which reader splits the script is not a defence.
+- New regressions in `tests/test_sql_injection.py` drive malicious CSV headers,
+  JSON keys, file paths, data-source names and table/schema names end to end
+  through `generate_all_statements`, and check the result against a *naive*
+  sqlcmd-style splitter rather than the project's own region-aware one, so the
+  tests model the client that actually executes the script.
+- `npm audit --omit=dev` reports no vulnerabilities. No production dependency
+  has an install script, a `gypfile` or a native binary.
+- **`safeSqlType` no longer admits a line break.** The type-override allowlist
+  used `\s*` between the type name and its parenthesised length. The accepted
+  candidate is interpolated into DDL verbatim - it is the one generator path
+  that does not run through the control-character collapse - so `\s` put a real
+  CRLF inside `CREATE TABLE`. It is now `[ \t]*` in both implementations, which
+  also removes a TS/Python divergence: JavaScript's `\s` matches U+00A0, U+2028,
+  U+2029 and U+FEFF, which Python's `re.ASCII` does not. Found by code review;
+  not exploitable as `GO` injection, because the grammar admits no line that can
+  reduce to `GO`, but it contradicted the guarantee the rest of this release
+  establishes.
+- **The Excel reader no longer compiles untrusted input into a regular
+  expression.** `firstSheetPath()` interpolated the `r:id` attribute of a
+  caller-supplied workbook into `new RegExp`. A crafted id hangs the extension
+  host on catastrophic backtracking - reproduced, not theorised - or throws a
+  `SyntaxError` from a path that expects only a parse miss. Relationship ids are
+  now compared with `===` against literal patterns, with regressions covering
+  both shapes. Found by security review.
+- **The VSIX audit now reads the bytes it vouches for.** It previously checked
+  only filenames for credentials, so a key pasted into any source file was
+  inlined into the bundle by esbuild and shipped under an innocent name with the
+  gate reporting success. It now scans every shipped text entry against seven
+  credential shapes (storage account key, SAS signature, private key, JWT,
+  GitHub, Slack and AWS tokens), applies the backend-vocabulary rules to every
+  shipped `.js` rather than the bundle alone, and states in its pass message
+  what it actually checked. A test proves each pattern matches its own shape, so
+  the scan cannot rot into decoration.
+- `pythonStringRepr` now escapes U+0085, U+2028 and U+2029, matching CPython's
+  `repr()` exactly. Every current caller wraps it in `sqlComment()`, so this
+  changes no output today; it means a future caller that forgets cannot
+  reintroduce the vector.
+
+### Notes
+
+- The Python CLI and web application remain fully functional and fully tested,
+  but they are **optional compatibility tooling**. No command, view or menu in
+  the extension reaches them.
+- Not yet published to the Marketplace. This release is a package built and
+  installed locally, pending live SQL Server and Azure SQL certification.
+
+## [2.0.0 — Layer 2: native webview UI]
 
 ### Changed
 
@@ -103,14 +246,14 @@ uses [semantic versioning](https://semver.org/).
 
 - The Python CLI and web application remain fully functional but are now
   **optional legacy compatibility**. `src/backend.ts`, `src/pythonEnv.ts`,
-  `src/process.ts` and `src/legacyBackendUrl.ts` survive as deprecated,
-  unreferenced transition code; Layer 3 removes them together with packaging
-  and dependency pruning.
+  `src/process.ts` and `src/legacyBackendUrl.ts` survived this layer as
+  deprecated, unreferenced transition code; Layer 3 removed them together with
+  packaging and dependency pruning.
 - Adds one runtime dependency, `@azure/storage-blob` (MIT), and one development
   dependency, `esbuild`, used to bundle the extension so the ESM-only
   `hyparquet` reader ships correctly.
-- The version is unchanged at 1.1.1. Layer 3 owns the version bump, the demo
-  GIF and the Marketplace copy.
+- The version was unchanged at 1.1.1 at the end of this layer. Layer 3 owns the
+  version bump, the demo GIF and the Marketplace copy.
 
 ### Added (Layer 1 — native analysis core)
 

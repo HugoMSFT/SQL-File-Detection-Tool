@@ -258,6 +258,62 @@ describe('malformed, truncated and hostile input', () => {
         );
     });
 
+    it('does not compile a hostile relationship id into a regular expression', async () => {
+        // `xl/workbook.xml` names its worksheet through an `r:id` attribute the
+        // file's author controls. If that value were interpolated into a
+        // pattern, `(a+)+X` against a long matching subject would wedge the
+        // extension host, and a lone backslash would throw a SyntaxError out of
+        // a path that only expects a parse miss. The id must be compared, never
+        // compiled.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { zipSync, strToU8 } = require('fflate') as {
+            zipSync(files: Record<string, Uint8Array>): Uint8Array;
+            strToU8(text: string): Uint8Array;
+        };
+        const evilIds = ['(a+)+$', '\\', '[', '.*.*.*.*.*.*.*.*.*!'];
+        for (const [index, evilId] of evilIds.entries()) {
+            const padding = 'a'.repeat(4000);
+            const workbook =
+                '<workbook><sheets>' +
+                `<sheet name="S" sheetId="1" r:id="${evilId}${padding}"/>` +
+                '</sheets></workbook>';
+            const rels =
+                '<Relationships>' +
+                `<Relationship Id="${evilId}${padding}" Target="worksheets/sheet1.xml"/>` +
+                '</Relationships>';
+            const sheet =
+                '<worksheet><sheetData>' +
+                '<row r="1"><c r="A1" t="inlineStr"><is><t>header</t></is></c></row>' +
+                '<row r="2"><c r="A2" t="inlineStr"><is><t>value</t></is></c></row>' +
+                '</sheetData></worksheet>';
+            const name = `evil${index}.xlsx`;
+            await write(
+                name,
+                Buffer.from(
+                    zipSync({
+                        'xl/workbook.xml': strToU8(workbook),
+                        'xl/_rels/workbook.xml.rels': strToU8(rels),
+                        'xl/worksheets/sheet1.xml': strToU8(sheet),
+                    }),
+                ),
+            );
+            const started = Date.now();
+            const metadata = await analyzeTemp(name);
+            const elapsed = Date.now() - started;
+            assert.ok(
+                elapsed < 2000,
+                `a hostile r:id must not stall analysis (took ${elapsed}ms for ${evilId})`,
+            );
+            assert.strictEqual(metadata.file_type, 'excel');
+            // The relationship still resolves, because the id is matched by
+            // equality rather than as a pattern.
+            assert.ok(
+                metadata.schema !== null && metadata.schema.length > 0,
+                `the worksheet must still be found for ${evilId}`,
+            );
+        }
+    });
+
     it('does not follow a directory that only looks like a table', async () => {
         await fs.promises.mkdir(path.join(root, 'fake_delta', '_delta_log'), {
             recursive: true,
