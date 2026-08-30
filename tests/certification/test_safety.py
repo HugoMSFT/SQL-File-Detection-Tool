@@ -5,6 +5,8 @@ Every test states the real-world accident it prevents. A test that only
 restates the implementation would pass just as happily against a broken gate.
 """
 
+import re
+
 import pytest
 
 from certification.safety import evaluate_batch
@@ -515,3 +517,161 @@ def test_select_into_an_owned_table_still_passes(identity, policy):
     owned = _owned(identity)
     sql = f'SELECT * INTO [{owned["s"]}].[{owned["t"]}2] FROM [{owned["s"]}].[{owned["t"]}];'
     assert evaluate_batch(sql, policy=policy).allowed
+
+
+# ---------------------------------------------------------------------------
+# Escaped delimiters inside a quoted identifier
+# ---------------------------------------------------------------------------
+#
+# `_IDENT` used to terminate a bracketed name at the first `]`, which is the
+# middle of the name as far as the server is concerned. Both object-list
+# defences are built on that grammar, so both failed on the same input and the
+# two-defence design gave no redundancy at all. The masker in `batches.py`
+# always got this right; its lesson had simply not been carried across.
+
+ESCAPED_DELIMITER_EXPLOITS = [
+    'DROP TABLE IF EXISTS [{s}].[{t}]]x], [sales].[invoices];',
+    'DROP VIEW IF EXISTS [{s}].[{t}]]x], [sales].[v];',
+    'DROP TABLE IF EXISTS [{s}].[{t}]]x], [prod].[sales].[invoices];',
+    'DROP TABLE IF EXISTS [{s}].[{t}]]x], [sales].[a], [hr].[b], [fin].[c];',
+    'DROP TABLE IF EXISTS [{s}]."{t}""x", [sales].[invoices];',
+    'TRUNCATE TABLE [{s}].[{t}]]x], [sales].[x];',
+]
+
+
+@pytest.mark.parametrize('template', ESCAPED_DELIMITER_EXPLOITS)
+def test_an_escaped_delimiter_cannot_hide_the_rest_of_a_list(
+    identity, policy, template
+):
+    report = evaluate_batch(template.format(**_owned(identity)), policy=policy)
+    assert not report.allowed, template
+
+
+def test_the_escape_aware_grammar_stands_without_the_shape_rule(
+    identity, policy, monkeypatch
+):
+    # The scope walk must reach the foreign name on its own. If only
+    # MULTI_TARGET is refusing these, a statement shape nobody thought to list
+    # would sail straight through.
+    import certification.safety as safety
+
+    monkeypatch.setattr(
+        safety,
+        '_FORBIDDEN',
+        tuple(rule for rule in safety._FORBIDDEN if rule[0] != 'MULTI_TARGET'),
+    )
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'DROP TABLE IF EXISTS [{owned["s"]}].[{owned["t"]}]]x], [sales].[invoices];',
+        policy=policy,
+    )
+    assert 'FOREIGN_SCHEMA' in report.codes
+
+
+def test_an_escaped_bracket_in_an_owned_name_is_still_allowed(identity, policy):
+    # The fix must not turn the generators' own escaping convention into a
+    # refusal: `escapeIdentifier`/`_escape_identifier` emit `]]` by design.
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'CREATE TABLE [{owned["s"]}].[{owned["t"]}]]odd] (a INT);', policy=policy
+    )
+    assert report.allowed, [v.code for v in report.violations]
+
+
+def test_a_name_split_keeps_an_escaped_delimiter(identity):
+    from certification.safety import _split_qualified
+
+    assert _split_qualified('[a]]x].[b]') == ['a]x', 'b']
+    assert _split_qualified('"a""x"."b"') == ['a"x', 'b']
+    assert _split_qualified('[sales].[in.voice]') == ['sales', 'in.voice']
+
+
+def test_a_statement_whose_target_list_cannot_be_parsed_fails_closed(
+    identity, policy, monkeypatch
+):
+    # A future grammar gap must become a refusal, not a silent pass.
+    import certification.safety as safety
+
+    monkeypatch.setattr(
+        safety,
+        '_FORBIDDEN',
+        tuple(rule for rule in safety._FORBIDDEN if rule[0] != 'MULTI_TARGET'),
+    )
+    monkeypatch.setattr(safety, '_LIST_HEAD_RE', re.compile(r'(?P<name>ZZZ_NEVER)'))
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'DROP TABLE [{owned["s"]}].[{owned["t"]}];', policy=policy
+    )
+    assert 'UNPARSED_TARGET_LIST' in report.codes
+
+
+# ---------------------------------------------------------------------------
+# A statement head can no longer be swallowed by the previous line
+# ---------------------------------------------------------------------------
+#
+# Layer 1's line scan separated its two words with `\s+`, which matches a
+# newline, and it *consumed* the second word. `BEGIN` alone on a line therefore
+# absorbed the next line's verb, and `finditer` resumed past it, so that verb
+# was never head-checked. `BEGIN` is an allowed simple head that both
+# generators emit on its own line, so this was a normal shape.
+
+SWALLOWED_HEAD_EXPLOITS = [
+    'BEGIN\n    ALTER TABLE [sales].[t] DROP COLUMN [c]\nEND',
+    'IF 1 = 1 BEGIN ALTER TABLE [sales].[t] DROP COLUMN [c] END',
+    'IF 1 = 1 BEGIN ALTER TABLE [sales].[t] ALTER COLUMN [c] INT NOT NULL END',
+    'IF 1 = 1 BEGIN ALTER SCHEMA [sales] TRANSFER [hr].[salary] END',
+    'IF 1 = 1 BEGIN ALTER INDEX ALL ON [sales].[t] DISABLE END',
+    'IF 1 = 1 BEGIN DROP INDEX [ix] ON [sales].[t] END',
+    'BEGIN\n    DROP SYNONYM [sales].[s]\nEND',
+]
+
+
+@pytest.mark.parametrize('sql', SWALLOWED_HEAD_EXPLOITS)
+def test_a_verb_after_begin_is_still_judged(policy, sql):
+    report = evaluate_batch(sql, policy=policy)
+    assert not report.allowed, sql
+
+
+def test_the_head_scan_no_longer_consumes_the_next_line(policy):
+    # The mechanism, not just the outcome: the second line must remain a scan
+    # position of its own.
+    report = evaluate_batch(
+        'BEGIN\n    ALTER TABLE [sales].[t] DROP COLUMN [c]\nEND', policy=policy
+    )
+    assert 'STATEMENT_NOT_ALLOWED' in report.codes
+
+
+@pytest.mark.parametrize('sql', SWALLOWED_HEAD_EXPLOITS)
+def test_alter_and_unmanaged_drops_are_refused_without_layer_one(
+    policy, sql, monkeypatch
+):
+    # Layer 1 is position dependent. These verbs must not depend on it.
+    import certification.safety as safety
+
+    monkeypatch.setattr(safety, '_head_violations', lambda masked, upper: [])
+    report = evaluate_batch(sql, policy=policy)
+    assert not report.allowed, sql
+
+
+def test_create_or_alter_view_is_not_caught_by_the_alter_rule(identity, policy):
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'CREATE OR ALTER VIEW [{owned["s"]}].[{owned["t"]}] AS SELECT 1 AS [a];',
+        policy=policy,
+    )
+    assert 'ALTER_OBJECT' not in report.codes
+
+
+def test_every_list_verb_scope_checks_its_second_name(identity, policy):
+    # T-SQL treats the last three as single-object statements, so the server
+    # would reject the comma anyway. The invariant "every name in a statement
+    # is scope-checked" must not rest on the server's grammar.
+    owned = _owned(identity)
+    prefix = identity.prefix
+    for sql in (
+        f'DROP EXTERNAL FILE FORMAT [{prefix}ff], [sales_fmt];',
+        f'DROP EXTERNAL DATA SOURCE [{prefix}ds], [sales_ds];',
+        f'DROP DATABASE SCOPED CREDENTIAL [{prefix}cr], [sales_cred];',
+    ):
+        report = evaluate_batch(sql, policy=policy)
+        assert not report.allowed, sql

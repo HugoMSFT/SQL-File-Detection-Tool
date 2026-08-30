@@ -115,6 +115,29 @@ and recorded on its own; and the scope check walks the whole list, because a
 scope check that depends on another rule holding is not a scope check. Each is
 tested with the other disabled.
 
+Both of those defences rest on the same identifier grammar, which is why the
+grammar has to agree with the masker's lexer character for character. For a
+while it did not: a bracketed name ends at a *single* `]` and a doubled `]]` is
+an escaped bracket that stays inside the name, and the gate's regex stopped at
+the first one. `DROP TABLE IF EXISTS [<run schema>].[<run table>]]x],
+[sales].[invoices];` therefore passed both defences at once — the shape rule saw
+a `]` where it wanted a comma, and the list walk stopped on its first iteration.
+Two defences built on one grammar are one defence. The grammar now consumes
+`]]` and `""`, name splitting undoes the escape so scope comparisons see the
+real name, and a target list that cannot be fully parsed is refused rather than
+skipped, so the next grammar gap fails closed instead of passing silently.
+
+Layer 1 is a scanner, which means it is position dependent, which means it must
+not be the only thing refusing a verb. Its line scan used to separate its
+two-word phrase with `\s+` — which matches a newline — and to consume what it
+matched, so a one-word head on one line absorbed the next line's verb and that
+verb was never head-checked. `BEGIN` is an allowed simple head that both
+generators emit on its own line, so `BEGIN\n    ALTER TABLE [sales].[t] DROP
+COLUMN [c]\nEND` passed the whole gate. The scan now captures its phrase in a
+lookahead and only spans horizontal whitespace, and — more to the point —
+`ALTER` of an object and `DROP` of an unmanaged object kind are position-
+independent layer 2 refusals now, so they hold wherever the statement sits.
+
 A cell may not create an object its own prerequisite setup already created.
 That is what C14 did on the first live run: the setup step created the
 BLOB_STORAGE data source, and the `BULK INSERT` statement was generated with

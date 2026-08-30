@@ -45,7 +45,25 @@ from .runid import RunIdentity
 # Identifier grammar
 # ---------------------------------------------------------------------------
 
-_IDENT = r'(?:\[[^\]\n]{1,128}\]|"[^"\n]{1,128}"|[A-Za-z_@#][A-Za-z0-9_@#$]{0,127})'
+# A quoted identifier ends at a *single* closing delimiter; a doubled `]]` or
+# `""` is an escaped delimiter and stays inside the name. This has to agree with
+# the masker's lexer in `batches.py`, and for a while it did not: `_IDENT`
+# terminated at the first `]`, which is the middle of the name as far as the
+# server is concerned. Everything after that point was text no scope rule looked
+# at, so
+#
+#     DROP TABLE IF EXISTS [<run schema>].[<run table>]]x], [sales].[invoices];
+#
+# passed the whole gate with zero violations - the shape rule saw a `]` where it
+# wanted a comma, and the list walk stopped on its first iteration. Both
+# defences rest on this grammar, so both failed together on the one input.
+# `escapeIdentifier`/`_escape_identifier` in the generators emit `]]` by design,
+# so this is the project's own escaping convention rather than an exotic case.
+_IDENT = (
+    r'(?:\[(?:[^\]\n]|\]\]){1,128}\]'
+    r'|"(?:[^"\n]|""){1,128}"'
+    r'|[A-Za-z_@#][A-Za-z0-9_@#$]{0,127})'
+)
 _QNAME = rf'{_IDENT}(?:\s*\.\s*{_IDENT}?)*'
 
 #: Placeholder tokens the generator emits on purpose, e.g. ``<storage_account>``.
@@ -72,13 +90,48 @@ _QUALIFIED_REF_RE = re.compile(
 )
 
 
+def _lex_qname(name: str) -> List[str]:
+    """Split a qualified name into its parts, honouring doubled delimiters.
+
+    Mirrors the lexer in :func:`certification.batches.mask_sql`. A regex split
+    on ``.`` cannot do this: the dot separating two parts and a dot *inside* a
+    bracketed part look identical to a regex, and a doubled ``]]`` breaks any
+    bracket-counting lookaround. Walking the string is the only way to get
+    ``[a]]x].[b]`` back as ``['a]x', 'b']``.
+    """
+    parts: List[str] = []
+    current: List[str] = []
+    index = 0
+    length = len(name)
+    while index < length:
+        char = name[index]
+        if char in '["':
+            closer = ']' if char == '[' else '"'
+            index += 1
+            while index < length:
+                if name[index] == closer:
+                    if index + 1 < length and name[index + 1] == closer:
+                        current.append(closer)
+                        index += 2
+                        continue
+                    index += 1
+                    break
+                current.append(name[index])
+                index += 1
+        elif char == '.':
+            parts.append(''.join(current))
+            current = []
+            index += 1
+        else:
+            current.append(char)
+            index += 1
+    parts.append(''.join(current))
+    return parts
+
+
 def _qname_parts(name: str) -> List[str]:
     """Split a possibly-qualified name into lowercase, unbracketed parts."""
-    return [
-        part.strip().strip('[]"').lower()
-        for part in name.split('.')
-        if part.strip().strip('[]"')
-    ]
+    return [part for part in _split_qualified(name) if part]
 
 
 
@@ -102,15 +155,7 @@ _READ_ONLY_SCHEMAS: FrozenSet[str] = frozenset({'sys', 'information_schema'})
 
 def _split_qualified(name: str) -> List[str]:
     """Split ``a.b.c`` into unquoted lowercase parts, keeping empty middles."""
-    parts: List[str] = []
-    for raw in re.split(r'\.(?=(?:[^\]]*\[[^\]]*\])*[^\]]*$)', name.strip()):
-        token = raw.strip()
-        if token.startswith('[') and token.endswith(']'):
-            token = token[1:-1]
-        elif token.startswith('"') and token.endswith('"'):
-            token = token[1:-1]
-        parts.append(token.strip().lower())
-    return parts
+    return [part.strip().lower() for part in _lex_qname(name.strip())]
 
 
 # ---------------------------------------------------------------------------
@@ -199,15 +244,44 @@ _FORBIDDEN: Tuple[Tuple[str, Pattern[str], str], ...] = (
     # smaller thing to get right than parsing it.
     ('MULTI_TARGET',
      re.compile(
-         r'\b(?:DROP\s+(?:TABLE|VIEW|EXTERNAL\s+TABLE|SCHEMA)|TRUNCATE\s+TABLE)\s+'
+         r'\b(?:DROP\s+(?:TABLE|VIEW|EXTERNAL\s+TABLE|SCHEMA|EXTERNAL\s+FILE\s+FORMAT|'
+         r'EXTERNAL\s+DATA\s+SOURCE|DATABASE\s+SCOPED\s+CREDENTIAL)|TRUNCATE\s+TABLE)\s+'
          rf'(?:IF\s+EXISTS\s+)?{_QNAME}\s*,',
          re.I,
      ),
      'dropping or truncating several objects in one statement is never generated, '
      'and only the first name in such a list can be scope-checked reliably'),
-    # ALTER needs no such exception: layer 1 refuses every ALTER outright, and
-    # nothing the harness generates alters a credential. Narrowing this rule to
-    # match would widen the gate for a statement that is never emitted.
+    # `ALTER DATABASE` deliberately carries no `SCOPED` exception. Layer 1 was
+    # once the reason - it refuses every ALTER head - but layer 1 is position
+    # dependent and could be stepped around, so this rule stays broad on its
+    # own merits: nothing the harness generates alters a credential, and
+    # narrowing it would widen the gate for a statement that is never emitted.
+    # `ALTER` and the object kinds the harness does not manage used to rest
+    # entirely on layer 1's head allowlist, which is position dependent. These
+    # two rules are position independent, so they hold wherever the statement
+    # sits - after a `BEGIN`, inside an `IF`, on a continuation line.
+    #
+    # `CREATE OR ALTER VIEW` is a shape a target rule accepts, so it is excused
+    # here; every other ALTER of an object is refused. `ALTER SCHEMA ...
+    # TRANSFER` is the sharpest of them: it moves a pre-existing table into the
+    # run's own schema, at which point the run's own teardown destroys it.
+    ('ALTER_OBJECT',
+     re.compile(
+         r'(?<!\bOR )\bALTER\s+(?:TABLE|SCHEMA|INDEX|VIEW|PROCEDURE|PROC|FUNCTION|'
+         r'TRIGGER|SEQUENCE|TYPE|ASSEMBLY|PARTITION|FULLTEXT|SYMMETRIC|ASYMMETRIC|'
+         r'CERTIFICATE|QUEUE|SERVICE|RESOURCE|COLUMN|CONSTRAINT)\b',
+         re.I,
+     ),
+     'the harness never alters an object; it creates its own and drops them'),
+    ('UNMANAGED_DROP',
+     re.compile(
+         r'\bDROP\s+(?:INDEX|STATISTICS|SYNONYM|SEQUENCE|PROCEDURE|PROC|FUNCTION|'
+         r'TRIGGER|TYPE|AGGREGATE|ASSEMBLY|DEFAULT|RULE|PARTITION|FULLTEXT|'
+         r'SYMMETRIC|ASYMMETRIC|CERTIFICATE|QUEUE|SERVICE|CONTRACT|ROUTE|ENDPOINT|'
+         r'COLUMN|CONSTRAINT)\b',
+         re.I,
+     ),
+     'only the object kinds the certification run creates may be dropped'),
     ('ALTER_DATABASE', re.compile(r'\bALTER\s+DATABASE\b', re.I),
      'altering database-scoped settings would mutate a pre-existing database'),
     ('ALTER_SERVER', re.compile(r'\bALTER\s+SERVER\b', re.I),
@@ -290,6 +364,12 @@ _TARGET_RULES: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
 )
 
 #: Verbs whose object is a *list*. See :data:`_MULTI_TARGET_RE`.
+#:
+#: T-SQL defines the last three as single-object statements, so a real server
+#: answers the comma with a syntax error and there is no exploit path. They are
+#: here anyway: the invariant worth holding is "every name in a statement is
+#: scope-checked", and resting that on the server's grammar rather than on the
+#: gate's is exactly the kind of assumption the object-list bypass was built on.
 _LIST_VERB_KINDS: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
     ('table', True, re.compile(r'\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?', re.I)),
     ('view', True, re.compile(r'\bDROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?', re.I)),
@@ -297,12 +377,24 @@ _LIST_VERB_KINDS: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
      re.compile(r'\bDROP\s+EXTERNAL\s+TABLE\s+(?:IF\s+EXISTS\s+)?', re.I)),
     ('schema', False, re.compile(r'\bDROP\s+SCHEMA\s+(?:IF\s+EXISTS\s+)?', re.I)),
     ('truncate target', True, re.compile(r'\bTRUNCATE\s+TABLE\s+', re.I)),
+    ('external file format', False,
+     re.compile(r'\bDROP\s+EXTERNAL\s+FILE\s+FORMAT\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('external data source', False,
+     re.compile(r'\bDROP\s+EXTERNAL\s+DATA\s+SOURCE\s+(?:IF\s+EXISTS\s+)?', re.I)),
+    ('database scoped credential', False,
+     re.compile(r'\bDROP\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+(?:IF\s+EXISTS\s+)?', re.I)),
 )
 
 #: One more name in a comma-separated object list.
 _NEXT_IN_LIST_RE = re.compile(rf'\s*,\s*(?P<name>{_QNAME})', re.I)
 #: The first name after a list verb, matched from a position rather than anchored.
 _LIST_HEAD_RE = re.compile(rf'(?P<name>{_QNAME})', re.I)
+#: Characters that can only follow a parsed object list if the identifier
+#: grammar desynchronised from the server's. A trailing ``]`` or ``"`` means the
+#: name was terminated early; a trailing ``,`` means the list walk stopped short.
+#: Any of them is refused rather than ignored, so a future grammar gap fails
+#: closed instead of silently handing the rest of the statement to the server.
+_LIST_TAIL_DESYNC_RE = re.compile(r'\s*[\]",]')
 
 _USE_RE = re.compile(rf'\bUSE\s+(?P<name>{_IDENT})', re.I)
 #: ``CREATE DATABASE`` proper — the negative lookahead keeps ``CREATE DATABASE
@@ -624,6 +716,14 @@ def evaluate_batch(sql: str, policy: SafetyPolicy) -> SafetyReport:
             # anchor at the start of the whole batch instead and never match.
             first = _LIST_HEAD_RE.match(masked, match.end())
             if first is None:
+                report.violations.append(
+                    Violation(
+                        'UNPARSED_TARGET_LIST',
+                        f'the target of this {kind} statement could not be parsed, so '
+                        f'it cannot be scope checked',
+                        line=_line_of(masked, match.start()),
+                    )
+                )
                 continue
             cursor = first.end()
             while True:
@@ -642,6 +742,15 @@ def evaluate_batch(sql: str, policy: SafetyPolicy) -> SafetyReport:
                         )
                     )
                 cursor = following.end()
+            if _LIST_TAIL_DESYNC_RE.match(masked, cursor):
+                report.violations.append(
+                    Violation(
+                        'UNPARSED_TARGET_LIST',
+                        f'this {kind} statement continues past the names that could be '
+                        f'parsed, so part of it would reach the server unchecked',
+                        line=_line_of(masked, cursor),
+                    )
+                )
 
     # -- Layer 3c: external locations must point at allowed hosts
     if policy._hosts:
@@ -679,19 +788,44 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
     # rule for. Line starts are scanned too (below) but only for known verbs,
     # since ordinary continuation lines legitimately begin with FROM, WITH (,
     # column lists and the like.
-    for match in re.finditer(r'(?:\A|;)\s*([A-Za-z_][A-Za-z_0-9]{1,29})', masked):
-        word = match.group(1).lower()
+    for match in re.finditer(r'(?:\A|;)\s*(?=(?P<word>[A-Za-z_][A-Za-z_0-9]{1,29}))', masked):
+        word = match.group('word').lower()
         if any(word == token or token.startswith(word + ' ') for token in _HEAD_TOKENS):
             continue
         violations.append(
             Violation(
                 'UNKNOWN_STATEMENT',
                 f'{word.upper()} does not begin any statement the harness recognises',
-                line=_line_of(masked, match.start(1)),
+                line=_line_of(masked, match.start('word')),
             )
         )
-    for match in re.finditer(r'(?:^|;)\s*([A-Za-z_]{2,20}(?:\s+[A-Za-z_]{2,20})?)', masked, re.M):
-        phrase = ' '.join(match.group(1).lower().split())
+    # Two details here are load bearing, and both were wrong.
+    #
+    # The separator between the two words is horizontal whitespace only. With
+    # `\s+` it matched a newline, so a one-word head on one line and the verb on
+    # the next were captured as a single two-word phrase.
+    #
+    # The phrase is captured inside a lookahead so the scan never consumes it.
+    # It used to be consumed, and `finditer` then resumed *after* the second
+    # word - which meant the second line's `^` was not a scan position and its
+    # verb was never head-checked at all. `BEGIN` is an allowed simple head and
+    # is emitted on its own line by `_guard_create_statements` in both
+    # generators, so
+    #
+    #     BEGIN
+    #         ALTER TABLE [sales].[t] DROP COLUMN [c]
+    #     END
+    #
+    # passed the whole gate with no violations. That mattered precisely for the
+    # verbs layer 1 is the sole defence for; the position-independent layer 2
+    # rules below now cover `ALTER` and the unmanaged `DROP` kinds as well, so
+    # neither depends on the scanner finding the right position any more.
+    for match in re.finditer(
+        r'(?:^|;)[ \t]*(?=(?P<phrase>[A-Za-z_]{2,20}(?:[ \t]+[A-Za-z_]{2,20})?))',
+        masked,
+        re.M,
+    ):
+        phrase = ' '.join(match.group('phrase').lower().split())
         head = None
         for token in _HEAD_TOKENS:
             if phrase == token or phrase.startswith(token + ' '):
@@ -702,14 +836,14 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
         if head in _ALLOWED_SIMPLE_HEADS:
             continue
         if head in ('create', 'drop'):
-            tail = upper[match.end(1) - len(match.group(1)) :]
+            tail = upper[match.start('phrase') :]
             kind = _object_kind(tail[len(head) :])
             if kind is None:
                 violations.append(
                     Violation(
                         'UNKNOWN_OBJECT_KIND',
                         f'{head.upper()} of an object kind the harness does not manage',
-                        line=_line_of(masked, match.start(1)),
+                        line=_line_of(masked, match.start('phrase')),
                     )
                 )
             continue
@@ -721,14 +855,14 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
             # this run's prefix, so it can only ever empty a table this run
             # created. Any other TRUNCATE - a bare one, or a variable target -
             # falls through to the refusal below.
-            tail = upper[match.end(1) - len(match.group(1)) :]
+            tail = upper[match.start('phrase') :]
             if _TRUNCATE_TABLE_RE.match(tail):
                 continue
         violations.append(
             Violation(
                 'STATEMENT_NOT_ALLOWED',
                 f'{head.upper()} is not on the certification statement allowlist',
-                line=_line_of(masked, match.start(1)),
+                line=_line_of(masked, match.start('phrase')),
             )
         )
     return violations

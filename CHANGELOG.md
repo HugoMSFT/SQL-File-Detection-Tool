@@ -117,8 +117,10 @@ test suites now read the same machine-readable evidence file.
   therefore un-droppable by the harness, and one live run finished reporting
   itself clean while leaving two managed-identity credentials on the server. The
   rule now carries a `(?!\s+SCOPED\s+CREDENTIAL\b)` lookahead, and every kind in
-  `CLEANUP_ORDER` is put through the gate by a test. `ALTER` needs no equivalent
-  exception - it is refused outright a layer earlier - so it did not get one.
+  `CLEANUP_ORDER` is put through the gate by a test. `ALTER DATABASE` still gets
+  no equivalent exception: layer 1 was once the reason, but layer 1 is position
+  dependent, so the rule stays broad on its own merits - nothing the harness
+  generates alters a credential.
 - **Cleanup outcomes are in the evidence.** A run used to report
   `cleanup_verified` and a residue count, which are both derived from an
   inventory query and say nothing about which statement ran. A `DROP` the gate
@@ -145,6 +147,51 @@ test suites now read the same machine-readable evidence file.
   object so each outcome can be recorded on its own; and the scope check walks
   the whole list, because a scope check that depends on another rule holding is
   not a scope check. Each is tested with the other disabled.
+- **An escaped `]]` inside a name defeated both of those defences at once.** A
+  bracketed identifier ends at a *single* `]`; a doubled `]]` is an escaped
+  bracket and stays inside the name. The gate's identifier grammar did not know
+  that and stopped at the first `]`, which is the middle of the name as far as
+  the server is concerned - so everything after that point was text no rule
+  looked at:
+
+  ```sql
+  DROP TABLE IF EXISTS [<run schema>].[<run table>]]x], [sales].[invoices];
+  ```
+
+  The shape rule saw a `]` where it wanted a comma and did not fire; the list
+  walk stopped on its first iteration. Both defences rest on the same grammar,
+  so the redundancy they were built for was not there for the one input that
+  needed it. This is not an exotic case either: `escapeIdentifier` and
+  `_escape_identifier` emit `]]` by design, so it is the project's own escaping
+  convention. The masker in `batches.py` had always handled it - and says in a
+  comment why it must - but the lesson had never been carried across to the
+  identifier regex. The grammar now consumes doubled `]]` and `""`, name
+  splitting undoes the escape so scope comparisons see the real name, and a
+  target list that cannot be fully parsed is refused rather than ignored, so a
+  future grammar gap fails closed.
+- **A statement head could be swallowed by the line above it.** Layer 1's line
+  scan separated its two-word phrase with `\s+`, which matches a newline, and it
+  *consumed* what it matched. A one-word head on one line therefore absorbed the
+  next line's verb, and `re.finditer` resumed after it, so that verb was never a
+  scan position and never head-checked at all. `BEGIN` is an allowed simple head
+  that both generators emit on its own line, which made this a normal shape:
+
+  ```sql
+  BEGIN
+      ALTER TABLE [sales].[t] DROP COLUMN [c]
+  END
+  ```
+
+  passed the entire gate with no violations. The loss was precisely layer 1, and
+  it mattered for exactly the verbs layer 1 was the sole defence for - `ALTER`
+  and the object kinds the harness does not manage. `ALTER SCHEMA ... TRANSFER`
+  was the sharpest of them: it moves a pre-existing table into the run's own
+  schema, at which point the run's own teardown destroys it. The scan now
+  captures its phrase inside a lookahead and separates the words with horizontal
+  whitespace only, so no scan position can be consumed. Independently, `ALTER`
+  of an object and `DROP` of an unmanaged kind are now position-independent
+  layer 2 refusals, so neither depends on the scanner finding the right position
+  any more.
 - **`SELECT ... INTO` needed no whitespace to escape its scope rule.** The rule
   required `INTO <name> FROM`, and T-SQL does not require a space after the
   target, so `SELECT * INTO [sales].[victim]FROM sys.objects` matched nothing
