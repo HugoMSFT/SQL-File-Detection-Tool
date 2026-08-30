@@ -222,8 +222,7 @@ def test_first_row_emitted_where_supported(platform):
     assert 'FIRST_ROW = 2' in sql
 
 
-@pytest.mark.parametrize('platform', ['sql_server_2019', 'azure_sql_db',
-                                      'azure_sql_mi'])
+@pytest.mark.parametrize('platform', ['sql_server_2019', 'azure_sql_mi'])
 def test_first_row_not_emitted_where_unsupported(platform):
     gen = SQLGenerator()
     sql = gen.generate_external_file_format(
@@ -453,11 +452,17 @@ def test_platform_matrix_scripts_are_structurally_sound(platform, file_type):
     if file_type != 'json':
         assert 'JSON FUNCTIONS' not in script, (platform, file_type)
 
-    # 6. SINGLE_* readers are never combined with a DATA_SOURCE.
+    # 6. Single-LOB readers only ever appear with a TYPE = BLOB_STORAGE data
+    #    source (the "_Bulk" one), never with an abs:// / adls:// virtualization
+    #    source. Live certification on Azure SQL Database and SQL Server 2025
+    #    proved SINGLE_CLOB works through a BLOB_STORAGE source, and that the
+    #    virtualization connectors are the ones that reject it.
     for batch in executable.split('\n\n'):
-        if 'DATA_SOURCE' in batch:
-            for reader in ('SINGLE_CLOB', 'SINGLE_NCLOB', 'SINGLE_BLOB'):
-                assert reader not in batch, (platform, file_type, reader)
+        if 'DATA_SOURCE' not in batch:
+            continue
+        for reader in ('SINGLE_CLOB', 'SINGLE_NCLOB', 'SINGLE_BLOB'):
+            if reader in batch:
+                assert '_Bulk' in batch, (platform, file_type, reader)
 
     # 7. No stale product guidance.
     for marker in FORBIDDEN_MARKERS:

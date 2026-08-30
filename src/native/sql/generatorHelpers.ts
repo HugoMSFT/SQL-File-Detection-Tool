@@ -27,6 +27,7 @@ import {
 } from './escaping';
 import {
     COMPRESSION_CODECS,
+    NO_EXTERNAL_FORMAT_FILE_TYPES,
     PLATFORM_LABELS,
     mapTypeToSql,
     type ExternalFormatType,
@@ -40,7 +41,8 @@ export type { GeneratorMetadata };
 
 /** Configuration for `CREATE EXTERNAL FILE FORMAT`. */
 export interface ExternalFileFormatConfig {
-    format_type: ExternalFormatType;
+    /** Empty when the file type has no external file format at all. */
+    format_type: ExternalFormatType | '';
     field_terminator: string | null;
     string_delimiter: string | null;
     date_format: string | null;
@@ -130,9 +132,14 @@ export function csvReaderOptions(
 /**
  * Options that make the CSV reader return whole JSON text per row.
  *
- * `SINGLE_CLOB`/`SINGLE_NCLOB`/`SINGLE_BLOB` cannot be combined with a
- * `DATA_SOURCE`, so remote JSON is read through the CSV reader with
- * non-printing field/row framing characters instead.
+ * This framing is for the *virtualization* connectors (`abs://` / `adls://`),
+ * which reject `SINGLE_CLOB`/`SINGLE_NCLOB`/`SINGLE_BLOB`. A
+ * `TYPE = BLOB_STORAGE` data source accepts the single-LOB options directly, so
+ * use {@link jsonSingleLobOptions} there instead.
+ *
+ * Live certification also showed the `https://` BLOB_STORAGE connector rejects
+ * `FIELDTERMINATOR`/`FIELDQUOTE`/`ROWTERMINATOR` with error 5369, so NDJSON row
+ * framing must go through the virtualization source.
  */
 export function jsonRowFrameOptions(
     indent = 4,
@@ -146,6 +153,46 @@ export function jsonRowFrameOptions(
         `${pad}${padRight('FIELDQUOTE', width)} = '0x0b',`,
         `${pad}${padRight('ROWTERMINATOR', width)} = '${rowTerminator}'`,
     ];
+}
+
+/**
+ * Encodings whose whole-file `OPENROWSET` read needs `SINGLE_NCLOB`.
+ *
+ * `SINGLE_CLOB` fails with error 4806 ("SINGLE_CLOB requires a double-byte
+ * character set (DBCS) input file; the file specified is Unicode") when the file
+ * is UTF-16. Live certification reproduced this against a UTF-16 server-local
+ * text file, where the identical read with `SINGLE_NCLOB` succeeded.
+ */
+const WIDE_TEXT_ENCODINGS = ['UTF16', 'UCS2'];
+
+/** Return `SINGLE_NCLOB` for UTF-16 input, else `SINGLE_CLOB`. */
+export function singleLobKeyword(encoding: string | null | undefined): string {
+    const normalised = (encoding ?? '')
+        .toUpperCase()
+        .split('-')
+        .join('')
+        .split('_')
+        .join('');
+    return WIDE_TEXT_ENCODINGS.some((wide) => normalised.startsWith(wide))
+        ? 'SINGLE_NCLOB'
+        : 'SINGLE_CLOB';
+}
+
+/**
+ * Whole-document read options for a `TYPE = BLOB_STORAGE` data source.
+ *
+ * Live certification against Azure SQL Database 12.0.2000.8 and SQL Server 2025
+ * 17.0.4065.4 read a public blob with
+ * `OPENROWSET(BULK '<relative path>', DATA_SOURCE = '<blob storage source>',
+ * SINGLE_CLOB)` and got the exact document back on both engines. The single-LOB
+ * options do combine with a data source, as long as that source is
+ * `TYPE = BLOB_STORAGE` rather than `abs://`.
+ */
+export function jsonSingleLobOptions(
+    encoding: string | null | undefined,
+    indent = 4,
+): string[] {
+    return [`${' '.repeat(indent)}${singleLobKeyword(encoding)}`];
 }
 
 /** Return a comment block saying a feature is not available on *platform*. */
@@ -323,25 +370,27 @@ export function formatSampleRows(metadata: GeneratorMetadata): string[] {
     return lines;
 }
 
-/** Normalise a detected encoding name to the SQL Server keyword. */
+/**
+ * Normalise a detected encoding name to a legal `ENCODING` keyword.
+ *
+ * `CREATE EXTERNAL FILE FORMAT` accepts only `UTF8` and `UTF16`. Anything else
+ * (CP932, Latin-1, ...) is dropped rather than passed through, because an
+ * unknown keyword is a syntax error, not a graceful fallback.
+ */
 function externalFormatEncoding(rawEncoding: string): string {
     const encoding = rawEncoding.toUpperCase();
-    if (
-        encoding === 'UTF-8' ||
-        encoding === 'UTF_8' ||
-        encoding === 'UTF8-SIG' ||
-        encoding === 'UTF-8-SIG'
-    ) {
+    const normalised = encoding.split('-').join('').split('_').join('');
+    if (normalised === 'UTF8' || normalised === 'UTF8SIG') {
         return 'UTF8';
     }
-    if (encoding === 'UTF-16' || encoding === 'UTF_16') {
+    if (normalised.startsWith('UTF16')) {
         return 'UTF16';
     }
-    return encoding;
+    return '';
 }
 
 function formatConfig(
-    partial: Partial<ExternalFileFormatConfig> & { format_type: ExternalFormatType },
+    partial: Partial<ExternalFileFormatConfig> & { format_type: ExternalFormatType | '' },
 ): ExternalFileFormatConfig {
     return {
         field_terminator: null,
@@ -372,7 +421,11 @@ export function determineFormatConfig(
             string_delimiter: '"',
             first_row: hasHeader ? 2 : 1,
             encoding,
-            use_type_default: true,
+            // USE_TYPE_DEFAULT = FALSE preserves the source's missing-value
+            // semantics. Live certification against Azure SQL Database showed
+            // TRUE silently rewriting a missing numeric to 0 and a missing
+            // string to '', which cannot be told apart from real values.
+            use_type_default: false,
         });
     }
     if (fileType === 'json') {
@@ -402,6 +455,13 @@ export function determineFormatConfig(
             serde_method: 'org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe',
             data_compression: COMPRESSION_CODECS[comp] ?? null,
         });
+    }
+    if (NO_EXTERNAL_FORMAT_FILE_TYPES.has(fileType)) {
+        // Excel workbooks and Iceberg tables have no external file format.
+        // Falling through to DELIMITEDTEXT below would emit a statement the
+        // engine accepts but that reads the container bytes as text, so the
+        // format type is left unset and the caller emits guidance instead.
+        return formatConfig({ format_type: '' });
     }
     return formatConfig({
         format_type: 'DELIMITEDTEXT',

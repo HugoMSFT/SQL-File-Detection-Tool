@@ -36,14 +36,19 @@ def test_csv_file_format_generation():
     assert 'FORMAT_OPTIONS (' in ddl
     assert "FIELD_TERMINATOR = ','" in ddl
     assert 'FIRST_ROW = 2' in ddl
-    assert 'USE_TYPE_DEFAULT = TRUE' in ddl
+    # Live evidence (Azure SQL DB 12.0.2000.8 / SQL Server 2025 17.0.4065.4):
+    # USE_TYPE_DEFAULT = TRUE replaces missing values with 0 / '' and destroys
+    # source NULL semantics, so the generator defaults to FALSE and always
+    # states the choice explicitly.
+    assert 'USE_TYPE_DEFAULT = FALSE' in ddl
 
 
 def test_csv_file_format_default_platform_is_azure_sql_database():
     """With no explicit platform the generator targets Azure SQL Database.
 
-    Azure SQL Database has no FIRST_ROW format option, so the default output
-    must explain that instead of emitting an option the platform rejects.
+    Live certification proved Azure SQL Database *does* accept the FIRST_ROW
+    format option: without it a header row raises error 4864, and with
+    ``FIRST_ROW = 2`` the same external table returns every data row.
     """
     generator = SQLGenerator()
 
@@ -58,7 +63,7 @@ def test_csv_file_format_default_platform_is_azure_sql_database():
     ddl = generator.generate_external_file_format(metadata, 'test_csv_format')
 
     assert 'Azure SQL Database' in ddl
-    assert 'FIRST_ROW = 2' not in ddl
+    assert 'FIRST_ROW = 2' in ddl
     assert 'FORMAT_TYPE = DELIMITEDTEXT' in ddl
 
 
@@ -1005,7 +1010,9 @@ def test_openrowset_azure_sql_db_data_virtualization():
         data_source='LakeDS', target_platform='azure_sql_db')
     assert "BULK 'landing/x.csv'" in sql
     assert "DATA_SOURCE     = 'LakeDS'" in sql
-    assert 'BLOB_STORAGE' not in sql
+    # The row-oriented read uses the abs:// virtualization source; only the
+    # single-LOB whole-file read may reference the TYPE = BLOB_STORAGE source.
+    assert 'BLOB_STORAGE' not in sql.split('-- ---- Whole file as one value')[0]
     assert 'https://' not in sql.split('-- Data source location')[1].split('\n')[1]
     assert 'abs://raw@acct.blob.core.windows.net' in sql
 
@@ -1114,7 +1121,13 @@ def test_best_practices_includes_platform_methods():
 # -------------------------------------------------------------------
 
 def test_openrowset_azure_sql_db_json():
-    """Remote JSON is row-framed, never SINGLE_CLOB + DATA_SOURCE."""
+    """Whole-document JSON uses the BLOB_STORAGE `_Bulk` source + SINGLE_CLOB.
+
+    Live certification (Azure SQL DB and SQL Server 2025, public blob
+    ``azcliprod/cli/vm/aliases.json``) proved SINGLE_CLOB *is* valid with a
+    DATA_SOURCE whose TYPE is BLOB_STORAGE. The restriction applies only to
+    the abs:// / adls:// virtualization connectors.
+    """
     gen = SQLGenerator()
     meta = {
         'file_type': 'json', 'file_path': 'data.json',
@@ -1123,12 +1136,13 @@ def test_openrowset_azure_sql_db_json():
     }
     sql = gen.generate_openrowset(meta, data_source='LakeDS',
                                   target_platform='azure_sql_db')
-    # SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined with a
-    # DATA_SOURCE, so the CSV reader is framed instead.
-    assert 'SINGLE_CLOB' not in code_only(sql)
+    code = code_only(sql)
+    assert 'SINGLE_CLOB' in code
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in code
+    assert 'BulkColumn' in code
     assert 'OPENJSON' in sql
-    assert "DATA_SOURCE     = 'LakeDS'" in sql
-    assert "FIELDQUOTE      = '0x0b'" in sql
+    # A whole JSON document is never row-framed.
+    assert "FIELDQUOTE      = '0x0b'" not in code
 
 
 def test_openrowset_azure_sql_mi():
@@ -1136,7 +1150,9 @@ def test_openrowset_azure_sql_mi():
     gen = SQLGenerator()
     meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
     sql = gen.generate_openrowset(meta, target_platform='azure_sql_mi')
-    assert 'BLOB_STORAGE' not in sql
+    # The row-oriented read uses data virtualization; the single-LOB whole-file
+    # read is the only place a TYPE = BLOB_STORAGE source may appear.
+    assert 'BLOB_STORAGE' not in sql.split('-- ---- Whole file as one value')[0]
     assert 'DATA_SOURCE' in sql
     assert "FORMAT          = 'CSV'" in sql
 
@@ -1372,10 +1388,10 @@ def test_openrowset_sql_server_2022_remote_json_uses_data_source():
         storage_url='abfss://raw@acct.dfs.core.windows.net/landing/orders.json',
         data_source='LakeDS', target_platform='sql_server_2022')
     assert "BULK 'landing/orders.json'" in sql
-    assert "DATA_SOURCE     = 'LakeDS'" in sql
-    # SINGLE_CLOB is invalid together with DATA_SOURCE.
-    assert 'SINGLE_CLOB' not in code_only(sql)
-    assert "FIELDQUOTE      = '0x0b'" in sql
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in sql
+    # Live evidence: SINGLE_CLOB is valid with a TYPE = BLOB_STORAGE source.
+    assert 'SINGLE_CLOB' in code_only(sql)
+    assert 'BulkColumn' in code_only(sql)
     assert 'OPENJSON' in sql
     assert "BULK N'" not in sql
 

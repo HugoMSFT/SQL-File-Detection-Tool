@@ -204,7 +204,12 @@ describe('target platform capabilities', () => {
         }
     });
 
-    it('never offers SINGLE_CLOB against remote storage', () => {
+    it('only offers a single-LOB read through a BLOB_STORAGE data source', () => {
+        // Live certification (Azure SQL Database 12.0.2000.8 and SQL Server 2025
+        // 17.0.4065.4) proved SINGLE_CLOB works with DATA_SOURCE when that
+        // source is TYPE = BLOB_STORAGE. The restriction applies to the abs:// /
+        // adls:// virtualization connectors, so a single-LOB read must always be
+        // paired with the dedicated "_Bulk" source.
         for (const platform of PLATFORMS) {
             for (const [label, url] of Object.entries(STORAGE_URLS)) {
                 if (url === null) {
@@ -219,10 +224,16 @@ describe('target platform capabilities', () => {
                     .split('\n')
                     .filter((line) => !line.trim().startsWith('--'))
                     .join('\n');
-                assert.ok(
-                    !/\bSINGLE_CLOB\b/.test(code),
-                    `${platform}/${label} offered SINGLE_CLOB for remote storage`,
-                );
+                for (const statement of code.split(/\bGO\b/)) {
+                    if (!/\bSINGLE_N?CLOB\b/.test(statement)) {
+                        continue;
+                    }
+                    assert.ok(
+                        /_Bulk/.test(statement),
+                        `${platform}/${label} used a single-LOB read without the `
+                            + 'BLOB_STORAGE data source',
+                    );
+                }
             }
         }
     });

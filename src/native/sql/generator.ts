@@ -41,10 +41,12 @@ import {
 } from './escaping';
 import {
     AZURE_SQL_PLATFORMS,
+    DDL_ONLY_CERTIFIED_FORMATS,
     DEFAULT_TARGET_PLATFORM,
-    EXTERNAL_FORMAT_PLATFORMS,
+    externalFormatPlatforms,
     FIRST_ROW_FORMAT_PLATFORMS,
     HADOOP_EXTERNAL_SOURCE_PLATFORMS,
+    noExternalFormatGuidance,
     PLATFORM_LABELS,
     DELIMITER_NAMES,
     normalizePlatform,
@@ -688,7 +690,7 @@ export function generateExternalFileFormat(
     );
 
     const config = determineFormatConfig(metadata);
-    const supportedPlatforms = EXTERNAL_FORMAT_PLATFORMS[config.format_type];
+    const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
             config.format_type === 'JSON'
@@ -721,8 +723,19 @@ export function generateExternalFileFormat(
                 `        DATE_FORMAT = '${quoteLiteral(config.date_format)}'`,
             );
         }
-        if (config.use_type_default) {
-            delimitedOptions.push('        USE_TYPE_DEFAULT = TRUE');
+        // Always emitted, never left implicit: USE_TYPE_DEFAULT decides whether
+        // a missing field becomes the type default (0, '') or stays NULL, and
+        // that difference is invisible in the generated DDL unless the option is
+        // written out.
+        delimitedOptions.push(
+            `        USE_TYPE_DEFAULT = ${config.use_type_default ? 'TRUE' : 'FALSE'}`,
+        );
+        if (!config.use_type_default) {
+            trailingNotes.push(
+                '-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE '
+                    + "would store 0 for numeric and '' for string columns, which "
+                    + 'cannot be told apart from real values.',
+            );
         }
         if (config.encoding) {
             delimitedOptions.push(`        ENCODING = '${quoteLiteral(config.encoding)}'`);
@@ -747,6 +760,14 @@ export function generateExternalFileFormat(
                 '    FORMAT_OPTIONS (\n' + delimitedOptions.join(',\n') + '\n    )',
             );
         }
+    }
+
+    if (DDL_ONLY_CERTIFIED_FORMATS.has(config.format_type)) {
+        trailingNotes.push(
+            `-- ${config.format_type} is accepted as DDL on this platform, but reading `
+                + `data through it was not certified. Verify a query against a real `
+                + `${config.format_type} file before relying on it.`,
+        );
     }
 
     if (config.serde_method) {
@@ -808,7 +829,14 @@ export function generateExternalTable(
     }
 
     const config = determineFormatConfig(metadata);
-    const supportedPlatforms = EXTERNAL_FORMAT_PLATFORMS[config.format_type];
+    if (!config.format_type) {
+        return notSupportedMessage(
+            'CREATE EXTERNAL TABLE',
+            targetPlatform,
+            noExternalFormatGuidance(metadata.file_type ?? ''),
+        );
+    }
+    const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
             config.format_type === 'JSON'
@@ -1002,7 +1030,7 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     const config = determineFormatConfig(
         metadata ?? ({ file_path: '' } as GeneratorMetadata),
     );
-    const supportedPlatforms = EXTERNAL_FORMAT_PLATFORMS[config.format_type];
+    const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
             config.format_type === 'JSON'
@@ -1584,7 +1612,7 @@ export function generateBestPractices(
         loadMethods.push('OPENROWSET (ad-hoc / exploratory queries)');
     }
     const config = determineFormatConfig(metadata);
-    const formatPlatforms = EXTERNAL_FORMAT_PLATFORMS[config.format_type];
+    const formatPlatforms = externalFormatPlatforms(config.format_type);
     if (
         supports('external_table', targetPlatform) &&
         formatPlatforms &&

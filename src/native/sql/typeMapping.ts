@@ -133,6 +133,12 @@ export type ExternalFormatType =
  *
  * JSON is only supported by Azure SQL Edge, which is not one of the targets
  * this application exposes, so it maps to the empty set.
+ *
+ * Live certification (SQL Server 2025 17.0.4065.4 and Azure SQL Database
+ * 12.0.2000.8) created and dropped each format to confirm these sets: DELTA and
+ * ORC were accepted on both engines, RCFILE was rejected with error 46506
+ * (invalid FORMAT_TYPE options) and JSON with error 102 (syntax error near
+ * 'JSON').
  */
 export const EXTERNAL_FORMAT_PLATFORMS:
     Readonly<Record<ExternalFormatType, ReadonlySet<TargetPlatform>>> = {
@@ -143,21 +149,78 @@ export const EXTERNAL_FORMAT_PLATFORMS:
     ]),
     // Delta external file format exists on SQL Server 2022+ and Azure SQL
     // Database, but not on Azure SQL Managed Instance or Fabric SQL Database.
+    // Certified live as DDL on SQL Server 2025 and Azure SQL Database.
     DELTA: new Set<TargetPlatform>(['sql_server_2022', 'sql_server_2025', 'azure_sql_db']),
-    ORC: new Set<TargetPlatform>(['sql_server_2019']),
+    // ORC keeps its legacy PolyBase support on SQL Server 2019 and was also
+    // accepted as DDL on SQL Server 2025 and Azure SQL Database. The data path
+    // was never certified (no maintained public ORC blob), so the generator
+    // emits an explicit caveat instead of claiming full support.
+    ORC: new Set<TargetPlatform>(['sql_server_2019', 'sql_server_2025', 'azure_sql_db']),
     RCFILE: new Set<TargetPlatform>(['sql_server_2019']),
     JSON: new Set<TargetPlatform>(),
 };
 
+/** Platforms supporting a format, or `undefined` when there is no format. */
+export function externalFormatPlatforms(
+    formatType: ExternalFormatType | '',
+): ReadonlySet<TargetPlatform> | undefined {
+    return formatType ? EXTERNAL_FORMAT_PLATFORMS[formatType] : undefined;
+}
+
+/**
+ * Formats whose `CREATE EXTERNAL FILE FORMAT` statement is certified only as
+ * DDL: the engine accepts and drops the format, but reading data through it was
+ * never proven against a live file.
+ */
+export const DDL_ONLY_CERTIFIED_FORMATS: ReadonlySet<ExternalFormatType | ''> =
+    new Set<ExternalFormatType | ''>(['ORC']);
+
+/**
+ * File types that have no `CREATE EXTERNAL FILE FORMAT` representation at all.
+ * They must never fall through to `DELIMITEDTEXT`, which would produce a
+ * statement the engine accepts but that reads a binary container as text.
+ */
+export const NO_EXTERNAL_FORMAT_FILE_TYPES: ReadonlySet<string> =
+    new Set<string>(['excel', 'xlsx', 'xls', 'iceberg']);
+
+/** Guidance shown instead of a bogus `DELIMITEDTEXT` format. */
+export const NO_EXTERNAL_FORMAT_GUIDANCE: Readonly<Record<string, string>> = {
+    excel:
+        'Excel workbooks are a ZIP/OLE container, not a delimited text file. '
+        + 'No FORMAT_TYPE describes them. Export the worksheet to CSV or Parquet '
+        + 'first, or read the workbook with SSIS, Azure Data Factory, or the ACE '
+        + 'OLE DB provider through a linked server.',
+    iceberg:
+        'Apache Iceberg tables are not a FORMAT_TYPE. Point the external table '
+        + 'at the underlying Parquet data files, or query the table through a '
+        + 'compute engine that speaks the Iceberg catalog.',
+};
+
+/** Guidance text for a file type that has no external file format. */
+export function noExternalFormatGuidance(fileType: string): string {
+    const key = fileType === 'xlsx' || fileType === 'xls' ? 'excel' : fileType;
+    return NO_EXTERNAL_FORMAT_GUIDANCE[key]
+        ?? `${fileType || 'This file type'} has no CREATE EXTERNAL FILE FORMAT representation.`;
+}
+
 /**
  * `FIRST_ROW` is a `CREATE EXTERNAL FILE FORMAT` / `FORMAT_OPTIONS` option on
- * SQL Server 2022+ and on Fabric SQL Database data virtualization. It is not
- * documented for SQL Server 2019 or the Azure SQL external file formats.
- * `FIRSTROW` (no underscore) is a different, widely supported
- * `OPENROWSET` / `BULK INSERT` option.
+ * SQL Server 2022+, on Azure SQL Database and on Fabric SQL Database data
+ * virtualization. It is not documented for SQL Server 2019 and stays unverified
+ * on Azure SQL Managed Instance. `FIRSTROW` (no underscore) is a different,
+ * widely supported `OPENROWSET` / `BULK INSERT` option.
+ *
+ * Azure SQL Database is included on live evidence rather than on the
+ * documentation: against Azure SQL Database 12.0.2000.8, omitting `FIRST_ROW`
+ * made an external table over a headered CSV fail with error 4864 (bulk load
+ * data conversion error, row 1 column 1, the header text converted to float),
+ * while the identical format with `FIRST_ROW = 2` returned all 150 rows. SQL
+ * Server 2025 17.0.4065.4 behaved the same way.
  */
 export const FIRST_ROW_FORMAT_PLATFORMS: ReadonlySet<TargetPlatform> =
-    new Set<TargetPlatform>(['sql_server_2022', 'sql_server_2025', 'fabric_sql_db']);
+    new Set<TargetPlatform>([
+        'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'fabric_sql_db',
+    ]);
 
 /** Hadoop compression codec class names by detected compression. */
 export const COMPRESSION_CODECS: Readonly<Record<string, string>> = {

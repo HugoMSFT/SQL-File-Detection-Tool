@@ -550,6 +550,12 @@ class SQLGenerator:
     # CREATE EXTERNAL FILE FORMAT availability differs by SQL product and
     # format. JSON is only supported by Azure SQL Edge, which is not one of the
     # targets exposed by this application.
+    #
+    # Live certification (2026, SQL Server 2025 17.0.4065.4 and Azure SQL
+    # Database 12.0.2000.8) confirmed each entry below by creating and dropping
+    # the format: DELTA and ORC were accepted on both engines, RCFILE was
+    # rejected with error 46506 (invalid FORMAT_TYPE options) and JSON with
+    # error 102 (syntax error near 'JSON').
     EXTERNAL_FORMAT_PLATFORMS = {
         'DELIMITEDTEXT': frozenset(PLATFORMS),
         'PARQUET': frozenset({
@@ -558,22 +564,42 @@ class SQLGenerator:
         }),
         # Delta external file format is available on SQL Server 2022+ and
         # Azure SQL Database, but not on Azure SQL Managed Instance or
-        # Fabric SQL Database.
+        # Fabric SQL Database. Certified live as DDL on SQL Server 2025 and
+        # Azure SQL Database.
         'DELTA': frozenset({
             'sql_server_2022', 'sql_server_2025', 'azure_sql_db',
         }),
-        'ORC': frozenset({'sql_server_2019'}),
+        # ORC keeps its legacy PolyBase support on SQL Server 2019 and was
+        # additionally accepted as DDL on SQL Server 2025 and Azure SQL
+        # Database during live certification. The data path was not certified
+        # (no maintained public ORC blob), so the generator emits an explicit
+        # caveat rather than claiming full support.
+        'ORC': frozenset({'sql_server_2019', 'sql_server_2025', 'azure_sql_db'}),
         'RCFILE': frozenset({'sql_server_2019'}),
         'JSON': frozenset(),
     }
 
+    #: Formats whose CREATE EXTERNAL FILE FORMAT statement is certified only as
+    #: DDL: the engine accepts and drops the format, but reading data through it
+    #: was never proven against a live file.
+    DDL_ONLY_CERTIFIED_FORMATS = frozenset({'ORC'})
+
+
     # ``FIRST_ROW`` is a CREATE EXTERNAL FILE FORMAT / FORMAT_OPTIONS option on
-    # SQL Server 2022+ and on Fabric SQL Database data virtualization. It is not
-    # documented for SQL Server 2019 or the Azure SQL Database / Managed
-    # Instance external file formats. Note that ``FIRSTROW`` (no underscore) is
-    # a different, widely supported OPENROWSET / BULK INSERT option.
+    # SQL Server 2022+, on Azure SQL Database and on Fabric SQL Database data
+    # virtualization. It is not documented for SQL Server 2019 and remains
+    # unverified on Azure SQL Managed Instance. Note that ``FIRSTROW`` (no
+    # underscore) is a different, widely supported OPENROWSET / BULK INSERT
+    # option.
+    #
+    # Azure SQL Database is included on live evidence rather than on the
+    # documentation: certification against Azure SQL Database 12.0.2000.8 showed
+    # that omitting FIRST_ROW made an external table over a headered CSV fail
+    # with error 4864 (bulk load data conversion error, row 1 column 1, header
+    # text converted to float), while the identical format with FIRST_ROW = 2
+    # returned all 150 rows. SQL Server 2025 17.0.4065.4 behaved the same way.
     FIRST_ROW_FORMAT_PLATFORMS = frozenset({
-        'sql_server_2022', 'sql_server_2025', 'fabric_sql_db',
+        'sql_server_2022', 'sql_server_2025', 'azure_sql_db', 'fabric_sql_db',
     })
 
     COMPRESSION_CODECS = {
@@ -631,9 +657,11 @@ class SQLGenerator:
                                 row_terminator: str = '0x0b') -> List[str]:
         """Options that make the CSV reader return whole JSON text per row.
 
-        ``SINGLE_CLOB``/``SINGLE_NCLOB``/``SINGLE_BLOB`` cannot be combined with
-        a ``DATA_SOURCE``, so remote JSON is read through the CSV reader with
-        non-printing field/row framing characters instead.
+        This framing is for the *virtualization* connectors (``abs://`` /
+        ``adls://``), which reject ``SINGLE_CLOB``/``SINGLE_NCLOB``/
+        ``SINGLE_BLOB``. A ``TYPE = BLOB_STORAGE`` data source accepts the
+        single-LOB options directly and should use
+        :meth:`_json_single_lob_options` instead.
         """
         pad = ' ' * indent
         width = SQLGenerator.CSV_OPTION_WIDTH
@@ -643,6 +671,37 @@ class SQLGenerator:
             f'{pad}{"FIELDQUOTE":<{width}} = \'0x0b\',',
             f'{pad}{"ROWTERMINATOR":<{width}} = \'{row_terminator}\'',
         ]
+
+    #: Encodings whose whole-file OPENROWSET read needs ``SINGLE_NCLOB``.
+    #: ``SINGLE_CLOB`` fails with error 4806 ("SINGLE_CLOB requires a double-byte
+    #: character set (DBCS) input file; the file specified is Unicode") when the
+    #: file is UTF-16, which live certification reproduced against a UTF-16
+    #: server-local text file.
+    WIDE_TEXT_ENCODINGS = ('UTF-16', 'UTF16', 'UTF_16', 'UCS-2', 'UCS2')
+
+    @classmethod
+    def _single_lob_keyword(cls, metadata: Optional[Dict[str, Any]]) -> str:
+        """Return ``SINGLE_NCLOB`` for UTF-16 input, else ``SINGLE_CLOB``."""
+        encoding = ((metadata or {}).get('encoding') or '').upper()
+        normalised = encoding.replace('-', '').replace('_', '')
+        if any(normalised.startswith(w.replace('-', '').replace('_', ''))
+               for w in cls.WIDE_TEXT_ENCODINGS):
+            return 'SINGLE_NCLOB'
+        return 'SINGLE_CLOB'
+
+    @classmethod
+    def _json_single_lob_options(cls, metadata: Optional[Dict[str, Any]] = None,
+                                 indent: int = 4) -> List[str]:
+        """Whole-document read options for a ``TYPE = BLOB_STORAGE`` source.
+
+        Live certification against Azure SQL Database 12.0.2000.8 and SQL Server
+        2025 17.0.4065.4 read a public blob with
+        ``OPENROWSET(BULK '<relative path>', DATA_SOURCE = '<blob storage
+        source>', SINGLE_CLOB)`` and got the exact document back on both
+        engines, so the single-LOB options do combine with a data source as long
+        as that source is ``TYPE = BLOB_STORAGE`` rather than ``abs://``.
+        """
+        return [f'{" " * indent}{cls._single_lob_keyword(metadata)}']
 
     @staticmethod
     def _bulk_data_source_supported(target_platform: str,
@@ -1264,8 +1323,9 @@ class SQLGenerator:
 
         This is the only bulk-access shape available to SQL Server 2019 for
         remote files: ``FORMAT = 'CSV'`` with a container-relative ``BULK``
-        path. ``SINGLE_CLOB``/``SINGLE_NCLOB``/``SINGLE_BLOB`` cannot be
-        combined with a ``DATA_SOURCE``, so JSON is read row-framed instead.
+        path. A ``TYPE = BLOB_STORAGE`` source does accept
+        ``SINGLE_CLOB``/``SINGLE_NCLOB``, so a whole JSON document is read that
+        way rather than through non-printing CSV framing.
         """
         file_type = metadata.get('file_type', 'csv')
         file_name = metadata.get('file_name', metadata['file_path'])
@@ -1291,19 +1351,21 @@ class SQLGenerator:
         ]
 
         if file_type == 'json':
+            lob = self._single_lob_keyword(metadata)
             lines += [
-                '-- JSON: SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be used',
-                '-- together with DATA_SOURCE. Read the document as one row using',
-                '-- non-printing CSV framing characters, then parse it with OPENJSON.',
+                f'-- JSON: a TYPE = BLOB_STORAGE data source accepts {lob},',
+                '-- so the whole document arrives as one value and is parsed with',
+                '-- OPENJSON. (The single-LOB options are rejected only by the',
+                '-- abs:// / adls:// virtualization connectors.)',
                 'SELECT j.*',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{bulk_literal}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_single_lob_options(metadata)
             lines += [
-                ') WITH (json_doc NVARCHAR(MAX)) AS src',
-                'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+                ') AS src',
+                'CROSS APPLY OPENJSON(src.BulkColumn) AS j;',
             ]
             return '\n'.join(lines)
 
@@ -1485,9 +1547,15 @@ class SQLGenerator:
             return '\n'.join(lines)
 
         if file_type == 'json':
+            bulk_ident, bulk_literal, _ = _bulk_data_source_names(data_source)
+            _, bulk_relative = _azure_bulk_storage_parts(storage_url, file_name)
+            lob = self._single_lob_keyword(metadata)
             if json_format == 'ndjson':
                 lines += [
                     '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+                    '-- Row framing needs the abs:// virtualization source. The https://',
+                    '-- BLOB_STORAGE connector rejects FIELDTERMINATOR / FIELDQUOTE /',
+                    '-- ROWTERMINATOR with error 5369.',
                     'SELECT TOP (100) doc',
                     'FROM OPENROWSET(',
                     f'    BULK \'{bulk_path}\',',
@@ -1501,18 +1569,19 @@ class SQLGenerator:
                 ]
             lines += [
                 '-- ---- Whole document -> OPENJSON --------------------------------------',
-                '-- SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined with',
-                '-- DATA_SOURCE, so the CSV reader is framed with non-printing',
-                '-- characters to return the whole document as a single value.',
+                f'-- {lob} needs the TYPE = BLOB_STORAGE data source [{bulk_ident}],',
+                '-- not the abs:// virtualization source: the single-LOB options are',
+                '-- rejected by abs:// / adls:// but accepted by https:// BLOB_STORAGE.',
+                '-- BULK is relative to that source root.',
                 'DECLARE @json NVARCHAR(MAX);',
-                'SELECT @json = json_doc',
+                'SELECT @json = BulkColumn',
                 'FROM OPENROWSET(',
-                f'    BULK \'{bulk_path}\',',
-                f'    DATA_SOURCE     = \'{source_name}\',',
+                f'    BULK \'{_quote_literal(bulk_relative)}\',',
+                f'    DATA_SOURCE     = \'{bulk_literal}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_single_lob_options(metadata)
             lines += [
-                ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+                ') AS [src];',
                 '',
                 'SELECT * FROM OPENJSON(@json)',
             ]
@@ -1539,15 +1608,15 @@ class SQLGenerator:
             ') AS [result];',
             '',
             '-- ---- Whole file as one value (small files) ---------------------------',
-            '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
-            '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
-            'SELECT file_text',
+            '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',
+            '-- the abs:// / adls:// virtualization connectors reject them.',
+            'SELECT BulkColumn AS file_text',
             'FROM OPENROWSET(',
-            f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE     = \'{source_name}\',',
+            f'    BULK \'{_quote_literal(_azure_bulk_storage_parts(storage_url, file_name)[1])}\',',
+            f'    DATA_SOURCE     = \'{_bulk_data_source_names(data_source)[1]}\',',
         ]
-        lines += self._json_row_frame_options()
-        lines += [') WITH (file_text NVARCHAR(MAX)) AS [src];']
+        lines += self._json_single_lob_options(metadata)
+        lines += [') AS [src];']
         return '\n'.join(lines)
 
     def _generate_openrowset_local(self, metadata: Dict[str, Any],
@@ -1660,9 +1729,15 @@ class SQLGenerator:
             return '\n'.join(lines)
 
         if file_type == 'json':
+            bulk_ident, bulk_literal, _ = _bulk_data_source_names(data_source)
+            _, bulk_relative = _azure_bulk_storage_parts(storage_url, file_name)
+            lob = self._single_lob_keyword(metadata)
             if json_format == 'ndjson':
                 lines += [
                     '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+                    '-- Row framing needs the abs:// / adls:// virtualization source. The',
+                    '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+                    '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
                     'SELECT TOP (100) doc',
                     'FROM OPENROWSET(',
                     f'    BULK \'{bulk_path}\',',
@@ -1675,20 +1750,20 @@ class SQLGenerator:
                     '',
                 ]
             lines += [
-                '-- SQL Server has no OPENROWSET FORMAT = \'JSON\', and SINGLE_CLOB',
-                '-- cannot be combined with DATA_SOURCE. Frame the CSV reader with',
-                '-- non-printing characters so the whole document arrives as one',
-                '-- value, then parse it with OPENJSON.',
                 '-- ---- JSON -> OPENJSON ------------------------------------------------',
+                '-- SQL Server has no OPENROWSET FORMAT = \'JSON\'. Read the whole',
+                f'-- document with {lob} through the TYPE = BLOB_STORAGE data source',
+                f'-- [{bulk_ident}], then parse it with OPENJSON. The single-LOB',
+                '-- options are rejected only by the abs:// / adls:// connectors.',
                 'DECLARE @json NVARCHAR(MAX);',
-                'SELECT @json = json_doc',
+                'SELECT @json = BulkColumn',
                 'FROM OPENROWSET(',
-                f'    BULK \'{bulk_path}\',',
-                f'    DATA_SOURCE     = \'{source_name}\',',
+                f'    BULK \'{_quote_literal(bulk_relative)}\',',
+                f'    DATA_SOURCE     = \'{bulk_literal}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_single_lob_options(metadata)
             lines += [
-                ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+                ') AS [src];',
                 '',
                 'SELECT * FROM OPENJSON(@json)',
             ]
@@ -1715,15 +1790,15 @@ class SQLGenerator:
             ') AS [result];',
             '',
             '-- ---- Whole file as one value (small files) ---------------------------',
-            '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
-            '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
-            'SELECT file_text',
+            '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',
+            '-- the abs:// / adls:// virtualization connectors reject them.',
+            'SELECT BulkColumn AS file_text',
             'FROM OPENROWSET(',
-            f'    BULK \'{bulk_path}\',',
-            f'    DATA_SOURCE     = \'{source_name}\',',
+            f'    BULK \'{_quote_literal(_azure_bulk_storage_parts(storage_url, file_name)[1])}\',',
+            f'    DATA_SOURCE     = \'{_bulk_data_source_names(data_source)[1]}\',',
         ]
-        lines += self._json_row_frame_options()
-        lines += [') WITH (file_text NVARCHAR(MAX)) AS [src];']
+        lines += self._json_single_lob_options(metadata)
+        lines += [') AS [src];']
         return '\n'.join(lines)
 
     # ------------------------------------------------------------------
@@ -1747,6 +1822,12 @@ class SQLGenerator:
         format_name = _escape_identifier(format_name)
 
         config = self._determine_format_config(metadata)
+        if not config.format_type:
+            return self._not_supported_message(
+                'CREATE EXTERNAL FILE FORMAT',
+                target_platform,
+                self._no_external_format_guidance(metadata.get('file_type', '')),
+            )
         supported_platforms = self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
         )
@@ -1781,8 +1862,20 @@ class SQLGenerator:
                 delimited_options.append(
                     f'        DATE_FORMAT = \'{_quote_literal(config.date_format)}\''
                 )
-            if config.use_type_default:
-                delimited_options.append('        USE_TYPE_DEFAULT = TRUE')
+            # Always emitted, never left implicit: USE_TYPE_DEFAULT decides
+            # whether a missing field becomes the type default (0, '') or stays
+            # NULL, and that difference is invisible in the generated DDL unless
+            # the option is written out.
+            delimited_options.append(
+                f'        USE_TYPE_DEFAULT = '
+                f'{"TRUE" if config.use_type_default else "FALSE"}'
+            )
+            if not config.use_type_default:
+                trailing_notes.append(
+                    '-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. '
+                    'TRUE would store 0 for numeric and \'\' for string columns, '
+                    'which cannot be told apart from real values.'
+                )
             if config.encoding:
                 delimited_options.append(
                     f'        ENCODING = \'{_quote_literal(config.encoding)}\''
@@ -1807,6 +1900,13 @@ class SQLGenerator:
                     + ',\n'.join(delimited_options)
                     + '\n    )'
                 )
+
+        if config.format_type in self.DDL_ONLY_CERTIFIED_FORMATS:
+            trailing_notes.append(
+                f'-- {config.format_type} is accepted as DDL on this platform, but '
+                f'reading data through it was not certified. Verify a query against '
+                f'a real {config.format_type} file before relying on it.'
+            )
 
         if config.serde_method:
             with_options.append(
@@ -2897,12 +2997,7 @@ class SQLGenerator:
 
     def _determine_format_config(self, metadata: Dict[str, Any]) -> ExternalFileFormatConfig:
         file_type = metadata.get('file_type', 'text')
-        encoding = (metadata.get('encoding') or 'utf-8').upper()
-        # Normalise encoding to SQL Server keyword
-        if encoding in ('UTF-8', 'UTF_8', 'UTF8-SIG', 'UTF-8-SIG'):
-            encoding = 'UTF8'
-        elif encoding in ('UTF-16', 'UTF_16'):
-            encoding = 'UTF16'
+        encoding = self._external_format_encoding(metadata.get('encoding'))
 
         if file_type == 'csv':
             delimiter = metadata.get('delimiter', ',') or ','
@@ -2913,7 +3008,12 @@ class SQLGenerator:
                 string_delimiter='"',
                 first_row=2 if has_header else 1,
                 encoding=encoding,
-                use_type_default=True,
+                # USE_TYPE_DEFAULT = FALSE preserves the source's missing-value
+                # semantics. Live certification against Azure SQL Database
+                # showed that TRUE silently rewrites a missing numeric to 0 and
+                # a missing string to '', so an absent value becomes
+                # indistinguishable from a real zero or empty string.
+                use_type_default=False,
             )
         elif file_type == 'json':
             return ExternalFileFormatConfig(format_type='JSON')
@@ -2938,10 +3038,64 @@ class SQLGenerator:
                 serde_method='org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe',
                 data_compression=self.COMPRESSION_CODECS.get(comp),
             )
+        elif file_type in self.NO_EXTERNAL_FORMAT_FILE_TYPES:
+            # Excel workbooks and Iceberg tables have no external file format.
+            # Falling through to DELIMITEDTEXT would emit a statement that is
+            # accepted by the engine but reads the container bytes as text, so
+            # the format type is left unset and the caller emits guidance.
+            return ExternalFileFormatConfig(format_type='')
         else:
             return ExternalFileFormatConfig(format_type='DELIMITEDTEXT',
                                             field_terminator='\\n',
                                             encoding=encoding)
+
+    #: File types that have no CREATE EXTERNAL FILE FORMAT representation at
+    #: all. They must never fall through to DELIMITEDTEXT, which would produce a
+    #: statement that succeeds but reads a binary container as delimited text.
+    NO_EXTERNAL_FORMAT_FILE_TYPES = frozenset({'excel', 'xlsx', 'xls', 'iceberg'})
+
+    #: Guidance shown instead of a bogus DELIMITEDTEXT format.
+    NO_EXTERNAL_FORMAT_GUIDANCE = {
+        'excel': (
+            'Excel workbooks are a ZIP/OLE container, not a delimited text '
+            'file. No FORMAT_TYPE describes them. Export the worksheet to CSV '
+            'or Parquet first, or read the workbook with SSIS, Azure Data '
+            'Factory, or the ACE OLE DB provider through a linked server.'
+        ),
+        'iceberg': (
+            'Apache Iceberg tables are not a FORMAT_TYPE. Point the external '
+            'table at the underlying Parquet data files, or query the table '
+            'through a compute engine that speaks the Iceberg catalog.'
+        ),
+    }
+
+    @classmethod
+    def _no_external_format_guidance(cls, file_type: str) -> str:
+        key = 'excel' if file_type in ('excel', 'xlsx', 'xls') else file_type
+        return cls.NO_EXTERNAL_FORMAT_GUIDANCE.get(
+            key,
+            f'{file_type or "This file type"} has no CREATE EXTERNAL FILE '
+            f'FORMAT representation.',
+        )
+
+    #: ``ENCODING`` in FORMAT_OPTIONS accepts only these two keywords.
+    EXTERNAL_FORMAT_ENCODINGS = frozenset({'UTF8', 'UTF16'})
+
+    @classmethod
+    def _external_format_encoding(cls, encoding: Optional[str]) -> str:
+        """Map a detected encoding onto a legal ``ENCODING`` keyword.
+
+        ``CREATE EXTERNAL FILE FORMAT`` accepts only ``UTF8`` and ``UTF16``.
+        Anything else (CP932, Latin-1, ...) must be omitted rather than passed
+        through, because an unknown keyword is a syntax error rather than a
+        graceful fallback.
+        """
+        normalised = (encoding or 'utf-8').upper()
+        if normalised in ('UTF-8', 'UTF_8', 'UTF8-SIG', 'UTF-8-SIG', 'UTF8'):
+            return 'UTF8'
+        if normalised.replace('-', '').replace('_', '').startswith('UTF16'):
+            return 'UTF16'
+        return ''
 
     def _generate_column_definitions(self, metadata: Dict[str, Any],
                                      include_nullability: bool = False,

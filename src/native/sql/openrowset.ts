@@ -5,7 +5,8 @@
  * platform-divergent part of the tool: SQL Server 2019, SQL Server 2022+,
  * Azure SQL DB/MI and Fabric SQL Database each need a different data-source
  * shape, and JSON needs a completely different access pattern from the others
- * because `SINGLE_CLOB` cannot be combined with `DATA_SOURCE`.
+ * because the `abs://` / `adls://` virtualization connectors reject
+ * `SINGLE_CLOB`. A `TYPE = BLOB_STORAGE` source accepts it.
  */
 
 import type { TargetPlatform } from '../types';
@@ -33,6 +34,8 @@ import {
     generateColumnDefinitions,
     generateOpenjsonColumns,
     jsonRowFrameOptions,
+    jsonSingleLobOptions,
+    singleLobKeyword,
     notSupportedMessage,
     openrowsetWithSchema,
     displayFileName,
@@ -198,9 +201,9 @@ function openrowsetSqlServer2019(
  * OPENROWSET(BULK) over an Azure Blob `TYPE = BLOB_STORAGE` data source.
  *
  * This is the only bulk-access shape available to SQL Server 2019 for remote
- * files: `FORMAT = 'CSV'` with a container-relative `BULK` path.
- * `SINGLE_CLOB`/`SINGLE_NCLOB`/`SINGLE_BLOB` cannot be combined with a
- * `DATA_SOURCE`, so JSON is read row-framed instead.
+ * files: `FORMAT = 'CSV'` with a container-relative `BULK` path. A
+ * `TYPE = BLOB_STORAGE` source does accept `SINGLE_CLOB`/`SINGLE_NCLOB`, so a
+ * whole JSON document is read that way rather than through CSV framing.
  */
 function openrowsetBlobStorageBulk(
     metadata: GeneratorMetadata,
@@ -228,19 +231,21 @@ function openrowsetBlobStorageBulk(
     );
 
     if (fileType === 'json') {
+        const lob = singleLobKeyword(metadata.encoding);
         lines.push(
-            '-- JSON: SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be used',
-            '-- together with DATA_SOURCE. Read the document as one row using',
-            '-- non-printing CSV framing characters, then parse it with OPENJSON.',
+            `-- JSON: a TYPE = BLOB_STORAGE data source accepts ${lob},`,
+            '-- so the whole document arrives as one value and is parsed with',
+            '-- OPENJSON. (The single-LOB options are rejected only by the',
+            '-- abs:// / adls:// virtualization connectors.)',
             'SELECT j.*',
             'FROM OPENROWSET(',
             `    BULK '${bulkPath}',`,
             `    DATA_SOURCE     = '${bulkLiteral}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        lines.push(...jsonSingleLobOptions(metadata.encoding));
         lines.push(
-            ') WITH (json_doc NVARCHAR(MAX)) AS src',
-            'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+            ') AS src',
+            'CROSS APPLY OPENJSON(src.BulkColumn) AS j;',
         );
         return lines.join('\n');
     }
@@ -420,9 +425,15 @@ function openrowsetAzure(
     }
 
     if (fileType === 'json') {
+        const [bulkIdent, bulkLiteral] = bulkDataSourceNames(dataSource);
+        const [, bulkRelative] = azureBulkStorageParts(storageUrl, fileName);
+        const lob = singleLobKeyword(metadata.encoding);
         if (jsonFormat === 'ndjson') {
             lines.push(
                 '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+                '-- Row framing needs the abs:// virtualization source. The https://',
+                '-- BLOB_STORAGE connector rejects FIELDTERMINATOR / FIELDQUOTE /',
+                '-- ROWTERMINATOR with error 5369.',
                 'SELECT TOP (100) doc',
                 'FROM OPENROWSET(',
                 `    BULK '${bulkPath}',`,
@@ -437,18 +448,19 @@ function openrowsetAzure(
         }
         lines.push(
             '-- ---- Whole document -> OPENJSON --------------------------------------',
-            '-- SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined with',
-            '-- DATA_SOURCE, so the CSV reader is framed with non-printing',
-            '-- characters to return the whole document as a single value.',
+            `-- ${lob} needs the TYPE = BLOB_STORAGE data source [${bulkIdent}],`,
+            '-- not the abs:// virtualization source: the single-LOB options are',
+            '-- rejected by abs:// / adls:// but accepted by https:// BLOB_STORAGE.',
+            '-- BULK is relative to that source root.',
             'DECLARE @json NVARCHAR(MAX);',
-            'SELECT @json = json_doc',
+            'SELECT @json = BulkColumn',
             'FROM OPENROWSET(',
-            `    BULK '${bulkPath}',`,
-            `    DATA_SOURCE     = '${sourceName}',`,
+            `    BULK '${quoteLiteral(bulkRelative)}',`,
+            `    DATA_SOURCE     = '${bulkLiteral}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        lines.push(...jsonSingleLobOptions(metadata.encoding));
         lines.push(
-            ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+            ') AS [src];',
             '',
             'SELECT * FROM OPENJSON(@json)',
         );
@@ -476,15 +488,15 @@ function openrowsetAzure(
         ') AS [result];',
         '',
         '-- ---- Whole file as one value (small files) ---------------------------',
-        '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
-        '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
-        'SELECT file_text',
+        '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',
+        '-- the abs:// / adls:// virtualization connectors reject them.',
+        'SELECT BulkColumn AS file_text',
         'FROM OPENROWSET(',
-        `    BULK '${bulkPath}',`,
-        `    DATA_SOURCE     = '${sourceName}',`,
+        `    BULK '${quoteLiteral(azureBulkStorageParts(storageUrl, fileName)[1])}',`,
+        `    DATA_SOURCE     = '${bulkDataSourceNames(dataSource)[1]}',`,
     );
-    lines.push(...jsonRowFrameOptions());
-    lines.push(') WITH (file_text NVARCHAR(MAX)) AS [src];');
+    lines.push(...jsonSingleLobOptions(metadata.encoding));
+    lines.push(') AS [src];');
     return lines.join('\n');
 }
 
@@ -596,9 +608,15 @@ function openrowsetSqlServerObjectStorage(
     }
 
     if (fileType === 'json') {
+        const [bulkIdent, bulkLiteral] = bulkDataSourceNames(dataSource);
+        const [, bulkRelative] = azureBulkStorageParts(storageUrl, fileName);
+        const lob = singleLobKeyword(metadata.encoding);
         if (jsonFormat === 'ndjson') {
             lines.push(
                 '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+                '-- Row framing needs the abs:// / adls:// virtualization source. The',
+                '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+                '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
                 'SELECT TOP (100) doc',
                 'FROM OPENROWSET(',
                 `    BULK '${bulkPath}',`,
@@ -612,20 +630,20 @@ function openrowsetSqlServerObjectStorage(
             );
         }
         lines.push(
-            "-- SQL Server has no OPENROWSET FORMAT = 'JSON', and SINGLE_CLOB",
-            '-- cannot be combined with DATA_SOURCE. Frame the CSV reader with',
-            '-- non-printing characters so the whole document arrives as one',
-            '-- value, then parse it with OPENJSON.',
             '-- ---- JSON -> OPENJSON ------------------------------------------------',
+            "-- SQL Server has no OPENROWSET FORMAT = 'JSON'. Read the whole",
+            `-- document with ${lob} through the TYPE = BLOB_STORAGE data source`,
+            `-- [${bulkIdent}], then parse it with OPENJSON. The single-LOB`,
+            '-- options are rejected only by the abs:// / adls:// connectors.',
             'DECLARE @json NVARCHAR(MAX);',
-            'SELECT @json = json_doc',
+            'SELECT @json = BulkColumn',
             'FROM OPENROWSET(',
-            `    BULK '${bulkPath}',`,
-            `    DATA_SOURCE     = '${sourceName}',`,
+            `    BULK '${quoteLiteral(bulkRelative)}',`,
+            `    DATA_SOURCE     = '${bulkLiteral}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        lines.push(...jsonSingleLobOptions(metadata.encoding));
         lines.push(
-            ') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+            ') AS [src];',
             '',
             'SELECT * FROM OPENJSON(@json)',
         );
@@ -653,14 +671,14 @@ function openrowsetSqlServerObjectStorage(
         ') AS [result];',
         '',
         '-- ---- Whole file as one value (small files) ---------------------------',
-        '-- SINGLE_CLOB is not valid with DATA_SOURCE; frame the CSV reader',
-        '-- so the whole file comes back as one NVARCHAR(MAX) value instead.',
-        'SELECT file_text',
+        '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',
+        '-- the abs:// / adls:// virtualization connectors reject them.',
+        'SELECT BulkColumn AS file_text',
         'FROM OPENROWSET(',
-        `    BULK '${bulkPath}',`,
-        `    DATA_SOURCE     = '${sourceName}',`,
+        `    BULK '${quoteLiteral(azureBulkStorageParts(storageUrl, fileName)[1])}',`,
+        `    DATA_SOURCE     = '${bulkDataSourceNames(dataSource)[1]}',`,
     );
-    lines.push(...jsonRowFrameOptions());
-    lines.push(') WITH (file_text NVARCHAR(MAX)) AS [src];');
+    lines.push(...jsonSingleLobOptions(metadata.encoding));
+    lines.push(') AS [src];');
     return lines.join('\n');
 }

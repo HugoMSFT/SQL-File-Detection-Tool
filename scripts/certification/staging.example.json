@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "_comment": [
+    "Example staging document. It carries no credentials, no tenant hostnames",
+    "and no absolute local paths - only public, anonymously readable Microsoft",
+    "sample data. Copy it, point the entries at wherever the fixtures are",
+    "actually staged, and pass it to `python -m certification plan --staging`.",
+    "",
+    "`hosts` becomes the safety gate's allowlist: a generated LOCATION that",
+    "resolves to any other host is refused before execution.",
+    "",
+    "Blob paths are case-sensitive. A wrong-case directory fails with error",
+    "13807 (directory cannot be listed) rather than returning no rows, so keep",
+    "the casing exactly as the container reports it."
+  ],
+  "hosts": [
+    "azuremlexamples.blob.core.windows.net",
+    "azureopendatastorage.blob.core.windows.net",
+    "azcliprod.blob.core.windows.net"
+  ],
+  "fixtures": {
+    "csv_scalar": {
+      "abs": "abs://datasets@azuremlexamples.blob.core.windows.net/iris.csv",
+      "blob_storage": "https://azuremlexamples.blob.core.windows.net/datasets/iris.csv",
+      "row_count": 150,
+      "column_count": 5
+    },
+    "json_array": {
+      "blob_storage": "https://azcliprod.blob.core.windows.net/cli/vm/aliases.json",
+      "abs": "abs://cli@azcliprod.blob.core.windows.net/vm/aliases.json"
+    },
+    "parquet_all_types": {
+      "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet",
+      "column_count": 21
+    },
+    "parquet_sales": {
+      "abs": "abs://nyctlc@azureopendatastorage.blob.core.windows.net/yellow/puYear=2018/puMonth=6/*.parquet",
+      "column_count": 21
+    }
+  }
+}
