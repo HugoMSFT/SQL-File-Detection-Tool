@@ -7,6 +7,10 @@ import type {
     StatementKind,
     TargetPlatform,
 } from './native';
+import {
+    documentationLink,
+    type DocumentationLink,
+} from './documentation';
 
 export const PROVENANCE = [
     'Detected',
@@ -43,6 +47,7 @@ export interface ExternalObjectState {
     readonly required: boolean;
     readonly provenance: Provenance;
     readonly detail: string;
+    readonly documentation: DocumentationLink;
 }
 
 export interface SourceReadiness {
@@ -58,6 +63,7 @@ export interface SourceReadiness {
 export interface PolyBaseGuidance {
     readonly visible: boolean;
     readonly detail: string | null;
+    readonly documentation: readonly DocumentationLink[];
 }
 
 export interface FolderProfile {
@@ -74,6 +80,7 @@ export interface QuickAnalyzeState {
     readonly source: SourceReadiness;
     readonly folderProfile: FolderProfile | null;
     readonly selectedStatement: StatementKind;
+    readonly documentation: readonly DocumentationLink[];
     readonly polybase: PolyBaseGuidance;
 }
 
@@ -323,6 +330,10 @@ export function sourceReadiness(inputs: SourceInputs): SourceReadiness {
                 detail: publicAccess
                     ? 'Anonymous public access needs no database scoped credential.'
                     : 'Required by the selected storage authentication.',
+                documentation: documentationLink(
+                    'create_database_scoped_credential',
+                    inputs.platform,
+                )!,
             } as const,
             {
                 kind: 'data_source',
@@ -330,6 +341,10 @@ export function sourceReadiness(inputs: SourceInputs): SourceReadiness {
                 required: true,
                 provenance: 'From source',
                 detail: `LOCATION base: ${baseLocation}`,
+                documentation: documentationLink(
+                    'create_external_data_source',
+                    inputs.platform,
+                )!,
             } as const]
                 : []),
             ...(needsFileFormat
@@ -339,6 +354,10 @@ export function sourceReadiness(inputs: SourceInputs): SourceReadiness {
                 required: true,
                 provenance: 'Mapped',
                 detail: `Mapped from ${inputs.fileType}; OPENROWSET/BULK parser options do not necessarily use this object.`,
+                documentation: documentationLink(
+                    'create_external_file_format',
+                    inputs.platform,
+                )!,
             } as const]
                 : []),
         ],
@@ -419,5 +438,11 @@ export function polyBaseGuidance(
         detail: requiresPolyBase
             ? "SQL Server Setup must first install 'PolyBase Query Service for External Data'. Then run sp_configure 'polybase enabled' to enable that installed feature; sp_configure does not install it."
             : null,
+        documentation: requiresPolyBase
+            ? [
+                documentationLink('polybase_install', platform)!,
+                documentationLink('server_configuration', platform)!,
+            ]
+            : [],
     };
 }

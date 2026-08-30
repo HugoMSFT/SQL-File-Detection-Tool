@@ -20,6 +20,7 @@ import {
     isStatementKind,
     parseWebviewRequest,
 } from '../protocol';
+import { DOCUMENTATION_IDS } from '../documentation';
 
 test('a well formed message is accepted and normalised', () => {
     const parsed = parseWebviewRequest({ type: 'setTab', tab: 'preview' });
@@ -140,6 +141,19 @@ test('enumerated fields accept only their own members', () => {
         });
     }
     assert.equal(parseWebviewRequest({ type: 'copyStatement', kind: 'metadata' }), undefined);
+    for (const id of DOCUMENTATION_IDS) {
+        assert.deepEqual(parseWebviewRequest({ type: 'openDocumentation', id }), {
+            type: 'openDocumentation',
+            id,
+        });
+    }
+    assert.equal(
+        parseWebviewRequest({
+            type: 'openDocumentation',
+            id: 'https://example.com/steal',
+        }),
+        undefined,
+    );
 });
 
 test('preview row counts are bounded', () => {

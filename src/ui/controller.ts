@@ -53,6 +53,7 @@ import {
     type AzureAuthMode,
     type WebviewRequest,
 } from '../protocol';
+import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue } from '../util';
 import { listStorageAccounts, listSubscriptions } from '../azure/arm';
 import { redactAzure } from '../azure/storageUrl';
@@ -296,6 +297,17 @@ export class UiController {
                 return this.queue(() => this.exportAllSql());
             case 'openInEditor':
                 return this.host.openPanel();
+            case 'openDocumentation': {
+                const url = resolveDocumentationUrl(request.id, this.store.state.platform);
+                if (!url) {
+                    this.host.log(
+                        `Documentation "${request.id}" is unavailable for the selected platform.`,
+                    );
+                    return;
+                }
+                await this.host.openExternal(url);
+                return;
+            }
             case 'showOrcGuidance':
                 this.showLimitationGuidance();
                 return;

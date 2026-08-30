@@ -66,6 +66,22 @@
         vscode.postMessage(message);
     }
 
+    function renderDocumentationLinks(container, links) {
+        if (!links || links.length === 0) {
+            return;
+        }
+        const group = element('div', 'documentation-links');
+        links.forEach(function (link) {
+            const button = element('button', 'documentation-link', link.label + ' (external)');
+            button.type = 'button';
+            button.dataset.documentation = link.id;
+            button.title = link.label + ' - opens Microsoft Learn externally';
+            button.setAttribute('aria-label', link.label + ' (opens externally)');
+            group.appendChild(button);
+        });
+        container.appendChild(group);
+    }
+
     function debounce(key, fn, ms) {
         const existing = debounceTimers.get(key);
         if (existing !== undefined) {
@@ -393,6 +409,7 @@
                         object.name + (object.required ? ' · required' : ' · not required');
                     item.querySelector('.provenance').textContent = object.provenance;
                     item.querySelector('.readiness-detail').textContent = object.detail;
+                    renderDocumentationLinks(item, [object.documentation]);
                     list.appendChild(item);
                 });
                 readiness.appendChild(list);
@@ -417,10 +434,15 @@
             statementSelect.value = state.quickAnalyze.selectedStatement;
             statementLabel.appendChild(statementSelect);
             container.appendChild(statementLabel);
+            renderDocumentationLinks(container, state.quickAnalyze.documentation);
             if (state.quickAnalyze.polybase.visible) {
-                container.appendChild(
-                    element('aside', 'polybase-guidance has-warning', state.quickAnalyze.polybase.detail),
+                const polybase = element(
+                    'aside',
+                    'polybase-guidance has-warning',
+                    state.quickAnalyze.polybase.detail,
                 );
+                renderDocumentationLinks(polybase, state.quickAnalyze.polybase.documentation);
+                container.appendChild(polybase);
             }
             const kind = state.quickAnalyze.selectedStatement;
             const sql = (state.statements || {})[kind];
@@ -869,6 +891,12 @@
                     kind: kind,
                 });
             }
+            return;
+        }
+
+        const documentation = target.closest('[data-documentation]');
+        if (documentation) {
+            post({ type: 'openDocumentation', id: documentation.dataset.documentation });
             return;
         }
 

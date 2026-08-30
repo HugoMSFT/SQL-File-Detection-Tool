@@ -191,6 +191,10 @@ class VsCodeUiHost implements UiHost {
         await vscode.window.showTextDocument(document, { preview: false });
     }
 
+    async openExternal(url: string): Promise<boolean> {
+        return vscode.env.openExternal(vscode.Uri.parse(url, true));
+    }
+
     async saveTextFile(suggestedName: string, content: string): Promise<string | undefined> {
         const folders = vscode.workspace.workspaceFolders ?? [];
         const target = await vscode.window.showSaveDialog({

@@ -33,6 +33,10 @@ import type {
     SupportedFormat,
     TargetPlatform,
 } from './native';
+import {
+    DOCUMENTATION_IDS,
+    type DocumentationId,
+} from './documentation';
 import type {
     FolderProfile,
     QuickAnalyzeState,
@@ -149,6 +153,7 @@ export type WebviewRequest =
       })
     | (Base & { readonly type: 'exportAllSql' })
     | (Base & { readonly type: 'openInEditor' })
+    | (Base & { readonly type: 'openDocumentation'; readonly id: DocumentationId })
     | (Base & {
           readonly type: 'setPreference';
           readonly appearance: AppearanceMode;
@@ -385,6 +390,10 @@ const BUILDERS: Record<string, Builder> = {
     azureListSubscriptions: () => ({ type: 'azureListSubscriptions' }),
     azureListContainers: () => ({ type: 'azureListContainers' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
+    openDocumentation: (source) => {
+        const id = member(source, 'id', DOCUMENTATION_IDS);
+        return id === undefined ? undefined : { type: 'openDocumentation', id };
+    },
 
     setPlatform: (source) => {
         const platform = text(source, 'platform', 64);

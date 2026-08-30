@@ -76,6 +76,7 @@ export interface UiHost {
 
     copyToClipboard(text: string): Promise<void>;
     openUntitledDocument(content: string, languageId: string): Promise<void>;
+    openExternal(url: string): Promise<boolean>;
     saveTextFile(suggestedName: string, content: string): Promise<string | undefined>;
 
     showInformation(message: string): void;

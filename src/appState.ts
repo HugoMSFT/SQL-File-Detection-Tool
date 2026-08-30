@@ -25,6 +25,7 @@ import type {
     TargetPlatform,
 } from './native';
 import { DEFAULT_TARGET_PLATFORM, PLATFORM_LABELS, PLATFORMS } from './native';
+import { statementDocumentation } from './documentation';
 import {
     folderProfileFor,
     parserOptionsFor,
@@ -118,6 +119,10 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
             }),
             folderProfile: null,
             selectedStatement: 'openrowset',
+            documentation: statementDocumentation(
+                'openrowset',
+                options.platform ?? DEFAULT_TARGET_PLATFORM,
+            ),
             polybase: polyBaseGuidance(
                 options.platform ?? DEFAULT_TARGET_PLATFORM,
                 'openrowset',
@@ -382,6 +387,7 @@ export function quickAnalyzePatch(
             }),
             folderProfile,
             selectedStatement: selected,
+            documentation: statementDocumentation(selected, state.platform),
             polybase: polyBaseGuidance(state.platform, selected),
         },
     };

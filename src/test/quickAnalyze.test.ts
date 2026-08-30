@@ -82,6 +82,14 @@ test('source readiness derives Azure base, relative path, names, and anonymous c
     assert.equal(source.stagingRequired, false);
     assert.equal(source.objects[0].required, false);
     assert.match(source.objects[0].detail, /needs no/i);
+    assert.deepEqual(
+        source.objects.map((object) => object.documentation.id),
+        [
+            'create_database_scoped_credential',
+            'create_external_data_source',
+            'create_external_file_format',
+        ],
+    );
 });
 
 test('local sources never invent cloud external objects', () => {
@@ -139,9 +147,21 @@ test('PolyBase guidance is visible only for a construct that requires it', () =>
         assert.equal(polyBaseGuidance(platform, 'bulk_insert').visible, false);
         const guidance = polyBaseGuidance(platform, 'create_external_table');
         assert.equal(guidance.visible, true);
+        assert.deepEqual(
+            guidance.documentation.map((link) => link.id),
+            ['polybase_install', 'server_configuration'],
+        );
         assert.match(guidance.detail ?? '', /SQL Server Setup/);
         assert.match(guidance.detail ?? '', /sp_configure does not install/i);
     }
+    assert.deepEqual(
+        polyBaseGuidance('sql_server_2022', 'openrowset').documentation,
+        [],
+    );
+    assert.deepEqual(
+        polyBaseGuidance('sql_server_2025', 'create_external_table').documentation,
+        [],
+    );
 });
 
 test('generator defaults are byte-identical while optional overrides reach production SQL', () => {

@@ -34,6 +34,7 @@ interface Recorder {
     readonly logs: string[];
     readonly clipboard: string[];
     readonly untitled: { content: string; languageId: string }[];
+    readonly externalUrls: string[];
     readonly saved: { name: string; content: string }[];
     readonly information: string[];
     readonly errors: string[];
@@ -116,6 +117,7 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         logs: [],
         clipboard: [],
         untitled: [],
+        externalUrls: [],
         saved: [],
         information: [],
         errors: [],
@@ -147,6 +149,10 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         copyToClipboard: async (text) => void state.clipboard.push(text),
         openUntitledDocument: async (content, languageId) =>
             void state.untitled.push({ content, languageId }),
+        openExternal: async (url) => {
+            state.externalUrls.push(url);
+            return true;
+        },
         saveTextFile: async (name, content) => {
             state.saved.push({ name, content });
             return state.saveResult;
@@ -199,6 +205,7 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
         },
         clearTimeoutImpl: () => undefined,
     });
+
     try {
         await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
         await settle();
@@ -234,10 +241,52 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
         });
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
         assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
+        assert.equal(
+            snapshot(record).quickAnalyze.documentation[0]?.label,
+            'Learn about CREATE EXTERNAL TABLE for SQL Server 2019',
+        );
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
         assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
+        assert.equal(
+            snapshot(record).quickAnalyze.documentation[0]?.label,
+            'Learn about CREATE EXTERNAL TABLE for SQL Server 2022',
+        );
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2025' });
         assert.equal(snapshot(record).quickAnalyze.polybase.visible, false);
+        assert.equal(
+            snapshot(record).quickAnalyze.documentation[0]?.label,
+            'Learn about CREATE EXTERNAL TABLE for SQL Server 2025',
+        );
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('documentation messages open only host-mapped links for the current platform', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
+        await ui.handle({
+            type: 'openDocumentation',
+            id: 'create_external_table',
+        });
+        assert.deepEqual(record.externalUrls, [
+            'https://learn.microsoft.com/en-us/sql/t-sql/statements/create-external-table-transact-sql?view=sql-server-ver16&preserve-view=true',
+        ]);
+
+        await ui.handle({ type: 'setPlatform', platform: 'fabric_sql_db' });
+        await ui.handle({ type: 'openDocumentation', id: 'bulk_insert' });
+        assert.equal(record.externalUrls.length, 1);
+        assert.match(record.logs.at(-1) ?? '', /unavailable for the selected platform/);
+
+        await ui.handle({
+            type: 'openDocumentation',
+            id: 'https://example.com/not-allowlisted',
+        });
+        assert.equal(record.externalUrls.length, 1);
+        assert.match(record.logs.at(-1) ?? '', /Dropped an unrecognised/);
     } finally {
         await ui.dispose();
         cleanup(record);

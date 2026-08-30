@@ -154,6 +154,12 @@ test('Quick Analyze is the primary native workflow with provenance and reset con
     assert.match(script, /resetParserOverride/);
     assert.match(script, /Source readiness/);
     assert.match(script, /polybase-guidance/);
+    assert.match(script, /openDocumentation/);
+    assert.match(script, /opens Microsoft Learn externally/);
+    assert.match(script, /dataset\.documentation/);
+    assert.match(script, /state\.quickAnalyze\.documentation/);
+    assert.match(script, /object\.documentation/);
+    assert.match(script, /polybase\.documentation/);
     assert.match(html, /Sources & files/);
     assert.match(html, /HTTPS \/ Azure/);
 });

@@ -91,6 +91,15 @@ distinguishes installing **PolyBase Query Service for External Data** in SQL
 Server Setup from enabling the already-installed feature with
 `sp_configure 'polybase enabled'`.
 
+Generated-statement headers and relevant external-object readiness entries show
+platform-aware Microsoft Learn links. The renderer receives only typed
+documentation identifiers, never URLs. The extension host maps those identifiers
+and the current platform to an exact `https://learn.microsoft.com` page and opens
+it with `vscode.env.openExternal`. Unsupported command/platform combinations do
+not receive a command link. SQL Server documentation is pinned to the 2019,
+2022, or 2025 view; Azure SQL Database, Managed Instance, and Fabric use their
+current product views.
+
 ## The message boundary
 
 A webview is a browser context. Treat it as hostile: an XSS in a rendering bug,
