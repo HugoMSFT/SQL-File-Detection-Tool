@@ -815,6 +815,16 @@ def run_session(
             evidence.inventory_after = cleanup['inventory_after']
             evidence.cleanup_verified = cleanup['verified']
             evidence.residue = cleanup['residue']
+            # The per-statement outcomes are what turn "cleanup verified" from a
+            # claim into a record. A DROP that the gate refused, or that the
+            # server rejected, is the difference between a clean server and two
+            # credentials nobody knew were still there - and without this the
+            # only trace of it was a residue count that a later inventory read
+            # could not explain.
+            evidence.cleanup_statements = [
+                {**step, 'statement': redactor.redact(str(step.get('statement', '')))}
+                for step in cleanup.get('statements', [])
+            ]
             if cleanup.get('unreadable_inventory'):
                 lifecycle['unreadable_inventory'] = cleanup['unreadable_inventory']
         finally:

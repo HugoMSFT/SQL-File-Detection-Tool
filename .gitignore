@@ -80,3 +80,14 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+# Scratch SQL from running the generator by hand. These land in the repo root
+# the moment somebody redirects `generate_all_statements` to a file, and one of
+# them (_doc.sql) was committed by accident. The generated corpus lives in
+# tests/parity and demo/, never here.
+/*.sql
+gen_out.sql
+_doc.sql
+
+# Test-runner transcripts. `npm test` is redirected here while debugging.
+node-test.log
+*.junit.xml

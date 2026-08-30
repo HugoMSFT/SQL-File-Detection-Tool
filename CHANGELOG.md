@@ -14,19 +14,42 @@ test suites now read the same machine-readable evidence file.
 
 ### Fixed
 
-- **The complete document survives being run twice.** Every `CREATE` in the
-  generated end-to-end script - table, external table, external data source,
-  external file format, database scoped credential - is now wrapped in a
-  catalog-existence guard, and the load target is emptied in its own batch
-  immediately before the first real load. Re-running the document used to stop
-  at error 46502 on the second `CREATE EXTERNAL DATA SOURCE`; guarding the DDL
-  alone would have replaced that with a quieter and worse failure, a row count
-  that went from 150 to 300 without saying anything. The emptying batch names
-  the table it clears and says how to remove it if you meant to append.
+- **The complete document survives being run twice, without emptying a table it
+  did not create.** Every `CREATE` in the generated end-to-end script - table,
+  external table, external data source, external file format, database scoped
+  credential - is wrapped in a catalog-existence guard. Re-running the document
+  used to stop at error 46502 on the second `CREATE EXTERNAL DATA SOURCE`.
+  Guarding the DDL alone would have replaced that with a quieter and worse
+  failure, a row count that went from 150 to 300 without saying anything, so the
+  document also empties its load target in its own batch immediately before the
+  first load.
+
+  That emptying step was, for one release candidate, a live and unconditional
+  `IF OBJECT_ID(N'[dbo].[<file name>]') IS NOT NULL TRUNCATE TABLE ...`. On a
+  warehouse where `orders.csv` and `dbo.orders` are the same subject, running the
+  script emptied the warehouse table. The truncate is now **opt-in**
+  (`rerun_truncate=True`, `rerunTruncate: true`) and is never emitted live for
+  the default schema even when asked for, because a script that did not choose
+  the name cannot know it created the object. By default the document ships the
+  truncate as commented guidance under a `RERUN SAFETY` heading. Callers that
+  name their own schema - which is what the certification harness does, and what
+  `--schema` exists for - get the live statement and idempotent reruns.
   Individual statement tabs are deliberately left bare: a tab is copied into an
   editor once, whereas the document is the thing people re-run. Mirrored in the
-  native TypeScript generator and the Python generator, with the boundary
-  pinned by tests in both.
+  native TypeScript generator and the Python generator, with the boundary pinned
+  by tests in both, including one that proves a pre-existing `dbo.orders` is
+  never touched.
+
+- **An apostrophe in a column name no longer swallows a batch.** Identifier
+  escaping doubles `]` but leaves `'` alone, so a CSV header like `Employee's ID`
+  reached the rerun guard verbatim inside `[Employee's ID]`. The scanner that
+  finds the end of the guarded statement read that apostrophe as the start of a
+  string literal, inverted quote parity for the rest of the scan, missed the
+  terminating semicolon and pulled the following `GO` inside the
+  `IF ... BEGIN ... END` block - where sqlcmd and SSMS still honour it as a batch
+  separator, leaving the first batch with an unterminated `BEGIN`. The scanner
+  now skips bracketed and double-quoted identifiers and stops at a batch
+  separator. Fixed in both generators.
 
 - **A file named `orders.csv` can be kept away from `dbo.orders`.** Every
   generated object name is caller-controlled: `--schema`, `--table`,
@@ -87,6 +110,35 @@ test suites now read the same machine-readable evidence file.
   fixed; and a `.jsonl` file was read as a single malformed document. The local
   path now picks `SINGLE_NCLOB` by encoding and assembles NDJSON lines into a
   JSON array before parsing.
+- **The cleanup gate no longer refuses its own cleanup.** The certification
+  harness forbids `DROP DATABASE`, and the rule was written as
+  `\bDROP\s+DATABASE\b` - which also matches `DROP DATABASE SCOPED CREDENTIAL`,
+  a different object entirely. Every credential the harness created was
+  therefore un-droppable by the harness, and one live run finished reporting
+  itself clean while leaving two managed-identity credentials on the server. The
+  rule now carries a `(?!\s+SCOPED\s+CREDENTIAL\b)` lookahead, and every kind in
+  `CLEANUP_ORDER` is put through the gate by a test. `ALTER` needs no equivalent
+  exception - it is refused outright a layer earlier - so it did not get one.
+- **Cleanup outcomes are in the evidence.** A run used to report
+  `cleanup_verified` and a residue count, which are both derived from an
+  inventory query and say nothing about which statement ran. A `DROP` the gate
+  refused looked identical to one that succeeded. Every cleanup statement is now
+  recorded with its outcome, redacted, in the JSON and named in the Markdown when
+  it did not run.
+- **An assertion that was never evaluated no longer counts as a pass.** Every
+  `sql_excludes` check is trivially true against an empty string, so a cell whose
+  generator produced nothing came back with a full set of green assertions and
+  was counted as accepted - the most misleading result the harness can produce,
+  because it looks like proof and is the absence of one. Empty output is now
+  recorded as unevaluated and cannot be accepted; guidance-only output, where a
+  comment block genuinely is the deliverable, is checked against the full text
+  and says so in the evidence.
+- **Redaction leaves common words alone.** The redactor substitutes the literals
+  it is handed, so a run against `master` blanked that word out of every "master
+  key" message in its own evidence. System database names and a short list of
+  ordinary words are now exempt, and literals shorter than four characters are
+  ignored, which is the boundary below which substitution rewrites ordinary SQL
+  rather than protecting anything.
 
 ### Added
 
@@ -189,12 +241,38 @@ test suites now read the same machine-readable evidence file.
 - Final certification runs closed with **no failures on either engine**: SQL
   Server 2025 at 16 PASS / 0 FAIL / 14 NOT_EXECUTABLE / 1 negative control, and
   Azure SQL Database at 17 PASS / 0 FAIL / 12 NOT_EXECUTABLE / 1 negative
-  control. Zero confirmed defects, and cleanup independently verified with zero
-  residue on both. The `NOT_EXECUTABLE` cells are the byte-fidelity fixtures,
-  which need those exact bytes readable by the engine itself; the run had no
-  authorised writable storage and would not change the server's configuration to
-  reach a local path, so they record what could not be proven instead of
-  claiming coverage from a differently-shaped file.
+  control. Zero confirmed defects. Cleanup was independently verified with zero
+  residue on SQL Server 2025; on Azure SQL Database that run left two
+  database-scoped credentials behind, which were removed by hand. The cause was
+  a harness bug, not a product one — see "The cleanup gate no longer refuses its
+  own cleanup" above — and the zero-residue claim for Azure SQL Database is
+  pending a fresh run with the fix in place. The `NOT_EXECUTABLE` cells are the
+  byte-fidelity fixtures, which need those exact bytes readable by the engine
+  itself; the run had no authorised writable storage and would not change the
+  server's configuration to reach a local path, so they record what could not be
+  proven instead of claiming coverage from a differently-shaped file.
+- **Excel and Iceberg are pinned by static assertion, not by live execution.**
+  Both are settled by the tests that read the generated text — no
+  `DELIMITEDTEXT` format, explicit guidance instead — because neither has a
+  readable path on either engine and neither fixture was staged. Nothing about
+  them was proven by running SQL.
+- **The live evidence was produced by the Python generator.** The harness imports
+  `external_file_detection`, so every statement that reached an engine came from
+  the Python implementation. The native TypeScript generator's certification is
+  derived: `tests/native_parity/python_baseline.json` pins the structural markers
+  of every statement both implementations produce for the same 19 fixtures, and
+  `src/test/native/generatorParity.test.ts` fails if the port's markers differ.
+  The shared matrix in `tests/certification/expected-matrix.json` is asserted
+  against both. A behaviour certified live is therefore certified for the native
+  generator only for as long as parity holds, which is what the parity suite is
+  for.
+- **The public JSONL fixture is a pinned snapshot of somebody else's CI
+  artifact.** The OpenVMM `petri.jsonl` blob used for NDJSON row framing (729
+  rows, four fields) belongs to a test-results container that its owners are free
+  to prune or restructure. The URL and the expected shape are pinned in
+  `scripts/certification/public_fixtures.py`, and a staged run checks the shape
+  before asserting on it, so fixture rot shows up as an unstaged cell rather than
+  as a generator defect.
 
 ## [2.0.0]
 

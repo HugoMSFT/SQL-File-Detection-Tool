@@ -21,8 +21,18 @@ production server that holds real TPC-H data — is how you drop someone's
 | Accepted verdicts | 24 | 23 |
 | Confirmed defects | 0 | 0 |
 
-Cleanup was verified independently after each run: residue zero, and the
-pre-existing external object counts unchanged.
+Cleanup was verified independently after each run. On SQL Server 2025 residue
+was zero. On Azure SQL Database it was not: the v7 run left the two
+database-scoped credentials it had created, and they were removed by hand
+afterwards. The cause was in this harness, not in the product — the gate's
+`DROP DATABASE` rule was written as `\bDROP\s+DATABASE\b`, which also matches
+`DROP DATABASE SCOPED CREDENTIAL`, so the cleanup planner's own statement was
+refused as if it were an attempt to drop a database. The rule now carries a
+`(?!\s+SCOPED\s+CREDENTIAL\b)` lookahead, `tests/certification/test_safety.py`
+puts every kind in `CLEANUP_ORDER` through the gate, and the evidence now records
+the outcome of each cleanup statement, so a refusal is visible in the artifact
+instead of showing up as a count that disagrees with itself. **The zero-residue
+claim for Azure SQL Database is pending a fresh run with the fix in place.**
 
 The `NOT_EXECUTABLE` cells are the byte-fidelity ones — the all-types, Unicode,
 Delta, ORC, Excel and Iceberg fixtures. Proving those needs those exact bytes
@@ -57,11 +67,14 @@ A batch that fails any of those is never sent. The violation code — for exampl
 instead of a result.
 
 `DELETE`, `UPDATE` and `MERGE` are refused outright. `TRUNCATE TABLE <name>` is
-the single admitted exception, because the generated complete document empties
-its own load target so a second run does not double the data. It is admitted
-only in that exact shape — a bare `TRUNCATE`, or one aimed at a variable, is
-still refused — and the name still has to pass the scope rules, so it can only
-ever empty a table the run itself created.
+the single admitted exception, because the harness asks the generator for a
+complete document that empties its own load target so a second run does not
+double the data. That truncate is opt-in (`rerun_truncate=True` /
+`rerunTruncate: true`) and the generator refuses to emit a live one for the
+default schema at all — see the CHANGELOG entry on rerun ownership. Here it is
+admitted only in that exact shape — a bare `TRUNCATE`, or one aimed at a
+variable, is still refused — and the name still has to pass the scope rules, so
+it can only ever empty a table the run itself created.
 
 A cell may not create an object its own prerequisite setup already created.
 That is what C14 did on the first live run: the setup step created the

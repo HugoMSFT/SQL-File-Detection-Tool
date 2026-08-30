@@ -1,4 +1,4 @@
-"""Driver values must never be able to destroy a completed run's evidence.
+﻿"""Driver values must never be able to destroy a completed run's evidence.
 
 A live VM execution finished its statements, reached report writing, and lost
 everything to ``TypeError: Object of type bytes is not JSON serializable``.
@@ -70,7 +70,7 @@ def test_exactly_the_prefix_length_is_still_rendered_whole():
 
 
 def test_known_text_columns_decode_with_replacement():
-    assert normalize_value('日本語'.encode('utf-8'), textual=True) == '日本語'
+    assert normalize_value('æ—¥æœ¬èªž'.encode('utf-8'), textual=True) == 'æ—¥æœ¬èªž'
     assert normalize_value(b'ok\xff', textual=True) == 'ok\ufffd'
 
 
@@ -330,9 +330,9 @@ def test_a_bytes_error_message_is_decoded_not_repr_ed():
 def test_a_bytes_message_survives_non_ascii():
     from certification.execute import _error_facts
 
-    facts = _error_facts(_pymssql_error(547, "近接 '日本語' の構文が正しくありません。"))
+    facts = _error_facts(_pymssql_error(547, "è¿‘æŽ¥ 'æ—¥æœ¬èªž' ã®æ§‹æ–‡ãŒæ­£ã—ãã‚ã‚Šã¾ã›ã‚“ã€‚"))
 
-    assert '日本語' in facts['error_message']
+    assert 'æ—¥æœ¬èªž' in facts['error_message']
     assert "b'" not in facts['error_message']
 
 
@@ -482,3 +482,133 @@ def test_a_nested_error_is_redacted_in_every_artifact(tmp_path):
         assert 'sqldemo-server' not in text, path
         assert 'contoso_warehouse' not in text, path
         assert 'not currently available' in text, path
+
+
+# ---------------------------------------------------------------------------
+# An assertion that was never judged is not a pass
+# ---------------------------------------------------------------------------
+#
+# Every `sql_excludes` check is trivially true against an empty string, so a
+# cell whose generator produced nothing came back with a full set of green
+# assertions and counted as accepted. That is the most misleading result the
+# harness can produce: it looks like proof and is the absence of one. Three
+# cells were accepted this way.
+
+from certification.evidence import (  # noqa: E402
+    NOT_EXECUTABLE,
+    Assertion,
+    check_static_assertions,
+)
+
+
+def assertion(kind, value):
+    return Assertion(kind=kind, value=value, detail=f'{kind} {value}')
+
+
+def cell(assertions, verdict=NOT_EXECUTABLE, accepts=(NOT_EXECUTABLE,)):
+    return CellResult(
+        cell_id='C99', target='vm', platform='sqlserver', fixture='csv_scalar',
+        statement_kind='create_table', access='none', hypothesis='H0',
+        intent='pin the semantics', accepts=list(accepts), verdict=verdict,
+        assertions=list(assertions),
+    )
+
+
+def test_nothing_generated_is_not_evaluated():
+    results = check_static_assertions('', [assertion('sql_excludes', 'DELIMITEDTEXT')])
+
+    assert results[0].evaluated is False
+    assert results[0].ok is False
+    assert 'not evaluated' in results[0].detail
+
+
+def test_a_cell_with_an_unevaluated_assertion_is_not_accepted():
+    results = check_static_assertions('', [assertion('sql_excludes', 'DELIMITEDTEXT')])
+    subject = cell(results)
+
+    assert subject.accepted is False
+    assert subject.unevaluated_assertions == results
+
+
+def test_a_failed_assertion_disqualifies_an_otherwise_acceptable_verdict():
+    # The verdict says "the engine could not run this", which is on the accepts
+    # list. That is no reason to stop checking that the generator wrote the
+    # right thing, and a cell that wrote the wrong thing is not certified.
+    results = check_static_assertions('SELECT 1;', [assertion('sql_contains', 'OPENJSON')])
+    subject = cell(results)
+
+    assert results[0].ok is False
+    assert subject.accepted is False
+
+
+def test_a_keyword_in_a_comment_does_not_certify_sql():
+    results = check_static_assertions(
+        '-- use OPENJSON for this\nSELECT 1;', [assertion('sql_contains', 'OPENJSON')]
+    )
+    assert results[0].ok is False
+
+
+def test_guidance_only_output_is_certified_as_guidance():
+    # Some formats have no external file format on either engine. The generator
+    # is supposed to say so and point elsewhere, so the comment block *is* the
+    # deliverable - but the evidence has to admit that is what was checked.
+    guidance = (
+        '-- CREATE EXTERNAL FILE FORMAT (JSON) - NOT AVAILABLE on this engine.\n'
+        '-- Use OPENROWSET with OPENJSON instead.\n'
+    )
+    results = check_static_assertions(guidance, [assertion('sql_contains', 'OPENJSON')])
+
+    assert results[0].ok is True
+    assert results[0].evaluated is True
+    assert 'guidance comments' in results[0].detail
+    assert cell(results).accepted is True
+
+
+def test_an_unevaluated_assertion_survives_serialisation():
+    results = check_static_assertions('', [assertion('sql_contains', 'CODEPAGE')])
+    assert results[0].as_dict()['evaluated'] is False
+
+
+# ---------------------------------------------------------------------------
+# Cleanup outcomes belong in the evidence
+# ---------------------------------------------------------------------------
+#
+# "cleanup_verified: true" with a residue count is a summary of an inventory
+# query. It does not say which DROP ran, so a statement the safety gate refused
+# looked identical to one that succeeded - which is how two credentials
+# survived a run that reported itself clean.
+
+def evidence_with_cleanup(statements):
+    return RunEvidence(
+        run_id='0123abcd', target='vm', platform='sqlserver',
+        started_at='2024-01-01T00:00:00Z', finished_at='2024-01-01T00:01:00Z',
+        cleanup_statements=list(statements),
+    )
+
+
+def test_a_refused_cleanup_statement_is_named_in_the_markdown(tmp_path):
+    evidence = evidence_with_cleanup([
+        {'statement': 'DROP EXTERNAL DATA SOURCE [cert_src];', 'ok': True},
+        {'statement': 'DROP DATABASE SCOPED CREDENTIAL [cert_cred];', 'ok': False,
+         'violations': ['DROP_DATABASE'], 'error': ''},
+    ])
+    path = tmp_path / 'evidence.md'
+    write_markdown(evidence, path, Redactor())
+    text = path.read_text(encoding='utf-8')
+
+    assert '## Cleanup' in text
+    assert 'DROP DATABASE SCOPED CREDENTIAL [cert_cred];' in text
+    assert 'DROP_DATABASE' in text
+
+
+def test_cleanup_statements_reach_the_json(tmp_path):
+    evidence = evidence_with_cleanup([
+        {'statement': 'DROP SCHEMA [cert_schema];', 'ok': True},
+    ])
+    path = tmp_path / 'evidence.json'
+    write_json(evidence, path, Redactor())
+    payload = json.loads(path.read_text(encoding='utf-8'))
+
+    assert payload['cleanup_statements'][0]['ok'] is True
+    assert payload['cleanup_statements'][0]['statement'] == 'DROP SCHEMA [cert_schema];'
+

@@ -27,7 +27,7 @@ import math
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Pattern, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Pattern, Sequence, Set, Tuple
 
 #: Hosts whose names may survive redaction because they are public, documented
 #: Microsoft sample data and carry no tenant information.
@@ -228,6 +228,37 @@ def normalize_value(value: Any, *, textual: bool = False) -> Any:
     return text
 
 
+#: Below this length a literal is more likely to be a fragment of ordinary SQL
+#: than an identifier worth hiding. ``sql``, ``dev`` and ``db`` are the ones
+#: this actually keeps out.
+_LITERAL_MIN_LENGTH = 4
+
+#: Names that identify nothing. The four system databases are called the same
+#: thing on every SQL Server in the world, and the rest are the placeholder
+#: names people give a scratch database. Redacting them would blank ordinary
+#: English out of error messages ("master key", "test data") while protecting
+#: nobody.
+NON_SECRET_LITERALS = frozenset({
+    'master', 'model', 'msdb', 'tempdb',
+    'data', 'test', 'demo', 'main', 'temp', 'public', 'default', 'sample',
+})
+
+
+def _usable_literals(literals: Iterable[Any]) -> Set[str]:
+    """The subset of *literals* worth substituting."""
+    usable: Set[str] = set()
+    for literal in literals:
+        if not literal:
+            continue
+        text = str(literal)
+        if len(text) < _LITERAL_MIN_LENGTH:
+            continue
+        if text.strip().lower() in NON_SECRET_LITERALS:
+            continue
+        usable.add(text)
+    return usable
+
+
 @dataclass
 class Redactor:
     """Filters secrets and environment identifiers out of harness artifacts.
@@ -236,6 +267,15 @@ class Redactor:
     pattern would catch — typically the login name and server host taken from
     the environment. They are replaced first, longest match first, so a short
     value that is a substring of a longer one cannot leave a fragment behind.
+
+    Two literals are deliberately *not* honoured: anything shorter than
+    :data:`_LITERAL_MIN_LENGTH`, and the common names in
+    :data:`NON_SECRET_LITERALS`. A run against ``master`` would otherwise put
+    ``[redacted]`` through every ``CREATE MASTER KEY`` and every "master key
+    does not exist" error in the evidence, which destroys exactly the record the
+    harness exists to produce — and it protects nothing, because ``master`` is
+    the same name on every SQL Server ever installed. The trade is explicit: a
+    login that is literally called ``test`` is not masked by this list.
     """
 
     extra_literals: Sequence[str] = field(default_factory=tuple)
@@ -254,7 +294,7 @@ class Redactor:
                     text = re.sub(re.escape(host), token, text, flags=re.IGNORECASE)
                     placeholders[token] = host
 
-        for literal in sorted({l for l in self.extra_literals if l and len(str(l)) >= 3},
+        for literal in sorted(_usable_literals(self.extra_literals),
                               key=len, reverse=True):
             text = re.sub(re.escape(str(literal)), _REDACTION, text, flags=re.IGNORECASE)
 

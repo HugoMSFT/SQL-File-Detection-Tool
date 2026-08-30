@@ -507,10 +507,15 @@ def connect_with_retry(
     carries one line per attempt naming the exception type and the SQL error
     number only - never the host, the login, the password or the driver's
     message, which routinely echoes the connection string back.
+
+    The chained cause is dropped deliberately (``from None``). Attaching the
+    driver exception puts its message back in the traceback, and an uncaught
+    ``AdapterUnavailable`` then prints to stderr everything this function just
+    took care to leave out. The per-attempt log above already carries the only
+    facts the harness needs.
     """
     sleeper = sleep if sleep is not None else time.sleep
     attempt_log: List[str] = []
-    last: Optional[BaseException] = None
     for attempt in range(1, max(1, attempts) + 1):
         try:
             connection = connect(settings, password, driver=driver)
@@ -518,7 +523,6 @@ def connect_with_retry(
                 attempt_log.append(f'attempt {attempt}: connected')
             return connection, attempt_log
         except Exception as exc:
-            last = exc
             number = _error_number(exc)
             transient = is_transient_connect_error(exc)
             attempt_log.append(
@@ -533,7 +537,7 @@ def connect_with_retry(
     raise AdapterUnavailable(
         'could not connect after ' + str(len(attempt_log)) + ' attempt(s): '
         + '; '.join(attempt_log)
-    ) from last
+    ) from None  # noqa: B904 - deliberate, see the docstring
 
 
 class SessionFactory:

@@ -51,6 +51,11 @@ class AssertionResult:
     actual: Any
     ok: bool
     detail: str = ''
+    #: True when the assertion could not be judged at all, as opposed to judged
+    #: and satisfied. An ``sql_excludes`` check against an empty string is
+    #: trivially true and means nothing; recording that as a pass is how three
+    #: cells came to be "accepted" without a single byte of SQL behind them.
+    evaluated: bool = True
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -58,6 +63,7 @@ class AssertionResult:
             'expected': self.expected,
             'actual': self.actual,
             'ok': self.ok,
+            'evaluated': self.evaluated,
             'detail': self.detail,
         }
 
@@ -141,7 +147,19 @@ class CellResult:
         # can never satisfy a cell's acceptance list even if someone lists it.
         if self.verdict in HARNESS_ONLY_VERDICTS:
             return False
+        # A cell is not accepted while one of its own assertions is unmet. The
+        # verdict alone is not enough: an UNSUPPORTED_EXPECTED or a
+        # NOT_EXECUTABLE cell is still asserting something about the SQL that
+        # was generated for it, and "the engine could not run this" is no reason
+        # to stop checking that the generator wrote the right thing.
+        if any(not a.ok for a in self.assertions):
+            return False
         return self.verdict in self.accepts
+
+    @property
+    def unevaluated_assertions(self) -> List['AssertionResult']:
+        """Assertions that could not be judged, typically for want of any SQL."""
+        return [a for a in self.assertions if not a.evaluated]
 
     @property
     def not_certified(self) -> bool:
@@ -225,6 +243,10 @@ class RunEvidence:
     #: database was created, whether the run schema was created, whether the
     #: database was dropped again, and the sanitised connect-attempt log.
     lifecycle: Dict[str, Any] = field(default_factory=dict)
+    #: One record per cleanup statement: the redacted statement, whether it ran,
+    #: and why not when it did not. This is what makes ``cleanup_verified`` an
+    #: auditable claim instead of a bare boolean.
+    cleanup_statements: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
     def defects(self) -> List[CellResult]:
@@ -256,6 +278,7 @@ class RunEvidence:
             'inventory_before': self.inventory_before,
             'inventory_after': self.inventory_after,
             'cleanup_verified': self.cleanup_verified,
+            'cleanup_statements': self.cleanup_statements,
             'residue': self.residue,
             'summary': self.summary(),
             'cells': [cell.as_dict() for cell in self.cells],
@@ -275,24 +298,49 @@ def check_static_assertions(sql: str, assertions: Iterable[Assertion]) -> List[A
     Comments are stripped first. The generator writes long explanatory comment
     blocks, and a check that passes because the keyword appears in a comment
     would certify prose rather than SQL.
+
+    Empty SQL is reported as unevaluated rather than as a pass. Every
+    ``sql_excludes`` check is trivially true against an empty string, so a cell
+    whose generator produced nothing at all used to come back with a full set of
+    green assertions - which is the most misleading result the harness can
+    produce, because it looks like proof and is the absence of it.
+
+    Guidance-only output is the one case where comments *are* the deliverable.
+    When a format has no external file format on either engine the generator is
+    supposed to say so and point elsewhere, so a cell like that has nothing but
+    a comment block to certify. Those assertions are checked against the full
+    text and say so in their detail, which keeps them honest without pretending
+    prose is SQL.
     """
     code = strip_sql_comments(sql)
     results: List[AssertionResult] = []
+    executable = bool(code.strip())
+    guidance_only = not executable and bool((sql or '').strip())
+    subject = code if executable else (sql or '')
+    suffix = ' [checked against guidance comments: no SQL was generated]'
     for assertion in assertions:
+        if not executable and not guidance_only:
+            results.append(
+                AssertionResult(assertion.kind, assertion.value, None, False,
+                                'not evaluated: the generator produced no output',
+                                evaluated=False)
+            )
+            continue
+        detail = assertion.detail + (suffix if guidance_only else '')
         if assertion.kind == 'sql_contains':
-            ok = str(assertion.value) in code
+            ok = str(assertion.value) in subject
             results.append(AssertionResult('sql_contains', assertion.value, ok, ok,
-                                           assertion.detail))
+                                           detail))
         elif assertion.kind == 'sql_excludes':
-            ok = str(assertion.value) not in code
+            ok = str(assertion.value) not in subject
             results.append(AssertionResult('sql_excludes', assertion.value, not ok, ok,
-                                           assertion.detail))
+                                           detail))
         elif assertion.kind == 'sql_matches':
-            match = re.search(str(assertion.value), code, re.IGNORECASE)
+            match = re.search(str(assertion.value), subject, re.IGNORECASE)
             results.append(
                 AssertionResult('sql_matches', assertion.value,
                                 match.group(0) if match else None, bool(match),
-                                assertion.detail)
+                                detail)
             )
     return results
 
@@ -481,6 +529,24 @@ def write_markdown(evidence: RunEvidence, path: str, redactor: Redactor) -> None
                         f'* batch {batch.index} error {batch.error_number} '
                         f'({batch.sqlstate}): {redactor.redact(batch.error_message)}'
                     )
+            lines.append('')
+    if evidence.cleanup_statements:
+        blocked = [s for s in evidence.cleanup_statements if not s.get('ok')]
+        lines += [
+            '',
+            '## Cleanup',
+            '',
+            f'{len(evidence.cleanup_statements) - len(blocked)}/'
+            f'{len(evidence.cleanup_statements)} cleanup statements succeeded.',
+            '',
+        ]
+        for step in blocked:
+            reason = step.get('violations') or step.get('error') or 'unknown'
+            lines.append(
+                f'* **did not run**: `{redactor.redact(str(step.get("statement", "")))}` '
+                f'— {redactor.redact(str(reason))}'
+            )
+        if blocked:
             lines.append('')
     with open(path, 'w', encoding='utf-8') as handle:
         handle.write('\n'.join(lines) + '\n')

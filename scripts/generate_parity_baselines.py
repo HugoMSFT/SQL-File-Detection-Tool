@@ -145,6 +145,26 @@ _INVARIANT_PATTERNS = (
     re.compile(r'\bFIELD_TERMINATOR\s*=\s*\'([^\']*)\'', re.IGNORECASE),
     re.compile(r'\bFIRSTROW\s*=\s*(\d+)', re.IGNORECASE),
     re.compile(r'\bFIRST_ROW\s*=\s*(\d+)', re.IGNORECASE),
+    re.compile(r'\bROWTERMINATOR\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    re.compile(r'\bROW_TERMINATOR\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    # USE_TYPE_DEFAULT decides whether an empty CSV field arrives as NULL or as
+    # a zero, which is a semantic difference the live matrix asserts on. It is
+    # exactly the kind of option a port can drop without any test noticing.
+    re.compile(r'\bUSE_TYPE_DEFAULT\s*=\s*(TRUE|FALSE)\b', re.IGNORECASE),
+    re.compile(r'\bSTRING_DELIMITER\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    re.compile(r'\bFIELDQUOTE\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    re.compile(r'\bENCODING\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    re.compile(r'\bDATAFILETYPE\s*=\s*\'([^\']*)\'', re.IGNORECASE),
+    # The credential shape is a security property: managed identity means no
+    # secret and no master key, a SAS means both.
+    re.compile(r'\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE)\'',
+               re.IGNORECASE),
+    # A live TRUNCATE in a generated document empties a table the user already
+    # had. It is only ever correct for a caller-owned schema, so it belongs in
+    # the parity markers where a change to either generator has to be explained.
+    # Anchored so the commented guidance form does not count as a live one.
+    re.compile(r'^\s*TRUNCATE\s+TABLE\s+(\[[^\]]*\]\.\[[^\]]*\])',
+               re.IGNORECASE | re.MULTILINE),
     re.compile(r'\bREJECT_TYPE\s*=\s*(\w+)', re.IGNORECASE),
     re.compile(r'\bSERDE_METHOD\s*=\s*\'([^\']*)\'', re.IGNORECASE),
     re.compile(r'\bDATA_COMPRESSION\s*=\s*\'([^\']*)\'', re.IGNORECASE),

@@ -3039,7 +3039,8 @@ class SQLGenerator:
                               external_table_name: str = None,
                               credential_name: str = None,
                               auth_method: str = None,
-                              file_path_override: str = None) -> str:
+                              file_path_override: str = None,
+                              rerun_truncate: bool = False) -> str:
         """Return every generated section as one runnable, GO-separated script.
 
         The document is rerunnable. A single statement tab is something you copy
@@ -3047,8 +3048,14 @@ class SQLGenerator:
         after fixing a typo three sections down - and the first live run proved
         it: re-executing the document failed at error 46502 because the external
         data source it had just created still existed. So every CREATE here is
-        guarded by an existence check, and the load empties its target first so
-        a second run does not double the rows.
+        guarded by an existence check.
+
+        Data needs the same treatment, but it cannot be handled the same way. A
+        guarded CREATE is harmless when the object already exists; emptying a
+        table that already exists is not. The default output therefore explains
+        the truncate and leaves it commented out. Pass *rerun_truncate* together
+        with an explicit schema and table name to have it emitted live - see
+        :func:`_owns_load_target` for why both are required.
         """
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
@@ -3107,12 +3114,17 @@ class SQLGenerator:
             f'[{_escape_identifier(_clean_identifier(table_name or _metadata_base_name(metadata)))}]'
         )
         truncated = False
+        truncate_active = bool(rerun_truncate) and _owns_load_target(
+            table_name, schema_name
+        )
         for key in ordered_sections:
             section = (statements.get(key) or '').strip()
             if not section:
                 continue
             if not truncated and _loads_into(section, target_table):
-                parts.append('\n'.join(_truncate_before_load(target_table)))
+                parts.append('\n'.join(
+                    _truncate_before_load(target_table, active=truncate_active)
+                ))
                 truncated = True
             parts.append(section)
             if not section.endswith('GO'):
@@ -3812,6 +3824,14 @@ _GUARD_RE = re.compile(
     re.IGNORECASE,
 )
 
+#: A line every SQL client treats as a batch separator. Nothing a guard wraps
+#: may cross one.
+_BATCH_SEPARATOR_RE = re.compile(r'^\s*GO\s*(?:--.*)?$', re.IGNORECASE)
+
+#: The schema a table lands in when nobody says otherwise - and therefore the
+#: one schema this generator must never assume it owns.
+DEFAULT_SCHEMA_NAME = 'dbo'
+
 
 def _unbracket(name: str) -> str:
     """The catalog form of an identifier: brackets off, doubling undone."""
@@ -3827,10 +3847,27 @@ def _statement_end(lines: Sequence[str], start: int) -> int:
     Semicolons inside string literals do not end a statement - a
     semicolon-delimited CSV puts one in ``FIELD_TERMINATOR = ';'`` - so the scan
     tracks quoting rather than looking for the character.
+
+    Bracket-quoted identifiers are skipped for the same reason, and it matters
+    more than it looks: ``_escape_identifier`` only doubles ``]``, so a column
+    called ``Employee's ID`` arrives here as ``[Employee's ID]`` with a live
+    apostrophe in it. Treating that as the start of a string literal inverts the
+    quote parity for the rest of the scan, and the statement then "ends" at some
+    unrelated semicolon further down the document.
+
+    The scan also stops at a ``GO`` batch separator. A guarded CREATE is wrapped
+    in ``BEGIN``/``END``, and a mis-parse that swallowed a ``GO`` would leave the
+    first batch with an unterminated ``BEGIN``, so this is the backstop that
+    keeps a lexer surprise from breaking the whole document.
     """
     in_string = False
+    in_bracket = False
+    in_quoted_ident = False
     for index in range(start, len(lines)):
         line = lines[index]
+        if (index > start and not (in_string or in_bracket or in_quoted_ident)
+                and _BATCH_SEPARATOR_RE.match(line)):
+            return index - 1
         position = 0
         while position < len(line):
             char = line[position]
@@ -3840,8 +3877,24 @@ def _statement_end(lines: Sequence[str], start: int) -> int:
                         position += 1
                     else:
                         in_string = False
+            elif in_bracket:
+                if char == ']':
+                    if position + 1 < len(line) and line[position + 1] == ']':
+                        position += 1
+                    else:
+                        in_bracket = False
+            elif in_quoted_ident:
+                if char == '"':
+                    if position + 1 < len(line) and line[position + 1] == '"':
+                        position += 1
+                    else:
+                        in_quoted_ident = False
             elif char == "'":
                 in_string = True
+            elif char == '[':
+                in_bracket = True
+            elif char == '"':
+                in_quoted_ident = True
             elif char == '-' and line[position:position + 2] == '--':
                 break
             elif char == ';':
@@ -3915,28 +3968,68 @@ def _loads_into(section: str, target_table: str) -> bool:
     )
 
 
-def _truncate_before_load(target_table: str) -> List[str]:
-    """Empty the load target so a second run of the document does not double it.
+def _truncate_before_load(target_table: str, *, active: bool) -> List[str]:
+    """The rerun-safety batch for the load target.
 
     Idempotence is not only about DDL. A script whose CREATEs are all guarded
     still doubles its data on the second run, and a row count that quietly went
     from 150 to 300 is a worse outcome than an error.
+
+    Emptying the target is only safe when the document can be said to own it,
+    which is why *active* exists. A file called ``orders.csv`` derives the table
+    name ``dbo.orders`` - the exact name a TPC-H warehouse already uses - so the
+    default output only ever *describes* the truncate. The live statement is
+    emitted when the caller both asked for rerun safety and named a target of
+    their own.
     """
-    return [
+    statement = [
+        f"IF OBJECT_ID(N'{_quote_literal(target_table)}', N'U') IS NOT NULL",
+        f'    TRUNCATE TABLE {target_table};',
+    ]
+    lines = [
         '-- ====================================================================',
         '-- RERUN SAFETY',
         '-- ====================================================================',
-        '-- This document is safe to run more than once: every CREATE above is',
-        '-- guarded, and the load target is emptied here so a second run does',
-        '-- not insert the same rows twice.',
-        f'-- WARNING: this empties {target_table}. That table is meant to be',
-        '-- owned by this script. If a table of that name already holds data you',
-        '-- care about, change the target name before running (--table/--schema).',
-        '-- Delete this batch if you mean to append to existing data.',
-        f"IF OBJECT_ID(N'{_quote_literal(target_table)}', N'U') IS NOT NULL",
-        f'    TRUNCATE TABLE {target_table};',
-        'GO',
+        '-- Every CREATE above is guarded, so re-running this document will not',
+        '-- fail on an object that already exists. Data is the other half: the',
+        f'-- load below appends, so a second run inserts the same rows into',
+        f'-- {target_table} again.',
     ]
+    if active:
+        lines += [
+            '--',
+            f'-- Emptying {target_table} first is what makes the row count stable',
+            '-- across runs. It is enabled here because you named this target',
+            '-- explicitly, so it is not a table this tool guessed at. Delete this',
+            '-- batch if you mean to append to what is already there.',
+        ]
+        return lines + statement + ['GO']
+    lines += [
+        '--',
+        f'-- Emptying {target_table} first would make the row count stable, and',
+        '-- the two lines below do exactly that. They are commented out because',
+        '-- this document cannot prove it created that table: the name was',
+        '-- derived from the file name in the default schema, and a table of the',
+        '-- same name may already exist and hold data that has nothing to do',
+        '-- with this file. Silently emptying it would be data loss.',
+        '--',
+        '-- Uncomment them once you have confirmed the table is this document\'s',
+        '-- to empty, or regenerate with an explicit schema and table name you',
+        '-- own (--schema/--table) to have them emitted live.',
+    ]
+    return lines + [f'-- {line}' for line in statement]
+
+
+def _owns_load_target(table_name: Optional[str], schema_name: Optional[str]) -> bool:
+    """True when the caller named the load target rather than inheriting it.
+
+    Both halves matter. An explicit table name in ``dbo`` is still a name that
+    collides with whatever else lives in ``dbo``, and the run-owned schema is
+    what actually separates this document's objects from everyone else's.
+    """
+    named = bool((table_name or '').strip())
+    schema = (schema_name or '').strip().lower()
+    return named and schema not in ('', DEFAULT_SCHEMA_NAME)
 
 
 #: Authentication methods the generator can emit for storage access.
@@ -4002,8 +4095,16 @@ def _credential_ddl(cred_ident: str, auth_method: str,
             '-- PREFERRED: no secret, no SAS token, and no database master key.',
             '-- Grant the server/instance managed identity the Storage Blob Data',
             '-- Reader role on the storage account (Storage Blob Data Contributor',
-            '-- if the workload also writes). Certified live: creating this',
-            '-- credential left the database master key count at 0.',
+            '-- if the workload also writes). Certified live on Azure SQL',
+            '-- Database: creating this credential left the database master key',
+            '-- count at 0.',
+            '-- Availability: Azure SQL Database and Azure SQL Managed Instance',
+            '-- have a service identity of their own. A SQL Server instance has',
+            '-- one only when it is Azure Arc-enabled with a system-assigned',
+            '-- managed identity; on a SQL Server without Arc this credential',
+            '-- cannot authenticate, and a SAS credential is the route that',
+            '-- works. Managed identity was certified live on Azure SQL Database',
+            '-- only.',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = 'MANAGED IDENTITY';",

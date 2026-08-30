@@ -290,7 +290,14 @@ PETRI_NDJSON = PublicShape(
         'must map to NVARCHAR(MAX) rather than a guessed width. Newline '
         'delimited JSON is what selects the abs:// virtualization source with '
         'CSV row framing; the https BLOB_STORAGE connector rejects the '
-        'delimiter options with error 5369.'
+        'delimiter options with error 5369. '
+        'SNAPSHOT: unlike the other three, this is not a curated dataset. It is '
+        'one artifact from one OpenVMM CI run, in a results container its '
+        'owners are free to prune or restructure at any time, so the row count '
+        'and the field set pinned here are a snapshot rather than a contract. '
+        'A run whose staged bytes no longer match this shape must be recorded '
+        'as unstaged, not as a generator defect - which is what the shape check '
+        'in the planner is for.'
     ),
 )
 

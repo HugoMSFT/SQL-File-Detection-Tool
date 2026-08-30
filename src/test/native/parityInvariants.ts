@@ -100,6 +100,22 @@ const INVARIANT_PATTERNS: readonly InvariantPattern[] = [
     pattern(String.raw`\bFIELD_TERMINATOR\s*=\s*\'([^\']*)\'`, 'i'),
     pattern(String.raw`\bFIRSTROW\s*=\s*(\d+)`, 'i'),
     pattern(String.raw`\bFIRST_ROW\s*=\s*(\d+)`, 'i'),
+    pattern(String.raw`\bROWTERMINATOR\s*=\s*\'([^\']*)\'`, 'i'),
+    pattern(String.raw`\bROW_TERMINATOR\s*=\s*\'([^\']*)\'`, 'i'),
+    // USE_TYPE_DEFAULT decides whether an empty CSV field arrives as NULL or as
+    // a zero, which is a semantic difference the live matrix asserts on. It is
+    // exactly the kind of option a port can drop without any test noticing.
+    pattern(String.raw`\bUSE_TYPE_DEFAULT\s*=\s*(TRUE|FALSE)\b`, 'i'),
+    pattern(String.raw`\bSTRING_DELIMITER\s*=\s*\'([^\']*)\'`, 'i'),
+    pattern(String.raw`\bFIELDQUOTE\s*=\s*\'([^\']*)\'`, 'i'),
+    pattern(String.raw`\bENCODING\s*=\s*\'([^\']*)\'`, 'i'),
+    pattern(String.raw`\bDATAFILETYPE\s*=\s*\'([^\']*)\'`, 'i'),
+    // The credential shape is a security property: managed identity means no
+    // secret and no master key, a SAS means both.
+    pattern(String.raw`\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE)\'`, 'i'),
+    // A live TRUNCATE in a generated document empties a table the user already
+    // had. Anchored so the commented guidance form does not count as a live one.
+    pattern(String.raw`^\s*TRUNCATE\s+TABLE\s+(\[[^\]]*\]\.\[[^\]]*\])`, 'im'),
     pattern(String.raw`\bREJECT_TYPE\s*=\s*(\w+)`, 'i'),
     pattern(String.raw`\bSERDE_METHOD\s*=\s*\'([^\']*)\'`, 'i'),
     pattern(String.raw`\bDATA_COMPRESSION\s*=\s*\'([^\']*)\'`, 'i'),

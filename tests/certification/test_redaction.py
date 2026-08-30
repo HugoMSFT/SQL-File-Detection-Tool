@@ -111,3 +111,47 @@ def test_an_ordinary_guid_in_a_run_id_is_left_alone():
     # Run identities are ours and appear in every artifact by design.
     out = Redactor().redact('run 0123abcd used schema sqlfdt_cert_0123abcd')
     assert 'sqlfdt_cert_0123abcd' in out
+
+
+# ---------------------------------------------------------------------------
+# Common names are not identifiers
+# ---------------------------------------------------------------------------
+#
+# The extra literals are whatever the operator put in the environment. A run
+# against `master` used to blank the word out of every "master key" message in
+# the evidence, which destroys the record the harness exists to produce and
+# protects nobody: `master` is called `master` on every SQL Server ever
+# installed.
+
+from certification.redaction import (  # noqa: E402
+    NON_SECRET_LITERALS,
+    _usable_literals,
+)
+
+
+@pytest.mark.parametrize('name', sorted(NON_SECRET_LITERALS))
+def test_a_common_name_is_not_redacted(name):
+    redactor = Redactor(extra_literals=(name,))
+    text = f'CREATE MASTER KEY failed while connected to {name}'
+    assert redactor.redact(text) == text
+
+
+def test_a_system_database_name_survives_inside_a_sentence():
+    redactor = Redactor(extra_literals=('master',))
+    assert 'master key' in redactor.redact(
+        'Please create a master key in the database or open the master key'
+    ).lower()
+
+
+def test_a_real_login_is_still_redacted():
+    redactor = Redactor(extra_literals=('certops_svc',))
+    assert 'certops_svc' not in redactor.redact('login failed for user certops_svc')
+
+
+def test_a_two_character_literal_is_ignored():
+    # Substituting a fragment that short would rewrite ordinary SQL.
+    assert _usable_literals(('ab', 'abc', 'abcd')) == {'abcd'}
+
+
+def test_case_does_not_smuggle_a_common_name_past_the_exclusion():
+    assert _usable_literals(('Master', 'TEMPDB')) == set()

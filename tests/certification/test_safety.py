@@ -266,3 +266,74 @@ def test_a_truncate_hidden_after_a_legitimate_statement_is_still_scoped(identity
         'TRUNCATE TABLE [dbo].[lineitem];'
     )
     assert not evaluate_batch(sql, policy).allowed
+
+
+# ---------------------------------------------------------------------------
+# Cleanup must survive its own gate
+# ---------------------------------------------------------------------------
+#
+# The gate refusing a cleanup statement is worse than the gate refusing a cell:
+# a refused cell produces a BLOCKED verdict that somebody reads, while a refused
+# DROP leaves an object on a live server and the only trace is a residue count.
+# That is exactly what happened - `\bDROP\s+DATABASE\b` also matches `DROP
+# DATABASE SCOPED CREDENTIAL`, so both managed-identity credentials survived a
+# run that reported itself clean, and had to be removed by hand afterwards.
+
+from certification.manifest import (  # noqa: E402
+    CLEANUP_ORDER,
+    explicit_cleanup_statements,
+)
+
+
+def cleanup_for_every_kind(identity):
+    """One representative object of every kind the cleanup planner knows."""
+    inventory = {
+        kind: [identity.prefix + kind.replace(' ', '_')] for kind in CLEANUP_ORDER
+    }
+    inventory['schema'] = [identity.schema]
+    return inventory
+
+
+def test_every_cleanup_kind_survives_the_gate(identity, policy):
+    statements = explicit_cleanup_statements(identity, cleanup_for_every_kind(identity))
+    assert len(statements) == len(CLEANUP_ORDER), statements
+    refused = {s: codes(s, policy) for s in statements if not evaluate_batch(s, policy).allowed}
+    assert refused == {}, refused
+
+
+def test_dropping_a_scoped_credential_is_not_dropping_a_database(identity, policy):
+    sql = f'DROP DATABASE SCOPED CREDENTIAL [{identity.name("c26", "cred")}];'
+    report = evaluate_batch(sql, policy)
+    assert report.allowed, report.as_dict()
+    assert 'DROP_DATABASE' not in report.codes
+
+
+def test_dropping_a_real_database_is_still_refused(policy):
+    assert 'DROP_DATABASE' in codes('DROP DATABASE [tpch];', policy)
+
+
+def test_altering_a_scoped_credential_is_refused_before_layer_two(policy):
+    # The DROP exception is narrow on purpose. ALTER gets no equivalent: layer 1
+    # refuses every ALTER outright, nothing the harness generates alters a
+    # credential, and widening the rule for a statement that is never emitted
+    # would trade a real guarantee for nothing.
+    assert 'STATEMENT_NOT_ALLOWED' in codes(
+        "ALTER DATABASE SCOPED CREDENTIAL [anything] WITH IDENTITY = 'MANAGED IDENTITY';",
+        policy,
+    )
+
+
+def test_altering_database_scoped_configuration_is_still_refused(policy):
+    # DATABASE SCOPED CONFIGURATION really does mutate a database setting.
+    assert 'ALTER_DATABASE' in codes(
+        'ALTER DATABASE SCOPED CONFIGURATION SET MAXDOP = 1;', policy
+    )
+
+
+def test_a_cleanup_statement_for_someone_elses_object_is_refused(identity, policy):
+    # The inventory is read off a live server. If it ever came back with an
+    # object the run did not create, the gate is the last thing between that
+    # name and a DROP.
+    assert not evaluate_batch(
+        'DROP EXTERNAL DATA SOURCE [prod_lake];', policy
+    ).allowed

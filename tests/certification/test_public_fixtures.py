@@ -252,3 +252,50 @@ def test_shapes_are_frozen_so_a_plan_cannot_mutate_them():
         shape.row_count = 1  # type: ignore[misc]
     assert isinstance(shape, PublicShape)
 
+
+
+# ---------------------------------------------------------------------------
+# The manifest is an artifact, and artifacts get shared
+# ---------------------------------------------------------------------------
+#
+# `hosts` was the one manifest field that never went through the redactor, so a
+# manifest committed or pasted anywhere carried the storage endpoints verbatim.
+# It cannot be redacted unconditionally: `verify` and `execute` rebuild the
+# safety policy from this list, and a redacted allowlist checked against real
+# SQL refuses every remote statement in the run. The `--emit-sql` manifest is
+# already full of cleartext SQL naming those hosts; the reporting one is not.
+
+def test_the_reporting_manifest_does_not_carry_a_tenant_endpoint(tmp_path):
+    document = {
+        'version': 1,
+        'hosts': ['contosotenant.blob.core.windows.net'],
+        'fixtures': {},
+    }
+    path = tmp_path / 'staging.json'
+    path.write_text(json.dumps(document), encoding='utf-8')
+
+    manifest = build_manifest(
+        target='azure', identity=RunIdentity('0123abcd'),
+        staging=Staging.load(str(path)),
+    )
+    assert 'contosotenant' not in json.dumps(manifest['hosts'])
+
+
+def test_a_documented_public_fixture_host_still_reads_plainly():
+    # Scrubbing Microsoft's own published sample endpoints would make the
+    # evidence irreproducible for no privacy gain.
+    manifest = build_manifest(
+        target='azure', identity=RunIdentity('0123abcd'),
+        staging=Staging.load(STAGING_PATH),
+    )
+    assert 'azureopendatastorage.blob.core.windows.net' in manifest['hosts']
+
+
+def test_the_executable_manifest_keeps_the_allowlist_usable():
+    # Redacting here would make the safety gate refuse the run it is gating.
+    staging = Staging.load(STAGING_PATH)
+    manifest = build_manifest(
+        target='azure', identity=RunIdentity('0123abcd'),
+        staging=staging, emit_sql=True,
+    )
+    assert set(manifest['hosts']) == set(staging.hosts)

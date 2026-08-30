@@ -173,7 +173,12 @@ def _generate(
         file_path_override=file_path_override,
     )
     if statement_kind == 'complete_ddl':
-        return generator.generate_complete_ddl(metadata, **common)
+        # The rerun truncate is opt-in because it is destructive against a table
+        # the document cannot prove it owns. Here it can: every certification
+        # target lives in this run's own schema under this run's own prefix, and
+        # the C29 rerun cell is precisely the test that a second execution ends
+        # at the same row count rather than double it.
+        return generator.generate_complete_ddl(metadata, rerun_truncate=True, **common)
     statements = generator.generate_all_statements(metadata, **common)
     if statement_kind == 'bulk_insert' and not include_prereq:
         # The cell runs after its prerequisite setup, which already created the
@@ -363,7 +368,20 @@ def build_manifest(
         'target': target,
         'platform': platform,
         'identity': identity.as_dict(),
-        'hosts': list(staging.hosts),
+        # The staging hosts are whatever the operator staged fixtures on, which
+        # may well be a tenant storage account, and a plain manifest is meant to
+        # be attachable to a pull request. So they are redacted like every other
+        # environment-bearing field - the maintained public fixture hosts pass
+        # through untouched, which is what keeps the plan readable.
+        #
+        # They stay in cleartext only in an --emit-sql manifest. That manifest
+        # already carries the raw SQL and is documented as machine-local, and
+        # `execute` rebuilds the host allowlist from this field: a redacted
+        # allowlist against raw SQL would refuse every remote statement.
+        'hosts': (
+            list(staging.hosts) if emit_sql
+            else [redactor.redact(host) for host in staging.hosts]
+        ),
         'allow_create_database': target == 'vm',
         'contains_raw_sql': emit_sql,
         'cells': cells,

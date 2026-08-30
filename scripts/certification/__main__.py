@@ -280,7 +280,20 @@ def adapters_env(suffix: str) -> str:
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except Exception as exc:  # noqa: BLE001 - the whole point is the last resort
+        # An unhandled exception prints its message and its whole chained
+        # traceback to stderr, and a driver's message routinely echoes the
+        # connection string back. Everything this harness writes to disk goes
+        # through the redactor; the one remaining way for an endpoint to reach a
+        # console or a CI log is a crash, so this is that gap closed.
+        redactor = Redactor()
+        print(
+            f'{type(exc).__name__}: {redactor.redact(str(exc))}',
+            file=sys.stderr,
+        )
+        return 2
 
 
 if __name__ == '__main__':

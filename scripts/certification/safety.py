@@ -176,9 +176,16 @@ _TRUNCATE_TABLE_RE = re.compile(r'TRUNCATE\s+TABLE\s+[\[A-Za-z_]', re.I)
 # ---------------------------------------------------------------------------
 
 _FORBIDDEN: Tuple[Tuple[str, Pattern[str], str], ...] = (
-    ('DROP_DATABASE', re.compile(r'\bDROP\s+DATABASE\b', re.I),
+    # The lookahead is load bearing. ``DATABASE SCOPED CREDENTIAL`` is a
+    # different object to a database, and without it this rule refuses the
+    # cleanup statement that drops a credential the run itself created, which
+    # leaves credential residue behind on a live server.
+    ('DROP_DATABASE', re.compile(r'\bDROP\s+DATABASE\b(?!\s+SCOPED\s+CREDENTIAL\b)', re.I),
      'DROP DATABASE is only produced by the cleanup planner for the disposable '
      'certification database and is never accepted from generated SQL'),
+    # ALTER needs no such exception: layer 1 refuses every ALTER outright, and
+    # nothing the harness generates alters a credential. Narrowing this rule to
+    # match would widen the gate for a statement that is never emitted.
     ('ALTER_DATABASE', re.compile(r'\bALTER\s+DATABASE\b', re.I),
      'altering database-scoped settings would mutate a pre-existing database'),
     ('ALTER_SERVER', re.compile(r'\bALTER\s+SERVER\b', re.I),

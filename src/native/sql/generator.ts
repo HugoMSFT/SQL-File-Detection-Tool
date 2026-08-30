@@ -1862,6 +1862,12 @@ export interface GenerateAllOptions {
      * `managed_identity` where the platform supports it.
      */
     authMethod?: string | null;
+    /**
+     * Emit the rerun truncate as a live statement rather than as commented
+     * guidance. Only honoured together with an explicit schema and table name;
+     * see {@link ownsLoadTarget}.
+     */
+    rerunTruncate?: boolean;
 }
 
 /**
@@ -1988,6 +1994,18 @@ const GUARD_RE = new RegExp(
     'i',
 );
 
+/**
+ * A line every SQL client treats as a batch separator. Nothing a guard wraps
+ * may cross one.
+ */
+const BATCH_SEPARATOR_RE = /^\s*GO\s*(?:--.*)?$/i;
+
+/**
+ * The schema a table lands in when nobody says otherwise - and therefore the
+ * one schema this generator must never assume it owns.
+ */
+export const DEFAULT_SCHEMA_NAME = 'dbo';
+
 /** The catalog form of an identifier: brackets off, doubling undone. */
 function unbracket(name: string): string {
     const trimmed = name.trim();
@@ -2003,11 +2021,34 @@ function unbracket(name: string): string {
  * Semicolons inside string literals do not end a statement - a
  * semicolon-delimited CSV puts one in `FIELD_TERMINATOR = ';'` - so the scan
  * tracks quoting rather than looking for the character.
+ *
+ * Bracket-quoted identifiers are skipped for the same reason, and it matters
+ * more than it looks: `escapeIdentifier` only doubles `]`, so a column called
+ * `Employee's ID` arrives here as `[Employee's ID]` with a live apostrophe in
+ * it. Treating that as the start of a string literal inverts the quote parity
+ * for the rest of the scan, and the statement then "ends" at some unrelated
+ * semicolon further down the document.
+ *
+ * The scan also stops at a `GO` batch separator. A guarded CREATE is wrapped in
+ * `BEGIN`/`END`, and a mis-parse that swallowed a `GO` would leave the first
+ * batch with an unterminated `BEGIN`, so this is the backstop that keeps a
+ * lexer surprise from breaking the whole document.
  */
 function statementEnd(lines: readonly string[], start: number): number {
     let inString = false;
+    let inBracket = false;
+    let inQuotedIdent = false;
     for (let index = start; index < lines.length; index += 1) {
         const line = lines[index];
+        if (
+            index > start &&
+            !inString &&
+            !inBracket &&
+            !inQuotedIdent &&
+            BATCH_SEPARATOR_RE.test(line)
+        ) {
+            return index - 1;
+        }
         let position = 0;
         while (position < line.length) {
             const char = line[position];
@@ -2019,8 +2060,28 @@ function statementEnd(lines: readonly string[], start: number): number {
                         inString = false;
                     }
                 }
+            } else if (inBracket) {
+                if (char === ']') {
+                    if (line[position + 1] === ']') {
+                        position += 1;
+                    } else {
+                        inBracket = false;
+                    }
+                }
+            } else if (inQuotedIdent) {
+                if (char === '"') {
+                    if (line[position + 1] === '"') {
+                        position += 1;
+                    } else {
+                        inQuotedIdent = false;
+                    }
+                }
             } else if (char === "'") {
                 inString = true;
+            } else if (char === '[') {
+                inBracket = true;
+            } else if (char === '"') {
+                inQuotedIdent = true;
             } else if (char === '-' && line.slice(position, position + 2) === '--') {
                 break;
             } else if (char === ';') {
@@ -2102,28 +2163,73 @@ function loadsInto(section: string, targetTable: string): boolean {
 }
 
 /**
- * Empty the load target so a second run of the document does not double it.
+ * The rerun-safety batch for the load target.
  *
  * Idempotence is not only about DDL. A script whose CREATEs are all guarded
  * still doubles its data on the second run, and a row count that quietly went
  * from 150 to 300 is a worse outcome than an error.
+ *
+ * Emptying the target is only safe when the document can be said to own it,
+ * which is why `active` exists. A file called `orders.csv` derives the table
+ * name `dbo.orders` - the exact name a TPC-H warehouse already uses - so the
+ * default output only ever *describes* the truncate. The live statement is
+ * emitted when the caller both asked for rerun safety and named a target of
+ * their own.
  */
-function truncateBeforeLoad(targetTable: string): string[] {
-    return [
+function truncateBeforeLoad(targetTable: string, active: boolean): string[] {
+    const statement = [
+        `IF OBJECT_ID(N'${quoteLiteral(targetTable)}', N'U') IS NOT NULL`,
+        `    TRUNCATE TABLE ${targetTable};`,
+    ];
+    const lines = [
         '-- ====================================================================',
         '-- RERUN SAFETY',
         '-- ====================================================================',
-        '-- This document is safe to run more than once: every CREATE above is',
-        '-- guarded, and the load target is emptied here so a second run does',
-        '-- not insert the same rows twice.',
-        `-- WARNING: this empties ${targetTable}. That table is meant to be`,
-        '-- owned by this script. If a table of that name already holds data you',
-        '-- care about, change the target name before running (--table/--schema).',
-        '-- Delete this batch if you mean to append to existing data.',
-        `IF OBJECT_ID(N'${quoteLiteral(targetTable)}', N'U') IS NOT NULL`,
-        `    TRUNCATE TABLE ${targetTable};`,
-        'GO',
+        '-- Every CREATE above is guarded, so re-running this document will not',
+        '-- fail on an object that already exists. Data is the other half: the',
+        '-- load below appends, so a second run inserts the same rows into',
+        `-- ${targetTable} again.`,
     ];
+    if (active) {
+        lines.push(
+            '--',
+            `-- Emptying ${targetTable} first is what makes the row count stable`,
+            '-- across runs. It is enabled here because you named this target',
+            '-- explicitly, so it is not a table this tool guessed at. Delete this',
+            '-- batch if you mean to append to what is already there.',
+        );
+        return [...lines, ...statement, 'GO'];
+    }
+    lines.push(
+        '--',
+        `-- Emptying ${targetTable} first would make the row count stable, and`,
+        '-- the two lines below do exactly that. They are commented out because',
+        '-- this document cannot prove it created that table: the name was',
+        '-- derived from the file name in the default schema, and a table of the',
+        '-- same name may already exist and hold data that has nothing to do',
+        '-- with this file. Silently emptying it would be data loss.',
+        '--',
+        "-- Uncomment them once you have confirmed the table is this document's",
+        '-- to empty, or regenerate with an explicit schema and table name you',
+        '-- own (--schema/--table) to have them emitted live.',
+    );
+    return [...lines, ...statement.map((line) => `-- ${line}`)];
+}
+
+/**
+ * True when the caller named the load target rather than inheriting it.
+ *
+ * Both halves matter. An explicit table name in `dbo` is still a name that
+ * collides with whatever else lives in `dbo`, and the run-owned schema is what
+ * actually separates this document's objects from everyone else's.
+ */
+export function ownsLoadTarget(
+    tableName: string | null | undefined,
+    schemaName: string | null | undefined,
+): boolean {
+    const named = Boolean((tableName ?? '').trim());
+    const schema = (schemaName ?? '').trim().toLowerCase();
+    return named && schema !== '' && schema !== DEFAULT_SCHEMA_NAME;
 }
 
 /**
@@ -2134,8 +2240,14 @@ function truncateBeforeLoad(targetTable: string): string[] {
  * fixing a typo three sections down - and the first live run proved it:
  * re-executing the document failed at error 46502 because the external data
  * source it had just created still existed. So every CREATE here is guarded by
- * an existence check, and the load empties its target first so a second run
- * does not double the rows.
+ * an existence check.
+ *
+ * Data needs the same treatment, but it cannot be handled the same way. A
+ * guarded CREATE is harmless when the object already exists; emptying a table
+ * that already exists is not. The default output therefore explains the
+ * truncate and leaves it commented out. Pass `rerunTruncate` together with an
+ * explicit schema and table name to have it emitted live - see
+ * {@link ownsLoadTarget} for why both are required.
  */
 export function generateCompleteDdl(
     metadata: GeneratorMetadata,
@@ -2193,13 +2305,16 @@ export function generateCompleteDdl(
         `[${escapeIdentifier(schemaName)}].` +
         `[${escapeIdentifier(resolveTableName(metadata, options.tableName))}]`;
     let truncated = false;
+    const truncateActive =
+        Boolean(options.rerunTruncate) &&
+        ownsLoadTarget(options.tableName, options.schemaName);
     for (const key of orderedSections) {
         const section = (statements[key] || '').trim();
         if (!section) {
             continue;
         }
         if (!truncated && loadsInto(section, targetTable)) {
-            parts.push(truncateBeforeLoad(targetTable).join('\n'));
+            parts.push(truncateBeforeLoad(targetTable, truncateActive).join('\n'));
             truncated = true;
         }
         parts.push(section);
