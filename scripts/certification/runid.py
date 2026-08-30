@@ -34,6 +34,11 @@ RUN_ID_RE = re.compile(r'^[0-9a-f]{8}$')
 #: Matches any identifier belonging to *some* certification run.
 ANY_RUN_OBJECT_RE = re.compile(rf'^{NAMESPACE}_[0-9a-f]{{8}}(?:_.*)?$', re.IGNORECASE)
 
+#: The only shape a name read back from a live server may have before it is
+#: interpolated into cleanup DDL. Anything carrying a bracket, a quote, a
+#: semicolon or a comment marker fails here and is left alone.
+OWNED_NAME_RE = re.compile(r'^[a-z0-9_]{1,128}$')
+
 
 class RunIdentityError(ValueError):
     """Raised when a run identity is malformed."""
@@ -82,8 +87,16 @@ class RunIdentity:
         return f'[{self.schema}].[{self.name(*parts)}]'
 
     def owns(self, identifier: str) -> bool:
-        """True when ``identifier`` belongs to *this* run."""
+        """True when ``identifier`` belongs to *this* run.
+
+        The check is deliberately strict about shape, not just prefix. A name
+        read back from a live server is interpolated into ``DROP`` DDL, so an
+        identifier carrying ``]``, ``;``, a quote or a comment marker must not
+        be recognised as ours no matter what it starts with.
+        """
         bare = identifier.strip().strip('[]"').lower()
+        if not OWNED_NAME_RE.match(bare):
+            return False
         return bare == self.schema or bare.startswith(self.prefix)
 
     def as_dict(self) -> dict:

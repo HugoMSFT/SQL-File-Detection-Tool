@@ -14,9 +14,11 @@ import * as path from 'path';
 import { describe, it } from 'node:test';
 
 import {
+    generateBulkInsert,
     generateCompleteDdl,
     generateCredentialSetup,
     generateExternalFileFormat,
+    generateExternalTable,
 } from '../../native/sql/generator';
 import { generateOpenrowset } from '../../native/sql/openrowset';
 import {
@@ -184,10 +186,34 @@ describe('live certification evidence', () => {
                 storageUrl: 'https://acct.blob.core.windows.net/container/doc.json',
             },
         );
-        if (/SINGLE_N?CLOB/.test(code(sql))) {
-            assert.match(code(sql), new RegExp(`TestDS${expect.data_source_suffix}`));
-            assert.match(sql, new RegExp(`TYPE\\s*=\\s*${expect.data_source_type}`));
-        }
+        // Unconditional: a guarded assertion would pass silently if the
+        // generator regressed to row framing for a whole document.
+        assert.match(code(sql), /SINGLE_N?CLOB/);
+        assert.match(code(sql), new RegExp(`TestDS${expect.data_source_suffix}`));
+        assert.match(sql, new RegExp(`TYPE\\s*=\\s*${expect.data_source_type}`));
+    });
+
+    it('R05: NDJSON is row framed and never read as one document', () => {
+        const sql = generateOpenrowset(
+            {
+                ...csvMetadata(),
+                file_name: 'lines.jsonl',
+                file_path: 'C:/data/lines.jsonl',
+                file_type: 'json',
+                json_format: 'ndjson',
+            } as GeneratorMetadata,
+            {
+                dataSource: 'TestDS',
+                targetPlatform: 'azure_sql_db',
+                storageUrl: 'https://acct.blob.core.windows.net/container/lines.jsonl',
+            },
+        );
+        assert.match(code(sql), /ROWTERMINATOR/);
+        assert.doesNotMatch(
+            code(sql),
+            /SINGLE_N?CLOB/,
+            'concatenated NDJSON is not one JSON document',
+        );
     });
 
     it('R08: USE_TYPE_DEFAULT is FALSE and always stated', () => {
@@ -201,26 +227,71 @@ describe('live certification evidence', () => {
     });
 
     it('R12: ORC is DDL-accepted but its data path is not certified', () => {
-        const expect = rule('R12').expect as {
-            ddl_accepted: boolean;
-            data_path_certified: boolean;
-        };
-        assert.strictEqual(expect.ddl_accepted, true);
-        assert.strictEqual(expect.data_path_certified, false);
+        const expect = rule('R12').expect as { guidance_must_not_say: string };
         assert.ok(
             [...DDL_ONLY_CERTIFIED_FORMATS].some((f) => f.toUpperCase() === 'ORC'),
             'ORC must be marked DDL-only, never fully supported',
         );
+        const sql = generateExternalFileFormat(
+            { ...csvMetadata(), file_type: 'orc', file_name: 'part.orc' } as GeneratorMetadata,
+            { formatName: 'sqlfdt_cert_fmt', targetPlatform: 'azure_sql_db' },
+        );
+        assert.match(sql, /FORMAT_TYPE\s*=\s*ORC/);
+        assert.ok(
+            !sql.toLowerCase().includes(expect.guidance_must_not_say),
+            'ORC guidance must not claim the data path is fully supported',
+        );
+    });
+
+    it('R07: Excel and Iceberg get guidance from both DDL entry points', () => {
+        const expect = rule('R07').expect as {
+            file_types: string[];
+            generated_code_excludes: string[];
+        };
+        for (const fileType of expect.file_types) {
+            const metadata = {
+                ...csvMetadata(),
+                file_type: fileType,
+                file_name: `book.${fileType}`,
+                file_path: `C:/data/book.${fileType}`,
+            } as GeneratorMetadata;
+            const outputs = {
+                format: generateExternalFileFormat(metadata, {
+                    formatName: 'sqlfdt_cert_fmt',
+                    targetPlatform: 'azure_sql_db',
+                }),
+                table: generateExternalTable(metadata, {
+                    tableName: 'sqlfdt_cert_t',
+                    targetPlatform: 'azure_sql_db',
+                }),
+            };
+            for (const [where, sql] of Object.entries(outputs)) {
+                for (const banned of expect.generated_code_excludes) {
+                    assert.ok(!sql.includes(banned), `${fileType}/${where}: ${banned}`);
+                }
+                // An empty format type must never reach the platform lookup and
+                // produce "CREATE EXTERNAL ... ()" with a generic message.
+                assert.doesNotMatch(sql, /EXTERNAL (FILE FORMAT|TABLE) \(\)/, `${fileType}/${where}`);
+                assert.match(sql, /not available|not supported|unsupported/i);
+            }
+        }
     });
 
     it('R02: the disproven UTF-16 hypothesis did not change the generator', () => {
-        const rec = rule('R02');
-        assert.strictEqual(rec.evidence, 'live');
-        assert.ok(
-            (rec.expect as { forbidden_conclusion: string }).forbidden_conclusion.includes(
-                'always wrong',
-            ),
+        const expect = rule('R02').expect as { generated_code_matches: string };
+        const sql = generateBulkInsert(
+            {
+                ...csvMetadata(),
+                encoding: 'utf-16-le',
+                codepage: '1200',
+                file_name: 'wide.csv',
+                file_path: 'C:/data/wide.csv',
+            } as GeneratorMetadata,
+            { tableName: 'sqlfdt_cert_t', targetPlatform: 'sql_server_2025' },
         );
+        // The static hypothesis said CODEPAGE 1200 always fails; live evidence
+        // disproved it, so one of the two certified forms must still be emitted.
+        assert.match(code(sql), new RegExp(expect.generated_code_matches));
     });
 
     it('every live rule names the engines that produced it', () => {

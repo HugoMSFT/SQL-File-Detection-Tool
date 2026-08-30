@@ -69,3 +69,26 @@ def test_strip_sql_comments_removes_both_comment_styles():
     assert 'a' not in stripped
     assert 'b' not in stripped
     assert 'SELECT 1;' in stripped and 'SELECT 2;' in stripped
+
+
+def test_escaped_right_bracket_does_not_desync_the_masker():
+    """A doubled ]] is part of the name, not the end of it.
+
+    Getting this wrong is not cosmetic: the masker would treat the rest of the
+    identifier as code, hit the stray quote inside it, decide a string literal
+    had started, and blank the remainder of the batch. Everything downstream --
+    the GO split and every safety scan -- then reads text the server would
+    never see.
+    """
+    sql = "SELECT [a]]'b] FROM [t];"
+    masked = mask_sql(sql, mask_identifiers=True)
+    assert masked.endswith('FROM [ ];')
+    assert masked.startswith('SELECT [')
+    assert "'" not in masked
+
+
+def test_escaped_right_bracket_does_not_hide_a_go_boundary():
+    script = "SELECT [a]]'b];\nGO\nDROP TABLE [dbo].[orders];\n"
+    batches = split_batches(script)
+    assert len(batches) == 2
+    assert 'DROP TABLE' in batches[1].text

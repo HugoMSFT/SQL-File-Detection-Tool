@@ -72,6 +72,7 @@ import {
     generateColumnDefinitions,
     generateOpenjsonColumns,
     jsonRowFrameOptions,
+    jsonSingleLobOptions,
     masterKeyLines,
     notSupportedMessage,
     openrowsetWithSchema,
@@ -410,9 +411,11 @@ function bulkInsertFabricAlternatives(
         return header
             .concat([
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
-                '-- SINGLE_CLOB cannot be combined with DATA_SOURCE, so the CSV',
-                '-- reader is framed with non-printing characters to return the',
-                '-- whole document as one value, then parsed with OPENJSON.',
+                '-- Fabric has no TYPE = BLOB_STORAGE data source, which is what',
+                '-- makes SINGLE_CLOB usable elsewhere, so the CSV reader is framed',
+                '-- with non-printing characters to return each document as one',
+                '-- value, then parsed with OPENJSON. This also reads NDJSON',
+                '-- correctly, because every line arrives as its own row.',
                 '',
                 `INSERT INTO [${schemaName}].[${tableName}]`,
                 'SELECT j.*',
@@ -699,6 +702,13 @@ export function generateExternalFileFormat(
     );
 
     const config = determineFormatConfig(metadata);
+    if (!config.format_type) {
+        return notSupportedMessage(
+            'CREATE EXTERNAL FILE FORMAT',
+            targetPlatform,
+            noExternalFormatGuidance(metadata.file_type ?? ''),
+        );
+    }
     const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
@@ -1244,10 +1254,24 @@ export function generateJsonFunctions(
         String(metadata.file_path ?? 'C:/data/file.json').split('\\').join('/'),
     );
     let jsonBulkSource: string | null = null;
+    // The single-LOB read needs the separate TYPE = BLOB_STORAGE source, which
+    // only exists on the platforms that can have one.
+    let jsonSingleLobSource: string | null = null;
+    let jsonSingleLobIdent = '';
+    let jsonSingleLobPath = '';
     if (!isOnPrem || storageUrl) {
         const [, jsonRelative] = externalSourceParts(storageUrl, fileName, targetPlatform);
         filePathSql = quoteLiteral(jsonRelative);
         jsonBulkSource = quoteLiteral(dataSource || 'MyDataSource');
+        if (bulkDataSourceSupported(targetPlatform, storageUrl)) {
+            const [bulkIdent, bulkLiteral] = bulkDataSourceNames(
+                dataSource || 'MyDataSource',
+            );
+            const [, bulkRelative] = azureBulkStorageParts(storageUrl, fileName);
+            jsonSingleLobIdent = bulkIdent;
+            jsonSingleLobSource = bulkLiteral;
+            jsonSingleLobPath = quoteLiteral(bulkRelative);
+        }
     }
 
     const lines = [
@@ -1267,14 +1291,66 @@ export function generateJsonFunctions(
             ? openjsonCols.join(',\n')
             : '        [data] NVARCHAR(MAX)';
 
-    if (jsonBulkSource) {
+    if (jsonBulkSource && jsonFormat === 'ndjson') {
+        // Every line is its own document. Reading the file whole would hand
+        // OPENJSON a concatenation that is not valid JSON, so the rows are
+        // framed out first and the rest of the script works on one of them.
+        lines.push(
+            '-- ----------------------------------------------------------------',
+            '-- 1. OPENROWSET(BULK) + OPENJSON   (NDJSON: one document per line)',
+            '--    Row framing needs the abs:// / adls:// virtualization source;',
+            '--    the https:// BLOB_STORAGE connector rejects the framing',
+            '--    options with error 5369.',
+            '-- ----------------------------------------------------------------',
+            '-- Every line at once:',
+            'SELECT [j].*',
+            'FROM OPENROWSET(',
+            `    BULK '${filePathSql}',`,
+            `    DATA_SOURCE     = '${jsonBulkSource}',`,
+        );
+        lines.push(...jsonRowFrameOptions());
+        lines.push(
+            ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
+            'CROSS APPLY OPENJSON([src].json_doc)',
+            'WITH (',
+            openjsonWith,
+            ') AS [j];',
+            '',
+            '-- The statements below work on one document at a time, so they',
+            '-- read a single line. Concatenated NDJSON is not one document.',
+            'DECLARE @json NVARCHAR(MAX);',
+            'SELECT TOP (1) @json = json_doc',
+            'FROM OPENROWSET(',
+            `    BULK '${filePathSql}',`,
+            `    DATA_SOURCE     = '${jsonBulkSource}',`,
+        );
+        lines.push(...jsonRowFrameOptions());
+        lines.push(') WITH (json_doc NVARCHAR(MAX)) AS [src];', '');
+    } else if (jsonBulkSource && jsonSingleLobSource) {
+        lines.push(
+            '-- ----------------------------------------------------------------',
+            '-- 1. OPENROWSET(BULK) + OPENJSON',
+            `--    Whole document through the TYPE = BLOB_STORAGE source`,
+            `--    [${jsonSingleLobIdent}]; BULK is relative to that source root.`,
+            '--    Certified live: the single-LOB options work through a',
+            '--    BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+            '-- ----------------------------------------------------------------',
+            'DECLARE @json NVARCHAR(MAX);',
+            'SELECT @json = BulkColumn',
+            'FROM OPENROWSET(',
+            `    BULK '${jsonSingleLobPath}',`,
+            `    DATA_SOURCE     = '${jsonSingleLobSource}',`,
+        );
+        lines.push(...jsonSingleLobOptions(metadata.encoding));
+        lines.push(') AS [src];', '');
+    } else if (jsonBulkSource) {
         lines.push(
             '-- ----------------------------------------------------------------',
             '-- 1. OPENROWSET(BULK) + OPENJSON',
             `--    BULK is relative to external data source [${jsonBulkSource}].`,
-            '--    SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined',
-            '--    with DATA_SOURCE, so the CSV reader is framed with',
-            '--    non-printing characters to return the whole document.',
+            '--    This target has no TYPE = BLOB_STORAGE data source, which is',
+            '--    what makes the single-LOB options usable, so the CSV reader is',
+            '--    framed with non-printing characters to return the document.',
             '-- ----------------------------------------------------------------',
             'DECLARE @json NVARCHAR(MAX);',
             'SELECT @json = json_doc',

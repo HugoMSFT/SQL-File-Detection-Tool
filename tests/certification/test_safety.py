@@ -134,3 +134,57 @@ def test_host_allowlist_refuses_unknown_endpoints(identity, policy):
         "WITH (LOCATION = 'https://evil.blob.core.windows.net/c');"
     )
     assert 'FOREIGN_HOST' in codes(sql, policy)
+
+
+def test_escaped_bracket_cannot_smuggle_a_dbo_drop_past_the_gate(policy, identity):
+    """The masker used to end a bracketed name at the first ], so a column
+    called [a]]'b] left an unbalanced quote, blanked the rest of the batch and
+    made every scan look at nothing. The DROP below has to be seen.
+    """
+    sql = (
+        'CREATE TABLE [{schema}].[{prefix}t] (\n'
+        "    [a]]'b] INT,\n"
+        '    [c] INT\n'
+        ');\n'
+        'DROP TABLE [dbo].[orders];\n'
+    ).format(schema=identity.schema, prefix=identity.prefix)
+    verdict = evaluate_batch(sql, policy)
+    codes = {v.code for v in verdict.violations}
+    assert verdict.allowed is False
+    assert 'FORBIDDEN_SCHEMA_DBO' in codes
+    assert 'PROTECTED_OBJECT' in codes
+
+
+def test_cleanup_names_are_filtered_and_bracket_escaped(identity):
+    """Cleanup names come off a live server, not out of the plan."""
+    from certification.manifest import explicit_cleanup_statements
+
+    hostile = identity.prefix + "x] ; DROP TABLE dbo.orders --"
+    statements = explicit_cleanup_statements(
+        identity,
+        {
+            'external file format': [hostile, identity.prefix + 'fmt'],
+            'table': ['someone_elses_table'],
+        },
+    )
+    assert statements == [
+        'DROP EXTERNAL FILE FORMAT [{}fmt];'.format(identity.prefix)
+    ]
+    assert not identity.owns(hostile)
+    assert not identity.owns('someone_elses_table')
+
+
+def test_cleanup_statements_pass_their_own_safety_gate(identity, policy):
+    from certification.manifest import explicit_cleanup_statements
+
+    statements = explicit_cleanup_statements(
+        identity,
+        {
+            'table': [identity.prefix + 'boundary'],
+            'external data source': [identity.prefix + 'src'],
+            'schema': [identity.schema],
+        },
+    )
+    assert statements
+    for statement in statements:
+        assert evaluate_batch(statement, policy).allowed, statement

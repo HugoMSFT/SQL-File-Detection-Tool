@@ -183,7 +183,9 @@ def cmd_execute(args: argparse.Namespace) -> int:
                     connection, cell, policy=policy, redactor=redactor, options=options
                 )
             )
-        cleanup = run_cleanup(connection, identity, redactor=redactor)
+        cleanup = run_cleanup(
+            connection, identity, redactor=redactor, policy=policy
+        )
         evidence.inventory_after = cleanup['inventory_after']
         evidence.cleanup_verified = cleanup['verified']
         evidence.residue = cleanup['residue']

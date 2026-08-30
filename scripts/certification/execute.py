@@ -286,13 +286,29 @@ def run_cleanup(
     identity: RunIdentity,
     *,
     redactor: Redactor,
+    policy: Optional[SafetyPolicy] = None,
     drop_database: bool = False,
 ) -> Dict[str, Any]:
     """Drop everything the run created, then prove it is gone."""
     inventory = read_inventory(connection, identity)
     statements = explicit_cleanup_statements(identity, inventory)
+    gate = policy if policy is not None else SafetyPolicy(identity)
     executed: List[Dict[str, Any]] = []
     for statement in statements:
+        # Cleanup is built from names read back off a live server, so it goes
+        # through the same gate as everything else. A statement that cannot be
+        # proven safe is recorded and skipped, not sent.
+        verdict = evaluate_batch(statement, gate)
+        if not verdict.allowed:
+            executed.append(
+                {
+                    'statement': statement,
+                    'ok': False,
+                    'blocked': True,
+                    'violations': sorted({v.code for v in verdict.violations}),
+                }
+            )
+            continue
         try:
             connection.execute(statement)
             executed.append({'statement': statement, 'ok': True})

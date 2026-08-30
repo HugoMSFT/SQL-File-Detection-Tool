@@ -99,10 +99,19 @@ def mask_sql(
                 blank(i + 1, j - 1)
             i = j
         elif ch == '[':
+            # A bracketed identifier ends at a single ']'; a doubled ']]' is an
+            # escaped bracket and stays inside the name. Getting this wrong
+            # desynchronises the masker from the parser, and the safety gate
+            # then scans text the server would never see.
             j = i + 1
-            while j < n and sql[j] != ']':
+            while j < n:
+                if sql[j] == ']':
+                    if j + 1 < n and sql[j + 1] == ']':
+                        j += 2
+                        continue
+                    j += 1
+                    break
                 j += 1
-            j = min(j + 1, n)
             if mask_identifiers:
                 blank(i + 1, j - 1)
             i = j

@@ -145,6 +145,48 @@ export function generateOpenrowset(
 }
 
 /** SQL Server 2019 OPENROWSET: local paths plus Azure Blob bulk access. */
+/**
+ * NDJSON read for a cloud source.
+ *
+ * Every line is its own document, so the file is framed into rows and each row
+ * is parsed on its own. There is deliberately no whole-file read: handing
+ * OPENJSON a concatenation of documents is not valid JSON.
+ */
+function ndjsonCloudLines(
+    metadata: GeneratorMetadata,
+    bulkPath: string,
+    sourceName: string,
+): string[] {
+    const lines = [
+        '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+        '-- Row framing needs the abs:// / adls:// virtualization source. The',
+        '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+        '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
+        '-- The file is never read whole here: concatenated NDJSON is not one',
+        '-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.',
+    ];
+    const cols = generateOpenjsonColumns(metadata, 4);
+    lines.push(
+        cols.length > 0 ? 'SELECT TOP (100) [j].*' : 'SELECT TOP (100) [src].doc',
+        'FROM OPENROWSET(',
+        `    BULK '${bulkPath}',`,
+        `    DATA_SOURCE     = '${sourceName}',`,
+    );
+    lines.push(...jsonRowFrameOptions(4, '0x0a'));
+    if (cols.length > 0) {
+        lines.push(
+            ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
+            'CROSS APPLY OPENJSON([src].doc)',
+            'WITH (',
+            cols.join(',\n'),
+            ') AS [j];',
+        );
+    } else {
+        lines.push(') WITH (doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line');
+    }
+    return lines;
+}
+
 function openrowsetSqlServer2019(
     metadata: GeneratorMetadata,
     lines: string[],
@@ -429,22 +471,8 @@ function openrowsetAzure(
         const [, bulkRelative] = azureBulkStorageParts(storageUrl, fileName);
         const lob = singleLobKeyword(metadata.encoding);
         if (jsonFormat === 'ndjson') {
-            lines.push(
-                '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-                '-- Row framing needs the abs:// virtualization source. The https://',
-                '-- BLOB_STORAGE connector rejects FIELDTERMINATOR / FIELDQUOTE /',
-                '-- ROWTERMINATOR with error 5369.',
-                'SELECT TOP (100) doc',
-                'FROM OPENROWSET(',
-                `    BULK '${bulkPath}',`,
-                `    DATA_SOURCE     = '${sourceName}',`,
-            );
-            lines.push(...jsonRowFrameOptions(4, '0x0a'));
-            lines.push(
-                ') WITH (doc NVARCHAR(MAX)) AS [src];' +
-                    '  -- LF: one JSON document per line',
-                '',
-            );
+            lines.push(...ndjsonCloudLines(metadata, bulkPath, sourceName));
+            return lines.join('\n');
         }
         lines.push(
             '-- ---- Whole document -> OPENJSON --------------------------------------',
@@ -595,6 +623,9 @@ function openrowsetSqlServerObjectStorage(
     );
     const bulkPath = quoteLiteral(relativePath);
     const sourceName = quoteLiteral(dataSource);
+    // The companion TYPE = BLOB_STORAGE source exists only for Azure URLs; for
+    // S3 there is nothing to reference and no whole-file read to offer.
+    const blobStorageBulkAvailable = storageUrlKind(storageUrl) === 'azure';
 
     lines.push(
         '-- SQL Server 2022+ reads external files from ABS, ADLS Gen2,',
@@ -627,22 +658,22 @@ function openrowsetSqlServerObjectStorage(
         const [, bulkRelative] = azureBulkStorageParts(storageUrl, fileName);
         const lob = singleLobKeyword(metadata.encoding);
         if (jsonFormat === 'ndjson') {
+            lines.push(...ndjsonCloudLines(metadata, bulkPath, sourceName));
+            return lines.join('\n');
+        }
+        if (!blobStorageBulkAvailable) {
+            // A TYPE = BLOB_STORAGE source needs an https:// Azure endpoint, so
+            // none is created for S3 and the single-LOB read has nothing to go
+            // through. Saying so beats emitting a source that does not exist.
             lines.push(
-                '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-                '-- Row framing needs the abs:// / adls:// virtualization source. The',
-                '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
-                '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
-                'SELECT TOP (100) doc',
-                'FROM OPENROWSET(',
-                `    BULK '${bulkPath}',`,
-                `    DATA_SOURCE     = '${sourceName}',`,
+                '-- ---- JSON -> OPENJSON ------------------------------------------------',
+                "-- SQL Server has no OPENROWSET FORMAT = 'JSON', and the whole-document",
+                `-- ${lob} read needs a TYPE = BLOB_STORAGE data source, which only`,
+                '-- accepts an https:// Azure endpoint. This location is not reachable',
+                '-- that way, so stage the document in Azure Blob Storage or ADLS Gen2',
+                '-- to read it whole.',
             );
-            lines.push(...jsonRowFrameOptions(4, '0x0a'));
-            lines.push(
-                ') WITH (doc NVARCHAR(MAX)) AS [src];' +
-                    '  -- LF: one JSON document per line',
-                '',
-            );
+            return lines.join('\n');
         }
         lines.push(
             '-- ---- JSON -> OPENJSON ------------------------------------------------',
@@ -682,8 +713,11 @@ function openrowsetSqlServerObjectStorage(
     lines.push(...csvReaderOptions(metadata));
     lines.push(') WITH (');
     lines.push(columnBody(metadata));
+    lines.push(') AS [result];');
+    if (!blobStorageBulkAvailable) {
+        return lines.join('\n');
+    }
     lines.push(
-        ') AS [result];',
         '',
         '-- ---- Whole file as one value (small files) ---------------------------',
         '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',

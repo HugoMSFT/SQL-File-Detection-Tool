@@ -652,6 +652,44 @@ class SQLGenerator:
             f'  -- {_sql_comment(encoding)}',
         ]
 
+    def _ndjson_cloud_lines(self, metadata: Dict[str, Any], bulk_path: str,
+                            source_name: str) -> List[str]:
+        """NDJSON read for a cloud source.
+
+        Every line is its own document, so the file is framed into rows and
+        each row is parsed on its own. There is deliberately no whole-file
+        read: handing OPENJSON a concatenation of documents is not valid JSON.
+        """
+        lines = [
+            '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+            '-- Row framing needs the abs:// / adls:// virtualization source. The',
+            '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+            '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
+            '-- The file is never read whole here: concatenated NDJSON is not one',
+            '-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.',
+        ]
+        cols = self._generate_openjson_columns(metadata, indent=4)
+        lines += [
+            'SELECT TOP (100) [j].*' if cols else 'SELECT TOP (100) [src].doc',
+            'FROM OPENROWSET(',
+            f"    BULK '{bulk_path}',",
+            f"    DATA_SOURCE     = '{source_name}',",
+        ]
+        lines += self._json_row_frame_options(row_terminator='0x0a')
+        if cols:
+            lines += [
+                ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
+                'CROSS APPLY OPENJSON([src].doc)',
+                'WITH (',
+                ',\n'.join(cols),
+                ') AS [j];',
+            ]
+        else:
+            lines.append(
+                ') WITH (doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line'
+            )
+        return lines
+
     @staticmethod
     def _json_row_frame_options(indent: int = 4,
                                 row_terminator: str = '0x0b') -> List[str]:
@@ -1140,9 +1178,11 @@ class SQLGenerator:
         if file_type == 'json':
             return '\n'.join(header + [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
-                '-- SINGLE_CLOB cannot be combined with DATA_SOURCE, so the CSV',
-                '-- reader is framed with non-printing characters to return the',
-                '-- whole document as one value, then parsed with OPENJSON.',
+                '-- Fabric has no TYPE = BLOB_STORAGE data source, which is what',
+                '-- makes SINGLE_CLOB usable elsewhere, so the CSV reader is framed',
+                '-- with non-printing characters to return each document as one',
+                '-- value, then parsed with OPENJSON. This also reads NDJSON',
+                '-- correctly, because every line arrives as its own row.',
                 '',
                 f'INSERT INTO [{schema_name}].[{table_name}]',
                 'SELECT j.*',
@@ -1552,22 +1592,9 @@ class SQLGenerator:
             _, bulk_relative = _azure_bulk_storage_parts(storage_url, file_name)
             lob = self._single_lob_keyword(metadata)
             if json_format == 'ndjson':
-                lines += [
-                    '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-                    '-- Row framing needs the abs:// virtualization source. The https://',
-                    '-- BLOB_STORAGE connector rejects FIELDTERMINATOR / FIELDQUOTE /',
-                    '-- ROWTERMINATOR with error 5369.',
-                    'SELECT TOP (100) doc',
-                    'FROM OPENROWSET(',
-                    f'    BULK \'{bulk_path}\',',
-                    f'    DATA_SOURCE     = \'{source_name}\',',
-                ]
-                lines += self._json_row_frame_options(row_terminator='0x0a')
-                lines += [
-                    ') WITH (doc NVARCHAR(MAX)) AS [src];'
-                    '  -- LF: one JSON document per line',
-                    '',
-                ]
+                lines += self._ndjson_cloud_lines(
+                    metadata, bulk_path, source_name)
+                return '\n'.join(lines)
             lines += [
                 '-- ---- Whole document -> OPENJSON --------------------------------------',
                 f'-- {lob} needs the TYPE = BLOB_STORAGE data source [{bulk_ident}],',
@@ -1725,6 +1752,9 @@ class SQLGenerator:
         )
         bulk_path = _quote_literal(relative_path)
         source_name = _quote_literal(data_source)
+        # The companion TYPE = BLOB_STORAGE source exists only for Azure URLs;
+        # for S3 there is nothing to reference and no whole-file read to offer.
+        blob_storage_bulk_available = _storage_url_kind(storage_url) == 'azure'
 
         lines += [
             f'-- SQL Server 2022+ reads external files from ABS, ADLS Gen2,',
@@ -1757,22 +1787,23 @@ class SQLGenerator:
             _, bulk_relative = _azure_bulk_storage_parts(storage_url, file_name)
             lob = self._single_lob_keyword(metadata)
             if json_format == 'ndjson':
+                lines += self._ndjson_cloud_lines(
+                    metadata, bulk_path, source_name)
+                return '\n'.join(lines)
+            if not blob_storage_bulk_available:
+                # A TYPE = BLOB_STORAGE source needs an https:// Azure
+                # endpoint, so none is created for S3 and the single-LOB read
+                # has nothing to go through. Saying so beats emitting a source
+                # that does not exist.
                 lines += [
-                    '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-                    '-- Row framing needs the abs:// / adls:// virtualization source. The',
-                    '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
-                    '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
-                    'SELECT TOP (100) doc',
-                    'FROM OPENROWSET(',
-                    f'    BULK \'{bulk_path}\',',
-                    f'    DATA_SOURCE     = \'{source_name}\',',
+                    '-- ---- JSON -> OPENJSON ------------------------------------------------',
+                    '-- SQL Server has no OPENROWSET FORMAT = \'JSON\', and the whole-document',
+                    f'-- {lob} read needs a TYPE = BLOB_STORAGE data source, which only',
+                    '-- accepts an https:// Azure endpoint. This location is not reachable',
+                    '-- that way, so stage the document in Azure Blob Storage or ADLS Gen2',
+                    '-- to read it whole.',
                 ]
-                lines += self._json_row_frame_options(row_terminator='0x0a')
-                lines += [
-                    ') WITH (doc NVARCHAR(MAX)) AS [src];'
-                    '  -- LF: one JSON document per line',
-                    '',
-                ]
+                return '\n'.join(lines)
             lines += [
                 '-- ---- JSON -> OPENJSON ------------------------------------------------',
                 '-- SQL Server has no OPENROWSET FORMAT = \'JSON\'. Read the whole',
@@ -1810,8 +1841,10 @@ class SQLGenerator:
         lines += [') WITH (']
         cols = self._generate_column_definitions(metadata, indent=4)
         lines.append(',\n'.join(cols) if cols else '    [data] NVARCHAR(MAX)')
+        lines += [') AS [result];']
+        if not blob_storage_bulk_available:
+            return '\n'.join(lines)
         lines += [
-            ') AS [result];',
             '',
             '-- ---- Whole file as one value (small files) ---------------------------',
             '-- The single-LOB options need the TYPE = BLOB_STORAGE data source;',
@@ -1983,6 +2016,12 @@ class SQLGenerator:
                 f'Alternative: {alt_text}')
 
         config = self._determine_format_config(metadata)
+        if not config.format_type:
+            return self._not_supported_message(
+                'CREATE EXTERNAL TABLE',
+                target_platform,
+                self._no_external_format_guidance(metadata.get('file_type', '')),
+            )
         if target_platform not in self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
         ):
@@ -2432,12 +2471,25 @@ class SQLGenerator:
 
         file_path_sql = metadata.get('file_path', r'C:/data/file.json').replace('\\', '/').replace("'", "''")
         json_bulk_source = None
+        # The single-LOB read needs the separate TYPE = BLOB_STORAGE source,
+        # which only exists on platforms that can have one.
+        json_single_lob_source = None
+        json_single_lob_ident = ''
+        json_single_lob_path = ''
         if not is_on_prem or storage_url:
             _, json_relative = self._external_source_parts(
                 storage_url, file_name, target_platform
             )
             file_path_sql = _quote_literal(json_relative)
             json_bulk_source = _quote_literal(data_source or 'MyDataSource')
+            if self._bulk_data_source_supported(target_platform, storage_url):
+                bulk_ident, bulk_literal, _ = _bulk_data_source_names(
+                    data_source or 'MyDataSource')
+                _, bulk_relative = _azure_bulk_storage_parts(
+                    storage_url, file_name)
+                json_single_lob_ident = bulk_ident
+                json_single_lob_source = bulk_literal
+                json_single_lob_path = _quote_literal(bulk_relative)
 
         lines = [
             f'-- ====================================================================',
@@ -2453,15 +2505,73 @@ class SQLGenerator:
         openjson_cols = self._generate_openjson_columns(metadata, indent=8)
         openjson_with = ',\n'.join(openjson_cols) if openjson_cols else '        [data] NVARCHAR(MAX)'
 
-        if json_bulk_source:
+        if json_bulk_source and json_format == 'ndjson':
+            # Every line is its own document. Reading the file whole would hand
+            # OPENJSON a concatenation that is not valid JSON, so the rows are
+            # framed out first and the rest of the script works on one of them.
+            lines += [
+                f'-- ----------------------------------------------------------------',
+                f'-- 1. OPENROWSET(BULK) + OPENJSON   (NDJSON: one document per line)',
+                f'--    Row framing needs the abs:// / adls:// virtualization source;',
+                f'--    the https:// BLOB_STORAGE connector rejects the framing',
+                f'--    options with error 5369.',
+                f'-- ----------------------------------------------------------------',
+                f'-- Every line at once:',
+                f'SELECT [j].*',
+                f'FROM OPENROWSET(',
+                f'    BULK \'{file_path_sql}\',',
+                f'    DATA_SOURCE     = \'{json_bulk_source}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                f') WITH (json_doc NVARCHAR(MAX)) AS [src]',
+                f'CROSS APPLY OPENJSON([src].json_doc)',
+                f'WITH (',
+                openjson_with,
+                f') AS [j];',
+                f'',
+                f'-- The statements below work on one document at a time, so they',
+                f'-- read a single line. Concatenated NDJSON is not one document.',
+                f'DECLARE @json NVARCHAR(MAX);',
+                f'SELECT TOP (1) @json = json_doc',
+                f'FROM OPENROWSET(',
+                f'    BULK \'{file_path_sql}\',',
+                f'    DATA_SOURCE     = \'{json_bulk_source}\',',
+            ]
+            lines += self._json_row_frame_options()
+            lines += [
+                f') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+                f'',
+            ]
+        elif json_bulk_source and json_single_lob_source:
+            lines += [
+                f'-- ----------------------------------------------------------------',
+                f'-- 1. OPENROWSET(BULK) + OPENJSON',
+                f'--    Whole document through the TYPE = BLOB_STORAGE source',
+                f'--    [{json_single_lob_ident}]; BULK is relative to that source root.',
+                f'--    Certified live: the single-LOB options work through a',
+                f'--    BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+                f'-- ----------------------------------------------------------------',
+                f'DECLARE @json NVARCHAR(MAX);',
+                f'SELECT @json = BulkColumn',
+                f'FROM OPENROWSET(',
+                f'    BULK \'{json_single_lob_path}\',',
+                f'    DATA_SOURCE     = \'{json_single_lob_source}\',',
+            ]
+            lines += self._json_single_lob_options(metadata)
+            lines += [
+                f') AS [src];',
+                f'',
+            ]
+        elif json_bulk_source:
             lines += [
                 f'-- ----------------------------------------------------------------',
                 f'-- 1. OPENROWSET(BULK) + OPENJSON',
                 f'--    BULK is relative to external data source '
                 f'[{json_bulk_source}].',
-                f'--    SINGLE_CLOB / SINGLE_NCLOB / SINGLE_BLOB cannot be combined',
-                f'--    with DATA_SOURCE, so the CSV reader is framed with',
-                f'--    non-printing characters to return the whole document.',
+                f'--    This target has no TYPE = BLOB_STORAGE data source, which is',
+                f'--    what makes the single-LOB options usable, so the CSV reader is',
+                f'--    framed with non-printing characters to return the document.',
                 f'-- ----------------------------------------------------------------',
                 f'DECLARE @json NVARCHAR(MAX);',
                 f'SELECT @json = json_doc',
@@ -4136,6 +4246,14 @@ def _best_practices_json(size_mb: float,
         '--        [col1] INT     \'$.col1\',',
         '--        [col2] NVARCHAR(255) \'$.col2\'',
         '--    );',
+        '--    A whole JSON document reads through SINGLE_CLOB with a',
+        '--    TYPE = BLOB_STORAGE data source; that combination is certified',
+        '--    live on Azure SQL Database and SQL Server 2025.',
+        '--    A UTF-16 file needs SINGLE_NCLOB instead: SINGLE_CLOB requires a',
+        '--    DBCS file and fails with error 4806.',
+        '--    Newline-delimited JSON is not a single document. Read it through',
+        '--    an abs:// data source with CSV row framing; an https',
+        '--    BLOB_STORAGE source rejects the framing options with error 5369.',
         '',
         *remote_example,
         '',

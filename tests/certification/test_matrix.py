@@ -30,6 +30,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
 
 
+def _code(sql):
+    """Strip comment lines so assertions cannot pass on prose alone."""
+    return '\n'.join(
+        line for line in sql.split('\n') if not line.strip().startswith('--')
+    )
+
+
 @pytest.fixture(scope='module')
 def expected():
     with open(os.path.join(HERE, 'expected-matrix.json'), 'r', encoding='utf-8') as fh:
@@ -131,15 +138,101 @@ def test_managed_identity_platforms_match_evidence(rules):
 
 
 def test_binary_workbook_types_have_no_external_format(rules):
-    for file_type in rules['R07']['expect']['file_types']:
+    expect = rules['R07']['expect']
+    generator = SQLGenerator()
+    for file_type in expect['file_types']:
         assert file_type in NO_EXTERNAL_FORMAT_FILE_TYPES
+        metadata = {
+            'file_path': f'C:/data/book.{file_type}',
+            'file_name': f'book.{file_type}',
+            'file_type': file_type,
+            'encoding': 'utf-8',
+            'delimiter': ',',
+            'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+        }
+        outputs = {
+            'format': generator.generate_external_file_format(
+                metadata, format_name='sqlfdt_cert_fmt',
+                target_platform='azure_sql_db'),
+            'table': generator.generate_external_table(
+                metadata, table_name='sqlfdt_cert_t',
+                target_platform='azure_sql_db'),
+        }
+        for where, sql in outputs.items():
+            for banned in expect['generated_code_excludes']:
+                assert banned not in sql, f'{file_type}/{where}: {banned}'
+            # An empty format type must never reach the platform lookup and
+            # produce "CREATE EXTERNAL ... ()" with a generic message.
+            assert not re.search(r'EXTERNAL (FILE FORMAT|TABLE) \(\)', sql), (
+                f'{file_type}/{where}')
+            assert re.search(
+                r'not available|not supported|unsupported', sql, re.I)
 
 
 def test_ddl_only_formats_are_not_claimed_as_data_certified(rules):
     # ORC and Delta both had their DDL accepted and their data path unverified.
     assert 'ORC' in {f.upper() for f in DDL_ONLY_CERTIFIED_FORMATS}
-    assert rules['R12']['expect']['data_path_certified'] is False
-    assert rules['R11']['expect']['data_path_certified'] is False
+    sql = SQLGenerator().generate_external_file_format(
+        {'file_name': 'part.orc', 'file_type': 'orc', 'encoding': 'utf-8'},
+        format_name='sqlfdt_cert_fmt',
+        target_platform='azure_sql_db',
+    )
+    assert re.search(r'FORMAT_TYPE\s*=\s*ORC', sql)
+    assert rules['R12']['expect']['guidance_must_not_say'].lower() not in sql.lower()
+
+
+def test_whole_document_json_uses_a_bulk_blob_storage_source(rules):
+    expect = rules['R05']['expect']
+    generator = SQLGenerator()
+    metadata = {
+        'file_path': 'C:/data/doc.json',
+        'file_name': 'doc.json',
+        'file_type': 'json',
+        'json_format': 'array',
+        'encoding': 'utf-8',
+        'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+    }
+    sql = generator.generate_openrowset(
+        metadata,
+        data_source='TestDS',
+        storage_url='https://acct.blob.core.windows.net/container/doc.json',
+        target_platform='azure_sql_db',
+    )
+    body = _code(sql)
+    assert re.search(r'SINGLE_N?CLOB', body)
+    assert f"TestDS{expect['data_source_suffix']}" in body
+    assert re.search(rf"TYPE\s*=\s*{expect['data_source_type']}", sql)
+
+    ndjson = generator.generate_openrowset(
+        dict(metadata, file_name='lines.jsonl', json_format='ndjson'),
+        data_source='TestDS',
+        storage_url='https://acct.blob.core.windows.net/container/lines.jsonl',
+        target_platform='azure_sql_db',
+    )
+    # Concatenated NDJSON is not one JSON document, so it must stay row framed.
+    assert 'ROWTERMINATOR' in _code(ndjson)
+    assert not re.search(r'SINGLE_N?CLOB', _code(ndjson))
+
+
+def test_utf16_bulk_insert_keeps_the_certified_encoding_options(rules):
+    expect = rules['R02']['expect']
+    sql = SQLGenerator().generate_bulk_insert(
+        {
+            'file_path': 'C:/data/wide.csv',
+            'file_name': 'wide.csv',
+            'file_type': 'csv',
+            'encoding': 'utf-16-le',
+            'codepage': '1200',
+            'delimiter': ',',
+            'has_header': True,
+            'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+        },
+        table_name='sqlfdt_cert_t',
+        target_platform='sql_server_2025',
+    )
+    # The static hypothesis said CODEPAGE 1200 always fails; live evidence
+    # disproved it, so one of the two certified forms must still be emitted.
+    assert re.search(expect['generated_code_matches'], _code(sql))
 
 
 def test_single_lob_keyword_follows_live_encoding_evidence(rules):

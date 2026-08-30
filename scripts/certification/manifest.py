@@ -235,6 +235,11 @@ def cleanup_script(identity: RunIdentity, *, drop_database: bool = False) -> str
     return '\n'.join(lines) + '\n'
 
 
+def _escape_ident(name: str) -> str:
+    """Double any ``]`` so a name cannot close its own bracket quoting."""
+    return str(name).replace(']', ']]')
+
+
 def explicit_cleanup_statements(
     identity: RunIdentity,
     inventory: Dict[str, List[str]],
@@ -244,19 +249,22 @@ def explicit_cleanup_statements(
     ``inventory`` maps an object kind from :data:`CLEANUP_ORDER` to the names
     found on the server. Only names owned by ``identity`` produce a statement,
     so an inventory that accidentally includes a pre-existing object cannot
-    turn into a destructive script.
+    turn into a destructive script. These names come off a live server rather
+    than out of the plan, so they are bracket-escaped as well as filtered.
     """
     statements: List[str] = []
     for kind in CLEANUP_ORDER:
-        for name in inventory.get(kind, []):
-            if not identity.owns(name):
+        for raw in inventory.get(kind, []):
+            if not identity.owns(raw):
                 continue
+            name = _escape_ident(raw)
+            schema = _escape_ident(identity.schema)
             if kind == 'schema':
-                statements.append(f'DROP SCHEMA [{identity.schema}];')
+                statements.append(f'DROP SCHEMA [{schema}];')
             elif kind in ('table', 'view', 'external table'):
                 verb = {'table': 'DROP TABLE', 'view': 'DROP VIEW',
                         'external table': 'DROP EXTERNAL TABLE'}[kind]
-                statements.append(f'{verb} [{identity.schema}].[{name}];')
+                statements.append(f'{verb} [{schema}].[{name}];')
             elif kind == 'external file format':
                 statements.append(f'DROP EXTERNAL FILE FORMAT [{name}];')
             elif kind == 'external data source':
