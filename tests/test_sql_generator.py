@@ -686,13 +686,55 @@ def test_copy_into_delta_fallback():
 # -------------------------------------------------------------------
 
 def test_credential_setup():
-    """Credential setup generates master key, credential, and data source."""
+    """Credential setup defaults to managed identity and needs no master key.
+
+    Live evidence (Azure SQL Database): creating a database scoped credential
+    with IDENTITY = 'MANAGED IDENTITY' left the database master key count at 0
+    before, during and after, so the master key step is not emitted.
+    """
     gen = SQLGenerator()
     sql = gen.generate_credential_setup('TestDS', 'ff_csv', {'file_type': 'csv'})
-    assert 'MASTER KEY' in sql
+    assert "IDENTITY = 'MANAGED IDENTITY'" in sql
+    assert 'CREATE MASTER KEY' not in sql
     assert 'DATABASE SCOPED CREDENTIAL' in sql
     assert 'EXTERNAL DATA SOURCE [TestDS]' in sql
     assert 'cred_TestDS' in sql
+
+
+def test_credential_setup_sas_still_emits_master_key():
+    """Opting into a SAS token restores the master key prerequisite."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'}, auth_method='sas'
+    )
+    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
+    assert 'CREATE MASTER KEY' in sql
+
+
+def test_credential_setup_public_container_needs_no_credential():
+    """A public container gets no credential, no secret and no master key."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'}, auth_method='public'
+    )
+    assert 'CREATE DATABASE SCOPED CREDENTIAL' not in sql
+    assert 'CREATE MASTER KEY' not in sql
+    assert 'SECRET' not in sql
+    assert 'CREDENTIAL = [' not in sql
+    assert 'EXTERNAL DATA SOURCE [TestDS]' in sql
+
+
+def test_credential_name_override_is_propagated():
+    """A caller-supplied credential name replaces every derived one."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'},
+        credential_name='sqlfdt_cert_abc_cred',
+        storage_url='https://acct.blob.core.windows.net/raw/x.csv',
+    )
+    assert 'CREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_abc_cred]' in sql
+    assert 'CREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_abc_cred_Bulk]' in sql
+    assert 'cred_TestDS' not in sql
 
 
 def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
@@ -720,7 +762,9 @@ def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
     assert "TYPE = BLOB_STORAGE" in sql
     assert ("LOCATION = 'https://account.blob.core.windows.net/container'"
             in sql)
-    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
+    # Managed identity is now the default, so no SAS secret is emitted.
+    assert "IDENTITY = 'MANAGED IDENTITY'" in sql
+    assert 'SECRET' not in sql
 
 
 def test_credential_setup_uses_abs_for_blob_storage_on_sql_server_2025():
@@ -1291,7 +1335,49 @@ def test_credential_setup_in_all_statements():
     }
     stmts = gen.generate_all_statements(meta)
     assert 'credential_setup' in stmts
-    assert 'CREATE MASTER KEY' in stmts['credential_setup'] or 'NOT AVAILABLE' in stmts['credential_setup']
+    setup = stmts['credential_setup']
+    # Managed identity is the default, so no master key is emitted.
+    assert (
+        "IDENTITY = 'MANAGED IDENTITY'" in setup or 'NOT AVAILABLE' in setup
+    )
+
+
+def test_all_statements_object_name_overrides():
+    """Every generated object name can be overridden by the caller.
+
+    This is what lets a run confine its objects to a disposable prefix instead
+    of writing into dbo, where real tables such as the TPC-H `orders` table
+    live.
+    """
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv',
+        'schema': [('id', 'int64')],
+        'delimiter': ',', 'has_header': True, 'encoding': 'utf-8',
+    }
+    stmts = gen.generate_all_statements(
+        meta,
+        table_name='sqlfdt_cert_abc_tbl',
+        schema_name='sqlfdt_cert_abc',
+        data_source='sqlfdt_cert_abc_ds',
+        format_name='sqlfdt_cert_abc_fmt',
+        external_table_name='sqlfdt_cert_abc_ext',
+        credential_name='sqlfdt_cert_abc_cred',
+        target_platform='azure_sql_db',
+        storage_url='https://acct.blob.core.windows.net/raw/orders.csv',
+    )
+    joined = '\n'.join(stmts.values())
+    code = '\n'.join(
+        line for line in joined.split('\n')
+        if not line.lstrip().startswith('--')
+    )
+    assert 'ff_csv_format' not in code
+    assert 'ext_orders' not in code
+    assert 'cred_sqlfdt_cert_abc_ds' not in code
+    assert '[dbo]' not in code
+    assert 'sqlfdt_cert_abc_fmt' in stmts['external_file_format']
+    assert 'sqlfdt_cert_abc_ext' in stmts['create_external_table']
+    assert 'sqlfdt_cert_abc_cred' in stmts['credential_setup']
 
 
 # -------------------------------------------------------------------

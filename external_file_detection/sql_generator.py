@@ -924,7 +924,9 @@ class SQLGenerator:
                              target_platform: str = DEFAULT_TARGET_PLATFORM,
                              storage_url: str = None,
                              data_source: str = 'MyDataSource',
-                             include_prereq: bool = True) -> str:
+                             include_prereq: bool = True,
+                             credential_name: str = None,
+                             auth_method: str = None) -> str:
         """Generate a BULK INSERT statement (CSV / delimited text files only)."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
@@ -984,7 +986,7 @@ class SQLGenerator:
             # URL. This source is separate from the abs:// / adls:// data
             # virtualization source used by external tables.
             bulk_ident, bulk_literal, bulk_cred_ident = _bulk_data_source_names(
-                data_source
+                data_source, credential_name
             )
             source_root, relative_path = _azure_bulk_storage_parts(
                 storage_url, file_name
@@ -997,25 +999,24 @@ class SQLGenerator:
                 'A BLOB_STORAGE external data source is required; '
                 'FROM is relative to its container'
             )
-            prereq_lines = [
+            bulk_auth = _resolve_auth_method(auth_method, target_platform)
+            bulk_cred_clause = _credential_clause(bulk_cred_ident, bulk_auth)
+            prereq_lines = ([
                 f'-- Step 0: Create the BLOB_STORAGE data source used by BULK INSERT.',
                 f'--         This is separate from the abs:// / adls:// data',
                 f'--         virtualization source used by external tables.',
-                f'CREATE DATABASE SCOPED CREDENTIAL [{bulk_cred_ident}]',
-                f'WITH',
-                f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
-                f'    SECRET   = \'<SAS_token_without_leading_?>\';',
-                f'GO',
+            ] + _credential_ddl(bulk_cred_ident, bulk_auth, '') + [
                 f'',
                 f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
                 f'WITH (',
                 f'    TYPE = BLOB_STORAGE,',
-                f'    LOCATION = \'{_quote_literal(source_root)}\',',
-                f'    CREDENTIAL = [{bulk_cred_ident}]',
+                f'    LOCATION = \'{_quote_literal(source_root)}\'' + (
+                    ',' if bulk_cred_clause else ''),
+            ] + bulk_cred_clause + [
                 f');',
                 f'GO',
                 f'',
-            ] if include_prereq else [
+            ]) if include_prereq else [
                 f'-- Step 0: [{bulk_ident}] (TYPE = BLOB_STORAGE, LOCATION',
                 f'--         \'{_quote_literal(source_root)}\') is created in the',
                 f'--         prerequisite setup section above.',
@@ -2137,9 +2138,17 @@ class SQLGenerator:
                                   file_format: str = 'ff_csv_format',
                                   metadata: Dict[str, Any] = None,
                                   target_platform: str = DEFAULT_TARGET_PLATFORM,
-                                  storage_url: str = None) -> str:
+                                  storage_url: str = None,
+                                  credential_name: str = None,
+                                  auth_method: str = None) -> str:
         """Generate prerequisite CREATE CREDENTIAL, CREATE EXTERNAL DATA SOURCE,
-        and CREATE EXTERNAL FILE FORMAT statements."""
+        and CREATE EXTERNAL FILE FORMAT statements.
+
+        ``auth_method`` selects how storage is authenticated and defaults to
+        ``'managed_identity'`` wherever the platform supports it, because a
+        managed identity needs neither a secret nor a database master key.
+        ``credential_name`` overrides the derived ``cred_<data_source>`` name.
+        """
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
@@ -2167,6 +2176,8 @@ class SQLGenerator:
             )
 
         data_source_raw = data_source
+        auth_method = _resolve_auth_method(auth_method, target_platform)
+        cred_ident = _credential_identifier(data_source_raw, credential_name)
         data_source = _escape_identifier(data_source)
         file_name = metadata.get(
             'file_name', metadata.get('file_path', '<file>')
@@ -2211,22 +2222,35 @@ class SQLGenerator:
         ]
         lines += self._cloud_staging_notice(storage_url, target_platform,
                                             file_name)
-        lines += [
-            f'-- 1. Master key (required once per database)',
-            f'IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = \'##MS_DatabaseMasterKey##\')',
-            f'    CREATE MASTER KEY ENCRYPTION BY PASSWORD = \'<StrongPassword!>\';',
-            f'GO',
-            f'',
-        ]
+        if auth_method in ('managed_identity', 'public'):
+            lines += [
+                f'-- 1. Master key: NOT required.',
+            ]
+            lines += [
+                f'-- {_sql_comment(note_line)}'
+                for note_line in _AUTH_NO_MASTER_KEY_NOTE[auth_method]
+            ]
+            lines += [
+                f'-- Certified live on Azure SQL Database: the database master',
+                f'-- key count stayed 0 before, during and after the credential',
+                f'-- existed, so no master key password has to be invented,',
+                f'-- stored or rotated.',
+                f'',
+            ]
+        else:
+            lines += [
+                f'-- 1. Master key (required once per database for this auth method)',
+                f'-- Only needed because a SECRET is being stored. Switching to',
+                f'-- IDENTITY = \'MANAGED IDENTITY\' removes this step entirely.',
+                f'IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = \'##MS_DatabaseMasterKey##\')',
+                f'    CREATE MASTER KEY ENCRYPTION BY PASSWORD = \'<StrongPassword!>\';',
+                f'GO',
+                f'',
+            ]
 
         if target_platform == 'sql_server_2019':
+            lines += _credential_ddl(cred_ident, auth_method, '2.')
             lines += [
-                f'-- 2. Database Scoped Credential (storage account key)',
-                f'CREATE DATABASE SCOPED CREDENTIAL [cred_{data_source}]',
-                f'WITH',
-                f'    IDENTITY = \'<storage_account_name>\',',
-                f'    SECRET   = \'<storage_account_key>\';',
-                f'GO',
                 f'',
                 f'-- 3. External Data Source (external tables / PolyBase)',
                 f'-- SQL Server 2019 uses wasbs:// for Azure Blob Storage or',
@@ -2237,23 +2261,24 @@ class SQLGenerator:
                 f'WITH (',
                 f'    TYPE = HADOOP,',
                 f'    LOCATION = \'{_quote_literal(source_location)}\',',
-                f'    CREDENTIAL = [cred_{data_source}]',
+            ]
+            clause = _credential_clause(cred_ident, auth_method)
+            if not clause:
+                lines[-1] = lines[-1].rstrip(',')
+            lines += clause
+            lines += [
                 f');',
                 f'GO',
             ]
             lines += self._bulk_data_source_block(
                 data_source_raw, storage_url, file_name, target_platform,
-                step_number=4,
+                step_number=4, credential_name=credential_name,
+                auth_method=auth_method,
             )
             return '\n'.join(lines)
 
+        lines += _credential_ddl(cred_ident, auth_method, '2.')
         lines += [
-            f'-- 2. Database Scoped Credential (SAS token)',
-            f'CREATE DATABASE SCOPED CREDENTIAL [cred_{data_source}]',
-            f'WITH',
-            f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
-            f'    SECRET   = \'<SAS_token_without_leading_?>\';',
-            f'GO',
             f'',
             f'-- 3. External Data Source (data virtualization)',
         ]
@@ -2269,18 +2294,23 @@ class SQLGenerator:
                 f'-- Do not specify TYPE. Use abs:// for Azure Blob Storage,',
                 f'-- adls:// for ADLS Gen2, or s3:// for S3-compatible storage.',
             ]
+        location_line = f'    LOCATION = \'{_quote_literal(source_location)}\''
+        cred_clause = _credential_clause(cred_ident, auth_method)
         lines += [
             f'CREATE EXTERNAL DATA SOURCE [{data_source}]',
             f'WITH (',
-            f'    LOCATION = \'{_quote_literal(source_location)}\',',
-            f'    CREDENTIAL = [cred_{data_source}]',
+            location_line + (',' if cred_clause else ''),
+        ]
+        lines += cred_clause
+        lines += [
             f');',
             f'GO',
         ]
 
         lines += self._bulk_data_source_block(
             data_source_raw, storage_url, file_name, target_platform,
-            step_number=4,
+            step_number=4, credential_name=credential_name,
+            auth_method=auth_method,
         )
 
         return '\n'.join(lines)
@@ -2289,7 +2319,9 @@ class SQLGenerator:
                                 storage_url: Optional[str],
                                 file_name: str,
                                 target_platform: str,
-                                step_number: int = 4) -> List[str]:
+                                step_number: int = 4,
+                                credential_name: Optional[str] = None,
+                                auth_method: Optional[str] = None) -> List[str]:
         """Build the TYPE = BLOB_STORAGE data source used by bulk operations.
 
         A ``TYPE = BLOB_STORAGE`` source cannot back an external table, and the
@@ -2300,27 +2332,36 @@ class SQLGenerator:
         if not self._bulk_data_source_supported(target_platform, storage_url):
             return []
 
-        bulk_ident, _, bulk_cred_ident = _bulk_data_source_names(data_source_raw)
+        auth_method = _resolve_auth_method(auth_method, target_platform)
+        bulk_ident, _, bulk_cred_ident = _bulk_data_source_names(
+            data_source_raw, credential_name
+        )
         bulk_location, _ = _azure_bulk_storage_parts(storage_url, file_name)
-        return [
+        lines = [
             f'',
             f'-- {step_number}. External Data Source for BULK INSERT / OPENROWSET(BULK)',
             f'-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,',
             f'-- which cannot back an external table, so it gets its own name.',
-            f'CREATE DATABASE SCOPED CREDENTIAL [{bulk_cred_ident}]',
-            f'WITH',
-            f'    IDENTITY = \'SHARED ACCESS SIGNATURE\',',
-            f'    SECRET   = \'<SAS_token_without_leading_?>\';',
-            f'GO',
+            f'-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:',
+            f'-- certified live, the single-LOB options work through a',
+            f'-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+        ]
+        lines += _credential_ddl(bulk_cred_ident, auth_method, '')
+        cred_clause = _credential_clause(bulk_cred_ident, auth_method)
+        lines += [
             f'',
             f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
             f'WITH (',
             f'    TYPE = BLOB_STORAGE,',
-            f'    LOCATION = \'{_quote_literal(bulk_location)}\',',
-            f'    CREDENTIAL = [{bulk_cred_ident}]',
+            f'    LOCATION = \'{_quote_literal(bulk_location)}\'' + (
+                ',' if cred_clause else ''),
+        ]
+        lines += cred_clause
+        lines += [
             f');',
             f'GO',
         ]
+        return lines
 
     # ------------------------------------------------------------------
     # JSON Functions  (OPENJSON, JSON_VALUE, JSON_QUERY, ISJSON, etc.)
@@ -2806,12 +2847,20 @@ class SQLGenerator:
                               location: str = None,
                               schema_name: str = 'dbo',
                               target_platform: str = DEFAULT_TARGET_PLATFORM,
-                              storage_url: str = None) -> str:
+                              storage_url: str = None,
+                              format_name: str = None,
+                              external_table_name: str = None,
+                              credential_name: str = None,
+                              auth_method: str = None) -> str:
         """Return every generated section as one runnable, GO-separated script."""
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
             schema_name, target_platform=target_platform,
             storage_url=storage_url,
+            format_name=format_name,
+            external_table_name=external_table_name,
+            credential_name=credential_name,
+            auth_method=auth_method,
         )
 
         ordered_sections = [
@@ -2835,7 +2884,9 @@ class SQLGenerator:
 
         # The prerequisite setup section already creates the BLOB_STORAGE
         # source that BULK INSERT needs, so do not create it twice.
-        bulk_ident, _, _ = _bulk_data_source_names(data_source or 'MyDataSource')
+        bulk_ident, _, _ = _bulk_data_source_names(
+            data_source or 'MyDataSource', credential_name
+        )
         if f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]' in (
             statements.get('credential_setup') or ''
         ):
@@ -2849,6 +2900,8 @@ class SQLGenerator:
                 storage_url=storage_url,
                 data_source=data_source or 'MyDataSource',
                 include_prereq=False,
+                credential_name=credential_name,
+                auth_method=auth_method,
             )
 
         parts: List[str] = []
@@ -2881,12 +2934,22 @@ class SQLGenerator:
                                 location: str = None,
                                 schema_name: str = 'dbo',
                                 target_platform: str = DEFAULT_TARGET_PLATFORM,
-                                storage_url: str = None) -> Dict[str, str]:
+                                storage_url: str = None,
+                                format_name: str = None,
+                                external_table_name: str = None,
+                                credential_name: str = None,
+                                auth_method: str = None) -> Dict[str, str]:
         """
         Return a dictionary with all generated SQL statement types:
             create_table, bulk_insert, openrowset, copy_into,
             external_file_format, create_external_table,
             json_functions, for_json, best_practices
+
+        ``format_name``, ``external_table_name`` and ``credential_name``
+        override the derived object names. Every generated object name is
+        therefore caller-controlled, which lets a deployment place all objects
+        under its own naming standard and lets a certification run confine them
+        to a disposable prefix instead of writing into ``dbo``.
         """
         if not table_name:
             base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
@@ -2895,9 +2958,15 @@ class SQLGenerator:
             table_name = _clean_identifier(table_name)
         data_source = data_source or 'MyDataSource'        # The external table must not collide with the regular table in the
         # same script, so it always gets its own name.
-        external_table_name = f'ext_{table_name}'
+        external_table_name = (
+            _clean_identifier(external_table_name) if external_table_name
+            else f'ext_{table_name}'
+        )
 
-        fmt_name = f'ff_{metadata.get("file_type", "csv")}_format'
+        fmt_name = (
+            _clean_identifier(format_name) if format_name
+            else f'ff_{metadata.get("file_type", "csv")}_format'
+        )
 
         return {
             'create_table': self.generate_create_table(metadata, table_name, schema_name,
@@ -2907,7 +2976,9 @@ class SQLGenerator:
             'bulk_insert': self.generate_bulk_insert(metadata, table_name, schema_name,
                                                      target_platform=target_platform,
                                                      storage_url=storage_url,
-                                                     data_source=data_source),
+                                                     data_source=data_source,
+                                                     credential_name=credential_name,
+                                                     auth_method=auth_method),
             'openrowset': self.generate_openrowset(metadata,
                                                    storage_url=storage_url,
                                                    data_source=data_source,
@@ -2931,7 +3002,9 @@ class SQLGenerator:
             'credential_setup': self.generate_credential_setup(data_source, fmt_name,
                                                                metadata=metadata,
                                                                target_platform=target_platform,
-                                                               storage_url=storage_url),
+                                                               storage_url=storage_url,
+                                                               credential_name=credential_name,
+                                                               auth_method=auth_method),
             'best_practices': self.generate_best_practices(metadata,
                                                            target_platform=target_platform,
                                                            table_name=table_name,
@@ -3440,19 +3513,135 @@ def _delta_table_folder(relative_path: str) -> str:
     return f'{normalized}/'
 
 
-def _bulk_data_source_names(data_source: str) -> Tuple[str, str, str]:
+def _bulk_data_source_names(
+    data_source: str, credential_name: Optional[str] = None
+) -> Tuple[str, str, str]:
     """Return ``(identifier, literal, credential_identifier)`` for a bulk source.
 
     The raw ``<data_source>_Bulk`` name is escaped once per context: bracket
     escaping for ``[identifier]`` and quote doubling for ``'literal'``. Escaping
     first and reusing the result would corrupt names containing ``]`` or ``'``.
+
+    ``credential_name`` overrides the derived ``cred_<data_source>_Bulk`` name so
+    callers that must place every object under their own prefix (certification
+    runs, deployments with a naming standard) can do so.
     """
     raw = f'{data_source}_Bulk'
+    cred_raw = f'{credential_name}_Bulk' if credential_name else f'cred_{raw}'
     return (
         _escape_identifier(raw),
         _quote_literal(raw),
-        _escape_identifier(f'cred_{raw}'),
+        _escape_identifier(cred_raw),
     )
+
+
+def _credential_identifier(
+    data_source: str, credential_name: Optional[str] = None
+) -> str:
+    """Return the escaped database scoped credential identifier."""
+    return _escape_identifier(credential_name or f'cred_{data_source}')
+
+
+#: Authentication methods the generator can emit for storage access.
+#:
+#: ``managed_identity`` is preferred and is the default wherever the platform
+#: supports it. Live certification against Azure SQL Database proved that
+#: ``CREATE DATABASE SCOPED CREDENTIAL ... WITH IDENTITY = 'MANAGED IDENTITY'``
+#: succeeds with **no database master key**: the master key count was 0 before
+#: the credential was created, 0 while it existed, and 0 after it was dropped.
+#: That removes the need to invent and store a master key password or a SAS
+#: token, so it is both simpler and secret-free.
+AUTH_METHODS = ('managed_identity', 'sas', 'storage_key', 'public')
+
+#: Why the master key step is skipped, per secret-free authentication method.
+_AUTH_NO_MASTER_KEY_NOTE = {
+    'managed_identity': (
+        "IDENTITY = 'MANAGED IDENTITY' stores no secret, so there is",
+        'nothing for a database master key to encrypt.',
+    ),
+    'public': (
+        'The container allows anonymous read access, so no credential',
+        'and no database master key are created.',
+    ),
+}
+
+#: Platforms where ``IDENTITY = 'MANAGED IDENTITY'`` is the preferred default.
+MANAGED_IDENTITY_PLATFORMS = frozenset({
+    'azure_sql_db',
+    'azure_sql_mi',
+    'sql_server_2022',
+    'sql_server_2025',
+})
+
+
+def _resolve_auth_method(auth_method: Optional[str],
+                         target_platform: str) -> str:
+    """Return the effective authentication method for a platform."""
+    if auth_method in AUTH_METHODS:
+        return auth_method
+    if target_platform in MANAGED_IDENTITY_PLATFORMS:
+        return 'managed_identity'
+    return 'storage_key' if target_platform == 'sql_server_2019' else 'sas'
+
+
+def _credential_ddl(cred_ident: str, auth_method: str,
+                    step_label: str) -> List[str]:
+    """Return the credential DDL lines for one authentication method.
+
+    ``public`` returns only a comment: a container that allows anonymous read
+    needs no credential at all, and emitting one would force an unnecessary
+    secret into the script.
+    """
+    prefix = f' {step_label} ' if step_label else ' '
+    if auth_method == 'public':
+        return [
+            f'--{prefix}Database Scoped Credential: not required.',
+            '-- The container allows anonymous read access, so the external',
+            '-- data source below is created without a CREDENTIAL.',
+        ]
+    if auth_method == 'managed_identity':
+        return [
+            f'--{prefix}Database Scoped Credential (managed identity)',
+            '-- PREFERRED: no secret, no SAS token, and no database master key.',
+            '-- Grant the server/instance managed identity the Storage Blob Data',
+            '-- Reader role on the storage account (Storage Blob Data Contributor',
+            '-- if the workload also writes). Certified live: creating this',
+            '-- credential left the database master key count at 0.',
+            f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
+            'WITH',
+            "    IDENTITY = 'MANAGED IDENTITY';",
+            'GO',
+        ]
+    if auth_method == 'storage_key':
+        return [
+            f'--{prefix}Database Scoped Credential (storage account key)',
+            '-- Prefer IDENTITY = \'MANAGED IDENTITY\' where the platform',
+            '-- supports it; an account key is a long-lived shared secret.',
+            '-- Requires a database master key (step 1).',
+            f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
+            'WITH',
+            "    IDENTITY = '<storage_account_name>',",
+            "    SECRET   = '<storage_account_key>';",
+            'GO',
+        ]
+    return [
+        f'--{prefix}Database Scoped Credential (SAS token)',
+        '-- Prefer IDENTITY = \'MANAGED IDENTITY\' where the platform',
+        '-- supports it: it needs no secret and no database master key.',
+        '-- Requires a database master key (step 1).',
+        f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
+        'WITH',
+        "    IDENTITY = 'SHARED ACCESS SIGNATURE',",
+        "    SECRET   = '<SAS_token_without_leading_?>';",
+        'GO',
+    ]
+
+
+def _credential_clause(cred_ident: str, auth_method: str) -> List[str]:
+    """Return the trailing ``CREDENTIAL = [...]`` line, if one is needed."""
+    if auth_method == 'public':
+        return []
+    return [f'    CREDENTIAL = [{cred_ident}]']
 
 
 def _validate_unique_column_names(schema: List[Any]) -> None:

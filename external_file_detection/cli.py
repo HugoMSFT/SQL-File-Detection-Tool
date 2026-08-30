@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any
 
 from .external_file_detector import ExternalFileDetectorApp
-from .sql_generator import DEFAULT_TARGET_PLATFORM, SQLGenerator
+from .sql_generator import AUTH_METHODS, DEFAULT_TARGET_PLATFORM, SQLGenerator
 from .azure_auth import AUTH_MODES as AZURE_AUTH_MODES
 from .azure_auth import redact as _redact
 from . import __product_name__, __version__
@@ -47,6 +47,40 @@ def target_platform_option(func):
         type=click.Choice(SQLGenerator.PLATFORMS),
         help='SQL platform the generated script targets',
     )(func)
+
+
+def naming_options(func):
+    """Shared Click options controlling generated object names and auth.
+
+    Without an explicit schema, a table name derived from the file name lands
+    in ``dbo``, where it can collide with a real table -- a file called
+    ``orders.csv`` targets ``dbo.orders``. These options make every generated
+    name caller-controlled.
+    """
+    func = click.option(
+        '--auth-method', default=None,
+        type=click.Choice(AUTH_METHODS),
+        help='How the generated SQL authenticates to storage. Defaults to '
+             'managed_identity where the platform supports it, which needs '
+             'no secret and no database master key. Use public for a '
+             'container that allows anonymous read.',
+    )(func)
+    func = click.option(
+        '--credential-name', default=None,
+        help='Name for the generated database scoped credential '
+             '(default: cred_<data-source>).',
+    )(func)
+    func = click.option(
+        '--table', 'table_name', default=None,
+        help='Explicit table name instead of one derived from the file name. '
+             'Only valid when analysing a single file.',
+    )(func)
+    func = click.option(
+        '--schema', 'schema_name', default='dbo', show_default=True,
+        help='Schema every generated object is created in. Set this to keep '
+             'generated objects out of dbo.',
+    )(func)
+    return func
 
 
 def storage_url_option(func):
@@ -136,9 +170,10 @@ def gui(host, port, debug, root_dir):
               help='Output format')
 @target_platform_option
 @storage_url_option
+@naming_options
 @storage_options
 def analyze(location, data_source, output, format, target_platform,
-           storage_url,
+           storage_url, schema_name, table_name, credential_name, auth_method,
            aws_access_key_id,
            aws_secret_access_key, aws_region, azure_account_name,
            azure_account_key, azure_connection_string, azure_sas,
@@ -159,7 +194,11 @@ def analyze(location, data_source, output, format, target_platform,
         click.echo(f"Analyzing location: {location}")
         results = app.analyze_location(location, data_source,
                                        target_platform=target_platform,
-                                       storage_url=storage_url)
+                                       storage_url=storage_url,
+                                       schema_name=schema_name,
+                                       table_name=table_name,
+                                       auth_method=auth_method,
+                                       credential_name=credential_name)
         
         # Display summary
         click.echo(f"\nAnalysis completed!")
@@ -209,9 +248,11 @@ def analyze(location, data_source, output, format, target_platform,
               help='Output format')
 @target_platform_option
 @storage_url_option
+@naming_options
 @storage_options
 def analyze_files(files, data_source, output, format, target_platform,
-                  storage_url,
+                  storage_url, schema_name, table_name, credential_name,
+                  auth_method,
                   aws_access_key_id,
                   aws_secret_access_key, aws_region, azure_account_name,
                   azure_account_key, azure_connection_string, azure_sas,
@@ -228,7 +269,11 @@ def analyze_files(files, data_source, output, format, target_platform,
     try:
         results = app.analyze_files(list(files), data_source,
                                     target_platform=target_platform,
-                                    storage_url=storage_url)
+                                    storage_url=storage_url,
+                                    schema_name=schema_name,
+                                    table_name=table_name,
+                                    auth_method=auth_method,
+                                    credential_name=credential_name)
         
         click.echo(f"Analyzed {len(results)} files")
         

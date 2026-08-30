@@ -36,6 +36,10 @@ def test_analyze_files_forwards_cloud_credentials():
         None,
         target_platform=DEFAULT_TARGET_PLATFORM,
         storage_url=None,
+        schema_name='dbo',
+        table_name=None,
+        auth_method=None,
+        credential_name=None,
     )
 
 
@@ -188,3 +192,45 @@ def test_analyze_rejects_unknown_target_platform():
     ])
     assert result.exit_code != 0
     assert 'oracle' in result.output
+
+
+def test_analyze_forwards_object_name_overrides():
+    """--schema / --table / --credential-name / --auth-method reach the app.
+
+    Without these, a file called orders.csv generates dbo.orders, which
+    collides with a real table in any TPC-H style database.
+    """
+    runner = CliRunner()
+    with patch(
+        'external_file_detection.cli.ExternalFileDetectorApp'
+    ) as app_type:
+        app_type.return_value.analyze_location.return_value = {
+            'location': 'x', 'files_found': 0, 'files': [],
+        }
+        result = runner.invoke(main, [
+            'analyze', 'folder',
+            '--schema', 'staging',
+            '--table', 'orders_import',
+            '--credential-name', 'cred_staging',
+            '--auth-method', 'managed_identity',
+        ])
+
+    assert result.exit_code == 0
+    app_type.return_value.analyze_location.assert_called_once_with(
+        'folder',
+        None,
+        target_platform=DEFAULT_TARGET_PLATFORM,
+        storage_url=None,
+        schema_name='staging',
+        table_name='orders_import',
+        auth_method='managed_identity',
+        credential_name='cred_staging',
+    )
+
+
+def test_analyze_rejects_unknown_auth_method():
+    """An unknown auth method is rejected instead of silently ignored."""
+    runner = CliRunner()
+    result = runner.invoke(main, ['analyze', 'folder', '--auth-method', 'nope'])
+    assert result.exit_code != 0
+    assert 'nope' in result.output

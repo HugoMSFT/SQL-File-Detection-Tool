@@ -64,15 +64,20 @@ import {
 } from './storage';
 import {
     csvReaderOptions,
+    credentialClause,
+    credentialDdl,
+    credentialIdentifier,
     determineFormatConfig,
     displayFileName,
     generateColumnDefinitions,
     generateOpenjsonColumns,
     jsonRowFrameOptions,
+    masterKeyLines,
     notSupportedMessage,
     openrowsetWithSchema,
     columnNameList,
     formatSampleRows,
+    resolveAuthMethod,
     splitextRoot,
 } from './generatorHelpers';
 import {
@@ -473,6 +478,8 @@ function bulkInsertFabricAlternatives(
 export interface BulkInsertOptions extends StatementOptions {
     filePathOverride?: string | null;
     includePrereq?: boolean;
+    credentialName?: string | null;
+    authMethod?: string | null;
 }
 
 /** Generate a `BULK INSERT` statement (CSV / delimited text files only). */
@@ -552,7 +559,12 @@ export function generateBulkInsert(
         // be relative to that source's container, never an absolute URL. This
         // source is separate from the abs:// / adls:// data virtualization
         // source used by external tables.
-        const [bulkIdent, bulkLiteral, bulkCredIdent] = bulkDataSourceNames(dataSource);
+        const [bulkIdent, bulkLiteral, bulkCredIdent] = bulkDataSourceNames(
+            dataSource,
+            options.credentialName,
+        );
+        const bulkAuth = resolveAuthMethod(options.authMethod, targetPlatform);
+        const bulkCredClause = credentialClause(bulkCredIdent, bulkAuth);
         const [sourceRoot, relativePath] = azureBulkStorageParts(storageUrl, fileName);
         fromPath = quoteLiteral(relativePath);
         dataSourceLine = `    DATA_SOURCE     = '${bulkLiteral}',`;
@@ -564,17 +576,14 @@ export function generateBulkInsert(
                   '-- Step 0: Create the BLOB_STORAGE data source used by BULK INSERT.',
                   '--         This is separate from the abs:// / adls:// data',
                   '--         virtualization source used by external tables.',
-                  `CREATE DATABASE SCOPED CREDENTIAL [${bulkCredIdent}]`,
-                  'WITH',
-                  "    IDENTITY = 'SHARED ACCESS SIGNATURE',",
-                  "    SECRET   = '<SAS_token_without_leading_?>';",
-                  'GO',
+                  ...credentialDdl(bulkCredIdent, bulkAuth, ''),
                   '',
                   `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
                   'WITH (',
                   '    TYPE = BLOB_STORAGE,',
-                  `    LOCATION = '${quoteLiteral(sourceRoot)}',`,
-                  `    CREDENTIAL = [${bulkCredIdent}]`,
+                  `    LOCATION = '${quoteLiteral(sourceRoot)}'` +
+                      (bulkCredClause.length > 0 ? ',' : ''),
+                  ...bulkCredClause,
                   ');',
                   'GO',
                   '',
@@ -974,28 +983,35 @@ function bulkDataSourceBlock(
     fileName: string,
     targetPlatform: TargetPlatform,
     stepNumber = 4,
+    credentialName?: string | null,
+    authMethod?: string | null,
 ): string[] {
     if (!bulkDataSourceSupported(targetPlatform, storageUrl)) {
         return [];
     }
-    const [bulkIdent, , bulkCredIdent] = bulkDataSourceNames(dataSourceRaw);
+    const resolvedAuth = resolveAuthMethod(authMethod, targetPlatform);
+    const [bulkIdent, , bulkCredIdent] = bulkDataSourceNames(
+        dataSourceRaw,
+        credentialName,
+    );
     const [bulkLocation] = azureBulkStorageParts(storageUrl, fileName);
+    const clause = credentialClause(bulkCredIdent, resolvedAuth);
     return [
         '',
         `-- ${stepNumber}. External Data Source for BULK INSERT / OPENROWSET(BULK)`,
         '-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,',
         '-- which cannot back an external table, so it gets its own name.',
-        `CREATE DATABASE SCOPED CREDENTIAL [${bulkCredIdent}]`,
-        'WITH',
-        "    IDENTITY = 'SHARED ACCESS SIGNATURE',",
-        "    SECRET   = '<SAS_token_without_leading_?>';",
-        'GO',
+        '-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:',
+        '-- certified live, the single-LOB options work through a',
+        '-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+        ...credentialDdl(bulkCredIdent, resolvedAuth, ''),
         '',
         `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
         'WITH (',
         '    TYPE = BLOB_STORAGE,',
-        `    LOCATION = '${quoteLiteral(bulkLocation)}',`,
-        `    CREDENTIAL = [${bulkCredIdent}]`,
+        `    LOCATION = '${quoteLiteral(bulkLocation)}'` +
+            (clause.length > 0 ? ',' : ''),
+        ...clause,
         ');',
         'GO',
     ];
@@ -1008,6 +1024,18 @@ export interface CredentialSetupOptions {
     metadata?: GeneratorMetadata | null;
     targetPlatform?: TargetPlatform | string | null;
     storageUrl?: string | null;
+    /**
+     * Name for the generated database scoped credential. Defaults to
+     * `cred_<dataSource>`; override it to keep every generated object under a
+     * caller-controlled prefix.
+     */
+    credentialName?: string | null;
+    /**
+     * How the generated SQL authenticates to storage. Defaults to
+     * `managed_identity` wherever the platform supports it, because a managed
+     * identity needs neither a secret nor a database master key.
+     */
+    authMethod?: string | null;
 }
 
 /** Generate the prerequisite credential / data source / file format script. */
@@ -1015,6 +1043,8 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
     const dataSourceRaw = options.dataSource ?? 'MyDataSource';
+    const authMethod = resolveAuthMethod(options.authMethod, targetPlatform);
+    const credIdent = credentialIdentifier(dataSourceRaw, options.credentialName);
 
     if (!supports('credential_setup', targetPlatform)) {
         return notSupportedMessage(
@@ -1085,22 +1115,12 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         '',
     ];
     lines.push(...cloudStagingNotice(storageUrl, targetPlatform, fileName));
-    lines.push(
-        '-- 1. Master key (required once per database)',
-        "IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = '##MS_DatabaseMasterKey##')",
-        "    CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<StrongPassword!>';",
-        'GO',
-        '',
-    );
+    lines.push(...masterKeyLines(authMethod));
 
     if (targetPlatform === 'sql_server_2019') {
+        lines.push(...credentialDdl(credIdent, authMethod, '2.'));
+        const legacyClause = credentialClause(credIdent, authMethod);
         lines.push(
-            '-- 2. Database Scoped Credential (storage account key)',
-            `CREATE DATABASE SCOPED CREDENTIAL [cred_${dataSource}]`,
-            'WITH',
-            "    IDENTITY = '<storage_account_name>',",
-            "    SECRET   = '<storage_account_key>';",
-            'GO',
             '',
             '-- 3. External Data Source (external tables / PolyBase)',
             '-- SQL Server 2019 uses wasbs:// for Azure Blob Storage or',
@@ -1110,8 +1130,9 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
             `CREATE EXTERNAL DATA SOURCE [${dataSource}]`,
             'WITH (',
             '    TYPE = HADOOP,',
-            `    LOCATION = '${quoteLiteral(sourceLocation)}',`,
-            `    CREDENTIAL = [cred_${dataSource}]`,
+            `    LOCATION = '${quoteLiteral(sourceLocation)}'` +
+                (legacyClause.length > 0 ? ',' : ''),
+            ...legacyClause,
             ');',
             'GO',
         );
@@ -1122,21 +1143,15 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
                 fileName,
                 targetPlatform,
                 4,
+                options.credentialName,
+                authMethod,
             ),
         );
         return lines.join('\n');
     }
 
-    lines.push(
-        '-- 2. Database Scoped Credential (SAS token)',
-        `CREATE DATABASE SCOPED CREDENTIAL [cred_${dataSource}]`,
-        'WITH',
-        "    IDENTITY = 'SHARED ACCESS SIGNATURE',",
-        "    SECRET   = '<SAS_token_without_leading_?>';",
-        'GO',
-        '',
-        '-- 3. External Data Source (data virtualization)',
-    );
+    lines.push(...credentialDdl(credIdent, authMethod, '2.'));
+    lines.push('', '-- 3. External Data Source (data virtualization)');
     if (AZURE_SQL_PLATFORMS.has(targetPlatform)) {
         lines.push(
             '-- Azure SQL data virtualization requires abs:// (Blob Storage)',
@@ -1150,17 +1165,27 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
             '-- adls:// for ADLS Gen2, or s3:// for S3-compatible storage.',
         );
     }
+    const credClause = credentialClause(credIdent, authMethod);
     lines.push(
         `CREATE EXTERNAL DATA SOURCE [${dataSource}]`,
         'WITH (',
-        `    LOCATION = '${quoteLiteral(sourceLocation)}',`,
-        `    CREDENTIAL = [cred_${dataSource}]`,
+        `    LOCATION = '${quoteLiteral(sourceLocation)}'` +
+            (credClause.length > 0 ? ',' : ''),
+        ...credClause,
         ');',
         'GO',
     );
 
     lines.push(
-        ...bulkDataSourceBlock(dataSourceRaw, storageUrl, fileName, targetPlatform, 4),
+        ...bulkDataSourceBlock(
+            dataSourceRaw,
+            storageUrl,
+            fileName,
+            targetPlatform,
+            4,
+            options.credentialName,
+            authMethod,
+        ),
     );
 
     return lines.join('\n');
@@ -1673,6 +1698,23 @@ export interface GenerateAllOptions {
     schemaName?: string;
     targetPlatform?: TargetPlatform | string | null;
     storageUrl?: string | null;
+    /**
+     * Name for the generated external file format. Defaults to
+     * `ff_<file_type>_format`.
+     */
+    formatName?: string | null;
+    /** Name for the generated external table. Defaults to `ext_<tableName>`. */
+    externalTableName?: string | null;
+    /**
+     * Name for the generated database scoped credential. Defaults to
+     * `cred_<dataSource>`.
+     */
+    credentialName?: string | null;
+    /**
+     * How the generated SQL authenticates to storage. Defaults to
+     * `managed_identity` where the platform supports it.
+     */
+    authMethod?: string | null;
 }
 
 /**
@@ -1704,8 +1746,12 @@ export function generateAllStatements(
 
     // The external table must not collide with the regular table in the same
     // script, so it always gets its own name.
-    const externalTableName = `ext_${tableName}`;
-    const fmtName = `ff_${stringOr(metadata.file_type, 'csv')}_format`;
+    const externalTableName = options.externalTableName
+        ? cleanIdentifier(options.externalTableName)
+        : `ext_${tableName}`;
+    const fmtName = options.formatName
+        ? cleanIdentifier(options.formatName)
+        : `ff_${stringOr(metadata.file_type, 'csv')}_format`;
 
     const shared: StatementOptions = {
         tableName,
@@ -1717,7 +1763,11 @@ export function generateAllStatements(
 
     return {
         create_table: generateCreateTable(metadata, shared),
-        bulk_insert: generateBulkInsert(metadata, shared),
+        bulk_insert: generateBulkInsert(metadata, {
+            ...shared,
+            credentialName: options.credentialName,
+            authMethod: options.authMethod,
+        }),
         openrowset: generateOpenrowset(metadata, {
             storageUrl,
             dataSource,
@@ -1745,6 +1795,8 @@ export function generateAllStatements(
             metadata,
             targetPlatform,
             storageUrl,
+            credentialName: options.credentialName,
+            authMethod: options.authMethod,
         }),
         best_practices: generateBestPractices(metadata, shared),
     };
@@ -1784,7 +1836,7 @@ export function generateCompleteDdl(
 
     // The prerequisite setup section already creates the BLOB_STORAGE source
     // that BULK INSERT needs, so do not create it twice.
-    const [bulkIdent] = bulkDataSourceNames(dataSource);
+    const [bulkIdent] = bulkDataSourceNames(dataSource, options.credentialName);
     if (
         (statements.credential_setup || '').includes(
             `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
@@ -1797,6 +1849,8 @@ export function generateCompleteDdl(
             storageUrl,
             dataSource,
             includePrereq: false,
+            credentialName: options.credentialName,
+            authMethod: options.authMethod,
         });
     }
 

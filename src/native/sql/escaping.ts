@@ -270,10 +270,18 @@ function stripSlashes(value: string): string {
  * The raw `<data_source>_Bulk` name is escaped once per context: bracket
  * escaping for `[identifier]` and quote doubling for `'literal'`. Escaping first
  * and reusing the result would corrupt names containing `]` or `'`.
+ *
+ * `credentialName` overrides the derived `cred_<data_source>_Bulk` name so
+ * callers that must place every object under their own prefix (certification
+ * runs, deployments with a naming standard) can do so.
  */
-export function bulkDataSourceNames(dataSource: string): [string, string, string] {
+export function bulkDataSourceNames(
+    dataSource: string,
+    credentialName?: string | null,
+): [string, string, string] {
     const raw = `${dataSource}_Bulk`;
-    return [escapeIdentifier(raw), quoteLiteral(raw), escapeIdentifier(`cred_${raw}`)];
+    const credRaw = credentialName ? `${credentialName}_Bulk` : `cred_${raw}`;
+    return [escapeIdentifier(raw), quoteLiteral(raw), escapeIdentifier(credRaw)];
 }
 
 /** Raised when a schema contains two columns that collide under SQL collation. */

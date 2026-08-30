@@ -14,6 +14,7 @@ import { describe, it } from 'node:test';
 import {
     deduplicateSharedPrerequisites,
     generateAllStatements,
+    generateCredentialSetup,
     generateBulkInsert,
     generateCompleteDdl,
     generateCreateTable,
@@ -478,5 +479,101 @@ describe('complete document assembly', () => {
             });
             assert.ok(ddl.trim().length > 0, `${platform} produced an empty document`);
         }
+    });
+});
+
+describe('storage authentication and object naming', () => {
+    const csvMeta = (): GeneratorMetadata => csvMetadata();
+
+    it('defaults to managed identity and emits no master key', () => {
+        // Live evidence (Azure SQL Database): creating a database scoped
+        // credential with IDENTITY = 'MANAGED IDENTITY' left the database
+        // master key count at 0 before, during and after. No secret and no
+        // master key password have to exist for private storage access.
+        const setup = generateCredentialSetup({
+            dataSource: 'TestDS',
+            metadata: csvMeta(),
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(setup, /IDENTITY = 'MANAGED IDENTITY'/);
+        assert.ok(!setup.includes('CREATE MASTER KEY'));
+        assert.ok(!setup.includes('SECRET'));
+    });
+
+    it('restores the master key when a SAS token is requested', () => {
+        const setup = generateCredentialSetup({
+            dataSource: 'TestDS',
+            metadata: csvMeta(),
+            targetPlatform: 'azure_sql_db',
+            authMethod: 'sas',
+        });
+        assert.match(setup, /IDENTITY = 'SHARED ACCESS SIGNATURE'/);
+        assert.match(setup, /CREATE MASTER KEY/);
+    });
+
+    it('creates no credential at all for a public container', () => {
+        const setup = generateCredentialSetup({
+            dataSource: 'TestDS',
+            metadata: csvMeta(),
+            targetPlatform: 'azure_sql_db',
+            authMethod: 'public',
+        });
+        assert.ok(!setup.includes('CREATE DATABASE SCOPED CREDENTIAL'));
+        assert.ok(!setup.includes('CREATE MASTER KEY'));
+        assert.ok(!setup.includes('SECRET'));
+        assert.ok(!setup.includes('CREDENTIAL = ['));
+        assert.match(setup, /CREATE EXTERNAL DATA SOURCE \[TestDS\]/);
+    });
+
+    it('propagates every object name override', () => {
+        // Without overrides a file called orders.csv generates dbo.orders,
+        // which collides with a real table in any TPC-H style database.
+        const statements = generateAllStatements(
+            { ...csvMeta(), file_name: 'orders.csv', file_path: 'C:/data/orders.csv' },
+            {
+                tableName: 'sqlfdt_cert_abc_tbl',
+                schemaName: 'sqlfdt_cert_abc',
+                dataSource: 'sqlfdt_cert_abc_ds',
+                formatName: 'sqlfdt_cert_abc_fmt',
+                externalTableName: 'sqlfdt_cert_abc_ext',
+                credentialName: 'sqlfdt_cert_abc_cred',
+                targetPlatform: 'azure_sql_db',
+                storageUrl: 'https://acct.blob.core.windows.net/raw/orders.csv',
+            },
+        );
+        const code = Object.values(statements)
+            .join('\n')
+            .split('\n')
+            .filter((line) => !line.trim().startsWith('--'))
+            .join('\n');
+
+        assert.ok(!code.includes('ff_csv_format'), 'derived format name leaked');
+        assert.ok(!code.includes('ext_orders'), 'derived external table leaked');
+        assert.ok(
+            !code.includes('cred_sqlfdt_cert_abc_ds'),
+            'derived credential name leaked',
+        );
+        assert.ok(!code.includes('[dbo]'), 'dbo leaked into generated code');
+        assert.match(statements.external_file_format, /sqlfdt_cert_abc_fmt/);
+        assert.match(statements.create_external_table, /sqlfdt_cert_abc_ext/);
+        assert.match(statements.credential_setup, /sqlfdt_cert_abc_cred/);
+    });
+
+    it('keeps the complete script free of dbo when a schema is given', () => {
+        const script = generateCompleteDdl(
+            { ...csvMeta(), file_name: 'orders.csv', file_path: 'C:/data/orders.csv' },
+            {
+                tableName: 'orders_import',
+                schemaName: 'staging',
+                targetPlatform: 'azure_sql_db',
+                storageUrl: 'https://acct.blob.core.windows.net/raw/orders.csv',
+            },
+        );
+        const code = script
+            .split('\n')
+            .filter((line) => !line.trim().startsWith('--'))
+            .join('\n');
+        assert.ok(!code.includes('[dbo]'));
+        assert.match(code, /\[staging\]/);
     });
 });

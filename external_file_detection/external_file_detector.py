@@ -63,7 +63,11 @@ class ExternalFileDetectorApp:
     
     def analyze_location(self, location: str, data_source: str = None,
                          target_platform: str = DEFAULT_TARGET_PLATFORM,
-                         storage_url: str = None) -> Dict[str, Any]:
+                         storage_url: str = None,
+                         schema_name: str = 'dbo',
+                         table_name: str = None,
+                         auth_method: str = None,
+                         credential_name: str = None) -> Dict[str, Any]:
         """
         Analyze files at the given location and generate SQL DDL.
         
@@ -74,6 +78,13 @@ class ExternalFileDetectorApp:
             storage_url: Cloud location the files are (or will be) staged
                 at. Use this when analysing local files that will be
                 uploaded, so the generated SQL references the real path.
+            schema_name: Schema every generated object is placed in. Override
+                this to keep generated objects away from ``dbo``, where a
+                file-derived table name can collide with a real table.
+            table_name: Explicit table name. Only valid for a single file,
+                because one name cannot serve several files.
+            auth_method: Storage authentication to generate; defaults to
+                managed identity where the platform supports it.
             
         Returns:
             Analysis results with file metadata and SQL DDL
@@ -83,7 +94,14 @@ class ExternalFileDetectorApp:
         
         # List files
         files = storage_handler.list_files(location)
-        
+
+        if table_name and len(files) > 1:
+            raise ValueError(
+                'table_name cannot be used when more than one file is '
+                f'analysed ({len(files)} found); it would give every file the '
+                'same table.'
+            )
+
         if not files:
             return {
                 'location': location,
@@ -114,6 +132,10 @@ class ExternalFileDetectorApp:
                     file_path, storage_handler, data_source, temp_dir,
                     target_platform=target_platform,
                     storage_url=_join_storage_url(storage_url, file_path),
+                    schema_name=schema_name,
+                    table_name=table_name,
+                    auth_method=auth_method,
+                    credential_name=credential_name,
                 )
                 results['files'].append(file_result)
                 
@@ -131,7 +153,11 @@ class ExternalFileDetectorApp:
     def _analyze_single_file(self, file_path: str, storage_handler: StorageHandler,
                            data_source: str = None, temp_dir: str = None,
                            target_platform: str = DEFAULT_TARGET_PLATFORM,
-                           storage_url: str = None) -> Dict[str, Any]:
+                           storage_url: str = None,
+                           schema_name: str = 'dbo',
+                           table_name: str = None,
+                           auth_method: str = None,
+                           credential_name: str = None) -> Dict[str, Any]:
         """Analyze a single file and generate SQL DDL."""
         local_path = file_path
         
@@ -146,6 +172,10 @@ class ExternalFileDetectorApp:
                     owned_temp_dir,
                     target_platform=target_platform,
                     storage_url=storage_url,
+                    schema_name=schema_name,
+                    table_name=table_name,
+                    auth_method=auth_method,
+                    credential_name=credential_name,
                 )
 
         if is_remote:
@@ -182,15 +212,18 @@ class ExternalFileDetectorApp:
             return self._file_error(file_path, f"Failed to analyze file: {e}")
         
         # Generate SQL DDL
-        table_name = self._generate_table_name(file_path)
+        table_name = table_name or self._generate_table_name(file_path)
         try:
             ddl = self.sql_generator.generate_complete_ddl(
                 metadata,
                 table_name,
                 data_source,
                 location=None,
+                schema_name=schema_name,
                 target_platform=target_platform,
                 storage_url=storage_url or (file_path if is_remote else None),
+                auth_method=auth_method,
+                credential_name=credential_name,
             )
         except Exception as e:
             logger.error("Failed to generate DDL for %s: %s", file_path, e)
@@ -246,7 +279,11 @@ class ExternalFileDetectorApp:
     
     def analyze_files(self, file_paths: List[str], data_source: str = None,
                       target_platform: str = DEFAULT_TARGET_PLATFORM,
-                      storage_url: str = None) -> List[Dict[str, Any]]:
+                      storage_url: str = None,
+                      schema_name: str = 'dbo',
+                      table_name: str = None,
+                      auth_method: str = None,
+                      credential_name: str = None) -> List[Dict[str, Any]]:
         """
         Analyze multiple specific files.
         
@@ -255,10 +292,19 @@ class ExternalFileDetectorApp:
             data_source: Name of the external data source for SQL
             target_platform: SQL platform the generated script targets
             storage_url: Cloud folder the files are (or will be) staged in.
+            schema_name: Schema every generated object is placed in.
+            table_name: Explicit table name; only valid for a single file.
+            auth_method: Storage authentication to generate.
             
         Returns:
             List of analysis results
         """
+        if table_name and len(file_paths) > 1:
+            raise ValueError(
+                'table_name cannot be used with more than one file '
+                f'({len(file_paths)} given); it would give every file the '
+                'same table.'
+            )
         results = []
         handler_cache: Dict[str, StorageHandler] = {}
 
@@ -282,6 +328,10 @@ class ExternalFileDetectorApp:
                     temp_dir,
                     target_platform=target_platform,
                     storage_url=_join_storage_url(storage_url, file_path),
+                    schema_name=schema_name,
+                    table_name=table_name,
+                    auth_method=auth_method,
+                    credential_name=credential_name,
                 )
                 results.append(result)
         

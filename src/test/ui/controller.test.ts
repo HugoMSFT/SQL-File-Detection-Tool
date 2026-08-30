@@ -658,7 +658,18 @@ test('export all emits shared prerequisites once across many files', async () =>
         const script = record.saved[0].content;
         assert.ok(script.includes('CREATE TABLE'));
         const occurrences = (needle: string): number => script.split(needle).length - 1;
-        assert.equal(occurrences('CREATE MASTER KEY'), 1, 'master key emitted once');
+        // Managed identity is the default now, so no master key is emitted at
+        // all. If a secret-based method is ever selected it must still appear
+        // exactly once, never per file.
+        assert.ok(
+            occurrences('CREATE MASTER KEY') <= 1,
+            'master key emitted at most once',
+        );
+        assert.equal(
+            occurrences('CREATE MASTER KEY'),
+            0,
+            'managed identity needs no master key',
+        );
 
         // Each named prerequisite object is created exactly once, which is what
         // makes the script runnable end to end rather than failing on the

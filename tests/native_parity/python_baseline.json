@@ -1794,7 +1794,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -1804,7 +1804,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -2331,7 +2334,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -2341,7 +2344,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -2868,7 +2874,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -2878,7 +2884,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -3405,7 +3414,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -3415,7 +3424,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -3942,7 +3954,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -3952,7 +3964,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -4479,7 +4494,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -4489,7 +4504,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -5015,7 +5033,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -5025,7 +5043,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -5551,7 +5572,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -5561,7 +5582,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -6087,7 +6111,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -6097,7 +6121,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -6623,7 +6650,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -6633,7 +6660,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -10223,7 +10253,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -10720,7 +10753,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -12520,7 +12556,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -12530,7 +12566,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -13013,7 +13052,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -13023,7 +13062,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -13501,7 +13543,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -13935,7 +13977,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -14419,7 +14461,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -14907,7 +14949,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -14917,7 +14959,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -15400,7 +15445,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -15410,7 +15455,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -15888,7 +15936,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -16322,7 +16370,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -16806,7 +16854,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -17296,7 +17344,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -17306,7 +17354,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -17833,7 +17884,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -17843,7 +17894,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -18370,7 +18424,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -18380,7 +18434,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -18907,7 +18964,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -18917,7 +18974,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -19444,7 +19504,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -19454,7 +19514,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -19981,7 +20044,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -19991,7 +20054,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -20517,7 +20583,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -20527,7 +20593,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -21053,7 +21122,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -21063,7 +21132,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -21589,7 +21661,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -21599,7 +21671,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -22125,7 +22200,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -22135,7 +22210,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -25725,7 +25803,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -26222,7 +26303,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -28022,7 +28106,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -28032,7 +28116,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -28515,7 +28602,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -28525,7 +28612,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -29003,7 +29093,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -29437,7 +29527,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -29921,7 +30011,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -30409,7 +30499,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -30419,7 +30509,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -30902,7 +30995,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -30912,7 +31005,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -31390,7 +31486,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -31824,7 +31920,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -32308,7 +32404,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -32798,7 +32894,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -32808,7 +32904,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -33335,7 +33434,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -33345,7 +33444,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -33872,7 +33974,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -33882,7 +33984,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -34409,7 +34514,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -34419,7 +34524,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -34946,7 +35054,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -34956,7 +35064,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -35483,7 +35594,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -35493,7 +35604,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -36019,7 +36133,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -36029,7 +36143,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -36555,7 +36672,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -36565,7 +36682,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -37091,7 +37211,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -37101,7 +37221,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -37627,7 +37750,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -37637,7 +37760,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -41227,7 +41353,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -41724,7 +41853,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -43524,7 +43656,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -43534,7 +43666,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -44017,7 +44152,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -44027,7 +44162,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -44505,7 +44643,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -44939,7 +45077,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -45423,7 +45561,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -45911,7 +46049,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -45921,7 +46059,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -46404,7 +46545,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -46414,7 +46555,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -46892,7 +47036,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -47326,7 +47470,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -47810,7 +47954,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -85838,7 +85982,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -85848,7 +85992,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -86511,7 +86658,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -86521,7 +86668,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -87184,7 +87334,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -87194,7 +87344,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -87857,7 +88010,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -87867,7 +88020,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -88530,7 +88686,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -88540,7 +88696,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -95845,7 +96004,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -96466,7 +96628,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -101368,7 +101533,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -101378,7 +101543,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -101980,7 +102148,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -101990,7 +102158,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -102592,7 +102763,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -103126,7 +103297,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -103733,7 +103904,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -104444,7 +104615,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -104454,7 +104625,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -105494,7 +105668,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -105504,7 +105678,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -106544,7 +106721,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -106554,7 +106731,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -107594,7 +107774,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -107604,7 +107784,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -108644,7 +108827,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -108654,7 +108837,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -109694,7 +109880,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -109704,7 +109890,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -110744,7 +110933,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -110754,7 +110943,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -111794,7 +111986,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -111804,7 +111996,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -112844,7 +113039,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -112854,7 +113049,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -113894,7 +114092,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -113904,7 +114102,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -125339,7 +125540,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -125349,7 +125550,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -126280,7 +126484,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -126290,7 +126494,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -127221,7 +127428,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -128152,7 +128359,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -129088,7 +129295,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -130024,7 +130231,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -130034,7 +130241,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -130965,7 +131175,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -130975,7 +131185,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -131906,7 +132119,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -132837,7 +133050,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -133773,7 +133986,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -134549,7 +134762,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -134559,7 +134772,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -134879,7 +135095,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -134889,7 +135105,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -135209,7 +135428,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -135219,7 +135438,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -135539,7 +135761,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -135549,7 +135771,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -135869,7 +136094,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -135879,7 +136104,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -136199,7 +136427,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -136209,7 +136437,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -136529,7 +136760,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -136539,7 +136770,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -136859,7 +137093,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -136869,7 +137103,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -137189,7 +137426,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -137199,7 +137436,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -137519,7 +137759,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -137529,7 +137769,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -141044,7 +141287,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -141054,7 +141297,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -141345,7 +141591,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -141355,7 +141601,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -141646,7 +141895,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -141937,7 +142186,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -142233,7 +142482,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -142529,7 +142778,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -142539,7 +142788,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -142830,7 +143082,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -142840,7 +143092,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -143131,7 +143386,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -143422,7 +143677,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -143718,7 +143973,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -144008,7 +144263,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -144018,7 +144273,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -144300,7 +144558,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -144310,7 +144568,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -144592,7 +144853,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -144602,7 +144863,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -144884,7 +145148,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -144894,7 +145158,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -145176,7 +145443,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -145186,7 +145453,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -149188,7 +149458,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -149198,7 +149468,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -149458,7 +149731,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -149468,7 +149741,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -149728,7 +150004,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -149988,7 +150264,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -150253,7 +150529,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -150518,7 +150794,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -150528,7 +150804,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -150788,7 +151067,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -150798,7 +151077,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -151058,7 +151340,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -151318,7 +151600,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -151583,7 +151865,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161010,7 +161292,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161020,7 +161302,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161154,7 +161439,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161164,7 +161449,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161298,7 +161586,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161308,7 +161596,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161442,7 +161733,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161452,7 +161743,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161586,7 +161880,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161596,7 +161890,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161730,7 +162027,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161740,7 +162037,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -161874,7 +162174,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -161884,7 +162184,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -162018,7 +162321,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -162028,7 +162331,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -162162,7 +162468,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -162172,7 +162478,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -162306,7 +162615,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -162316,7 +162625,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -163191,7 +163503,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -163333,7 +163648,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -163821,7 +164139,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -163831,7 +164149,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -163959,7 +164280,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -163969,7 +164290,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -164092,7 +164416,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164207,7 +164531,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164336,7 +164660,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164469,7 +164793,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164479,7 +164803,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -164607,7 +164934,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164617,7 +164944,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -164740,7 +165070,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164855,7 +165185,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -164984,7 +165314,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -165160,7 +165490,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -165170,7 +165500,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -165497,7 +165830,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -165507,7 +165840,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -165834,7 +166170,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -165844,7 +166180,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -166171,7 +166510,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -166181,7 +166520,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -166508,7 +166850,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -166518,7 +166860,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -166845,7 +167190,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -166855,7 +167200,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -167181,7 +167529,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -167191,7 +167539,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -167517,7 +167868,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -167527,7 +167878,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -167853,7 +168207,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -167863,7 +168217,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -168189,7 +168546,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -168199,7 +168556,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -170389,7 +170749,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -170706,7 +171069,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -171846,7 +172212,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -171856,7 +172222,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -172159,7 +172528,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -172169,7 +172538,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -172467,7 +172839,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -172741,7 +173113,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -173045,7 +173417,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -173353,7 +173725,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -173363,7 +173735,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -173666,7 +174041,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -173676,7 +174051,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -173974,7 +174352,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -174248,7 +174626,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -174552,7 +174930,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -174854,7 +175232,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -174864,7 +175242,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -175151,7 +175532,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -175161,7 +175542,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -175448,7 +175832,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -175458,7 +175842,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -175745,7 +176132,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -175755,7 +176142,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -176042,7 +176432,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -176052,7 +176442,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -176339,7 +176732,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -176349,7 +176742,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -176635,7 +177031,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -176645,7 +177041,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -176931,7 +177330,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -176941,7 +177340,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -177227,7 +177629,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -177237,7 +177639,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -177523,7 +177928,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -177533,7 +177938,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -179443,7 +179851,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -179724,7 +180135,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -180732,7 +181146,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -180742,7 +181156,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -181009,7 +181426,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -181019,7 +181436,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -181281,7 +181701,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -181523,7 +181943,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -181791,7 +182211,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -182063,7 +182483,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -182073,7 +182493,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -182340,7 +182763,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -182350,7 +182773,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -182612,7 +183038,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -182854,7 +183280,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -183122,7 +183548,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -183404,7 +183830,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -183414,7 +183840,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -183741,7 +184170,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -183751,7 +184180,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -184078,7 +184510,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -184088,7 +184520,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -184415,7 +184850,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -184425,7 +184860,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -184752,7 +185190,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -184762,7 +185200,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -185089,7 +185530,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -185099,7 +185540,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -185425,7 +185869,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -185435,7 +185879,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -185761,7 +186208,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -185771,7 +186218,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -186097,7 +186547,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -186107,7 +186557,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -186433,7 +186886,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -186443,7 +186896,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -188633,7 +189089,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -188950,7 +189409,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -190090,7 +190552,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -190100,7 +190562,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -190403,7 +190868,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -190413,7 +190878,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -190711,7 +191179,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -190985,7 +191453,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -191289,7 +191757,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -191597,7 +192065,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -191607,7 +192075,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -191910,7 +192381,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -191920,7 +192391,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -192218,7 +192692,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -192492,7 +192966,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -192796,7 +193270,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -193106,7 +193580,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -193116,7 +193590,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -193443,7 +193920,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -193453,7 +193930,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -193780,7 +194260,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -193790,7 +194270,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -194117,7 +194600,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -194127,7 +194610,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -194454,7 +194940,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -194464,7 +194950,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -194791,7 +195280,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -194801,7 +195290,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -195127,7 +195619,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -195137,7 +195629,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -195463,7 +195958,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -195473,7 +195968,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -195799,7 +196297,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -195809,7 +196307,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -196135,7 +196636,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -196145,7 +196646,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -198335,7 +198839,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -198652,7 +199159,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -199792,7 +200302,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -199802,7 +200312,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -200105,7 +200618,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -200115,7 +200628,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -200413,7 +200929,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -200687,7 +201203,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -200991,7 +201507,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -201299,7 +201815,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -201309,7 +201825,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -201612,7 +202131,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -201622,7 +202141,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -201920,7 +202442,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -202194,7 +202716,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -202498,7 +203020,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -202808,7 +203330,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -202818,7 +203340,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -203145,7 +203670,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -203155,7 +203680,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -203482,7 +204010,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -203492,7 +204020,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -203819,7 +204350,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -203829,7 +204360,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -204156,7 +204690,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -204166,7 +204700,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -204493,7 +205030,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -204503,7 +205040,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -204829,7 +205369,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -204839,7 +205379,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -205165,7 +205708,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -205175,7 +205718,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -205501,7 +206047,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -205511,7 +206057,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -205837,7 +206386,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -205847,7 +206396,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -208037,7 +208589,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -208354,7 +208909,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -209494,7 +210052,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -209504,7 +210062,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -209807,7 +210368,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -209817,7 +210378,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -210115,7 +210679,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -210389,7 +210953,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -210693,7 +211257,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -211001,7 +211565,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -211011,7 +211575,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -211314,7 +211881,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -211324,7 +211891,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -211622,7 +212192,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -211896,7 +212466,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -212200,7 +212770,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -212510,7 +213080,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -212520,7 +213090,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -212847,7 +213420,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -212857,7 +213430,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -213184,7 +213760,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -213194,7 +213770,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -213521,7 +214100,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -213531,7 +214110,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -213858,7 +214440,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -213868,7 +214450,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -214195,7 +214780,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -214205,7 +214790,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -214531,7 +215119,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -214541,7 +215129,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -214867,7 +215458,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -214877,7 +215468,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -215203,7 +215797,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -215213,7 +215807,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://workspace@onelake.dfs.fabric.microsoft.com",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://onelake.dfs.fabric.microsoft.com/workspace",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -215539,7 +216136,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -215549,7 +216146,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -217739,7 +218339,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -218056,7 +218659,10 @@
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -219196,7 +219802,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -219206,7 +219812,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -219509,7 +220118,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -219519,7 +220128,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -219817,7 +220429,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -220091,7 +220703,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -220395,7 +221007,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -220703,7 +221315,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -220713,7 +221325,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -221016,7 +221631,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 4,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -221026,7 +221641,10 @@
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    },
    "external_file_format": {
@@ -221324,7 +221942,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -221598,7 +222216,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
@@ -221902,7 +222520,7 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 3,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",

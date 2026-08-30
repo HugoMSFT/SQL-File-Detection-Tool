@@ -474,3 +474,158 @@ export function determineFormatConfig(
 export function schemaColumnNames(schema: readonly SchemaField[]): string[] {
     return schema.map(([name]) => name);
 }
+
+/**
+ * Authentication methods the generator can emit for storage access.
+ *
+ * `managed_identity` is preferred and is the default wherever the platform
+ * supports it. Live certification against Azure SQL Database proved that
+ * `CREATE DATABASE SCOPED CREDENTIAL ... WITH IDENTITY = 'MANAGED IDENTITY'`
+ * succeeds with **no database master key**: the master key count was 0 before
+ * the credential was created, 0 while it existed, and 0 after it was dropped.
+ * That removes the need to invent and store a master key password or a SAS
+ * token, so it is both simpler and secret-free.
+ */
+export const AUTH_METHODS = [
+    'managed_identity',
+    'sas',
+    'storage_key',
+    'public',
+] as const;
+
+export type AuthMethod = (typeof AUTH_METHODS)[number];
+
+/** Platforms where `IDENTITY = 'MANAGED IDENTITY'` is the preferred default. */
+export const MANAGED_IDENTITY_PLATFORMS: ReadonlySet<string> = new Set([
+    'azure_sql_db',
+    'azure_sql_mi',
+    'sql_server_2022',
+    'sql_server_2025',
+]);
+
+/** Why the master key step is skipped, per secret-free authentication method. */
+const AUTH_NO_MASTER_KEY_NOTE: Record<string, readonly string[]> = {
+    managed_identity: [
+        "IDENTITY = 'MANAGED IDENTITY' stores no secret, so there is",
+        'nothing for a database master key to encrypt.',
+    ],
+    public: [
+        'The container allows anonymous read access, so no credential',
+        'and no database master key are created.',
+    ],
+};
+
+/** Return the effective authentication method for a platform. */
+export function resolveAuthMethod(
+    authMethod: string | null | undefined,
+    targetPlatform: string,
+): AuthMethod {
+    if (authMethod && (AUTH_METHODS as readonly string[]).includes(authMethod)) {
+        return authMethod as AuthMethod;
+    }
+    if (MANAGED_IDENTITY_PLATFORMS.has(targetPlatform)) {
+        return 'managed_identity';
+    }
+    return targetPlatform === 'sql_server_2019' ? 'storage_key' : 'sas';
+}
+
+/** Return the escaped database scoped credential identifier. */
+export function credentialIdentifier(
+    dataSource: string,
+    credentialName?: string | null,
+): string {
+    return escapeIdentifier(credentialName || `cred_${dataSource}`);
+}
+
+/** Return the master key section, which secret-free methods do not need. */
+export function masterKeyLines(authMethod: AuthMethod): string[] {
+    const note = AUTH_NO_MASTER_KEY_NOTE[authMethod];
+    if (note) {
+        return [
+            '-- 1. Master key: NOT required.',
+            ...note.map((line) => `-- ${sqlComment(line)}`),
+            '-- Certified live on Azure SQL Database: the database master',
+            '-- key count stayed 0 before, during and after the credential',
+            '-- existed, so no master key password has to be invented,',
+            '-- stored or rotated.',
+            '',
+        ];
+    }
+    return [
+        '-- 1. Master key (required once per database for this auth method)',
+        '-- Only needed because a SECRET is being stored. Switching to',
+        "-- IDENTITY = 'MANAGED IDENTITY' removes this step entirely.",
+        "IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = '##MS_DatabaseMasterKey##')",
+        "    CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<StrongPassword!>';",
+        'GO',
+        '',
+    ];
+}
+
+/**
+ * Return the credential DDL lines for one authentication method.
+ *
+ * `public` returns only a comment: a container that allows anonymous read
+ * needs no credential at all, and emitting one would force an unnecessary
+ * secret into the script.
+ */
+export function credentialDdl(
+    credIdent: string,
+    authMethod: AuthMethod,
+    stepLabel: string,
+): string[] {
+    const prefix = stepLabel ? ` ${stepLabel} ` : ' ';
+    if (authMethod === 'public') {
+        return [
+            `--${prefix}Database Scoped Credential: not required.`,
+            '-- The container allows anonymous read access, so the external',
+            '-- data source below is created without a CREDENTIAL.',
+        ];
+    }
+    if (authMethod === 'managed_identity') {
+        return [
+            `--${prefix}Database Scoped Credential (managed identity)`,
+            '-- PREFERRED: no secret, no SAS token, and no database master key.',
+            '-- Grant the server/instance managed identity the Storage Blob Data',
+            '-- Reader role on the storage account (Storage Blob Data Contributor',
+            '-- if the workload also writes). Certified live: creating this',
+            '-- credential left the database master key count at 0.',
+            `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
+            'WITH',
+            "    IDENTITY = 'MANAGED IDENTITY';",
+            'GO',
+        ];
+    }
+    if (authMethod === 'storage_key') {
+        return [
+            `--${prefix}Database Scoped Credential (storage account key)`,
+            "-- Prefer IDENTITY = 'MANAGED IDENTITY' where the platform",
+            '-- supports it; an account key is a long-lived shared secret.',
+            '-- Requires a database master key (step 1).',
+            `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
+            'WITH',
+            "    IDENTITY = '<storage_account_name>',",
+            "    SECRET   = '<storage_account_key>';",
+            'GO',
+        ];
+    }
+    return [
+        `--${prefix}Database Scoped Credential (SAS token)`,
+        "-- Prefer IDENTITY = 'MANAGED IDENTITY' where the platform",
+        '-- supports it: it needs no secret and no database master key.',
+        '-- Requires a database master key (step 1).',
+        `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
+        'WITH',
+        "    IDENTITY = 'SHARED ACCESS SIGNATURE',",
+        "    SECRET   = '<SAS_token_without_leading_?>';",
+        'GO',
+    ];
+}
+
+/** Return the trailing `CREDENTIAL = [...]` line, if one is needed. */
+export function credentialClause(
+    credIdent: string,
+    authMethod: AuthMethod,
+): string[] {
+    return authMethod === 'public' ? [] : [`    CREDENTIAL = [${credIdent}]`];
+}

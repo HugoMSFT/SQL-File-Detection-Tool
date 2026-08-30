@@ -343,7 +343,8 @@ def test_two_file_export_creates_shared_objects_once(tmp_path):
 
     counts = _shared_object_counts(script)
     assert counts == {
-        'master_key': 1, 'credential': 1, 'data_source': 1, 'file_format': 1
+        # Managed identity is the default, so no master key is emitted at all.
+        'master_key': 0, 'credential': 1, 'data_source': 1, 'file_format': 1
     }, counts
     # Both files still get their own table and load statements.
     assert 'CREATE TABLE [dbo].[orders]' in script
