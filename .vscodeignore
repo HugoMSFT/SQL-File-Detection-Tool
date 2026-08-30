@@ -29,6 +29,7 @@ venv/**
 
 # Docs that are not part of the packaged extension
 AGENTS.md
+docs/**
 demo/**/*.ipynb
 
 # Capture scratch: raw walkthrough frames and tooling never ship.

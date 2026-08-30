@@ -4,6 +4,82 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Native TypeScript analysis core (`src/native/`).** A complete in-process
+  port of the Python analysis and T-SQL generation logic, so the VS Code
+  extension can eventually work without spawning a Python interpreter or a
+  Flask server. It covers CSV/TSV/pipe-delimited text, plain text, JSON arrays,
+  single JSON objects, NDJSON/JSONL, Parquet, XLSX, Delta (by reading
+  `_delta_log` directly, with no `deltalake` requirement), and Iceberg table
+  metadata, plus a full port of the platform-aware SQL generator for all six
+  targets with `azure_sql_db` still the default.
+- The core exposes a single `NativeAnalysisService` facade suitable for a future
+  `WebviewView`: analyse a file or a table directory, read a bounded preview,
+  generate every statement tab or a complete document, generate a multi-file
+  script, and list supported formats and platforms. Every filesystem operation
+  resolves symlinks and junctions before enforcing an allowed root, accepts a
+  `vscode.CancellationToken`, reports progress, and reads within explicit byte
+  and row bounds.
+- Deterministic parity testing against the live Python implementation.
+  `scripts/generate_parity_baselines.py` records normalised metadata and
+  semantic statement invariants for the committed `demo/` fixtures into
+  `tests/native_parity/python_baseline.json` (no absolute paths, no timings),
+  and the Node suites compare against it marker for marker. The handful of
+  intentional differences are allowlisted individually, with a guard test that
+  fails if an allowlisted difference ever stops being one.
+- New Node test suites for the format matrix, encodings, malformed and hostile
+  input, cancellation, path containment (including a Windows junction escape),
+  SQL injection across every platform, the 6 x 4 x 2 generator matrix, and
+  performance guards.
+- New contributor documentation: [`docs/native-core.md`](docs/native-core.md)
+  covers the module layout, the service API, the safety properties, the
+  dependency and license choices, the format matrix, and the parity method.
+
+### Security
+
+- The native escaping layer collapses control characters before escaping, so a
+  line terminator smuggled into a column name, a JSON key, a file name, or a
+  storage URL cannot introduce a line reading `GO` and split the generated
+  script into an attacker-authored batch. `GO` is a client-side batch separator
+  rather than a T-SQL keyword, so doubling `]` and `'` alone did not prevent
+  this. The native `splitGoBatches` helper is independently hardened to track
+  literals, bracketed identifiers, and line and block comments across lines.
+- Delta and Iceberg now resolve every sidecar file they read by name
+  (`_delta_log/…`, `metadata/…`) through the same realpath-based containment
+  check used for caller-supplied paths, so a symlink or Windows junction planted
+  inside a table directory cannot redirect the read outside the allowed root.
+- The JSON section's on-premises `SINGLE_CLOB` branch escapes `file_path`
+  through the central `quoteLiteral` helper instead of a hand-rolled quote
+  double, closing the last path by which a control character could reach
+  generated SQL. A test now fails the build on any hand-rolled SQL escaper
+  outside `src/native/sql/escaping.ts`.
+  Iceberg no longer surfaces raw `JSON.parse` messages, which embed a snippet of
+  the file being parsed.
+- Both issues were found by a security review of this branch, both had working
+  proofs of concept, and both now have regression tests — including control
+  tests that fail if the detection logic itself becomes vacuous.
+
+### Known limitations
+- **ORC is not analysed natively.** The native core recognises an ORC file and
+  reports its size and compression codec, but returns a typed
+  `unsupported_native` result instead of a schema, because there is no
+  maintained pure-JavaScript or WASM ORC reader that avoids a platform-specific
+  native binary. The Python CLI and backend still analyse ORC exactly as before.
+  See [`docs/native-core.md`](docs/native-core.md) for the full rationale.
+
+### Notes
+
+- Nothing user-facing changed. The extension still starts the managed Python
+  backend and still opens the web UI; no shipped code path imports the native
+  core yet, Python files still ship in the VSIX, and the extension version is
+  unchanged.
+- Adds four runtime dependencies, all MIT, all pure JavaScript, none with an
+  install script or a native binary: `hyparquet`, `iconv-lite`, `chardet`, and
+  `fflate`.
+
 ## [1.1.1]
 
 ### Added

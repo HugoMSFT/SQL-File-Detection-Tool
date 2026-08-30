@@ -7,6 +7,9 @@
  * nor `sh` expands the pattern for us when it is quoted in an npm script, so we
  * discover the files here and hand the runner an explicit list. This behaves
  * identically on every supported Node version and on both Windows and POSIX.
+ *
+ * Discovery is recursive so suites can be grouped in subdirectories (for
+ * example `out/test/native/`).
  */
 
 const { spawnSync } = require('child_process');
@@ -20,11 +23,23 @@ if (!fs.existsSync(testDir)) {
     process.exit(1);
 }
 
-const files = fs
-    .readdirSync(testDir)
-    .filter((name) => name.endsWith('.test.js'))
-    .sort()
-    .map((name) => path.join(testDir, name));
+/** Collect every `*.test.js` under `dir`, depth first and alphabetically. */
+function collectTests(dir) {
+    const found = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+        a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+    )) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            found.push(...collectTests(full));
+        } else if (entry.isFile() && entry.name.endsWith('.test.js')) {
+            found.push(full);
+        }
+    }
+    return found;
+}
+
+const files = collectTests(testDir);
 
 if (files.length === 0) {
     console.error(`No *.test.js files in ${testDir}.`);

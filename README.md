@@ -661,6 +661,22 @@ python -m build
 CI runs the tests on Linux and Windows and builds the wheel from
 `pyproject.toml`.
 
+### Native TypeScript core
+
+`src/native/` holds an in-process TypeScript port of the analysis and T-SQL
+generation logic, built so the extension can eventually drop its Python backend.
+It is not on the shipped runtime path yet — no extension source imports it — but
+it is proven against the Python implementation by a parity baseline:
+
+```bash
+python scripts/generate_parity_baselines.py --check   # baseline still matches Python
+npm test                                              # Node suites compare against it
+```
+
+See [`docs/native-core.md`](docs/native-core.md) for the module layout, the
+service API, the dependency and license choices, the format matrix, and the one
+explicit limitation (ORC).
+
 ## Project layout
 
 ```text
@@ -673,7 +689,14 @@ src/                         extension TypeScript sources
 |-- process.ts               spawn helpers (no vscode import)
 |-- azureScopes.ts           token scopes and expiry math
 |-- util.ts                  ports, URLs, redaction
+|-- native/                  native analysis + SQL generation core (see docs/)
+|   |-- index.ts             public barrel
+|   |-- service.ts           NativeAnalysisService facade
+|   |-- analysis/            per-format analyzers
+|   `-- sql/                 platform-aware T-SQL generator
 `-- test/                    node --test suites
+docs/
+`-- native-core.md           native core architecture and parity notes
 external_file_detection/
 |-- azure_auth.py
 |-- cli.py
