@@ -487,29 +487,43 @@ def test_platform_matrix_local_files_have_no_data_source_bulk(platform):
 
 # -- absent metadata ---------------------------------------------------------
 
-# Fields that feed string operations somewhere in the generator. A detection
-# result routinely carries these keys with ``None``: a Parquet file has no
-# delimiter, an undecided CSV probe has no quote character, and a caller
-# building metadata by hand rarely fills in every key.
+# Keys the generator actually reads and treats as text. A detection result
+# routinely carries these with ``None``: `analyze_file_metadata` seeds every one
+# of them as ``None`` up front and only fills them in if the per-format analyser
+# succeeds, so a failure anywhere leaves the key present and empty.
 OPTIONAL_TEXT_FIELDS = (
     'file_name', 'file_type', 'encoding', 'delimiter', 'has_header',
-    'file_size', 'row_count', 'compression', 'columns', 'json_format',
-    'sheet_name', 'quote_char',
+    'file_size', 'row_count', 'compression', 'json_format', 'schema',
+    'codepage', 'file_path',
 )
 
 
 def _complete_meta():
+    """Metadata in the shape the detector really produces, schema included.
+
+    The schema matters: with no columns every platform generates the same
+    degenerate single-``NVARCHAR(MAX)`` script, and the whole matrix below then
+    exercises one trivial path instead of the typed column definitions, the
+    ``WITH`` column lists and the nullable-column warnings where the remaining
+    optional fields are actually read.
+    """
     return {
         'file_path': 'C:/data/sample.csv',
         'file_name': 'sample.csv',
         'file_type': 'csv',
         'encoding': 'utf-8',
+        'codepage': '65001',
         'delimiter': ',',
         'has_header': True,
         'file_size': 1024,
         'row_count': 10,
         'compression': None,
-        'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+        'schema': [
+            ('id', 'int64'),
+            ('name', 'object'),
+            ('amount', 'float64'),
+        ],
+        'nullable_columns': ['name'],
     }
 
 
@@ -556,3 +570,40 @@ def test_delimiter_always_reads_as_a_comma_when_absent(value):
     for script in (gen.generate_complete_ddl(meta),
                    '\n'.join(gen.generate_all_statements(meta).values())):
         assert "FIELDTERMINATOR = ','" in script
+
+
+def test_a_csv_whose_analysis_failed_still_generates(tmp_path, monkeypatch):
+    """The live crash, reproduced through the detector that caused it.
+
+    ``analyze_file_metadata`` seeds ``delimiter`` as ``None``, decides
+    ``file_type`` from the extension, then calls the per-format analyser inside
+    a bare ``except Exception`` that records the error and moves on. So any
+    analyser failure - a missing optional dependency, an unreadable file, a
+    corrupt one - hands back exactly ``file_type='csv'`` with
+    ``delimiter=None``. That pair, and only that pair, reaches
+    ``_best_practices_csv``: it is why the certification plan crashed on the
+    parent's machine and not on one where pandas imports cleanly.
+    """
+    from external_file_detection.file_detector import FileDetector
+
+    sample = tmp_path / 'sales.csv'
+    sample.write_text('id,name\n1,alpha\n', encoding='utf-8')
+
+    def _explode(*_args, **_kwargs):
+        raise ImportError('pandas is required for CSV analysis')
+
+    monkeypatch.setattr(FileDetector, '_analyze_csv', _explode)
+    metadata = FileDetector().analyze_file_metadata(str(sample))
+
+    # The precondition, asserted rather than assumed: without it the rest of
+    # this test would pass against the broken generator too.
+    assert metadata['file_type'] == 'csv'
+    assert metadata['delimiter'] is None
+    assert metadata['error']
+
+    gen = SQLGenerator()
+    for platform in SQLGenerator.PLATFORMS:
+        assert gen.generate_best_practices(metadata, target_platform=platform)
+        assert gen.generate_all_statements(
+            metadata, target_platform=platform)['create_table']
+        assert gen.generate_complete_ddl(metadata, target_platform=platform)

@@ -63,7 +63,7 @@ def probe_engine(connection: Connection) -> Dict[str, Any]:
     facts: Dict[str, Any] = {'driver': connection.driver}
     for name, sql in ENGINE_PROBES.items():
         try:
-            result = connection.execute(sql)
+            result = connection.execute(sql, textual=True)
             facts[name] = result.rows[0][0] if result.rows else None
         except Exception as exc:
             facts[name] = f'<probe failed: {type(exc).__name__}>'
@@ -76,7 +76,7 @@ def read_inventory(connection: Connection, identity: RunIdentity) -> Dict[str, L
     for kind, template in INVENTORY_QUERIES.items():
         sql = template.format(schema=identity.schema)
         try:
-            result = connection.execute(sql)
+            result = connection.execute(sql, textual=True)
             inventory[kind] = [str(row[0]) for row in result.rows]
         except Exception as exc:
             inventory[kind] = [f'<inventory failed: {type(exc).__name__}>']

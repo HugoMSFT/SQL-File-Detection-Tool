@@ -809,7 +809,7 @@ class SQLGenerator:
                 'Use CREATE EXTERNAL TABLE instead (see EXT TABLE tab).')
 
         if not table_name:
-            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            base = _metadata_base_name(metadata)
             table_name = _clean_identifier(base)
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
@@ -819,7 +819,7 @@ class SQLGenerator:
             columns = ['    [data] NVARCHAR(MAX) NULL']
 
         file_type = _metadata_text(metadata, 'file_type', 'unknown').upper()
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
 
@@ -857,7 +857,7 @@ class SQLGenerator:
             data_source: str) -> List[str]:
         """Build platform-specific quick-load guidance for CREATE TABLE."""
         file_type = _metadata_text(metadata, 'file_type', 'csv')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         lines = [
             '',
             '-- ====================================================================',
@@ -986,7 +986,7 @@ class SQLGenerator:
                 f'Alternative: {alt_text}')
 
         if not table_name:
-            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            base = _metadata_base_name(metadata)
             table_name = _clean_identifier(base)
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
@@ -1094,7 +1094,7 @@ class SQLGenerator:
             prereq_lines.append('')
         else:
             from_path = _quote_literal(
-                (file_path_override or metadata['file_path']).replace('\\', '/')
+                (file_path_override or _metadata_text(metadata, 'file_path', '')).replace('\\', '/')
             )
             prereq_note = 'File must be accessible to the SQL Server service account'
 
@@ -1266,8 +1266,8 @@ class SQLGenerator:
                 f'Alternative: {alt_text}')
 
         file_type = _metadata_text(metadata, 'file_type', 'csv')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
-        local_path = _quote_literal(metadata['file_path'].replace('\\', '/'))
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
+        local_path = _quote_literal(_metadata_text(metadata, 'file_path', '').replace('\\', '/'))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         lines = [
@@ -1369,7 +1369,7 @@ class SQLGenerator:
         way rather than through non-printing CSV framing.
         """
         file_type = _metadata_text(metadata, 'file_type', 'csv')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         bulk_ident, bulk_literal, bulk_cred_ident = _bulk_data_source_names(
             data_source
         )
@@ -1431,7 +1431,7 @@ class SQLGenerator:
                                     data_source: str) -> str:
         """Generate Fabric SQL Database OPENROWSET over Lakehouse Files."""
         file_type = _metadata_text(metadata, 'file_type', 'csv')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
@@ -1523,7 +1523,7 @@ class SQLGenerator:
                                    target_platform: str) -> str:
         """Generate Azure SQL data virtualization OPENROWSET statements."""
         file_type = _metadata_text(metadata, 'file_type', 'csv')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
@@ -1658,7 +1658,7 @@ class SQLGenerator:
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
         delim_escaped = _quote_literal(delimiter.replace('\t', '\\t'))
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
 
         if file_type in ('csv', 'text'):
             # A FORMATFILE placeholder makes this statement unrunnable: there is
@@ -1739,7 +1739,7 @@ class SQLGenerator:
             target_platform: str) -> str:
         """Generate SQL Server 2022+ OPENROWSET over an object storage source."""
         file_type = _metadata_text(metadata, 'file_type', 'parquet')
-        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
@@ -1875,7 +1875,7 @@ class SQLGenerator:
                 'External tables are not available on this platform.')
 
         if not format_name:
-            format_name = f'ff_{metadata["file_type"]}_format'
+            format_name = f'ff_{_metadata_text(metadata, "file_type", "data")}_format'
         format_name = _escape_identifier(format_name)
 
         config = self._determine_format_config(metadata)
@@ -2037,10 +2037,10 @@ class SQLGenerator:
             )
 
         if not table_name:
-            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            base = _metadata_base_name(metadata)
             table_name = f'ext_{_clean_identifier(base)}'
         file_name = metadata.get('file_name') or os.path.basename(
-            metadata['file_path']
+            _metadata_text(metadata, 'file_path', '')
         )
         source_location, relative_path = self._external_source_parts(
             storage_url, file_name, target_platform
@@ -2049,7 +2049,7 @@ class SQLGenerator:
             location = relative_path
         location = str(location).replace('\\', '/')
         if not file_format:
-            file_format = f'ff_{metadata["file_type"]}_format'
+            file_format = f'ff_{_metadata_text(metadata, "file_type", "data")}_format'
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
         file_format = _escape_identifier(file_format)
@@ -2469,7 +2469,9 @@ class SQLGenerator:
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
 
-        file_path_sql = metadata.get('file_path', r'C:/data/file.json').replace('\\', '/').replace("'", "''")
+        file_path_sql = _metadata_text(
+            metadata, 'file_path', r'C:/data/file.json'
+        ).replace('\\', '/').replace("'", "''")
         json_bulk_source = None
         # The single-LOB read needs the separate TYPE = BLOB_STORAGE source,
         # which only exists on platforms that can have one.
@@ -3027,8 +3029,7 @@ class SQLGenerator:
             statements.get('credential_setup') or ''
         ):
             resolved_table = _clean_identifier(
-                table_name or os.path.splitext(
-                    os.path.basename(metadata['file_path']))[0]
+                table_name or _metadata_base_name(metadata)
             )
             statements['bulk_insert'] = self.generate_bulk_insert(
                 metadata, resolved_table, schema_name,
@@ -3060,7 +3061,7 @@ class SQLGenerator:
         :meth:`generate_all_statements`; anything else is cleaned but kept.
         """
         if not table_name:
-            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            base = _metadata_base_name(metadata)
             return _clean_identifier(base)
         return _clean_identifier(table_name)
 
@@ -3088,7 +3089,7 @@ class SQLGenerator:
         to a disposable prefix instead of writing into ``dbo``.
         """
         if not table_name:
-            base = os.path.splitext(os.path.basename(metadata['file_path']))[0]
+            base = _metadata_base_name(metadata)
             table_name = _clean_identifier(base)
         else:
             table_name = _clean_identifier(table_name)
@@ -3551,6 +3552,21 @@ def _metadata_text(metadata: Dict[str, Any], key: str, fallback: Any) -> str:
     if value is None or value == '':
         return ''
     return str(value)
+
+
+def _metadata_base_name(metadata: Dict[str, Any], fallback: str = 'data') -> str:
+    """The file's stem, for deriving a default object name.
+
+    ``metadata['file_path']`` used to be read by subscript in six places. The
+    detector seeds every metadata key as ``None`` and only fills it in when the
+    per-format analyser succeeds, and it swallows any analyser failure, so a
+    caller can genuinely be handed a result whose ``file_path`` is missing or
+    empty. Indexing it raised ``KeyError`` and lost the whole script.
+    """
+    source = (_metadata_text(metadata, 'file_path', '')
+              or _metadata_text(metadata, 'file_name', ''))
+    base = os.path.splitext(os.path.basename(source))[0]
+    return base or fallback
 
 
 def _display_delimiter(value: Optional[str]) -> str:

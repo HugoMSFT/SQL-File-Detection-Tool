@@ -140,11 +140,10 @@ describe('demo fixture support matrix', () => {
         });
 
         it(`${relative} generates a whole script on every platform`, async () => {
-            // The Python generator crashed on exactly this path during the
-            // live certification plan: the detector reports no delimiter for
-            // every non-delimited format, and that absent field reached a
-            // string operation. Detector output must never be able to abort
-            // generation.
+            // Breadth, not the crash regression. The native generator never had
+            // the Python defect - `stringOr` already treated null as absent -
+            // so this pins that real detector output stays generable on every
+            // platform rather than reproducing a bug this side never had.
             const metadata = await service.analyze({
                 filePath: path.join(DEMO, ...relative.split('/')),
             });

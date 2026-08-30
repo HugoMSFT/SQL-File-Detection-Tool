@@ -582,15 +582,19 @@ describe('storage authentication and object naming', () => {
 // -- absent metadata ----------------------------------------------------------
 
 /**
- * Fields that feed a string operation somewhere in the generator. A detection
- * result routinely carries these with `null`: a Parquet file has no delimiter,
- * an undecided CSV probe has no quote character, and metadata built by hand
- * rarely fills in every key.
+ * Keys the generator actually reads and treats as text. The detector seeds all
+ * of them empty and only fills them in when the per-format analyser succeeds,
+ * so any of them can arrive `null` on a real analysis.
+ *
+ * The schema is supplied for a reason: with no columns every platform produces
+ * the same degenerate single-`NVARCHAR(MAX)` script, and the matrix would then
+ * exercise one trivial path instead of the typed column definitions where the
+ * remaining optional fields are read.
  */
 const OPTIONAL_TEXT_FIELDS = [
     'file_name', 'file_type', 'encoding', 'delimiter', 'has_header',
-    'file_size', 'row_count', 'compression', 'columns', 'json_format',
-    'sheet_name', 'quote_char',
+    'file_size', 'row_count', 'compression', 'json_format', 'schema',
+    'codepage', 'file_path',
 ] as const;
 
 function completeMetadata(): Record<string, unknown> {
@@ -599,12 +603,18 @@ function completeMetadata(): Record<string, unknown> {
         file_name: 'sample.csv',
         file_type: 'csv',
         encoding: 'utf-8',
+        codepage: '65001',
         delimiter: ',',
         has_header: true,
         file_size: 1024,
         row_count: 10,
         compression: null,
-        columns: [{ name: 'a', sql_type: 'INT', nullable: true }],
+        schema: [
+            ['id', 'int64'],
+            ['name', 'object'],
+            ['amount', 'float64'],
+        ],
+        nullable_columns: ['name'],
     };
 }
 

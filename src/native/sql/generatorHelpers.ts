@@ -221,11 +221,13 @@ export function generateColumnDefinitions(
 ): string[] {
     const includeNullability = options.includeNullability ?? false;
     const indent = options.indent ?? 4;
-    const schema = metadata.schema;
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : undefined;
     if (!schema || schema.length === 0) {
         return [];
     }
-    const nullableSet = new Set(metadata.nullable_columns ?? []);
+    const nullableSet = new Set(
+        Array.isArray(metadata.nullable_columns) ? metadata.nullable_columns : [],
+    );
     const maxLengths = metadata.max_string_lengths ?? {};
     const overrides = metadata.sql_type_overrides ?? {};
     const pad = ' '.repeat(indent);
@@ -260,7 +262,7 @@ export function generateOpenjsonColumns(
     metadata: GeneratorMetadata,
     indent = 4,
 ): string[] {
-    const schema = metadata.schema ?? [];
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const nesting = metadata.json_nesting ?? {};
     const maxLengths = metadata.max_string_lengths ?? {};
     const overrides = metadata.sql_type_overrides ?? {};
@@ -308,7 +310,7 @@ export function openrowsetWithSchema(
 
 /** A bracketed comma-separated column list, or `*` when the schema is unknown. */
 export function columnNameList(metadata: GeneratorMetadata): string {
-    const schema = metadata.schema ?? [];
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const names = schema.map(
         ([name]) => `[${escapeIdentifier(cleanIdentifier(name))}]`,
     );
@@ -318,7 +320,7 @@ export function columnNameList(metadata: GeneratorMetadata): string {
 /** Render sample data rows as SQL comments for context. */
 export function formatSampleRows(metadata: GeneratorMetadata): string[] {
     const sampleRows = metadata.sample_rows;
-    const schema = metadata.schema;
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : undefined;
     const jsonSamples = metadata.json_sample_values;
 
     if (!schema || schema.length === 0) {

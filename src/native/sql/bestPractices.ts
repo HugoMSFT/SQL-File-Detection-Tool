@@ -101,8 +101,12 @@ export function bestPracticesWarnings(metadata: GeneratorMetadata): string[] {
     const fileType = metadata.file_type ?? 'csv';
     const jsonNesting = metadata.json_nesting ?? {};
     const maxLengths = metadata.max_string_lengths ?? {};
-    const nullable = new Set(metadata.nullable_columns ?? []);
-    const schema = metadata.schema ?? [];
+    const nullable = new Set(
+        Array.isArray(metadata.nullable_columns) ? metadata.nullable_columns : [],
+    );
+    // `?? []` only covers null and undefined. A detector that failed partway
+    // can leave `schema` as an empty string, and `''.filter` is not a function.
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
 
     if (encoding && encoding !== 'binary'
         && confidence !== undefined && confidence !== null && confidence < 70) {
@@ -146,7 +150,7 @@ export function bestPracticesValidationSql(
     tableName: string,
     schemaName = 'dbo',
 ): string[] {
-    const schema = metadata.schema ?? [];
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const cols = schema.slice(0, 3).map(([col]) => escapeIdentifier(col));
     const selectCols = cols.length > 0 ? cols.map((c) => `[${c}]`).join(', ') : '*';
     const safeTable = escapeIdentifier(tableName);

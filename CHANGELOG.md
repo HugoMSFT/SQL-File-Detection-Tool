@@ -44,15 +44,21 @@ test suites now read the same machine-readable evidence file.
 - **`FIRST_ROW` gating matches the engines.** It is emitted for SQL Server
   2022/2025, Azure SQL Database and Fabric SQL Database, and explained as
   unavailable elsewhere.
-- **A format with no delimiter no longer aborts generation.** The detector
-  reports `delimiter = None` for every non-delimited format - 11 of the 19
-  certification fixtures, including Parquet, JSON, Delta and Excel - and a
+- **A CSV whose analysis fails no longer aborts generation.** The detector
+  seeds every metadata field as empty, decides the format from the extension,
+  then runs the per-format analyser inside a catch-all that records the error
+  and carries on — so a missing optional dependency, an unreadable file or a
+  corrupt one hands back a file still typed as CSV but with no delimiter. A
   dictionary default only fills in a key that is *missing*, not one that is
-  present and empty. Generating a best-practices section for such a file raised
-  `TypeError` and took the whole run down. Every optional metadata field is now
-  read through one helper that treats an empty value like an absent one, in both
-  generators, and both suites push real detector output for every committed
-  fixture through every platform.
+  present and empty, so generating the best-practices section for that file
+  raised `TypeError` and lost the whole script. Every optional metadata field
+  is now read through one helper that treats an empty value like an absent one,
+  which also closed six `KeyError`s on an absent file path. Widening the test
+  to every optional field the generators actually read then exposed the same
+  class of defect in the native generator: a `schema` or `nullable_columns` that
+  arrives as anything other than a list reached `.filter`/`.slice`, and a null
+  `file_path` reached `.split`, in both cases throwing instead of degrading.
+  Both generators are now checked against the same absent-and-empty matrix.
 
 ### Added
 
@@ -79,7 +85,12 @@ test suites now read the same machine-readable evidence file.
   can enter the package - and it refuses to send any statement that touches
   `dbo`, names an unprefixed object, or targets a TPC-H table. Its
   `execute --dry-run` mode is fully offline: no environment variable, no
-  password, no adapter, no socket.
+  password, no adapter, no socket. Its connection layer requests encryption
+  explicitly rather than trusting a driver default - `pymssql.connect` has no
+  `encrypt` parameter, so the setting was being dropped - and refuses to connect
+  at all if the installed driver cannot honour it. Every value that comes back
+  from a driver is normalised before it is redacted, so a `bytes` column can
+  neither crash the JSON report nor reach an artifact as raw binary.
 
 ### Changed
 

@@ -19,10 +19,17 @@ Credential handling is the point of this module:
 from __future__ import annotations
 
 import getpass
+import inspect
 import os
 import sys
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from .redaction import normalize_value
+
+#: Reported to the engine so a certification session is identifiable in
+#: ``sys.dm_exec_sessions``. Names the tool, nothing about the environment.
+APPLICATION_NAME = 'sqlfdt-certification'
 
 #: Environment variable *names* the harness reads. Values never appear in code,
 #: documentation, artifacts or commit history.
@@ -119,7 +126,22 @@ class Connection:
         self._raw = raw
         self.driver = driver
 
-    def execute(self, sql: str, params: Optional[Sequence[Any]] = None) -> QueryResult:
+    def execute(
+        self,
+        sql: str,
+        params: Optional[Sequence[Any]] = None,
+        *,
+        textual: bool = False,
+    ) -> QueryResult:
+        """Run one statement and return values that an artifact can hold.
+
+        Every cell is normalised on the way out. Drivers return ``bytes``,
+        ``Decimal`` and ``datetime`` objects that no serialiser here accepts,
+        and a run that discovered that at report-writing time lost the evidence
+        it had just spent a live connection gathering. ``textual=True`` says the
+        statement returns engine text, so byte strings are decoded rather than
+        rendered as a binary literal.
+        """
         cursor = self._raw.cursor()
         try:
             if params:
@@ -130,7 +152,10 @@ class Connection:
             rows: List[Tuple[Any, ...]] = []
             if cursor.description:
                 columns = [str(d[0]) for d in cursor.description]
-                rows = [tuple(r) for r in cursor.fetchall()]
+                rows = [
+                    tuple(normalize_value(value, textual=textual) for value in row)
+                    for row in cursor.fetchall()
+                ]
             return QueryResult(columns=columns, rows=rows)
         finally:
             cursor.close()
@@ -165,6 +190,61 @@ def available_drivers() -> List[str]:
     return found
 
 
+def _connect_parameters(module: Any) -> Optional[frozenset]:
+    """Names ``module.connect`` accepts, or ``None`` if that cannot be decided.
+
+    ``pymssql.connect`` is a Cython function; on some builds it carries a usable
+    signature and on others it does not. ``None`` means "unknown", so the caller
+    decides rather than assuming a parameter is missing. A signature that ends
+    in ``**kwargs`` accepts any name at all, which is also "unknown".
+    """
+    try:
+        parameters = inspect.signature(module.connect).parameters
+    except (TypeError, ValueError):  # pragma: no cover - build specific
+        return None
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return None
+    return frozenset(parameters)
+
+
+def _pymssql_kwargs(module: Any, settings: 'ConnectionSettings') -> Dict[str, Any]:
+    """Build ``pymssql.connect`` arguments, honouring the encryption setting.
+
+    This is the whole reason the function exists. ``pymssql.connect`` has no
+    ``encrypt`` or ``trust_server_certificate`` parameter, so passing the
+    dataclass through unchanged silently ignored both and opened a connection
+    on whatever FreeTDS negotiated by default. The encryption parameter arrived
+    in pymssql 2.3; if the installed build predates it and encryption was asked
+    for, that is a hard failure rather than a quiet downgrade.
+
+    ``charset`` matters for fidelity, not comfort: the matrix asserts Japanese
+    and emoji round-trips, and the default single-byte charset mangles them.
+    ``appname`` makes the harness identifiable in ``sys.dm_exec_sessions`` while
+    naming nothing sensitive.
+    """
+    kwargs: Dict[str, Any] = {
+        'server': settings.host,
+        'port': str(settings.port),
+        'user': settings.user,
+        'database': settings.database,
+        'login_timeout': settings.login_timeout,
+        'autocommit': True,
+        'charset': 'UTF-8',
+        'appname': APPLICATION_NAME,
+    }
+    supported = _connect_parameters(module)
+    if supported is not None and 'encryption' not in supported:
+        if settings.encrypt:
+            raise AdapterUnavailable(
+                'the installed pymssql has no encryption parameter; install '
+                'pymssql 2.3 or newer, or pyodbc, rather than connecting '
+                'unencrypted'
+            )
+        return kwargs
+    kwargs['encryption'] = 'require' if settings.encrypt else 'off'
+    return kwargs
+
+
 def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str] = None) -> Connection:
     """Open an encrypted connection using the first available driver."""
     candidates = [driver] if driver else available_drivers()
@@ -179,15 +259,8 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
             if name == 'pymssql':
                 import pymssql  # noqa: WPS433
 
-                raw = pymssql.connect(
-                    server=settings.host,
-                    port=str(settings.port),
-                    user=settings.user,
-                    password=password,
-                    database=settings.database,
-                    login_timeout=settings.login_timeout,
-                    autocommit=True,
-                )
+                kwargs = _pymssql_kwargs(pymssql, settings)
+                raw = pymssql.connect(password=password, **kwargs)
                 return Connection(raw, 'pymssql')
             if name == 'pyodbc':
                 import pyodbc  # noqa: WPS433

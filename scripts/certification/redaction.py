@@ -20,9 +20,14 @@ tokens such as ``<SAS_token_without_leading_?>``.
 
 from __future__ import annotations
 
+import datetime
+import decimal
+import hashlib
+import math
 import re
+import uuid
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Pattern, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Pattern, Sequence, Tuple
 
 #: Hosts whose names may survive redaction because they are public, documented
 #: Microsoft sample data and carry no tenant information.
@@ -131,6 +136,84 @@ _FILTERS: Tuple[Tuple[str, Pattern[str], str], ...] = (
 )
 
 
+# --------------------------------------------------------------------------
+# Value normalisation
+# --------------------------------------------------------------------------
+
+#: Longest binary prefix written out literally. Thirty-two bytes reproduces the
+#: VARBINARY fixtures the matrix asserts on while keeping an unexpected blob
+#: from ever reaching an artifact in full.
+MAX_BINARY_PREFIX = 32
+
+#: Longest rendering of a value with no better representation than ``str()``.
+MAX_TEXT = 512
+
+
+def _binary_literal(raw: bytes) -> str:
+    if len(raw) <= MAX_BINARY_PREFIX:
+        return '0x' + raw.hex().upper()
+    digest = hashlib.sha256(raw).hexdigest()[:16]
+    return (
+        '0x' + raw[:MAX_BINARY_PREFIX].hex().upper()
+        + f'... [{len(raw)} bytes, sha256 {digest}]'
+    )
+
+
+def normalize_value(value: Any, *, textual: bool = False) -> Any:
+    """Coerce a driver value into something JSON, XML and Markdown can carry.
+
+    Database drivers return ``bytes``, ``Decimal``, ``datetime`` and UUID
+    objects. ``json.dump`` refuses every one of them, which is how a completed
+    certification run lost its evidence at report-writing time, and the two
+    renderers that do not go through JSON would have written a raw ``b'\\xde'``
+    repr into a report rather than failing loudly.
+
+    The mapping is total and deterministic:
+
+    * ``bytes`` become an uppercase ``0x`` literal, the same form SQL Server
+      displays and the matrix asserts on, truncated past
+      :data:`MAX_BINARY_PREFIX` with the true length and a digest. Content is
+      never sniffed for text: guessing would turn the VARBINARY fixture
+      ``0x41424344`` into ``'ABCD'`` and pass an assertion that should fail.
+      A caller that *knows* the column is text passes ``textual=True``, which
+      decodes UTF-8 with replacement instead.
+    * ``Decimal`` becomes a string rather than a float, because the matrix
+      asserts the uint64 boundary 18446744073709551615, which no float holds.
+    * dates, times, intervals and UUIDs become their canonical text form.
+    * a non-finite float becomes text: ``json.dump`` writes bare ``NaN`` and
+      ``Infinity``, which no other JSON reader accepts.
+
+    Every result is a string, number, bool, ``None``, or a container of those,
+    so redaction - which only rewrites strings - can still reach all of it.
+    """
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        raw = bytes(value)
+        return raw.decode('utf-8', errors='replace') if textual else _binary_literal(raw)
+    if isinstance(value, decimal.Decimal):
+        return str(value)
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
+    if isinstance(value, datetime.timedelta):
+        return str(value)
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return {
+            str(key): normalize_value(item, textual=textual)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple, set)):
+        return [normalize_value(item, textual=textual) for item in value]
+    text = str(value)
+    if len(text) > MAX_TEXT:
+        return text[:MAX_TEXT] + f'... [{len(text)} characters]'
+    return text
+
+
 @dataclass
 class Redactor:
     """Filters secrets and environment identifiers out of harness artifacts.
@@ -169,14 +252,24 @@ class Redactor:
         return text
 
     def redact_obj(self, obj):
-        """Recursively redact strings inside dicts / lists / tuples."""
+        """Recursively redact strings inside dicts / lists / tuples.
+
+        Anything that is not already a JSON scalar is normalised first, so a
+        driver-native value cannot slip through unredacted and cannot reach a
+        serialiser that would refuse it.
+        """
         if isinstance(obj, str):
             return self.redact(obj)
         if isinstance(obj, dict):
-            return {key: self.redact_obj(value) for key, value in obj.items()}
-        if isinstance(obj, (list, tuple)):
+            return {str(key): self.redact_obj(value) for key, value in obj.items()}
+        if isinstance(obj, (list, tuple, set)):
             return [self.redact_obj(item) for item in obj]
-        return obj
+        if obj is None or isinstance(obj, (bool, int)):
+            return obj
+        if isinstance(obj, float) and math.isfinite(obj):
+            return obj
+        normalized = normalize_value(obj)
+        return self.redact(normalized) if isinstance(normalized, str) else normalized
 
 
 # --------------------------------------------------------------------------

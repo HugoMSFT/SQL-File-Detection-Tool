@@ -345,13 +345,14 @@ def test_blob_paths_keep_their_case(rules):
 
 @pytest.mark.parametrize('fixture', FIXTURES, ids=lambda item: item.key)
 def test_every_fixture_generates_on_every_platform(fixture):
-    """Detector output must never be able to abort script generation.
+    """Real detector output must generate a script on every platform.
 
-    The live certification plan crashed here: the detector returns
-    ``delimiter=None`` for every non-delimited format - 11 of the 19 fixtures -
-    and ``metadata.get('delimiter', ',')`` only falls back for an *absent* key,
-    so that None reached an iteration and took the whole run down before a
-    single statement was sent.
+    This is breadth, not the crash regression: 11 of the 19 fixtures report
+    ``delimiter=None`` because no non-delimited format has one, and they
+    exercise the optional-field reads outside the CSV guidance path. The live
+    crash itself needed ``file_type='csv'`` *and* ``delimiter=None``, which only
+    a failed CSV analysis produces - that is pinned by
+    ``test_a_csv_whose_analysis_failed_still_generates``.
     """
     from external_file_detection.file_detector import FileDetector
 

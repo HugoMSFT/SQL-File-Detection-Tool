@@ -92,7 +92,9 @@ export function generateOpenrowset(
 
     const fileType = stringOr(metadata.file_type, 'csv');
     const fileName = displayFileName(metadata);
-    const localPath = quoteLiteral(metadata.file_path.split('\\').join('/'));
+    const localPath = quoteLiteral(
+        stringOr(metadata.file_path, '').split('\\').join('/'),
+    );
 
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     const lines = [

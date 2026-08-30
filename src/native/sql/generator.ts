@@ -101,9 +101,22 @@ function stringOr(value: unknown, fallback: string): string {
     return String(value);
 }
 
+/**
+ * The file's stem, for deriving a default object name.
+ *
+ * The detector seeds every metadata key empty and only fills it in when the
+ * per-format analyser succeeds, swallowing any failure, so a caller can be
+ * handed a result whose file path is missing. Mirrors Python's
+ * `_metadata_base_name`.
+ */
+function derivedBaseName(metadata: GeneratorMetadata, fallback = 'data'): string {
+    const source = stringOr(metadata.file_path, '') || stringOr(metadata.file_name, '');
+    return splitextRoot(baseName(source)) || fallback;
+}
+
 /** Derive a table name from the file path, matching Python's default. */
 function derivedTableName(metadata: GeneratorMetadata): string {
-    return cleanIdentifier(splitextRoot(baseName(metadata.file_path)));
+    return cleanIdentifier(derivedBaseName(metadata));
 }
 
 /** True when bulk access needs a `TYPE = BLOB_STORAGE` data source. */
@@ -382,7 +395,7 @@ function bulkInsertFabricAlternatives(
     const sourceName = quoteLiteral(dataSource);
 
     const tableName = escapeIdentifier(
-        rawTableName ? rawTableName : cleanIdentifier(splitextRoot(baseName(metadata.file_path))),
+        rawTableName ? rawTableName : derivedTableName(metadata),
     );
     const schemaName = escapeIdentifier(rawSchemaName);
 
@@ -634,7 +647,9 @@ export function generateBulkInsert(
         prereqLines.push('');
     } else {
         fromPath = quoteLiteral(
-            (options.filePathOverride || metadata.file_path).split('\\').join('/'),
+            stringOr(options.filePathOverride || metadata.file_path, '')
+                .split('\\')
+                .join('/'),
         );
         prereqNote = 'File must be accessible to the SQL Server service account';
     }
@@ -871,7 +886,8 @@ export function generateExternalTable(
     const rawTableName = options.tableName
         ? options.tableName
         : `ext_${derivedTableName(metadata)}`;
-    const fileName = metadata.file_name || baseName(metadata.file_path);
+    const fileName = stringOr(metadata.file_name, '')
+        || baseName(stringOr(metadata.file_path, ''));
     const [sourceLocation, relativePath] = externalSourceParts(
         storageUrl,
         fileName,
@@ -1241,7 +1257,7 @@ export function generateJsonFunctions(
     const fileName = metadata.file_name ?? metadata.file_path ?? 'file';
     const jsonFormat = stringOr(metadata.json_format, 'array');
     const nesting = metadata.json_nesting ?? {};
-    const schema = metadata.schema ?? [];
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
 
     const tableName = escapeIdentifier(
         options.tableName
@@ -1579,7 +1595,7 @@ export function generateForJsonPath(
     const rootLabel = quoteLiteral(rawTableName); // literal context (FOR JSON ROOT)
     const tableName = escapeIdentifier(rawTableName);
     const schemaName = escapeIdentifier(options.schemaName ?? 'dbo');
-    const schema = metadata.schema ?? [];
+    const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const nesting = metadata.json_nesting ?? {};
 
     const selectCols: string[] = [];

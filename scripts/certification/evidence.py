@@ -27,7 +27,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from .batches import strip_sql_comments
 from .matrix import HARNESS_ONLY_VERDICTS, VERDICTS, Assertion
-from .redaction import Redactor
+from .redaction import Redactor, normalize_value
 
 PASS = 'PASS'
 FAIL = 'FAIL'
@@ -312,7 +312,11 @@ def check_result_assertions(
 def write_json(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
     payload = evidence.as_dict(redactor)
     with open(path, 'w', encoding='utf-8') as handle:
-        json.dump(payload, handle, indent=2, ensure_ascii=False, sort_keys=False)
+        # `default` is unreachable while redaction normalises every leaf, and
+        # is kept because losing a completed live run to a serialisation error
+        # costs a whole credentialed execution to reproduce.
+        json.dump(payload, handle, indent=2, ensure_ascii=False, sort_keys=False,
+                  default=normalize_value)
         handle.write('\n')
 
 
@@ -345,7 +349,10 @@ def write_junit(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
             )
             failed = [a for a in cell.assertions if not a.ok]
             detail = '\n'.join(
-                redactor.redact(f'{a.kind}: expected {a.expected!r}, got {a.actual!r} {a.detail}')
+                redactor.redact(
+                    f'{a.kind}: expected {normalize_value(a.expected)!r}, '
+                    f'got {normalize_value(a.actual)!r} {a.detail}'
+                )
                 for a in failed
             )
             errors = '\n'.join(
@@ -365,7 +372,7 @@ def write_markdown(evidence: RunEvidence, path: str, redactor: Redactor) -> None
         f'# Certification evidence — {evidence.target} ({evidence.platform})',
         '',
         f'* run id: `{evidence.run_id}`',
-        f'* engine: {redactor.redact(str(evidence.engine.get("version", "unknown")))}',
+        f'* engine: {redactor.redact(str(normalize_value(evidence.engine.get("version", "unknown"))))}',
         f'* started: {evidence.started_at}',
         f'* cleanup verified: **{evidence.cleanup_verified}**'
         + (f' (residue: {len(evidence.residue)})' if evidence.residue else ' (residue: 0)'),
@@ -400,8 +407,9 @@ def write_markdown(evidence: RunEvidence, path: str, redactor: Redactor) -> None
                 if not assertion.ok:
                     lines.append(
                         f'* failed `{assertion.kind}`: expected '
-                        f'`{redactor.redact(str(assertion.expected))}`, got '
-                        f'`{redactor.redact(str(assertion.actual))}` {assertion.detail}'
+                        f'`{redactor.redact(str(normalize_value(assertion.expected)))}`, got '
+                        f'`{redactor.redact(str(normalize_value(assertion.actual)))}` '
+                        f'{assertion.detail}'
                     )
             for batch in cell.batches:
                 if batch.error_message:
