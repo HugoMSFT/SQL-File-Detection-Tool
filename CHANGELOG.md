@@ -25,6 +25,15 @@ test suites now read the same machine-readable evidence file.
   A multi-byte character sliced in half by the 64 KiB read cap is tolerated
   rather than mistaken for corruption. Files that are already detected as
   ASCII stay ASCII; this is not a reclassification.
+- **UTF-16 that arrives without a byte order mark is no longer read as ASCII.**
+  Latin text encoded as UTF-16 is a run of `XX 00` pairs, so every byte is
+  below `0x80` and a plain ASCII test claims the whole file. Decoding it as a
+  single-byte codepage then treats the NUL padding as data: a three-column,
+  two-row CSV came back as six rows with a `CODEPAGE` of `1252` instead of
+  `1200`. Both the TypeScript core and the Python library now look at *where*
+  the NUL bytes sit before deciding - real text has none, binary scatters them
+  across both parities, and only a sample whose NULs land on exactly one
+  parity is called UTF-16.
 - **A redirect verdict is no longer destroyed by closing a bodyless error.**
   On Python 3.9 `HTTPError` leaves `fp` as `None` when it is constructed
   without a body, and calling `close()` on it raises `KeyError: 'file'` from

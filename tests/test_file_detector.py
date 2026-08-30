@@ -765,7 +765,9 @@ def test_chardet_still_names_a_legacy_codepage():
     assert detector.encoding_to_codepage(encoding) == '932'
 
 
-def test_a_multibyte_character_split_by_the_read_cap_is_still_utf8(tmp_path):
+def test_a_multibyte_character_split_by_the_read_cap_is_still_utf8(
+    tmp_path, sabotaged_chardet
+):
     """A capped read can slice a character in half; that is not a verdict."""
     from external_file_detection import file_detector as fd
 
@@ -778,8 +780,62 @@ def test_a_multibyte_character_split_by_the_read_cap_is_still_utf8(tmp_path):
     monkey = pytest.MonkeyPatch()
     try:
         monkey.setattr(fd, 'ENCODING_DETECTION_BYTES', cut)
-        encoding, _ = FileDetector().detect_encoding(str(path))
+        encoding, confidence = FileDetector().detect_encoding(str(path))
     finally:
         monkey.undo()
 
     assert encoding == 'utf-8'
+    # Without the tolerance the sliced tail would fail the strict decode and
+    # the answer would come from chardet instead, so the verdict has to be the
+    # certain one and chardet has to have been left alone.
+    assert confidence == 1.0
+    assert sabotaged_chardet.calls == 0
+
+@pytest.mark.parametrize(
+    'codec, expected, codepage',
+    [
+        ('utf-16-le', 'utf-16-le', '1200'),
+        ('utf-16-be', 'utf-16-be', '1201'),
+    ],
+)
+def test_utf16_without_a_bom_is_not_mistaken_for_ascii(
+    tmp_path, codec, expected, codepage
+):
+    """Latin UTF-16 is all bytes below 0x80, which is not the same as ASCII."""
+    path = tmp_path / 'nobom.csv'
+    path.write_bytes('id,name,city\r\n1,Alice,Paris\r\n2,Bob,Tokyo\r\n'.encode(codec))
+
+    detector = FileDetector()
+    encoding, _ = detector.detect_encoding(str(path))
+
+    assert encoding == expected
+    assert detector.encoding_to_codepage(encoding) == codepage
+
+
+def test_utf16_without_a_bom_still_counts_its_rows(tmp_path):
+    """Reading UTF-16 as a single byte codepage turns NUL padding into data."""
+    path = tmp_path / 'nobom.csv'
+    path.write_bytes('id,name,city\r\n1,Alice,Paris\r\n2,Bob,Tokyo\r\n'.encode('utf-16-le'))
+
+    metadata = FileDetector().analyze_file_metadata(str(path))
+
+    assert metadata.get('error') is None
+    assert metadata['codepage'] == '1200'
+    assert [name for name, _ in metadata['schema']] == ['id', 'name', 'city']
+    # Read as a single byte codepage the NUL padding becomes data and this is 6.
+    assert metadata['row_count'] == 2
+    assert metadata['sample_rows'] == [[1, 'Alice', 'Paris'], [2, 'Bob', 'Tokyo']]
+
+
+@pytest.mark.parametrize(
+    'name, body',
+    [
+        ('plain ascii', b'id,name\r\n1,Alice\r\n2,Bob\r\n'),
+        ('utf-8 text', 'id,name\r\n1,Bj\u00f6rk\r\n'.encode('utf-8')),
+        ('nuls on both parities', bytes([0, 0, 1, 2]) * 64),
+        ('too short to judge', b'\x41\x00'),
+    ],
+)
+def test_the_utf16_heuristic_keeps_to_itself(name, body):
+    """It must claim UTF-16 only, never ordinary text or binary."""
+    assert FileDetector._looks_like_bomless_utf16(body) is None, name

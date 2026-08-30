@@ -24,6 +24,11 @@ import {
 import { clampPreviewRows } from '../../native/preview';
 import { resolveWithinRoot } from '../../native/paths';
 import { NativeAnalysisService } from '../../native/service';
+import {
+    decodeBuffer,
+    detectEncodingFromBuffer,
+    encodingToCodepage,
+} from '../../native/encoding';
 import { PREVIEW_DEFAULT_ROWS, PREVIEW_MAX_ROWS } from '../../native/limits';
 import type { FileMetadata, FileType, NativeSupport } from '../../native/types';
 import { fixturePath, REPO_ROOT } from './parityInvariants';
@@ -476,5 +481,51 @@ describe('service facade', () => {
             `master key created ${masterKeys.length} times`,
         );
         assert.ok(/\[sales_scalars\]/i.test(script));
+    });
+});
+
+describe('UTF-16 without a byte order mark', () => {
+    const body = 'id,name,city\r\n1,Alice,Paris\r\n2,Bob,Tokyo\r\n';
+
+    const cases: ReadonlyArray<readonly [string, BufferEncoding, string]> = [
+        ['little endian', 'utf16le', 'utf-16-le'],
+        ['big endian', 'utf16le', 'utf-16-be'],
+    ];
+
+    for (const [label, , expected] of cases) {
+        it(`is not mistaken for ASCII (${label})`, () => {
+            let buffer = Buffer.from(body, 'utf16le');
+            if (expected === 'utf-16-be') {
+                buffer = Buffer.from(buffer);
+                buffer.swap16();
+            }
+            const detected = detectEncodingFromBuffer(buffer);
+            assert.strictEqual(detected.encoding, expected);
+            assert.strictEqual(detected.bomLength, 0);
+            assert.strictEqual(
+                encodingToCodepage(detected.encoding),
+                expected === 'utf-16-le' ? '1200' : '1201',
+            );
+        });
+    }
+
+    it('decodes back to the original text rather than NUL padded bytes', () => {
+        const buffer = Buffer.from(body, 'utf16le');
+        const detected = detectEncodingFromBuffer(buffer);
+        assert.strictEqual(decodeBuffer(buffer, detected.encoding), body);
+    });
+
+    it('leaves ordinary text and binary alone', () => {
+        const untouched: ReadonlyArray<readonly [string, Buffer, string]> = [
+            ['plain ascii', Buffer.from('id,name\r\n1,Alice\r\n'), 'ascii'],
+            ['utf-8 text', Buffer.from('id,name\r\n1,Björk\r\n', 'utf8'), 'utf-8'],
+        ];
+        for (const [label, buffer, expected] of untouched) {
+            assert.strictEqual(detectEncodingFromBuffer(buffer).encoding, expected, label);
+        }
+        // NULs on both parities are binary, not UTF-16.
+        const binary = Buffer.from(Array.from({ length: 256 }, (_, i) => [0, 0, 1, 2][i % 4]));
+        assert.notStrictEqual(detectEncodingFromBuffer(binary).encoding, 'utf-16-le');
+        assert.notStrictEqual(detectEncodingFromBuffer(binary).encoding, 'utf-16-be');
     });
 });

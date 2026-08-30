@@ -256,6 +256,37 @@ class FileDetector:
     )
 
     @staticmethod
+    def _looks_like_bomless_utf16(raw: bytes) -> Optional[str]:
+        """Return a UTF-16 codec name when *raw* looks like UTF-16 without a BOM.
+
+        Latin text encoded as UTF-16 is a run of `XX 00` pairs, so every byte
+        is below 0x80 and a plain ASCII test claims it - reading it back as a
+        single byte codepage then treats the NUL padding as data and doubles
+        the apparent row count.
+
+        The tell is not the NUL bytes themselves but *where* they sit: real
+        text has none at all, and binary formats scatter them across both
+        parities. Only a sample whose NULs land exclusively on one parity, and
+        often enough to be structural rather than incidental, is claimed here.
+        """
+        usable = len(raw) - (len(raw) % 2)
+        if usable < 4:
+            return None
+        head = raw[:usable]
+        evens = head[0::2]
+        odds = head[1::2]
+        zeros_even = evens.count(0)
+        zeros_odd = odds.count(0)
+        # A quarter of one side being NUL is far past anything text produces
+        # and is the density a Latin UTF-16 stream shows.
+        threshold = max(2, len(odds) // 4)
+        if zeros_even == 0 and zeros_odd >= threshold:
+            return 'utf-16-le'
+        if zeros_odd == 0 and zeros_even >= threshold:
+            return 'utf-16-be'
+        return None
+
+    @staticmethod
     def _decodes_as_utf8(raw: bytes, truncated: bool) -> bool:
         """Return True when *raw* is valid UTF-8.
 
@@ -315,6 +346,12 @@ class FileDetector:
                 return (encoding, 1.0)
 
         if raw:
+            # UTF-16 without a byte order mark is a stream of `XX 00` pairs when
+            # the text is Latin, and every one of those bytes is below 0x80. The
+            # ASCII check below would happily claim it, so this runs first.
+            bomless_utf16 = self._looks_like_bomless_utf16(raw)
+            if bomless_utf16:
+                return (bomless_utf16, 0.95)
             # ASCII is a subset of UTF-8 but maps to a different SQL Server
             # codepage, so it keeps its own answer rather than being folded in.
             if max(raw) < 0x80:

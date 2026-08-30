@@ -184,6 +184,45 @@ function detectLegacy(buffer: Buffer): { encoding: string; confidence: number; }
     return { encoding: 'cp1252', confidence: 0.4 };
 }
 
+/**
+ * Recognise UTF-16 that arrived without a byte order mark.
+ *
+ * Latin text encoded as UTF-16 is a run of `XX 00` pairs, so `classifyUtf8`
+ * sees nothing but bytes below 0x80 and calls it ASCII. Decoding it as a
+ * single byte codepage then treats the NUL padding as data and doubles the
+ * apparent row count.
+ *
+ * The tell is where the NULs sit, not that they exist: real text has none,
+ * and binary formats scatter them across both parities. Only a sample whose
+ * NULs land on exactly one parity, densely enough to be structural, is
+ * claimed here.
+ */
+function detectBomlessUtf16(buffer: Buffer): string | undefined {
+    const usable = buffer.length - (buffer.length % 2);
+    if (usable < 4) {
+        return undefined;
+    }
+    let zerosEven = 0;
+    let zerosOdd = 0;
+    for (let i = 0; i < usable; i += 2) {
+        if (buffer[i] === 0) {
+            zerosEven += 1;
+        }
+        if (buffer[i + 1] === 0) {
+            zerosOdd += 1;
+        }
+    }
+    const pairs = usable / 2;
+    const threshold = Math.max(2, Math.floor(pairs / 4));
+    if (zerosEven === 0 && zerosOdd >= threshold) {
+        return 'utf-16-le';
+    }
+    if (zerosOdd === 0 && zerosEven >= threshold) {
+        return 'utf-16-be';
+    }
+    return undefined;
+}
+
 /** Detect the encoding of an in-memory sample. */
 export function detectEncodingFromBuffer(buffer: Buffer): EncodingDetection {
     const bom = detectBom(buffer);
@@ -192,6 +231,10 @@ export function detectEncodingFromBuffer(buffer: Buffer): EncodingDetection {
     }
     if (buffer.length === 0) {
         return { encoding: 'utf-8', confidence: 1.0, bomLength: 0 };
+    }
+    const bomless = detectBomlessUtf16(buffer);
+    if (bomless) {
+        return { encoding: bomless, confidence: 0.95, bomLength: 0 };
     }
     const utf8 = classifyUtf8(buffer);
     if (utf8 === 'ascii') {
