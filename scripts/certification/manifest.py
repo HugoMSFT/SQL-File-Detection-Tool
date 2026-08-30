@@ -136,6 +136,10 @@ def _generate(
     data_source: str,
     platform: str,
     storage_url: Optional[str],
+    format_name: Optional[str] = None,
+    external_table_name: Optional[str] = None,
+    credential_name: Optional[str] = None,
+    auth_method: Optional[str] = None,
 ) -> str:
     _ensure_repo_on_path()
     from external_file_detection.sql_generator import SQLGenerator  # noqa: WPS433
@@ -147,6 +151,10 @@ def _generate(
         data_source=data_source,
         target_platform=platform,
         storage_url=storage_url,
+        format_name=format_name,
+        external_table_name=external_table_name,
+        credential_name=credential_name,
+        auth_method=auth_method,
     )
     if statement_kind == 'complete_ddl':
         return generator.generate_complete_ddl(metadata, **common)
@@ -383,6 +391,19 @@ def _plan_cell(
     table_name = None if use_default_names else identity.name(entry.cell_id.lower(), entry.fixture)
     schema_name = 'dbo' if use_default_names else identity.schema
     data_source = identity.name(entry.cell_id.lower(), 'src')
+    # Every generated object gets the run prefix, not just the table. Without
+    # this the shared prerequisites (ff_csv_format, cred_<ds>) keep their
+    # derived names and the safety gate correctly refuses the whole batch.
+    format_name = None if use_default_names else identity.name(entry.cell_id.lower(), 'fmt')
+    external_table_name = (
+        None if use_default_names else identity.name(entry.cell_id.lower(), 'ext')
+    )
+    credential_name = (
+        None if use_default_names else identity.name(entry.cell_id.lower(), 'cred')
+    )
+    # Managed identity keeps the run secretless: no master key, no SAS token,
+    # nothing secret-shaped for the redactor or the gate to trip over.
+    auth_method = None if use_default_names else 'managed_identity'
 
     sql = _generate(
         metadata,
@@ -392,6 +413,10 @@ def _plan_cell(
         data_source=data_source,
         platform=platform,
         storage_url=location,
+        format_name=format_name,
+        external_table_name=external_table_name,
+        credential_name=credential_name,
+        auth_method=auth_method,
     )
 
     planned['sql_sha256'] = _sha256(sql)

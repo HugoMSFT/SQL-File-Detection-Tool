@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from .batches import strip_sql_comments
-from .matrix import VERDICTS, Assertion
+from .matrix import HARNESS_ONLY_VERDICTS, VERDICTS, Assertion
 from .redaction import Redactor
 
 PASS = 'PASS'
@@ -35,10 +35,13 @@ EXEC_AFTER_SUBSTITUTION = 'EXEC_AFTER_SUBSTITUTION'
 NOT_EXECUTABLE = 'NOT_EXECUTABLE'
 UNSUPPORTED_EXPECTED = 'UNSUPPORTED_EXPECTED'
 BLOCKED = 'BLOCKED'
+DRY_RUN_ACCEPTED = 'DRY_RUN_ACCEPTED'
 
 #: Verdicts that mean "nothing reached the server", used when deciding whether
 #: a cleanup step is required.
-NON_EXECUTED = frozenset({NOT_EXECUTABLE, UNSUPPORTED_EXPECTED, BLOCKED})
+NON_EXECUTED = frozenset(
+    {NOT_EXECUTABLE, UNSUPPORTED_EXPECTED, BLOCKED, DRY_RUN_ACCEPTED}
+)
 
 
 @dataclass
@@ -114,7 +117,23 @@ class CellResult:
 
     @property
     def accepted(self) -> bool:
+        # A harness-mode verdict describes the harness, not the engine, so it
+        # can never satisfy a cell's acceptance list even if someone lists it.
+        if self.verdict in HARNESS_ONLY_VERDICTS:
+            return False
         return self.verdict in self.accepts
+
+    @property
+    def is_defect(self) -> bool:
+        """True when this cell represents a real, reportable defect.
+
+        A dry run proves nothing either way, so it is neither accepted nor a
+        defect. Counting dry runs as defects produced the misleading
+        "27 defects" summary on an offline run that had in fact found none.
+        """
+        if self.verdict in HARNESS_ONLY_VERDICTS:
+            return False
+        return not self.accepted
 
     @property
     def elapsed_ms(self) -> float:
@@ -163,7 +182,11 @@ class RunEvidence:
 
     @property
     def defects(self) -> List[CellResult]:
-        return [c for c in self.cells if not c.accepted]
+        return [c for c in self.cells if c.is_defect]
+
+    @property
+    def dry_run_cells(self) -> List[CellResult]:
+        return [c for c in self.cells if c.verdict in HARNESS_ONLY_VERDICTS]
 
     def summary(self) -> Dict[str, int]:
         counts = {verdict: 0 for verdict in VERDICTS}
@@ -288,7 +311,12 @@ def write_junit(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
             name=f'{cell.cell_id} {cell.fixture} {cell.statement_kind} ({cell.access})',
             time=f'{cell.elapsed_ms / 1000:.3f}',
         )
-        if not cell.accepted:
+        if cell.verdict in HARNESS_ONLY_VERDICTS:
+            ET.SubElement(
+                case, 'skipped',
+                message=redactor.redact(f'{cell.verdict}: {cell.intent}'),
+            )
+        elif not cell.accepted:
             failure = ET.SubElement(
                 case, 'failure',
                 message=redactor.redact(f'{cell.verdict}: {cell.intent}'),
@@ -335,7 +363,10 @@ def write_markdown(evidence: RunEvidence, path: str, redactor: Redactor) -> None
         '| --- | --- | --- | --- | --- | --- | --- |',
     ]
     for cell in evidence.cells:
-        mark = 'yes' if cell.accepted else '**NO**'
+        if cell.verdict in HARNESS_ONLY_VERDICTS:
+            mark = 'n/a (dry run)'
+        else:
+            mark = 'yes' if cell.accepted else '**NO**'
         lines.append(
             f'| {cell.cell_id} | {cell.hypothesis} | {cell.fixture} | '
             f'{cell.statement_kind} | {cell.access} | {cell.verdict} | {mark} |'

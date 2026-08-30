@@ -11519,15 +11519,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -13822,15 +13868,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -16215,15 +16307,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -27069,15 +27207,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -29372,15 +29556,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -31765,15 +31995,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -42619,15 +42895,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -44922,15 +45244,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -47315,15 +47683,61 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[quantity]",
+      "FLOAT"
+     ],
+     [
+      "[unit_price]",
+      "FLOAT"
+     ],
+     [
+      "[temperature_c]",
+      "FLOAT"
+     ],
+     [
+      "[is_active]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[product_name]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[notes]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_date]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[order_timestamp_utc]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -62984,6 +63398,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -64311,6 +64726,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -65704,6 +66120,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -72382,6 +72799,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -73877,6 +74295,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -75446,6 +75865,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -82156,6 +82576,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -83643,6 +84064,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -85196,6 +85618,7 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -163821,15 +164244,25 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[data]",
+      "NVARCHAR(MAX)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -164457,15 +164890,25 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[data]",
+      "NVARCHAR(MAX)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -165111,15 +165554,25 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[data]",
+      "NVARCHAR(MAX)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -171535,15 +171988,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[pair_id]",
+      "BIGINT"
+     ],
+     [
+      "[category]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[left_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[right_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[differs_under]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -172998,15 +173477,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[pair_id]",
+      "BIGINT"
+     ],
+     [
+      "[category]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[left_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[right_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[differs_under]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -174511,15 +175016,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[pair_id]",
+      "BIGINT"
+     ],
+     [
+      "[category]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[left_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[right_value]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[differs_under]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -180541,15 +181072,37 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[kana_type]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -181836,15 +182389,37 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[kana_type]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -183173,15 +183748,37 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[kana_type]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -189875,16 +190472,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -191338,16 +191961,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -192851,16 +193500,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -199625,16 +200300,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -201088,16 +201789,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -202601,16 +203328,42 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB"
     ]
    }
   },
@@ -209375,15 +210128,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -210838,15 +211617,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -212351,15 +213156,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -219125,15 +219956,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -220588,15 +221445,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
@@ -222101,15 +222984,41 @@
     ]
    },
    "openrowset": {
-    "columns": [],
+    "columns": [
+     [
+      "[row_id]",
+      "BIGINT"
+     ],
+     [
+      "[script]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[sample_text]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[code_points]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[note]",
+      "NVARCHAR(255)"
+     ]
+    ],
     "go_batches": 0,
     "has_sql": true,
     "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }

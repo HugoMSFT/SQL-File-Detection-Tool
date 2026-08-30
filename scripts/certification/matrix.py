@@ -38,7 +38,17 @@ VERDICTS: Tuple[str, ...] = (
     'NOT_EXECUTABLE',
     'UNSUPPORTED_EXPECTED',
     'BLOCKED',
+    # Harness-mode verdict, never a certification result. A cell whose SQL
+    # passed every safety layer but was deliberately not sent (``--dry-run``)
+    # is *not* NOT_EXECUTABLE: calling it that would hide the difference
+    # between "the generator cannot produce runnable SQL for this cell" and
+    # "we chose not to open a connection". Nothing may be certified from it.
+    'DRY_RUN_ACCEPTED',
 )
+
+#: Verdicts that describe how the harness behaved rather than what an engine
+#: did. They can never satisfy a cell's ``accepts`` list.
+HARNESS_ONLY_VERDICTS: FrozenSet[str] = frozenset({'DRY_RUN_ACCEPTED'})
 
 #: How the engine is expected to reach the bytes. Files are *not* local to the
 #: engine just because they are local to the client, and conflating the two is
@@ -182,14 +192,23 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     ),
     MatrixEntry(
         'C03', 'utf16le_bom', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H2',
-        'UTF-16LE is the case CODEPAGE alone cannot express: SQL Server bulk '
-        'paths need DATAFILETYPE = widechar, and CODEPAGE = 1200 without it is '
-        'rejected or silently mangles the data.',
+        'UTF-16LE bulk loading. The original hypothesis — that CODEPAGE = 1200 '
+        'is simply wrong and DATAFILETYPE = widechar is required — was '
+        'DISPROVEN on live SQL Server 2025: a one-column load with '
+        "CODEPAGE = '1200' preserved fidelity (122 rows, banner text intact) "
+        "and DATAFILETYPE = 'widechar' preserved it too, with both byte and "
+        'character terminators. Exact UTF-16 *CSV* certification is BLOCKED '
+        'pending a staged valid fixture, because the only readable UTF-16 file '
+        'available on the VM (an archived ERRORLOG) is not valid CSV, so its '
+        "FORMAT = 'CSV' failure cannot be attributed to encoding.",
+        accepts=('PASS', 'BLOCKED'),
         static_assertions=(
-            A('sql_matches', r"DATAFILETYPE\s*=\s*'widechar'",
-              'UTF-16 bulk load must select the wide-character data file type'),
-            A('sql_excludes', "CODEPAGE        = '1200'",
-              'CODEPAGE 1200 is not a valid BULK INSERT codepage'),
+            A('sql_matches', r"CODEPAGE\s*=\s*'1200'|DATAFILETYPE\s*=\s*'widechar'",
+              'a UTF-16 bulk load must select one of the two proven wide paths'),
+        ),
+        notes=(
+            'Whole-file UTF-16 reads are a separate, settled case: SINGLE_CLOB '
+            'fails with error 4806 and SINGLE_NCLOB succeeds. See C25.'
         ),
     ),
     MatrixEntry(
@@ -428,11 +447,18 @@ HYPOTHESES: Dict[str, str] = {
     'H1': 'Default/file-derived names can collide with existing TPC-H objects; '
           'the table and schema must be overridable end to end, including from '
           'the command line.',
-    'H2': 'UTF-16LE needs DATAFILETYPE = widechar for bulk paths, and external '
-          'file formats accept only UTF8/UTF16 as ENCODING.',
-    'H3': 'SINGLE_CLOB rules differ by source type: a TYPE = BLOB_STORAGE bulk '
-          'source accepts SINGLE_CLOB with DATA_SOURCE, an abs:// '
-          'virtualization source does not.',
+    'H2': 'Encoding handling. The original claim — UTF-16LE bulk loads require '
+          "DATAFILETYPE = 'widechar' and CODEPAGE = '1200' fails — was "
+          'DISPROVEN on live SQL Server 2025, where both spellings preserved '
+          'fidelity. What does hold: an external file format accepts only '
+          'UTF8/UTF16 as ENCODING, and a whole-file UTF-16 read needs '
+          'SINGLE_NCLOB because SINGLE_CLOB fails with error 4806.',
+    'H3': 'SINGLE_CLOB rules differ by source type. Live evidence on both '
+          'Azure SQL Database and SQL Server 2025: a TYPE = BLOB_STORAGE bulk '
+          'source accepts SINGLE_CLOB together with DATA_SOURCE (the earlier '
+          '"cannot be combined" claim is disproven), while NDJSON row framing '
+          'requires an abs:// virtualization source because the https '
+          'connector rejects delimiter options with error 5369.',
     'H4': 'Excel and Iceberg must never fall through to a DELIMITEDTEXT '
           'external file format.',
     'H5': 'USE_TYPE_DEFAULT = TRUE destroys null fidelity for external CSV '

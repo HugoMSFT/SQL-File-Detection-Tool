@@ -117,7 +117,9 @@ def cmd_matrix(args: argparse.Namespace) -> int:
 
 
 def cmd_execute(args: argparse.Namespace) -> int:
-    if not args.confirm:
+    # --confirm guards *connecting*. A dry run connects to nothing, so
+    # requiring it there would only train people to pass --confirm reflexively.
+    if not args.confirm and not args.dry_run:
         print(
             'refusing to connect without --confirm.\n'
             'This subcommand runs generated SQL against a live server. Review the\n'

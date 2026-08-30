@@ -29,6 +29,13 @@ from typing import Dict, Iterable, List, Pattern, Sequence, Tuple
 PUBLIC_HOSTS = (
     'azureopendatastorage.blob.core.windows.net',
     'azureopendatastorage.dfs.core.windows.net',
+    # Maintained, anonymously readable Microsoft endpoints used as live
+    # certification fixtures. Scrubbing them would make the evidence
+    # irreproducible for no privacy gain: they belong to Microsoft, are
+    # documented publicly, and carry no tenant of ours.
+    'azcliprod.blob.core.windows.net',
+    'openvmmghtestresults.blob.core.windows.net',
+    'openvmmghtestresults.dfs.core.windows.net',
 )
 
 #: Placeholder shapes the generator emits on purpose. These are *not* secrets.

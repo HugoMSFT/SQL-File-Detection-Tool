@@ -30,7 +30,12 @@ from typing import List
 GO_RE = re.compile(r'^\s*GO(?:\s+(\d+))?\s*(?:--.*)?$', re.IGNORECASE)
 
 
-def mask_sql(sql: str, *, mask_identifiers: bool = False) -> str:
+def mask_sql(
+    sql: str,
+    *,
+    mask_identifiers: bool = False,
+    mask_strings: bool = True,
+) -> str:
     """Blank comment and string-literal content, preserving length and newlines.
 
     The returned string has exactly the same length as ``sql`` and the same
@@ -43,6 +48,12 @@ def mask_sql(sql: str, *, mask_identifiers: bool = False) -> str:
     ``"..."`` identifiers. The batch splitter wants that (a ``GO`` inside a
     quoted identifier is not a separator); the safety gate explicitly does not,
     because it has to be able to see ``[dbo].[orders]``.
+
+    ``mask_strings=False`` keeps string-literal *content* intact and blanks
+    only comments. The placeholder scan needs that combination: a ``<path>``
+    inside ``LOCATION = '<path>'`` is a real unresolved placeholder that would
+    be sent to the server, while the same token inside a ``--`` guidance
+    comment is documentation and must not block execution.
     """
     out = list(sql)
     n = len(sql)
@@ -84,7 +95,8 @@ def mask_sql(sql: str, *, mask_identifiers: bool = False) -> str:
                     j += 1
                     break
                 j += 1
-            blank(i + 1, j - 1)
+            if mask_strings:
+                blank(i + 1, j - 1)
             i = j
         elif ch == '[':
             j = i + 1
@@ -116,14 +128,21 @@ def strip_sql_comments(sql: str) -> str:
     """Return ``sql`` with comments removed but code and literals intact.
 
     Used by assertions that need to prove a keyword appears in *executable*
-    code rather than in the generator's explanatory comment blocks.
+    code rather than in the generator's explanatory comment blocks. Trailing
+    comments on a code line must go too: a line-based filter that keeps
+    ``SELECT 1; -- see [dbo].[orders]`` intact would let a ``sql_excludes``
+    assertion fail on prose, or a ``sql_contains`` assertion pass on prose,
+    which is exactly backwards.
     """
-    masked = mask_sql(sql)
+    masked = mask_sql(sql, mask_strings=False)
     kept: List[str] = []
     for raw, masked_line in zip(sql.split('\n'), masked.split('\n')):
-        if masked_line.strip() == '' and raw.strip() != '':
+        if masked_line.strip() == '':
+            if raw.strip() != '':
+                continue
+            kept.append('')
             continue
-        kept.append(raw)
+        kept.append(masked_line.rstrip())
     return '\n'.join(kept)
 
 
@@ -145,8 +164,9 @@ def split_batches(sql: str) -> List[Batch]:
     """Split ``sql`` into ``GO``-separated batches.
 
     ``GO`` is only honoured when it is alone on a line outside comments,
-    string literals and quoted identifiers. Empty batches are dropped so a
-    trailing ``GO`` does not produce a phantom execution.
+    string literals and quoted identifiers. Empty *and comment-only* batches
+    are dropped so neither a trailing ``GO`` nor a block of guidance prose
+    produces a phantom execution.
     """
     masked = mask_sql(sql, mask_identifiers=True)
     raw_lines = sql.split('\n')
@@ -160,7 +180,10 @@ def split_batches(sql: str) -> List[Batch]:
     def flush(repeat: int, line_no: int) -> None:
         nonlocal current, start_line, index
         text = '\n'.join(current).strip('\n')
-        if text.strip():
+        # A batch of nothing but comments is not an execution. Keeping it would
+        # make a cell whose generator output is pure guidance prose (Excel,
+        # Iceberg) look READY instead of NOT_EXECUTABLE.
+        if strip_sql_comments(text).strip():
             batches.append(Batch(index=index, text=text, start_line=start_line, repeat=repeat))
             index += 1
         current = []

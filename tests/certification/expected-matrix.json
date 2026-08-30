@@ -1,0 +1,292 @@
+{
+  "$comment": [
+    "Machine-readable live-certification expectations shared by the Python and",
+    "TypeScript generators. Both test suites read this file, so neither",
+    "implementation can drift away from the evidence without a visible failure.",
+    "",
+    "Every entry records where the rule came from. 'live' means an engine",
+    "executed it during the certification run; 'live-negative' means an engine",
+    "rejected it with the recorded error number; 'static' means the rule is",
+    "asserted from documentation only and has not been executed.",
+    "",
+    "No endpoint, database, user name, IP address or path from the",
+    "certification environment appears here. Storage hosts that do appear are",
+    "maintained, anonymously readable Microsoft endpoints."
+  ],
+  "schema_version": 1,
+  "engines_certified": [
+    {
+      "id": "sql_server_2025",
+      "product_version": "17.0.4065.4",
+      "note": "One host certifies only the version it runs. 2019, 2022, Managed Instance and Fabric SQL remain static-only."
+    },
+    {
+      "id": "azure_sql_db",
+      "product_version": "12.0.2000.8",
+      "note": "Azure SQL Database has no local-file access; every file cell reaches storage."
+    }
+  ],
+  "static_only_platforms": [
+    "sql_server_2019",
+    "sql_server_2022",
+    "azure_sql_mi",
+    "fabric_sql_db"
+  ],
+  "rules": [
+    {
+      "id": "R01",
+      "hypothesis": "H1",
+      "evidence": "static",
+      "rule": "object_name_overrides",
+      "statement": "A caller-supplied schema, table, external table, file format and credential name must propagate to every generated statement.",
+      "expect": {
+        "generated_code_excludes": ["[dbo]"],
+        "overridable": [
+          "schema_name",
+          "table_name",
+          "external_table_name",
+          "format_name",
+          "credential_name",
+          "data_source"
+        ]
+      },
+      "why": "dbo.orders exists in any TPC-H database. A file called orders.csv must never resolve onto it."
+    },
+    {
+      "id": "R02",
+      "hypothesis": "H2",
+      "evidence": "live",
+      "engines": ["sql_server_2025"],
+      "rule": "utf16_bulk_insert",
+      "statement": "Both CODEPAGE = '1200' and DATAFILETYPE = 'widechar' preserved UTF-16 fidelity on a one-column load (122 rows, banner text intact), with byte and character terminators.",
+      "expect": {
+        "generated_code_matches": "CODEPAGE\\s*=\\s*'1200'|DATAFILETYPE\\s*=\\s*'widechar'",
+        "forbidden_conclusion": "CODEPAGE = '1200' is always wrong"
+      },
+      "why": "The pre-run hypothesis said CODEPAGE 1200 fails. Live evidence disproved it, so the generator must not be changed on the strength of the static claim alone."
+    },
+    {
+      "id": "R03",
+      "hypothesis": "H2",
+      "evidence": "live",
+      "engines": ["sql_server_2025"],
+      "rule": "utf16_whole_file_read",
+      "statement": "A whole-file UTF-16 read needs SINGLE_NCLOB. SINGLE_CLOB on the same path failed with error 4806; SINGLE_NCLOB returned 30420 bytes of the expected text.",
+      "expect": {
+        "single_lob_keyword": {
+          "utf-16": "SINGLE_NCLOB",
+          "utf-16le": "SINGLE_NCLOB",
+          "utf-8": "SINGLE_CLOB",
+          "default": "SINGLE_CLOB"
+        },
+        "error_number_on_single_clob_over_utf16": 4806
+      }
+    },
+    {
+      "id": "R04",
+      "hypothesis": "H2",
+      "evidence": "static",
+      "rule": "external_format_encoding",
+      "statement": "CREATE EXTERNAL FILE FORMAT accepts only UTF8 and UTF16 as ENCODING.",
+      "expect": {
+        "allowed_encodings": ["UTF8", "UTF16"],
+        "generated_code_excludes": ["ENCODING = 'CP932'", "ENCODING = 'SHIFT_JIS'"]
+      },
+      "why": "Emitting the detected codepage name produced an invalid keyword."
+    },
+    {
+      "id": "R05",
+      "hypothesis": "H3",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "whole_document_json_source",
+      "statement": "OPENROWSET with SINGLE_CLOB and DATA_SOURCE against a TYPE = BLOB_STORAGE source succeeded on both engines against https://azcliprod.blob.core.windows.net/cli/vm/aliases.json (relative path vm/aliases.json). ISJSON = 1, JSON_VALUE contentVersion = 1.0.0.0, nested JSON_QUERY bytes = 5280. Azure SQL 228 ms, SQL Server 2025 329 ms.",
+      "expect": {
+        "data_source_suffix": "_Bulk",
+        "data_source_type": "BLOB_STORAGE",
+        "single_lob_requires_bulk_source": true,
+        "disproven_claim": "SINGLE_CLOB cannot be combined with DATA_SOURCE"
+      }
+    },
+    {
+      "id": "R06",
+      "hypothesis": "H3",
+      "evidence": "live-negative",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "ndjson_row_framing_source",
+      "statement": "NDJSON row framing (FORMAT = 'CSV' with FIELDTERMINATOR / FIELDQUOTE / ROWTERMINATOR) was rejected on an https TYPE = BLOB_STORAGE source with error 5369 on both engines, and succeeded on an abs:// virtualization source: 729 rows, 729 valid JSON documents, longest message 3862 characters.",
+      "expect": {
+        "https_blob_storage_error_number": 5369,
+        "ndjson_source_scheme": "abs",
+        "whole_document_json_source_scheme": "https"
+      },
+      "why": "The generator must pick the source by JSON shape: a whole document gets the _Bulk BLOB_STORAGE source and SINGLE_CLOB, NDJSON gets a virtualization source and CSV row framing."
+    },
+    {
+      "id": "R07",
+      "hypothesis": "H4",
+      "evidence": "static",
+      "rule": "no_external_format_for_binary_workbooks",
+      "statement": "Excel and Iceberg have no external file format. They must emit explicit guidance, never a DELIMITEDTEXT fallthrough.",
+      "expect": {
+        "file_types": ["excel", "iceberg"],
+        "format_type": "",
+        "generated_code_excludes": ["FORMAT_TYPE = DELIMITEDTEXT"]
+      }
+    },
+    {
+      "id": "R08",
+      "hypothesis": "H5",
+      "evidence": "static",
+      "rule": "use_type_default",
+      "statement": "USE_TYPE_DEFAULT must default to FALSE and always be stated explicitly.",
+      "expect": {
+        "default": "FALSE",
+        "always_emitted": true
+      },
+      "why": "TRUE silently rewrites NULL as 0 or an empty string, destroying null fidelity."
+    },
+    {
+      "id": "R09",
+      "hypothesis": "H8",
+      "evidence": "live",
+      "engines": ["azure_sql_db"],
+      "rule": "managed_identity_default",
+      "statement": "CREATE DATABASE SCOPED CREDENTIAL WITH IDENTITY = 'MANAGED IDENTITY' succeeded; the database master key count was 0 before, during and after, and cleanup left zero residue.",
+      "expect": {
+        "default_auth_method": "managed_identity",
+        "master_key_required_for": ["sas", "storage_key"],
+        "master_key_required_for_managed_identity": false,
+        "supported_platforms": [
+          "azure_sql_db",
+          "azure_sql_mi",
+          "sql_server_2022",
+          "sql_server_2025"
+        ]
+      },
+      "caveat": "Blob RBAC itself was never exercised: no user storage account was authorised for the run."
+    },
+    {
+      "id": "R10",
+      "hypothesis": "H_FIRSTROW",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "first_row_platforms",
+      "statement": "FIRST_ROW in CREATE EXTERNAL FILE FORMAT is accepted on the engines certified here.",
+      "expect": {
+        "platforms": [
+          "sql_server_2022",
+          "sql_server_2025",
+          "azure_sql_db",
+          "fabric_sql_db"
+        ],
+        "excluded_platforms": ["azure_sql_mi", "sql_server_2019"]
+      },
+      "why": "azure_sql_mi is excluded deliberately: no engine in this run certified it, and claiming it would be an overclaim."
+    },
+    {
+      "id": "R11",
+      "hypothesis": "H10",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "delta_external_file_format",
+      "statement": "CREATE EXTERNAL FILE FORMAT WITH (FORMAT_TYPE = DELTA) was accepted and dropped with zero residue on both engines. This certifies the DDL only; querying protocol 1/2 data awaits a staged fixture.",
+      "expect": {
+        "format_type": "DELTA",
+        "ddl_accepted": true,
+        "data_path_certified": false
+      }
+    },
+    {
+      "id": "R12",
+      "hypothesis": "H4",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "orc_ddl_only",
+      "statement": "FORMAT_TYPE = ORC was accepted and dropped with zero residue on both engines, but no maintained public ORC blob was available, so the data path is unverified.",
+      "expect": {
+        "ddl_accepted": true,
+        "data_path_certified": false,
+        "native_parser": "unsupported_native",
+        "guidance_must_not_say": "fully supported"
+      }
+    },
+    {
+      "id": "R13",
+      "hypothesis": "H4",
+      "evidence": "live-negative",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "rejected_format_types",
+      "statement": "RCFILE was rejected with error 46506 (invalid FORMAT_TYPE options) and a JSON format type with error 102 (syntax error near JSON) on both engines.",
+      "expect": {
+        "rcfile_error_number": 46506,
+        "json_format_type_error_number": 102
+      }
+    },
+    {
+      "id": "R14",
+      "hypothesis": "H1",
+      "evidence": "live-negative",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "blob_path_case_sensitivity",
+      "statement": "Changing a staged path from yellow/ to Yellow/ produced error 13807 (directory cannot be listed) on both engines.",
+      "expect": {
+        "error_number": 13807,
+        "paths_are_case_sensitive": true,
+        "generator_must_preserve_case": true
+      }
+    },
+    {
+      "id": "R15",
+      "hypothesis": "H10",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "type_mapping_boundaries",
+      "statement": "Boundary values round-tripped on both engines: signed and unsigned integer extremes including uint64 18446744073709551615 in DECIMAL(20,0), DECIMAL(18,4), REAL, FLOAT, BIT, Japanese NVARCHAR codepoints, VARBINARY hex, and date/time/datetime2 precision. DATETIMEOFFSET preserved +09:00 under CONVERT style 121 with DATEPART(TZOFFSET) = 540.",
+      "expect": {
+        "uint64_target_type": "DECIMAL(20,0)",
+        "datetimeoffset_assert_with_style": 121,
+        "datetimeoffset_never_assert_with_style": 127
+      },
+      "why": "CONVERT style 127 normalises datetimeoffset to UTC with a Z suffix on both engines, so asserting +09 against style 127 is a harness error, not a mapping defect."
+    },
+    {
+      "id": "R16",
+      "hypothesis": "H3",
+      "evidence": "live",
+      "engines": ["azure_sql_db", "sql_server_2025"],
+      "rule": "json_surface",
+      "statement": "JSON_MODIFY round-tripped Unicode exactly, JSON_ARRAY returned the exact Japanese value, and a nested OPENJSON ... WITH returned 2 typed rows on both engines.",
+      "expect": {
+        "functions_certified": ["ISJSON", "JSON_VALUE", "JSON_QUERY", "JSON_PATH_EXISTS", "JSON_MODIFY", "JSON_ARRAY", "OPENJSON"]
+      }
+    },
+    {
+      "id": "R17",
+      "hypothesis": "H7",
+      "evidence": "static",
+      "rule": "no_runnable_claim_with_placeholders",
+      "statement": "A complete script that still contains an unresolved <placeholder> must not describe itself as ready to run as-is.",
+      "expect": {
+        "placeholder_pattern": "<[A-Za-z_][A-Za-z0-9_. -]*>",
+        "forbidden_when_placeholders_present": ["run as-is", "ready to run"]
+      }
+    },
+    {
+      "id": "R18",
+      "hypothesis": "H9",
+      "evidence": "static",
+      "rule": "version_attribution",
+      "statement": "Certification claims may name only the engines that actually executed the cells.",
+      "expect": {
+        "live_certified_platforms": ["sql_server_2025", "azure_sql_db"],
+        "static_only_platforms": [
+          "sql_server_2019",
+          "sql_server_2022",
+          "azure_sql_mi",
+          "fabric_sql_db"
+        ]
+      }
+    }
+  ]
+}

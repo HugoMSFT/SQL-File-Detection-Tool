@@ -509,34 +509,49 @@ function openrowsetLocal(
 ): string {
     const fileType = stringOr(metadata.file_type, 'csv');
     const encoding = stringOr(metadata.encoding, 'utf-8');
-    const codepage = stringOr(metadata.codepage, '65001');
-    const hasHeader = metadata.has_header ?? true;
 
     if (fileType === 'csv' || fileType === 'text') {
+        // A FORMATFILE placeholder makes this statement unrunnable: there is no
+        // format file, and the reader cannot write one without knowing the
+        // on-disk byte layout. SQL Server 2017 and later accept FORMAT = 'CSV'
+        // with an inline WITH schema instead, which is executable as printed.
+        const lob = singleLobKeyword(metadata.encoding);
         lines.push(
             '-- ---- CSV via OPENROWSET(BULK) — SQL Server local file -------------------',
+            '-- The file must be readable by the SQL Server *service account* on the',
+            '-- server itself (or on a UNC share it can reach). A path that is local to',
+            '-- your workstation will not resolve.',
             'SELECT TOP 100 *',
             'FROM OPENROWSET(',
             `    BULK N'${localPath}',`,
-            "    FORMATFILE = N'<path_to_format_file.xml>',",
-            `    CODEPAGE   = '${quoteLiteral(codepage)}',  ` +
-                `-- ${sqlComment(encoding.toUpperCase())}`,
-            `    FIRSTROW   = ${hasHeader ? 2 : 1}`,
+            ...csvReaderOptions(metadata),
+            ') WITH (',
+            columnBody(metadata),
             ') AS [result];',
             '',
-            '-- ---- Alternative: ad-hoc with SINGLE_CLOB (small files) ---',
+            "-- FORMAT = 'CSV' needs SQL Server 2017 or later. On SQL Server 2016 use a",
+            '-- bcp-generated format file instead:',
+            '--   bcp <db>.<schema>.<table> format nul -c -f fmt.xml -t , -T',
+            "--   ... then FORMATFILE = N'<path_to_format_file.xml>' in place of the",
+            '--   FORMAT/FIELDTERMINATOR/ROWTERMINATOR options above.',
+            '',
+            '-- ---- Alternative: whole file as one value (small files) ---',
+            `-- ${sqlComment(encoding.toUpperCase())}: ${lob} is the encoding-correct choice here.`,
+            '-- SINGLE_CLOB over a UTF-16 file fails with error 4806; SINGLE_NCLOB reads it.',
             'SELECT BulkColumn',
-            `FROM OPENROWSET(BULK N'${localPath}', SINGLE_CLOB) AS [src];`,
+            `FROM OPENROWSET(BULK N'${localPath}', ${lob}) AS [src];`,
         );
     } else if (fileType === 'json') {
         lines.push(
             `-- ${sqlComment(PLATFORM_LABELS[targetPlatform])} does not support`,
             "-- FORMAT = 'JSON' or JSON external tables. This workaround",
             '-- loads JSON as text and parses it with OPENJSON.',
-            '-- ---- JSON via SINGLE_CLOB + OPENJSON  (SQL Server 2016+) ---------------',
+            '-- ---- JSON via single-LOB read + OPENJSON  (SQL Server 2016+) ----------',
+            '-- Live evidence: a UTF-16 file read with SINGLE_CLOB fails with error 4806;',
+            '-- SINGLE_NCLOB reads the same path successfully.',
             'DECLARE @json NVARCHAR(MAX);',
             'SELECT @json = BulkColumn',
-            `FROM OPENROWSET(BULK N'${localPath}', SINGLE_CLOB) AS [src];`,
+            `FROM OPENROWSET(BULK N'${localPath}', ${singleLobKeyword(metadata.encoding)}) AS [src];`,
             '',
             'SELECT * FROM OPENJSON(@json)',
         );

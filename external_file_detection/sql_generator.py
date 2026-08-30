@@ -1634,30 +1634,53 @@ class SQLGenerator:
         file_name = metadata.get('file_name', metadata['file_path'])
 
         if file_type in ('csv', 'text'):
+            # A FORMATFILE placeholder makes this statement unrunnable: there is
+            # no format file, and the reader cannot write one without knowing
+            # the on-disk byte layout. SQL Server 2017 and later accept
+            # FORMAT = 'CSV' with an inline WITH schema instead, which is
+            # executable as printed.
             lines += [
-                f'-- ---- CSV via OPENROWSET(BULK) — SQL Server local file -------------------',
-                f'SELECT TOP 100 *',
-                f'FROM OPENROWSET(',
+                '-- ---- CSV via OPENROWSET(BULK) — SQL Server local file -------------------',
+                '-- The file must be readable by the SQL Server *service account* on the',
+                '-- server itself (or on a UNC share it can reach). A path that is local to',
+                '-- your workstation will not resolve.',
+                'SELECT TOP 100 *',
+                'FROM OPENROWSET(',
                 f'    BULK N\'{local_path}\',',
-                f'    FORMATFILE = N\'<path_to_format_file.xml>\',',
-                f'    CODEPAGE   = \'{_quote_literal(codepage)}\',  '
-                f'-- {_sql_comment(encoding.upper())}',
-                f'    FIRSTROW   = {2 if has_header else 1}',
-                f') AS [result];',
-                f'',
-                f'-- ---- Alternative: ad-hoc with SINGLE_CLOB (small files) ---',
+            ]
+            lines += self._csv_reader_options(metadata)
+            lines += [') WITH (']
+            cols = self._generate_column_definitions(metadata, indent=4)
+            lines.append(',\n'.join(cols) if cols else '    [data] NVARCHAR(MAX)')
+            lines += [
+                ') AS [result];',
+                '',
+                '-- FORMAT = \'CSV\' needs SQL Server 2017 or later. On SQL Server 2016 use a',
+                '-- bcp-generated format file instead:',
+                '--   bcp <db>.<schema>.<table> format nul -c -f fmt.xml -t , -T',
+                '--   ... then FORMATFILE = N\'<path_to_format_file.xml>\' in place of the',
+                '--   FORMAT/FIELDTERMINATOR/ROWTERMINATOR options above.',
+                '',
+                f'-- ---- Alternative: whole file as one value (small files) ---',
+                f'-- {_sql_comment(encoding.upper())}: '
+                f'{self._single_lob_keyword(metadata)} is the encoding-correct choice here.',
+                f'-- SINGLE_CLOB over a UTF-16 file fails with error 4806; SINGLE_NCLOB reads it.',
                 f'SELECT BulkColumn',
-                f'FROM OPENROWSET(BULK N\'{local_path}\', SINGLE_CLOB) AS [src];',
+                f'FROM OPENROWSET(BULK N\'{local_path}\', '
+                f'{self._single_lob_keyword(metadata)}) AS [src];',
             ]
         elif file_type == 'json':
             lines += [
                 f'-- {_sql_comment(self.PLATFORM_LABELS[target_platform])} does not support',
                 f'-- FORMAT = \'JSON\' or JSON external tables. This workaround',
                 f'-- loads JSON as text and parses it with OPENJSON.',
-                f'-- ---- JSON via SINGLE_CLOB + OPENJSON  (SQL Server 2016+) ---------------',
+                f'-- ---- JSON via single-LOB read + OPENJSON  (SQL Server 2016+) ----------',
+                f'-- Live evidence: a UTF-16 file read with SINGLE_CLOB fails with error 4806;',
+                f'-- SINGLE_NCLOB reads the same path successfully.',
                 f'DECLARE @json NVARCHAR(MAX);',
                 f'SELECT @json = BulkColumn',
-                f'FROM OPENROWSET(BULK N\'{local_path}\', SINGLE_CLOB) AS [src];',
+                f'FROM OPENROWSET(BULK N\'{local_path}\', '
+                f'{self._single_lob_keyword(metadata)}) AS [src];',
                 f'',
                 f'SELECT * FROM OPENJSON(@json)',
             ]

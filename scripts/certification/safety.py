@@ -413,8 +413,12 @@ def evaluate_batch(sql: str, policy: SafetyPolicy) -> SafetyReport:
     masked = mask_sql(sql)
     upper = masked.upper()
 
-    # -- Layer 4a: unresolved placeholders (scanned raw; they live in strings)
-    for match in PLACEHOLDER_RE.finditer(sql):
+    # -- Layer 4a: unresolved placeholders.
+    # String-literal content is kept (LOCATION = '<path>' really would be sent)
+    # but comments are blanked, because a placeholder inside a guidance comment
+    # is documentation and never reaches the server.
+    uncommented = mask_sql(sql, mask_strings=False)
+    for match in PLACEHOLDER_RE.finditer(uncommented):
         report.placeholders.append(match.group(0))
 
     # -- Layer 4b: secret-shaped material

@@ -34,6 +34,7 @@ from .evidence import (
     BLOCKED,
     EXEC_AFTER_SUBSTITUTION,
     FAIL,
+    DRY_RUN_ACCEPTED,
     NOT_EXECUTABLE,
     PASS,
     UNSUPPORTED_EXPECTED,
@@ -157,9 +158,28 @@ def execute_cell(
             )
         return result
 
-    if plan_verdict == NOT_EXECUTABLE or connection is None or options.dry_run:
+    if plan_verdict == NOT_EXECUTABLE:
         result.verdict = NOT_EXECUTABLE
         result.notes = planned.get('reason', result.notes)
+        return result
+
+    if connection is None or options.dry_run:
+        # The SQL cleared every safety layer and would have been sent. Saying
+        # NOT_EXECUTABLE here would conflate a generator defect with a
+        # deliberate offline run, so it gets its own harness-only verdict.
+        result.verdict = DRY_RUN_ACCEPTED
+        result.notes = (
+            'dry run: batches were classified, gated and hashed but not sent; '
+            'no certification may be claimed from this verdict'
+        )
+        for batch in planned.get('batches', []):
+            result.batches.append(
+                BatchResult(
+                    index=batch['batch_index'],
+                    start_line=batch['start_line'],
+                    verdict=DRY_RUN_ACCEPTED,
+                )
+            )
         return result
 
     unsupported_seen = False
