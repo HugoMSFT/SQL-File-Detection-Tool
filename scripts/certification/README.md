@@ -127,6 +127,15 @@ Two defences built on one grammar are one defence. The grammar now consumes
 real name, and a target list that cannot be fully parsed is refused rather than
 skipped, so the next grammar gap fails closed instead of passing silently.
 
+That last part earned its place immediately. The same class arrived a second
+time through a different character: `_IDENT`'s unquoted alternative was ASCII
+only, T-SQL regular identifiers accept Unicode letters, and one non-ASCII letter
+truncated the name exactly the way an unescaped `]` had. The grammar is
+Unicode-aware now, but the durable fix is that the tail check stopped being a
+denylist of the desync characters somebody had already found and became an
+allowlist of what may legitimately follow an object list — whitespace, `;`, `(`,
+or the end of the batch. A denylist only ever knows about the last bug.
+
 Layer 1 is a scanner, which means it is position dependent, which means it must
 not be the only thing refusing a verb. Its line scan used to separate its
 two-word phrase with `\s+` — which matches a newline — and to consume what it

@@ -59,10 +59,20 @@ from .runid import RunIdentity
 # defences rest on this grammar, so both failed together on the one input.
 # `escapeIdentifier`/`_escape_identifier` in the generators emit `]]` by design,
 # so this is the project's own escaping convention rather than an exotic case.
+#
+# The unquoted alternative is Unicode aware for the same reason. T-SQL regular
+# identifiers accept Unicode letters, and while this was `[A-Za-z_@#]...` a
+# single non-ASCII letter truncated the name and reproduced the bypass exactly:
+#
+#     DROP TABLE <run schema>.<run table>X, [sales].[invoices];   -- X non-ASCII
+#
+# The truncated head is genuinely run-owned so it passes the scope check, the
+# comma is no longer adjacent to a complete name so the shape rule never fires,
+# and a Cyrillic homoglyph makes the payload invisible in review.
 _IDENT = (
     r'(?:\[(?:[^\]\n]|\]\]){1,128}\]'
     r'|"(?:[^"\n]|""){1,128}"'
-    r'|[A-Za-z_@#][A-Za-z0-9_@#$]{0,127})'
+    r'|(?:[^\W\d]|[@#])[\w@#$]{0,127})'
 )
 _QNAME = rf'{_IDENT}(?:\s*\.\s*{_IDENT}?)*'
 
@@ -389,12 +399,18 @@ _LIST_VERB_KINDS: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
 _NEXT_IN_LIST_RE = re.compile(rf'\s*,\s*(?P<name>{_QNAME})', re.I)
 #: The first name after a list verb, matched from a position rather than anchored.
 _LIST_HEAD_RE = re.compile(rf'(?P<name>{_QNAME})', re.I)
-#: Characters that can only follow a parsed object list if the identifier
-#: grammar desynchronised from the server's. A trailing ``]`` or ``"`` means the
-#: name was terminated early; a trailing ``,`` means the list walk stopped short.
-#: Any of them is refused rather than ignored, so a future grammar gap fails
-#: closed instead of silently handing the rest of the statement to the server.
-_LIST_TAIL_DESYNC_RE = re.compile(r'\s*[\]",]')
+#: What may legitimately sit immediately after a parsed object list: whitespace
+#: (a newline before the next statement, a space before `WITH (...)`, or a
+#: blanked-out comment), a statement terminator, an opening parenthesis, or the
+#: end of the batch. Anything else means the parse stopped in the middle of
+#: something the server would go on to read, so it is refused.
+#:
+#: This is deliberately an allowlist. It began as a denylist of `]`, `"` and
+#: `,` - the three characters the *then-known* desyncs left behind - and a
+#: single non-ASCII letter walked straight past it, because a denylist can only
+#: name the gaps somebody already found. An allowlist turns the next identifier
+#: grammar surprise into a refusal instead of a third silent bypass.
+_LIST_TAIL_BENIGN_RE = re.compile(r'\s|[;(]|\Z')
 
 _USE_RE = re.compile(rf'\bUSE\s+(?P<name>{_IDENT})', re.I)
 #: ``CREATE DATABASE`` proper — the negative lookahead keeps ``CREATE DATABASE
@@ -742,7 +758,7 @@ def evaluate_batch(sql: str, policy: SafetyPolicy) -> SafetyReport:
                         )
                     )
                 cursor = following.end()
-            if _LIST_TAIL_DESYNC_RE.match(masked, cursor):
+            if not _LIST_TAIL_BENIGN_RE.match(masked, cursor):
                 report.violations.append(
                     Violation(
                         'UNPARSED_TARGET_LIST',

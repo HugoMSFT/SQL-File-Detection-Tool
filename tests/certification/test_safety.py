@@ -675,3 +675,124 @@ def test_every_list_verb_scope_checks_its_second_name(identity, policy):
     ):
         report = evaluate_batch(sql, policy=policy)
         assert not report.allowed, sql
+
+
+# ---------------------------------------------------------------------------
+# A Unicode letter is a legal identifier character
+# ---------------------------------------------------------------------------
+#
+# `_IDENT`'s unquoted alternative was `[A-Za-z_@#][A-Za-z0-9_@#$]*`, but T-SQL
+# regular identifiers accept Unicode letters. A single non-ASCII letter
+# therefore truncated the name, and that one truncation defeated every layer at
+# once: the truncated head is genuinely run-owned so the scope check passed, the
+# comma was no longer adjacent to a complete name so the shape rule never fired,
+# and the tail check was a denylist of three characters that did not include it.
+# A Cyrillic homoglyph makes the payload invisible in review.
+
+UNICODE_TRUNCATION_EXPLOITS = [
+    'DROP TABLE {s}.{t}\u00e9, [sales].[invoices];',
+    'DROP TABLE {s}.{t}\u00e9, [prod].[sales].[invoices];',
+    'DROP TABLE {s}.{t}\u00e9, [s1].[t1], [s2].[t2], [s3].[t3];',
+    'DROP VIEW {s}.{t}\u00e9, [sales].[v];',
+    'TRUNCATE TABLE {s}.{t}\u00e9, [sales].[x];',
+    'DROP SCHEMA {s}\u00e9, [sales];',
+    'DROP TABLE [{s}].{t}\u00e9, [sales].[invoices];',
+    'DROP TABLE {s}.{t}\u4e2d, [sales].[invoices];',
+    'DROP TABLE {s}.{t}\u03b1, [sales].[invoices];',
+    'DROP TABLE {s}.{t}\u0430, [sales].[invoices];',
+    'DROP TABLE {s}.{t}\u0301, [sales].[invoices];',
+]
+
+
+@pytest.mark.parametrize('template', UNICODE_TRUNCATION_EXPLOITS)
+def test_a_unicode_letter_cannot_truncate_a_name(identity, policy, template):
+    report = evaluate_batch(template.format(**_owned(identity)), policy=policy)
+    assert not report.allowed, ascii(template)
+
+
+def test_a_unicode_name_is_scope_checked_not_ignored(identity, policy):
+    # The widened grammar has to produce a real scope verdict, not merely fail
+    # to match. A foreign Unicode name must be refused on its own.
+    assert 'FOREIGN_SCHEMA' in evaluate_batch(
+        'DROP TABLE [sales].caf\u00e9;', policy=policy
+    ).codes
+
+
+def test_an_owned_unicode_name_is_still_allowed(identity, policy):
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'CREATE TABLE [{owned["s"]}].[{owned["t"]}caf\u00e9] (a INT);', policy=policy
+    )
+    assert report.allowed, [v.code for v in report.violations]
+
+
+def test_the_tail_check_is_an_allowlist_not_a_denylist(identity, policy, monkeypatch):
+    # The backstop has to catch a desync character nobody has thought of yet.
+    # It began as a denylist of `]`, `"` and `,` and a Unicode letter walked
+    # straight past it. With the shape rule removed, an unparsed tail must still
+    # be refused on its own.
+    import certification.safety as safety
+
+    monkeypatch.setattr(
+        safety,
+        '_FORBIDDEN',
+        tuple(rule for rule in safety._FORBIDDEN if rule[0] != 'MULTI_TARGET'),
+    )
+    # Patch the compiled pattern, not `_IDENT`: the regexes are built from it at
+    # import time, so rebinding the string alone changes nothing.
+    monkeypatch.setattr(
+        safety, '_LIST_HEAD_RE', re.compile(r'(?P<name>[A-Za-z_.0-9\[\]]{1,128})')
+    )
+    owned = _owned(identity)
+    report = evaluate_batch(
+        f'DROP TABLE {owned["s"]}.{owned["t"]}\u00e9, [sales].[invoices];',
+        policy=policy,
+    )
+    assert 'UNPARSED_TARGET_LIST' in report.codes
+
+
+@pytest.mark.parametrize('sql', [
+    'DROP TABLE IF EXISTS [{s}].[{t}];',
+    'DROP TABLE [{s}].[{t}]\nDROP TABLE [{s}].[{t}2]',
+    'DROP TABLE [{s}].[{t}]\nGO',
+    'DROP TABLE [{s}].[{t}] -- remove the load target\n',
+    'DROP SCHEMA [{s}];',
+    'TRUNCATE TABLE [{s}].[{t}];',
+    'TRUNCATE TABLE [{s}].[{t}] WITH (PARTITIONS (1));',
+    'DROP TABLE {s}.{t};',
+    'DROP TABLE IF EXISTS [{s}].[{t}]',
+])
+def test_the_tail_allowlist_does_not_refuse_real_shapes(identity, policy, sql):
+    report = evaluate_batch(sql.format(**_owned(identity)), policy=policy)
+    assert report.allowed, [v.code for v in report.violations]
+
+
+def test_the_generated_cleanup_script_passes_the_gate(identity, policy):
+    # The tail allowlist and the widened grammar both sit on the cleanup path.
+    from certification import manifest
+    from certification.safety import evaluate_script
+
+    batches, reports = evaluate_script(
+        manifest.cleanup_script(identity, drop_database=False), policy
+    )
+    assert batches
+    assert all(report.allowed for report in reports), [
+        [v.code for v in r.violations] for r in reports
+    ]
+
+
+def test_the_identifier_grammar_does_not_backtrack_pathologically():
+    # Both bracket alternatives are first-character-disjoint, so matching is
+    # effectively deterministic. Pin it with a timing check rather than by eye.
+    import time
+
+    from certification.safety import _IDENT
+
+    pattern = re.compile(_IDENT)
+    timings = []
+    for size in (2000, 8000, 32000):
+        probe = '[' + 'a]]' * size
+        start = time.perf_counter()
+        pattern.match(probe)
+        timings.append(time.perf_counter() - start)
+    assert timings[-1] < 1.0, timings

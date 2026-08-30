@@ -169,6 +169,18 @@ test suites now read the same machine-readable evidence file.
   splitting undoes the escape so scope comparisons see the real name, and a
   target list that cannot be fully parsed is refused rather than ignored, so a
   future grammar gap fails closed.
+- **A Unicode letter did the same thing to the same grammar.** `_IDENT`'s
+  unquoted alternative was `[A-Za-z_@#][A-Za-z0-9_@#$]*`, but T-SQL regular
+  identifiers accept Unicode letters. One non-ASCII letter therefore truncated
+  the name, and that single truncation defeated every layer at once: the
+  truncated head is genuinely run-owned so the scope check passed, the comma was
+  no longer adjacent to a complete name so the shape rule never fired, and the
+  tail backstop was a denylist of the three characters the *then-known* desyncs
+  left behind. A Cyrillic homoglyph makes such a payload invisible in review.
+  The grammar is Unicode-aware now, and - the more important half - the tail
+  backstop became an allowlist: whitespace, `;`, `(` or end of batch may follow
+  a parsed object list, and anything else is refused. A denylist can only name
+  the gaps somebody has already found, which is how the same bug arrived twice.
 - **A statement head could be swallowed by the line above it.** Layer 1's line
   scan separated its two-word phrase with `\s+`, which matches a newline, and it
   *consumed* what it matched. A one-word head on one line therefore absorbed the
