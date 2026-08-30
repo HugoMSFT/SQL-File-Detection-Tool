@@ -80,6 +80,22 @@ def test_every_cell_targets_at_least_one_engine():
         assert set(entry.targets) <= {'vm', 'azure'}, entry.cell_id
 
 
+def test_unsupported_cells_name_the_error_they_expect():
+    # Accepting *any* error as "unsupported as expected" would let a typo in
+    # the generated SQL be filed as a platform limitation.
+    for entry in MATRIX:
+        if 'UNSUPPORTED_EXPECTED' in entry.accepts:
+            assert entry.expected_errors, entry.cell_id
+            for number in entry.expected_errors:
+                assert isinstance(number, int) and number > 0, entry.cell_id
+
+
+def test_expected_errors_are_only_declared_where_they_apply():
+    for entry in MATRIX:
+        if entry.expected_errors:
+            assert 'UNSUPPORTED_EXPECTED' in entry.accepts, entry.cell_id
+
+
 # ---------------------------------------------------------------------------
 # Evidence file integrity
 # ---------------------------------------------------------------------------

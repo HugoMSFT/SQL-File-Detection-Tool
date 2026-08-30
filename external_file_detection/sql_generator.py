@@ -2522,9 +2522,12 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options()
+            # LF, so each line is its own row. The default 0x0b framing
+            # returns the whole file as one row, which is not a JSON document
+            # here.
+            lines += self._json_row_frame_options(row_terminator='0x0a')
             lines += [
-                f') WITH (json_doc NVARCHAR(MAX)) AS [src]',
+                f') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
                 f'CROSS APPLY OPENJSON([src].json_doc)',
                 f'WITH (',
                 openjson_with,
@@ -2538,9 +2541,9 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_row_frame_options(row_terminator='0x0a')
             lines += [
-                f') WITH (json_doc NVARCHAR(MAX)) AS [src];',
+                f') WITH (json_doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line',
                 f'',
             ]
         elif json_bulk_source and json_single_lob_source:

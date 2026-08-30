@@ -1308,9 +1308,11 @@ export function generateJsonFunctions(
             `    BULK '${filePathSql}',`,
             `    DATA_SOURCE     = '${jsonBulkSource}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        // LF, so each line is its own row. The default 0x0b framing returns
+        // the whole file as one row, which is not a JSON document here.
+        lines.push(...jsonRowFrameOptions(4, '0x0a'));
         lines.push(
-            ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
+            ') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
             'CROSS APPLY OPENJSON([src].json_doc)',
             'WITH (',
             openjsonWith,
@@ -1324,8 +1326,11 @@ export function generateJsonFunctions(
             `    BULK '${filePathSql}',`,
             `    DATA_SOURCE     = '${jsonBulkSource}',`,
         );
-        lines.push(...jsonRowFrameOptions());
-        lines.push(') WITH (json_doc NVARCHAR(MAX)) AS [src];', '');
+        lines.push(...jsonRowFrameOptions(4, '0x0a'));
+        lines.push(
+            ') WITH (json_doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line',
+            '',
+        );
     } else if (jsonBulkSource && jsonSingleLobSource) {
         lines.push(
             '-- ----------------------------------------------------------------',

@@ -149,6 +149,10 @@ class MatrixEntry:
     intent: str
     #: Verdicts that count as success for this cell. Anything else is a defect.
     accepts: Sequence[str] = ('PASS',)
+    #: SQL error numbers that count as the *expected* refusal. A cell that
+    #: accepts UNSUPPORTED_EXPECTED must name them, so an unrelated failure
+    #: cannot be filed as a platform limitation.
+    expected_errors: Sequence[int] = ()
     static_assertions: Sequence[Assertion] = field(default_factory=tuple)
     notes: str = ''
 
@@ -236,6 +240,8 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C07', 'json_array', 'json_functions', ('vm', 'azure'), 'none', 'H3',
         'OPENJSON over a literal document must parse arrays and round-trip '
         'non-ASCII text exactly.',
+        accepts=('PASS', 'NOT_EXECUTABLE'),
+        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
     ),
     MatrixEntry(
         'C08', 'json_array', 'openrowset', ('vm', 'azure'), 'blob_storage', 'H3',
@@ -250,20 +256,29 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     ),
     MatrixEntry(
         'C09', 'json_array', 'openrowset', ('vm', 'azure'), 'abs', 'H3',
-        'Remote JSON through an abs:// virtualization source. This is the case '
-        'where SINGLE_CLOB genuinely cannot be combined with DATA_SOURCE, so '
-        'row framing is correct here and only here.',
-        accepts=('PASS', 'UNSUPPORTED_EXPECTED'),
+        'Remote JSON through an abs:// virtualization source. The single-LOB '
+        'options are rejected by that connector - not by DATA_SOURCE as such, '
+        'which a TYPE = BLOB_STORAGE source accepts - so row framing is '
+        'correct here and only here. Live: abs:// row framing passed on both '
+        'engines, so PASS is the only acceptable outcome.',
+        accepts=('PASS',),
         static_assertions=(A('sql_excludes', 'SINGLE_CLOB'),),
     ),
     MatrixEntry(
         'C10', 'ndjson', 'json_functions', ('vm', 'azure'), 'none', 'H3',
         'NDJSON is not a JSON document; the generator must frame it per line.',
+        accepts=('PASS', 'NOT_EXECUTABLE'),
+        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
+        static_assertions=(
+            A('sql_matches', r"ROWTERMINATOR\s*=\s*'0x0a'"),
+        ),
     ),
     MatrixEntry(
         'C11', 'json_nested', 'json_functions', ('vm', 'azure'), 'none', 'H3',
         'Nested objects and arrays must surface as JSON text, not as a silently '
         'flattened scalar.',
+        accepts=('PASS', 'NOT_EXECUTABLE'),
+        notes='Azure SQL Database has no local-file access, so on that target the script keeps its staging placeholder and is correctly NOT_EXECUTABLE.',
     ),
     MatrixEntry(
         'C12', 'json_object', 'for_json', ('vm', 'azure'), 'none', 'H3',
@@ -334,27 +349,51 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'Excel is a binary workbook. It must never fall through to '
         'DELIMITEDTEXT, which would produce a script that runs and returns '
         'garbage.',
-        accepts=('UNSUPPORTED_EXPECTED',),
+        accepts=('UNSUPPORTED_EXPECTED', 'NOT_EXECUTABLE'),
+        expected_errors=(46506,),
+        notes='Guidance-only output does not execute, hence NOT_EXECUTABLE. '
+              'If a regression ever emitted FORMAT_TYPE = EXCEL, the engines '
+              'answer 46506 (invalid FORMAT_TYPE options), certified live '
+              'against RCFILE on the same code path.',
         static_assertions=(
             A('sql_excludes', 'DELIMITEDTEXT'),
-            A('sql_matches', r'not supported|unsupported'),
+            A('sql_matches', r'not available|not supported|unsupported'),
         ),
     ),
     MatrixEntry(
         'C22', 'iceberg', 'external_file_format', ('vm', 'azure'), 'abs', 'H4',
         'Iceberg has no CREATE EXTERNAL FILE FORMAT type; falling through to '
         'DELIMITEDTEXT would misrepresent the table.',
-        accepts=('UNSUPPORTED_EXPECTED',),
+        accepts=('UNSUPPORTED_EXPECTED', 'NOT_EXECUTABLE'),
+        expected_errors=(46506,),
+        notes='Guidance-only output does not execute, hence NOT_EXECUTABLE.',
         static_assertions=(
             A('sql_excludes', 'DELIMITEDTEXT'),
-            A('sql_matches', r'not supported|unsupported'),
+            A('sql_matches', r'not available|not supported|unsupported'),
+        ),
+    ),
+    MatrixEntry(
+        'C32', 'json_array', 'external_file_format', ('vm', 'azure'), 'abs', 'H4',
+        'JSON has no external file format on either engine. The generator must '
+        'point at OPENROWSET/OPENJSON instead of emitting FORMAT_TYPE = JSON.',
+        accepts=('UNSUPPORTED_EXPECTED', 'NOT_EXECUTABLE'),
+        expected_errors=(102, 46506),
+        notes='Live: FORMAT_TYPE = JSON is rejected with error 102 (syntax '
+              'error near JSON) on Azure SQL Database and SQL Server 2025. '
+              'Naming the number stops an unrelated failure being filed as a '
+              'platform limitation.',
+        static_assertions=(
+            A('sql_excludes', 'FORMAT_TYPE = JSON'),
+            A('sql_matches', r'OPENJSON|not available|not supported'),
         ),
     ),
     MatrixEntry(
         'C23', 'orc', 'external_file_format', ('vm',), 'abs', 'H4',
         'ORC is recognised but not analysable natively; the generator may still '
-        'emit FORMAT_TYPE = ORC from a caller-supplied schema.',
-        accepts=('PASS', 'UNSUPPORTED_EXPECTED', 'NOT_EXECUTABLE'),
+        'emit FORMAT_TYPE = ORC from a caller-supplied schema. Live: both '
+        'engines accepted and dropped the DDL, so the data path - not the '
+        'DDL - is what remains uncertified.',
+        accepts=('PASS', 'NOT_EXECUTABLE'),
     ),
     MatrixEntry(
         'C24', 'text', 'create_table', ('vm', 'azure'), 'none', 'H4',
@@ -400,8 +439,9 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     MatrixEntry(
         'C29', 'csv_scalar', 'complete_ddl', ('vm', 'azure'), 'abs', 'H7',
         'Second execution of the same document: rerun behaviour is part of the '
-        'contract, not an accident.',
-        accepts=('PASS', 'EXEC_AFTER_SUBSTITUTION', 'UNSUPPORTED_EXPECTED'),
+        'contract, not an accident. A rerun that fails is a defect, not a '
+        'platform limitation, so UNSUPPORTED_EXPECTED is not on the list.',
+        accepts=('PASS', 'EXEC_AFTER_SUBSTITUTION'),
     ),
     # -- negative --------------------------------------------------------
     MatrixEntry(

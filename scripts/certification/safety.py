@@ -570,6 +570,23 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
     verb nobody anticipated therefore fails closed instead of being ignored.
     """
     violations: List[Violation] = []
+    # A statement boundary proper: the start of the batch or just after a
+    # semicolon. Anything the scanner cannot name here is refused, because an
+    # unrecognised verb in that position is a statement the harness has no
+    # rule for. Line starts are scanned too (below) but only for known verbs,
+    # since ordinary continuation lines legitimately begin with FROM, WITH (,
+    # column lists and the like.
+    for match in re.finditer(r'(?:\A|;)\s*([A-Za-z_][A-Za-z_0-9]{1,29})', masked):
+        word = match.group(1).lower()
+        if any(word == token or token.startswith(word + ' ') for token in _HEAD_TOKENS):
+            continue
+        violations.append(
+            Violation(
+                'UNKNOWN_STATEMENT',
+                f'{word.upper()} does not begin any statement the harness recognises',
+                line=_line_of(masked, match.start(1)),
+            )
+        )
     for match in re.finditer(r'(?:^|;)\s*([A-Za-z_]{2,20}(?:\s+[A-Za-z_]{2,20})?)', masked, re.M):
         phrase = ' '.join(match.group(1).lower().split())
         head = None

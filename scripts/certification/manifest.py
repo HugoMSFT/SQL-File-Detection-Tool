@@ -377,12 +377,14 @@ def _plan_cell(
 
     if not os.path.exists(fixture_path):
         planned['plan_verdict'] = NOT_EXECUTABLE
+        planned['unstaged'] = True
         planned['reason'] = f'fixture {fixture.path} is missing from the repository'
         return planned
 
     location = staging.location(entry.fixture, entry.access)
     if entry.access != 'none' and not location:
         planned['plan_verdict'] = NOT_EXECUTABLE
+        planned['unstaged'] = True
         planned['reason'] = (
             f'no {entry.access} location staged for fixture {entry.fixture!r}; '
             f'the harness will not invent one'

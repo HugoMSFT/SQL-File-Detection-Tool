@@ -188,3 +188,25 @@ def test_cleanup_statements_pass_their_own_safety_gate(identity, policy):
     assert statements
     for statement in statements:
         assert evaluate_batch(statement, policy).allowed, statement
+
+
+def test_unknown_statement_verbs_fail_closed(policy):
+    # An unrecognised verb at a statement boundary must be refused rather than
+    # ignored: the scanner cannot reason about a statement it cannot name.
+    report = evaluate_batch('FROBNICATE [sqlfdt_cert_ab12cd34_t];', policy)
+    assert not report.allowed
+    assert 'UNKNOWN_STATEMENT' in report.codes
+
+
+def test_ordinary_continuation_lines_are_not_mistaken_for_statements(policy):
+    sql = (
+        "SELECT TOP (100) *\n"
+        "FROM OPENROWSET(\n"
+        "    BULK 'sales.csv',\n"
+        "    DATA_SOURCE = 'sqlfdt_cert_ab12cd34_ds'\n"
+        ") WITH (\n"
+        "    [amount] DECIMAL(18, 4)\n"
+        ") AS [result];\n"
+    )
+    report = evaluate_batch(sql, policy)
+    assert report.allowed, report.codes

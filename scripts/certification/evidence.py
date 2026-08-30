@@ -114,6 +114,10 @@ class CellResult:
     assertions: List[AssertionResult] = field(default_factory=list)
     cleanup: str = 'not_required'
     notes: str = ''
+    #: Set when the planner refused to run the cell because the fixture is not
+    #: staged (or is unreachable on this target), rather than because anything
+    #: about the generated SQL was wrong.
+    unstaged: bool = False
 
     @property
     def accepted(self) -> bool:
@@ -124,14 +128,28 @@ class CellResult:
         return self.verdict in self.accepts
 
     @property
+    def not_certified(self) -> bool:
+        """True when nothing was proved because the fixture was not staged.
+
+        This is a coverage gap, not a defect: the generator produced SQL the
+        harness was willing to send, and the only reason it did not run is that
+        no one staged the file or granted access. Reporting these as defects
+        made an offline plan look like 21 broken cells.
+        """
+        return self.verdict == NOT_EXECUTABLE and self.unstaged
+
+    @property
     def is_defect(self) -> bool:
         """True when this cell represents a real, reportable defect.
 
         A dry run proves nothing either way, so it is neither accepted nor a
         defect. Counting dry runs as defects produced the misleading
         "27 defects" summary on an offline run that had in fact found none.
+        An unstaged fixture is likewise not the generator's fault.
         """
         if self.verdict in HARNESS_ONLY_VERDICTS:
+            return False
+        if self.not_certified:
             return False
         return not self.accepted
 
@@ -161,6 +179,8 @@ class CellResult:
             'elapsed_ms': round(self.elapsed_ms, 2),
             'cleanup': self.cleanup,
             'notes': self.notes,
+            'unstaged': self.unstaged,
+            'not_certified': self.not_certified,
         }
 
 
@@ -193,6 +213,7 @@ class RunEvidence:
         for cell in self.cells:
             counts[cell.verdict] = counts.get(cell.verdict, 0) + 1
         counts['ACCEPTED'] = sum(1 for c in self.cells if c.accepted)
+        counts['NOT_CERTIFIED'] = sum(1 for c in self.cells if c.not_certified)
         counts['DEFECTS'] = len(self.defects)
         return counts
 

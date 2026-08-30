@@ -161,6 +161,7 @@ def execute_cell(
     if plan_verdict == NOT_EXECUTABLE:
         result.verdict = NOT_EXECUTABLE
         result.notes = planned.get('reason', result.notes)
+        result.unstaged = bool(planned.get('unstaged'))
         return result
 
     if connection is None or options.dry_run:
@@ -229,8 +230,27 @@ def execute_cell(
         except Exception as exc:
             elapsed = (time.perf_counter() - started) * 1000
             facts = _error_facts(exc)
-            # A refusal the matrix predicted is evidence, not a defect.
-            expected_unsupported = UNSUPPORTED_EXPECTED in entry.accepts
+            # A refusal the matrix predicted is evidence, not a defect - but
+            # only when it is the refusal that was predicted. Accepting any
+            # error at all would let a typo in the generated SQL masquerade as
+            # a platform limitation, which is the exact confusion this harness
+            # exists to prevent.
+            expected_unsupported = (
+                UNSUPPORTED_EXPECTED in entry.accepts
+                and (
+                    not entry.expected_errors
+                    or facts['error_number'] in entry.expected_errors
+                )
+            )
+            if (
+                UNSUPPORTED_EXPECTED in entry.accepts
+                and entry.expected_errors
+                and not expected_unsupported
+            ):
+                result.notes = (
+                    f'error {facts["error_number"]} is not one of the expected '
+                    f'refusals {list(entry.expected_errors)}'
+                )
             verdict = UNSUPPORTED_EXPECTED if expected_unsupported else FAIL
             unsupported_seen = unsupported_seen or expected_unsupported
             failed = failed or not expected_unsupported
