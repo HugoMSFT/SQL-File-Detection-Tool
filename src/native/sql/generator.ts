@@ -1893,10 +1893,13 @@ export function generateAllStatements(
     options: GenerateAllOptions = {},
 ): GeneratedStatements {
     const targetPlatform = normalizePlatform(options.targetPlatform);
+    const effectiveMetadata: GeneratorMetadata = metadata.parser_overrides?.format
+        ? { ...metadata, file_type: metadata.parser_overrides.format }
+        : metadata;
     const storageUrl = options.storageUrl ?? null;
     const schemaName = options.schemaName ?? 'dbo';
     const dataSource = options.dataSource || 'MyDataSource';
-    const tableName = resolveTableName(metadata, options.tableName);
+    const tableName = resolveTableName(effectiveMetadata, options.tableName);
 
     // The external table must not collide with the regular table in the same
     // script, so it always gets its own name.
@@ -1905,7 +1908,7 @@ export function generateAllStatements(
         : `ext_${tableName}`;
     const fmtName = options.formatName
         ? cleanIdentifier(options.formatName)
-        : `ff_${stringOr(metadata.file_type, 'csv')}_format`;
+        : `ff_${stringOr(effectiveMetadata.file_type, 'csv')}_format`;
 
     const shared: StatementOptions = {
         tableName,
@@ -1916,23 +1919,23 @@ export function generateAllStatements(
     };
 
     return {
-        create_table: generateCreateTable(metadata, shared),
-        bulk_insert: generateBulkInsert(metadata, {
+        create_table: generateCreateTable(effectiveMetadata, shared),
+        bulk_insert: generateBulkInsert(effectiveMetadata, {
             ...shared,
             credentialName: options.credentialName,
             authMethod: options.authMethod,
         }),
-        openrowset: generateOpenrowset(metadata, {
+        openrowset: generateOpenrowset(effectiveMetadata, {
             storageUrl,
             dataSource,
             targetPlatform,
         }),
-        copy_into: generateCopyInto(metadata, shared),
-        external_file_format: generateExternalFileFormat(metadata, {
+        copy_into: generateCopyInto(effectiveMetadata, shared),
+        external_file_format: generateExternalFileFormat(effectiveMetadata, {
             formatName: fmtName,
             targetPlatform,
         }),
-        create_external_table: generateExternalTable(metadata, {
+        create_external_table: generateExternalTable(effectiveMetadata, {
             tableName: externalTableName,
             dataSource,
             location: options.location ?? null,
@@ -1941,18 +1944,18 @@ export function generateAllStatements(
             targetPlatform,
             storageUrl,
         }),
-        json_functions: generateJsonFunctions(metadata, shared),
-        for_json: generateForJsonPath(metadata, shared),
+        json_functions: generateJsonFunctions(effectiveMetadata, shared),
+        for_json: generateForJsonPath(effectiveMetadata, shared),
         credential_setup: generateCredentialSetup({
             dataSource,
             fileFormat: fmtName,
-            metadata,
+            metadata: effectiveMetadata,
             targetPlatform,
             storageUrl,
             credentialName: options.credentialName,
             authMethod: options.authMethod,
         }),
-        best_practices: generateBestPractices(metadata, shared),
+        best_practices: generateBestPractices(effectiveMetadata, shared),
     };
 }
 

@@ -12,6 +12,16 @@ fixes everything the runs found wrong. Both the native TypeScript generator and
 the optional Python generator carry every fix; neither can drift, because both
 test suites now read the same machine-readable evidence file.
 
+### Added
+
+- **Quick Analyze is now the extension's default workflow.** The persistent
+  source/file navigator feeds a selected-file view with analyzed facts, real row
+  preview, provenance-aware parser overrides and reset actions, source-derived
+  external-object readiness, and production-generated SQL. Folder summaries
+  report mixed facts and outliers without sharing one file's settings across the
+  folder. Existing metadata, schema, statement, Azure/URL, Formats, copy/open,
+  and export surfaces remain available.
+
 ### Fixed
 
 - **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`

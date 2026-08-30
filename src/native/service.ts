@@ -32,6 +32,7 @@ import type {
     StorageReference,
     SupportedFormat,
     TargetPlatform,
+    ParserOverrides,
 } from './types';
 import {
     deduplicateSharedPrerequisites,
@@ -70,6 +71,8 @@ export interface GenerationRequest {
     readonly location?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
+    readonly formatName?: string | null;
+    readonly parserOverrides?: ParserOverrides;
 }
 
 /** One file in a multi-file export. */
@@ -184,7 +187,10 @@ export class NativeAnalysisService {
 
     /** Generate every statement tab for already-analysed metadata. */
     generateStatements(request: GenerationRequest): GeneratedStatements {
-        return generateAllStatements(request.metadata, {
+        const metadata = request.parserOverrides
+            ? { ...request.metadata, parser_overrides: request.parserOverrides }
+            : request.metadata;
+        return generateAllStatements(metadata, {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
@@ -193,12 +199,16 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            formatName: request.formatName ?? null,
         });
     }
 
     /** Generate one runnable, GO-separated document containing every section. */
     generateCompleteDocument(request: GenerationRequest): string {
-        return generateCompleteDdl(request.metadata, {
+        const metadata = request.parserOverrides
+            ? { ...request.metadata, parser_overrides: request.parserOverrides }
+            : request.metadata;
+        return generateCompleteDdl(metadata, {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
@@ -207,6 +217,7 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            formatName: request.formatName ?? null,
         });
     }
 

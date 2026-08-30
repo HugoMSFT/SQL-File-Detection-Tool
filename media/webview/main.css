@@ -262,6 +262,13 @@ body.surface-sidebar .file-pane {
   overflow-wrap: anywhere;
 }
 
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
 .file-list {
   list-style: none;
   margin: 0;
@@ -402,6 +409,79 @@ thead th {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.parser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.parser-option,
+.source-readiness,
+.folder-profile,
+.polybase-guidance {
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.parser-option-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.provenance {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+
+.expected,
+.evidence,
+.readiness-detail {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82em;
+  margin: 3px 0;
+}
+
+.has-warning {
+  border-color: var(--vscode-editorWarning-foreground, var(--vscode-contrastBorder));
+  background: var(--vscode-inputValidation-warningBackground, transparent);
+}
+
+details {
+  margin: 6px 0 var(--gap);
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.readiness-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+}
+
+.readiness-item {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto;
+  gap: 2px 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.readiness-detail {
+  grid-column: 1 / -1;
+}
+
+.statement-picker {
+  margin: var(--gap) 0 6px;
 }
 
 .sql-actions {

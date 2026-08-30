@@ -106,10 +106,15 @@ export function csvReaderOptions(
     const prefix = options.prefix ?? '';
     const trailingComma = options.trailingComma ?? false;
 
-    const delimiter = stringOr(metadata.delimiter, ',');
-    const hasHeader = metadata.has_header ?? true;
+    const overrides = metadata.parser_overrides;
+    const delimiter = stringOr(overrides?.fieldDelimiter ?? metadata.delimiter, ',');
+    const hasHeader = overrides?.firstRow === undefined
+        ? metadata.has_header ?? true
+        : overrides.firstRow > 1;
+    const firstRow = overrides?.firstRow ?? (hasHeader ? 2 : 1);
     const encoding = stringOr(metadata.encoding, 'utf-8').toUpperCase();
-    const codepage = stringOr(metadata.codepage, '65001');
+    const codepage = stringOr(overrides?.codepage ?? metadata.codepage, '65001');
+    const rowTerminator = stringOr(overrides?.rowTerminator, '0x0a');
     const delimEscaped = quoteLiteral(displayDelimiter(delimiter));
     const pad = `${prefix}${' '.repeat(indent)}`;
     const width = CSV_OPTION_WIDTH;
@@ -117,13 +122,22 @@ export function csvReaderOptions(
 
     return [
         `${pad}${padRight('FORMAT', width)} = 'CSV',`,
-        `${pad}${padRight('FIRSTROW', width)} = ${hasHeader ? 2 : 1},` +
+        `${pad}${padRight('FIRSTROW', width)} = ${firstRow},` +
             (hasHeader
                 ? '        -- skip the header row'
                 : '        -- no header row detected'),
         `${pad}${padRight('FIELDTERMINATOR', width)} = '${delimEscaped}',`,
-        `${pad}${padRight('ROWTERMINATOR', width)} = '0x0a',` +
-            "        -- LF (use '0x0d0a' for CRLF)",
+        `${pad}${padRight('ROWTERMINATOR', width)} = '${quoteLiteral(rowTerminator)}',` +
+            (overrides?.rowTerminator === undefined
+                ? "        -- LF (use '0x0d0a' for CRLF)"
+                : '        -- user override'),
+        ...(overrides?.quoteCharacter === undefined
+            ? []
+            : [
+                  `${pad}${padRight('FIELDQUOTE', width)} = '${quoteLiteral(
+                      overrides.quoteCharacter,
+                  )}',`,
+              ]),
         `${pad}${padRight('CODEPAGE', width)} = '${quoteLiteral(codepage)}'${tail}` +
             `  -- ${sqlComment(encoding)}`,
     ];
@@ -411,17 +425,22 @@ function formatConfig(
 export function determineFormatConfig(
     metadata: GeneratorMetadata,
 ): ExternalFileFormatConfig {
-    const fileType = metadata.file_type ?? 'text';
+    const fileType = metadata.parser_overrides?.format ?? metadata.file_type ?? 'text';
     const encoding = externalFormatEncoding(stringOr(metadata.encoding, 'utf-8'));
 
     if (fileType === 'csv') {
-        const delimiter = stringOr(metadata.delimiter, ',');
-        const hasHeader = metadata.has_header ?? false;
+        const delimiter = stringOr(
+            metadata.parser_overrides?.fieldDelimiter ?? metadata.delimiter,
+            ',',
+        );
+        const hasHeader = metadata.parser_overrides?.firstRow === undefined
+            ? metadata.has_header ?? false
+            : metadata.parser_overrides.firstRow > 1;
         return formatConfig({
             format_type: 'DELIMITEDTEXT',
             field_terminator: delimiter.split('\t').join('\\t'),
-            string_delimiter: '"',
-            first_row: hasHeader ? 2 : 1,
+            string_delimiter: metadata.parser_overrides?.quoteCharacter ?? '"',
+            first_row: metadata.parser_overrides?.firstRow ?? (hasHeader ? 2 : 1),
             encoding,
             // USE_TYPE_DEFAULT = FALSE preserves the source's missing-value
             // semantics. Live certification against Azure SQL Database showed
@@ -434,7 +453,9 @@ export function determineFormatConfig(
         return formatConfig({ format_type: 'JSON' });
     }
     if (fileType === 'parquet') {
-        const comp = (metadata.compression ?? '').toUpperCase();
+        const comp = (
+            metadata.parser_overrides?.compression ?? metadata.compression ?? ''
+        ).toUpperCase();
         return formatConfig({
             format_type: 'PARQUET',
             data_compression: COMPRESSION_CODECS[comp] ?? null,
@@ -444,14 +465,18 @@ export function determineFormatConfig(
         return formatConfig({ format_type: 'DELTA' });
     }
     if (fileType === 'orc') {
-        const comp = (metadata.compression ?? '').toUpperCase();
+        const comp = (
+            metadata.parser_overrides?.compression ?? metadata.compression ?? ''
+        ).toUpperCase();
         return formatConfig({
             format_type: 'ORC',
             data_compression: COMPRESSION_CODECS[comp] ?? null,
         });
     }
     if (fileType === 'rc') {
-        const comp = (metadata.compression ?? '').toUpperCase();
+        const comp = (
+            metadata.parser_overrides?.compression ?? metadata.compression ?? ''
+        ).toUpperCase();
         return formatConfig({
             format_type: 'RCFILE',
             serde_method: 'org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe',

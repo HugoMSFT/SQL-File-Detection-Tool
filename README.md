@@ -26,10 +26,13 @@ The walkthrough above, in text:
 2. Point it at any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a
    Delta or Iceberg table directory. The walkthrough analyses
    `demo/parquet/sales.parquet` from this repository.
-3. The **Preview** tab shows real rows read straight from the file. No import
-   and no database connection are required.
-4. The **Metadata** tab shows the detected column types, precision, nullability,
-   encoding, and collation.
+3. **Quick Analyze** is the default view. It keeps the selected file, analyzed
+   facts, real row preview, common parser controls, source readiness, and
+   generated SQL together. Advanced parser details remain one disclosure away.
+4. Every parser value states its provenance: **Detected**, **Inferred**,
+   **Assumed**, **Mapped**, **From source**, **Platform default**,
+   **Unavailable/Unsupported**, **Mixed**, or **Overridden**. An override can be
+   reset to the analyzed expected value without changing the underlying file fact.
 5. The **Target platform** selector is preset to **Azure SQL Database**. Switch
    to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
    at any time.
@@ -598,11 +601,19 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 ### Activity Bar
 
 Selecting the **SQL File Detection Tool** container reveals the complete
-interface immediately, rendered from bundled assets: file list, preview,
-metadata, every statement tab, the schema override editor, export, the platform
-selector, the public dataset URL box, and the Azure Storage browser. There is no
+interface immediately, rendered from bundled assets. **Quick Analyze** is the
+default view, with a persistent source/file navigator, selected-file facts, real
+preview rows, provenance-aware parser options, source readiness, and generated
+SQL. Metadata, Schema, statement details, export, Formats, public HTTPS URLs, and
+the Azure Storage browser remain available through progressive disclosure. There is no
 loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
+
+Folder detection remains per file. The folder profile reports **Mixed** and an
+outlier count when formats, delimiters, encodings, or schemas differ; it never
+applies the selected file's parser facts to every file. Local paths expose direct
+SQL Server/UNC reads where supported and otherwise say that staging is required,
+rather than inventing a cloud external source.
 
 - The webview has a strict, nonce-bound Content Security Policy with
   `default-src 'none'` and no `connect-src`, so the renderer has no network

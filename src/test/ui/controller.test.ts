@@ -189,6 +189,76 @@ function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
 
+test('Quick Analyze controller applies and resets parser overrides per selected file', async () => {
+    const record = recorder();
+    const timers: Array<() => void> = [];
+    const ui = controller(record, {
+        setTimeoutImpl: (fn: () => void) => {
+            timers.push(fn);
+            return fn;
+        },
+        clearTimeoutImpl: () => undefined,
+    });
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        await settle();
+        assert.equal(snapshot(record).activeTab, 'quick_analyze');
+        await ui.handle({
+            type: 'setParserOverride',
+            key: 'fieldDelimiter',
+            value: '|',
+        });
+        timers.splice(0).forEach((fire) => fire());
+        assert.equal(snapshot(record).parserOverrides.fieldDelimiter, '|');
+        assert.equal(
+            snapshot(record).quickAnalyze.options.find(
+                (option) => option.key === 'fieldDelimiter',
+            )?.provenance,
+            'Overridden',
+        );
+        assert.match(snapshot(record).statements?.bulk_insert ?? '', /FIELDTERMINATOR\s+= '\|'/);
+
+        await ui.handle({ type: 'resetParserOverride', key: 'fieldDelimiter' });
+        timers.splice(0).forEach((fire) => fire());
+        assert.equal(snapshot(record).parserOverrides.fieldDelimiter, undefined);
+        assert.equal(
+            snapshot(record).quickAnalyze.options.find(
+                (option) => option.key === 'fieldDelimiter',
+            )?.provenance,
+            'Inferred',
+        );
+
+        await ui.handle({
+            type: 'setStatementKind',
+            kind: 'create_external_table',
+        });
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
+        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2025' });
+        assert.equal(snapshot(record).quickAnalyze.polybase.visible, false);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('folder Quick Analyze keeps per-file facts and reports mixed values', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadDirectory(DEMO);
+        await settle();
+        const state = snapshot(record);
+        assert.ok(state.folderProfile);
+        assert.equal(state.folderProfile.format, 'Mixed');
+        assert.ok(state.folderProfile.outlierCount > 0);
+        assert.equal(state.parserOverrides.fieldDelimiter, undefined);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 // -- message validation -------------------------------------------------------
 
 test('a malformed or unknown message is dropped, never defaulted', async () => {
@@ -1029,8 +1099,19 @@ test('analyzing a blob keeps the copy local and the SQL pointed at the URL', asy
             'https://myaccount.blob.core.windows.net/data/a.csv',
         );
         assert.equal(state.metadata?.file_type, 'csv');
+        assert.equal(state.sourceKind, 'azure');
+        assert.equal(state.quickAnalyze.source.baseLocation, 'https://myaccount.blob.core.windows.net/data');
+        assert.equal(state.quickAnalyze.source.relativePath, 'a.csv');
+        assert.equal(state.quickAnalyze.source.objects[0].required, false);
+        assert.equal(state.dataSource, 'ds_myaccount_data');
         assert.match(state.notice ?? '', /local copy/i);
         assert.ok(!state.storageUrl.includes('sig='), 'the URL in SQL is never signed');
+
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        await settle();
+        assert.equal(snapshot(record).sourceKind, 'local');
+        assert.equal(snapshot(record).storageUrl, '');
+        assert.deepEqual(snapshot(record).quickAnalyze.source.objects, []);
     } finally {
         await ui.dispose();
         cleanup(record);

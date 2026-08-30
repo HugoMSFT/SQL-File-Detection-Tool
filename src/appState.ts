@@ -25,6 +25,12 @@ import type {
     TargetPlatform,
 } from './native';
 import { DEFAULT_TARGET_PLATFORM, PLATFORM_LABELS, PLATFORMS } from './native';
+import {
+    folderProfileFor,
+    parserOptionsFor,
+    polyBaseGuidance,
+    sourceReadiness,
+} from './quickAnalyze';
 import type {
     AppStateSnapshot,
     AppearanceMode,
@@ -79,7 +85,7 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         version: options.version,
         platform: options.platform ?? DEFAULT_TARGET_PLATFORM,
         platforms: PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] })),
-        activeTab: options.activeTab ?? 'metadata',
+        activeTab: options.activeTab ?? 'quick_analyze',
         files: [],
         selectedFileId: null,
         sourceLabel: null,
@@ -92,6 +98,31 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         credentialName: '',
         authMethod: '',
         storageUrl: '',
+        formatName: '',
+        parserOverrides: {},
+        sourceKind: 'local',
+        folderProfile: null,
+        quickAnalyze: {
+            options: [],
+            source: sourceReadiness({
+                sourceKind: 'local',
+                storageUrl: '',
+                fileName: '',
+                fileType: 'unknown',
+                dataSource: 'MyDataSource',
+                credentialName: '',
+                formatName: '',
+                authMethod: '',
+                platform: options.platform ?? DEFAULT_TARGET_PLATFORM,
+                selectedStatement: 'openrowset',
+            }),
+            folderProfile: null,
+            selectedStatement: 'openrowset',
+            polybase: polyBaseGuidance(
+                options.platform ?? DEFAULT_TARGET_PLATFORM,
+                'openrowset',
+            ),
+        },
         columnOverrides: {},
         previewRows: DEFAULT_PREVIEW_ROWS,
         busy: false,
@@ -198,6 +229,7 @@ export class AppStateStore {
             preview: null,
             statements: null,
             columnOverrides: {},
+            parserOverrides: {},
             limitation: null,
             lastAnalysisMs: null,
         });
@@ -322,6 +354,37 @@ export function supportsPreview(metadata: FileMetadata | null): boolean {
         return false;
     }
     return metadata.file_type !== 'unknown';
+}
+
+/** Rebuild the derived Quick Analyze view model after any relevant state change. */
+export function quickAnalyzePatch(
+    state: AppStateSnapshot,
+    metadata: FileMetadata | null,
+    folderMetadata: readonly FileMetadata[] = [],
+): Pick<AppStateSnapshot, 'folderProfile' | 'quickAnalyze'> {
+    const folderProfile = folderProfileFor(folderMetadata);
+    const selected = state.quickAnalyze.selectedStatement;
+    return {
+        folderProfile,
+        quickAnalyze: {
+            options: parserOptionsFor(metadata, state.parserOverrides),
+            source: sourceReadiness({
+                sourceKind: state.sourceKind,
+                storageUrl: state.storageUrl,
+                fileName: metadata?.file_name ?? '',
+                fileType: metadata?.file_type ?? 'unknown',
+                dataSource: state.dataSource,
+                credentialName: state.credentialName,
+                formatName: state.formatName,
+                authMethod: state.authMethod,
+                platform: state.platform,
+                selectedStatement: selected,
+            }),
+            folderProfile,
+            selectedStatement: selected,
+            polybase: polyBaseGuidance(state.platform, selected),
+        },
+    };
 }
 
 export type { AppStateSnapshot, PreviewResult };

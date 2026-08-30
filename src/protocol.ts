@@ -27,11 +27,17 @@
 import type {
     FileMetadata,
     NativeSupport,
+    ParserOverrides,
     PreviewResult,
     StatementKind,
     SupportedFormat,
     TargetPlatform,
 } from './native';
+import type {
+    FolderProfile,
+    QuickAnalyzeState,
+    SourceKind,
+} from './quickAnalyze';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -45,6 +51,7 @@ export const MAX_PREVIEW_ROWS = 500;
 
 /** Tabs the native interface can show. */
 export const UI_TABS = [
+    'quick_analyze',
     'metadata',
     'preview',
     'create_table',
@@ -120,6 +127,14 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setCredentialName'; readonly value: string })
     | (Base & { readonly type: 'setAuthMethod'; readonly value: string })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
+    | (Base & { readonly type: 'setFormatName'; readonly value: string })
+    | (Base & {
+          readonly type: 'setParserOverride';
+          readonly key: keyof ParserOverrides;
+          readonly value: string;
+      })
+    | (Base & { readonly type: 'resetParserOverride'; readonly key: keyof ParserOverrides })
+    | (Base & { readonly type: 'setStatementKind'; readonly kind: StatementKind })
     | (Base & {
           readonly type: 'setColumnOverride';
           readonly column: string;
@@ -232,6 +247,11 @@ export interface AppStateSnapshot {
     readonly credentialName: string;
     readonly authMethod: string;
     readonly storageUrl: string;
+    readonly formatName: string;
+    readonly parserOverrides: Readonly<ParserOverrides>;
+    readonly sourceKind: SourceKind;
+    readonly folderProfile: FolderProfile | null;
+    readonly quickAnalyze: QuickAnalyzeState;
     readonly columnOverrides: Readonly<Record<string, string>>;
     readonly previewRows: number;
     readonly busy: boolean;
@@ -403,6 +423,41 @@ const BUILDERS: Record<string, Builder> = {
     setStorageUrl: (source) => {
         const value = text(source, 'value', MAX_URL_LENGTH);
         return value === undefined ? undefined : { type: 'setStorageUrl', value };
+    },
+    setFormatName: (source) => {
+        const value = text(source, 'value', 256);
+        return value === undefined ? undefined : { type: 'setFormatName', value };
+    },
+    setParserOverride: (source) => {
+        const key = member(source, 'key', [
+            'format',
+            'firstRow',
+            'fieldDelimiter',
+            'rowTerminator',
+            'quoteCharacter',
+            'codepage',
+            'compression',
+        ] as const);
+        const value = text(source, 'value', 128);
+        return key === undefined || value === undefined
+            ? undefined
+            : { type: 'setParserOverride', key, value };
+    },
+    resetParserOverride: (source) => {
+        const key = member(source, 'key', [
+            'format',
+            'firstRow',
+            'fieldDelimiter',
+            'rowTerminator',
+            'quoteCharacter',
+            'codepage',
+            'compression',
+        ] as const);
+        return key === undefined ? undefined : { type: 'resetParserOverride', key };
+    },
+    setStatementKind: (source) => {
+        const kind = member(source, 'kind', STATEMENT_KINDS);
+        return kind === undefined ? undefined : { type: 'setStatementKind', kind };
     },
     setColumnOverride: (source) => {
         const column = text(source, 'column', 256);

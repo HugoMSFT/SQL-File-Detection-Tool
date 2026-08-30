@@ -28,6 +28,7 @@ import {
     type FileMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
+    type ParserOverrides,
     type StatementKind,
     type TargetPlatform,
 } from '../native';
@@ -36,9 +37,15 @@ import {
     DEFAULT_PREVIEW_ROWS,
     displayLabel,
     limitationFor,
+    quickAnalyzePatch,
     supportsPreview,
     type RegisteredFile,
 } from '../appState';
+import {
+    sourceReadiness,
+    suggestedObjectNames,
+    type SourceKind,
+} from '../quickAnalyze';
 import {
     MAX_PREVIEW_ROWS,
     MIN_PREVIEW_ROWS,
@@ -108,6 +115,8 @@ export class UiController {
     private readonly temporaryFiles = new Set<string>();
     /** The untouched metadata, i.e. the copy that still has a real path. */
     private rawMetadata: FileMetadata | null = null;
+    private folderMetadata: readonly FileMetadata[] = [];
+    private sourceReferenceUrl = '';
     private disposed = false;
     /** Benchmark instrumentation: only the first analysis is timed in the log. */
     private firstAnalysisLogged = false;
@@ -168,6 +177,7 @@ export class UiController {
             case 'setPlatform': {
                 const platform = this.service.normalizePlatform(request.platform);
                 this.store.update({ platform });
+                this.refreshQuickAnalyze();
                 void this.host.setPreference('platform', platform);
                 this.regenerate();
                 return;
@@ -200,20 +210,61 @@ export class UiController {
                 return;
             case 'setDataSource':
                 this.store.update({ dataSource: request.value });
+                this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
             case 'setCredentialName':
                 this.store.update({ credentialName: request.value });
+                this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
             case 'setAuthMethod':
                 this.store.update({ authMethod: request.value });
+                this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
             case 'setStorageUrl':
                 this.store.update({ storageUrl: request.value });
+                this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
+            case 'setFormatName':
+                this.store.update({ formatName: request.value });
+                this.refreshQuickAnalyze();
+                this.regenerate();
+                return;
+            case 'setStatementKind':
+                this.store.update({
+                    activeTab: 'quick_analyze',
+                    quickAnalyze: {
+                        ...this.store.state.quickAnalyze,
+                        selectedStatement: request.kind,
+                    },
+                });
+                this.refreshQuickAnalyze();
+                return;
+            case 'setParserOverride': {
+                const value = this.parseParserOverride(request.key, request.value);
+                if (value === undefined) {
+                    return;
+                }
+                const parserOverrides = {
+                    ...this.store.state.parserOverrides,
+                    [request.key]: value,
+                };
+                this.store.update({ parserOverrides, error: null });
+                this.refreshQuickAnalyze();
+                this.regenerate();
+                return;
+            }
+            case 'resetParserOverride': {
+                const parserOverrides = { ...this.store.state.parserOverrides };
+                delete parserOverrides[request.key];
+                this.store.update({ parserOverrides });
+                this.refreshQuickAnalyze();
+                this.regenerate();
+                return;
+            }
             case 'setColumnOverride': {
                 const overrides = { ...this.store.state.columnOverrides };
                 if (request.sqlType.trim() === '') {
@@ -363,6 +414,15 @@ export class UiController {
      * folder the user chose can be read even if it is linked into it.
      */
     async loadDirectory(directory: string): Promise<void> {
+        this.sourceReferenceUrl = '';
+        this.folderMetadata = [];
+        this.rawMetadata = null;
+        this.store.update({
+            sourceKind: 'local',
+            storageUrl: '',
+            parserOverrides: {},
+            folderProfile: null,
+        });
         const { token, generation } = this.begin();
         this.store.update({ busy: true, progress: 'Scanning folder…', error: null });
         try {
@@ -384,6 +444,7 @@ export class UiController {
                     isDirectory: file.file_type === 'delta' || file.file_type === 'iceberg',
                 })),
             );
+            this.folderMetadata = result.files;
             const { label } = displayLabel(result.root, this.host.workspaceFolders());
             this.store.update({
                 busy: false,
@@ -394,6 +455,7 @@ export class UiController {
                         ? 'No supported data files were found in that folder.'
                         : null,
             });
+            this.refreshQuickAnalyze();
             const first = this.store.state.files[0];
             if (first) {
                 await this.selectFile(first.id);
@@ -406,7 +468,11 @@ export class UiController {
     }
 
     /** Analyse one or more explicitly chosen files. */
-    async loadFiles(paths: readonly string[]): Promise<void> {
+    async loadFiles(paths: readonly string[], sourceKind: SourceKind = 'local'): Promise<void> {
+        this.folderMetadata = [];
+        if (sourceKind === 'local') {
+            this.sourceReferenceUrl = '';
+        }
         const entries = paths.map((absolute) => ({
             absolutePath: absolute,
             // A single chosen file is confined to its own directory, matching
@@ -420,7 +486,16 @@ export class UiController {
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
         const { label } = displayLabel(paths[0], this.host.workspaceFolders());
-        this.store.update({ sourceLabel: label, error: null, notice: null });
+        this.store.update({
+            sourceLabel: label,
+            sourceKind,
+            storageUrl: sourceKind === 'local' ? '' : this.store.state.storageUrl,
+            parserOverrides: {},
+            folderProfile: null,
+            error: null,
+            notice: null,
+        });
+        this.refreshQuickAnalyze();
         if (first) {
             await this.selectFile(first.id);
         }
@@ -433,7 +508,13 @@ export class UiController {
             this.store.update({ error: 'That file is no longer in the list. Refresh and try again.' });
             return;
         }
-        this.store.update({ selectedFileId: fileId, error: null, notice: null });
+        const changed = this.store.state.selectedFileId !== fileId;
+        this.store.update({
+            selectedFileId: fileId,
+            parserOverrides: changed ? {} : this.store.state.parserOverrides,
+            error: null,
+            notice: null,
+        });
         await this.analyzeSelected(file);
     }
 
@@ -525,13 +606,94 @@ export class UiController {
     private applyMetadata(metadata: FileMetadata, elapsedMs: number): void {
         const display = metadataForDisplay(metadata, this.host.workspaceFolders());
         const state = this.store.state;
+        const sourceNames =
+            state.sourceKind === 'local' || !state.storageUrl
+                ? null
+                : suggestedObjectNames(
+                      state.storageUrl,
+                      metadata.file_type,
+                      state.authMethod || (state.azure.mode === 'anonymous' ? 'public' : ''),
+                  );
         this.store.update({
             metadata: display,
             limitation: limitationFor(metadata),
             tableName: state.tableName || this.service.resolveTableName(metadata, null),
+            dataSource: sourceNames?.dataSource ?? state.dataSource,
+            credentialName: sourceNames?.credentialName ?? state.credentialName,
+            formatName: sourceNames?.formatName ?? state.formatName,
+            authMethod:
+                state.authMethod ||
+                (state.sourceKind === 'azure' && state.azure.mode === 'anonymous'
+                    ? 'public'
+                    : state.authMethod),
             lastAnalysisMs: Math.max(0, Math.round(elapsedMs)),
         });
+        this.refreshQuickAnalyze();
         this.generateNow();
+    }
+
+    private refreshQuickAnalyze(): void {
+        const patch = quickAnalyzePatch(
+            this.store.state,
+            this.rawMetadata,
+            this.folderMetadata,
+        );
+        if (this.sourceReferenceUrl && this.store.state.sourceKind !== 'local') {
+            this.store.update({
+                ...patch,
+                quickAnalyze: {
+                ...patch.quickAnalyze,
+                source: sourceReadiness({
+                    sourceKind: this.store.state.sourceKind,
+                    storageUrl: this.sourceReferenceUrl,
+                    fileName: this.rawMetadata?.file_name ?? '',
+                    fileType: this.rawMetadata?.file_type ?? 'unknown',
+                    dataSource: this.store.state.dataSource,
+                    credentialName: this.store.state.credentialName,
+                    formatName: this.store.state.formatName,
+                    authMethod: this.store.state.authMethod,
+                    platform: this.store.state.platform,
+                    selectedStatement: patch.quickAnalyze.selectedStatement,
+                }),
+                },
+            });
+            return;
+        }
+        this.store.update(patch);
+    }
+
+    private parseParserOverride(
+        key: keyof ParserOverrides,
+        raw: string,
+    ): ParserOverrides[keyof ParserOverrides] | undefined {
+        if (key === 'firstRow') {
+            const value = Number(raw);
+            if (!Number.isInteger(value) || value < 1 || value > 1_000_000) {
+                this.store.update({ error: 'FIRSTROW must be an integer from 1 to 1000000.' });
+                return undefined;
+            }
+            return value;
+        }
+        if (key === 'format') {
+            const formats = this.store.state.formats.map((entry) => entry.fileType);
+            if (!formats.includes(raw as FileMetadata['file_type'])) {
+                this.store.update({ error: 'Choose a supported file format.' });
+                return undefined;
+            }
+            return raw as FileMetadata['file_type'];
+        }
+        if (
+            (key === 'fieldDelimiter' || key === 'quoteCharacter') &&
+            [...raw].length !== 1
+        ) {
+            this.store.update({ error: `${key} must be exactly one character.` });
+            return undefined;
+        }
+        if (key === 'rowTerminator' && raw.length === 0) {
+            this.store.update({ error: 'Row terminator cannot be empty.' });
+            return undefined;
+        }
+        return raw;
     }
 
     /** Schedule a regeneration, collapsing bursts of keystrokes into one. */
@@ -569,6 +731,11 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            formatName: state.formatName || null,
+            parserOverrides:
+                Object.keys(state.parserOverrides).length > 0
+                    ? { ...state.parserOverrides }
+                    : undefined,
         });
         this.store.update({ statements });
     }
@@ -590,6 +757,11 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            formatName: state.formatName || null,
+            parserOverrides:
+                Object.keys(state.parserOverrides).length > 0
+                    ? { ...state.parserOverrides }
+                    : undefined,
         });
     }
 
@@ -663,6 +835,11 @@ export class UiController {
                         sql_type_overrides:
                             registered.id === state.selectedFileId
                                 ? { ...state.columnOverrides }
+                                : undefined,
+                        parser_overrides:
+                            registered.id === state.selectedFileId &&
+                            Object.keys(state.parserOverrides).length > 0
+                                ? { ...state.parserOverrides }
                                 : undefined,
                     },
                     // A table name is a per-file override, so it only applies
@@ -908,8 +1085,9 @@ export class UiController {
                 this.temporaryFiles.delete(downloaded.path);
                 return;
             }
-            this.store.update({ storageUrl: browser.blobUrl(container, blob) });
-            await this.loadFiles([downloaded.path]);
+            this.sourceReferenceUrl = browser.blobUrl(container, blob);
+            this.store.update({ storageUrl: this.sourceReferenceUrl });
+            await this.loadFiles([downloaded.path], 'azure');
             this.store.update({
                 notice:
                     'Analyzed a local copy. The generated SQL points at the blob URL, not the copy.',
@@ -971,8 +1149,19 @@ export class UiController {
             }
 
             const queryable = storageUrlFor(target);
+            try {
+                const source = new URL(target);
+                source.search = '';
+                source.hash = '';
+                this.sourceReferenceUrl = source.toString();
+            } catch {
+                this.sourceReferenceUrl = '';
+            }
             this.store.update({ storageUrl: queryable ?? '' });
-            await this.loadFiles([downloaded.path]);
+            await this.loadFiles(
+                [downloaded.path],
+                queryable && isAzureStorageUrl(queryable) ? 'azure' : 'public_https',
+            );
             this.store.update({
                 busy: false,
                 progress: null,
@@ -1011,6 +1200,8 @@ export class UiController {
             this.regenerateHandle = undefined;
         }
         this.rawMetadata = null;
+        this.folderMetadata = [];
+        this.sourceReferenceUrl = '';
         for (const file of this.temporaryFiles) {
             await this.host.cleanupDownload(file);
         }

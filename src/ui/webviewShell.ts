@@ -110,7 +110,13 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <div class="layout">
     <nav class="file-pane" aria-labelledby="file-pane-title">
-      <h2 id="file-pane-title">Files</h2>
+      <h2 id="file-pane-title">Sources & files</h2>
+      <div class="source-actions" role="toolbar" aria-label="Add data source">
+        <button type="button" class="btn subtle" data-action="openFileDialog">File</button>
+        <button type="button" class="btn subtle" data-action="openFolderDialog">Folder</button>
+        <button type="button" class="btn subtle" data-action="analyzeWorkspaceFolder">Workspace</button>
+        <button type="button" class="btn subtle" data-source-tab="azure">HTTPS / Azure</button>
+      </div>
       <p class="source" id="source-label"></p>
       <ul class="file-list" id="file-list" role="listbox" aria-labelledby="file-pane-title" tabindex="0"></ul>
       <p class="empty" id="file-empty">Select a file or folder to begin.</p>
@@ -214,6 +220,27 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <template id="tpl-format-row">
     <tr><th scope="row"></th><td class="fmt-ext"></td><td class="fmt-support"></td><td class="fmt-notes"></td></tr>
+  </template>
+
+  <template id="tpl-parser-option">
+    <div class="parser-option">
+      <div class="parser-option-head">
+        <label></label>
+        <span class="provenance"></span>
+      </div>
+      <div class="parser-control"></div>
+      <p class="expected"></p>
+      <p class="evidence"></p>
+      <button type="button" class="btn subtle reset-option" hidden>Use expected</button>
+    </div>
+  </template>
+
+  <template id="tpl-readiness">
+    <li class="readiness-item">
+      <span class="readiness-name"></span>
+      <span class="provenance"></span>
+      <span class="readiness-detail"></span>
+    </li>
   </template>
 
 <script nonce="${nonce}" src="${scriptUri}"></script>

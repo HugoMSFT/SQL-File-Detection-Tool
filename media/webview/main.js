@@ -27,6 +27,7 @@
 
     /** Tabs in display order. Statement tabs appear only when they have text. */
     const TABS = [
+        { id: 'quick_analyze', label: 'Quick Analyze', always: true },
         { id: 'metadata', label: 'Metadata', always: true },
         { id: 'preview', label: 'Preview', always: true },
         { id: 'schema', label: 'Schema', always: true },
@@ -69,6 +70,14 @@
         const existing = debounceTimers.get(key);
         if (existing !== undefined) {
             clearTimeout(existing);
+        }
+
+        function cancelDebounce(key) {
+            const timer = debounceTimers.get(key);
+            if (timer !== undefined) {
+                clearTimeout(timer);
+                debounceTimers.delete(key);
+            }
         }
         debounceTimers.set(
             key,
@@ -244,6 +253,184 @@
                 element('p', 'empty', 'Choose a file to see its detected metadata.'),
             );
             return;
+        }
+
+        function renderParserOption(container, option) {
+            const node = template('tpl-parser-option');
+            node.classList.toggle('has-warning', Boolean(option.warning));
+            node.querySelector('label').textContent = option.label;
+            node.querySelector('.provenance').textContent = option.provenance;
+            node.querySelector('.expected').textContent =
+                'Expected: ' + option.expectedValue + ' · ' + option.provenance;
+            node.querySelector('.evidence').textContent =
+                option.warning || option.evidence || '';
+            const control = node.querySelector('.parser-control');
+            if (option.label === 'File encoding') {
+                control.appendChild(element('strong', null, option.value));
+            } else {
+                let input;
+                if (option.key === 'format') {
+                    input = document.createElement('select');
+                    (state.formats || []).forEach(function (format) {
+                        const entry = element('option', null, format.label);
+                        entry.value = format.fileType;
+                        input.appendChild(entry);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = option.key === 'firstRow' ? 'number' : 'text';
+                    input.spellcheck = false;
+                    input.autocomplete = 'off';
+                }
+                input.value = editable('parser:' + option.key, option.value);
+                input.dataset.parserOption = option.key;
+                input.setAttribute('aria-label', option.label);
+                control.appendChild(input);
+            }
+            const reset = node.querySelector('.reset-option');
+            reset.hidden = !option.overridden;
+            reset.dataset.resetParser = option.key;
+            container.appendChild(node);
+        }
+
+        function renderQuickAnalyze(container) {
+            const metadata = state.metadata;
+            container.appendChild(element('h2', null, 'Quick Analyze'));
+            renderLimitation(container);
+            if (!metadata) {
+                container.appendChild(
+                    element('p', 'empty', 'Choose a source and file to analyze it.'),
+                );
+                return;
+            }
+
+            const summary = element('dl', 'kv-list quick-facts');
+            appendKv(summary, 'Selected file', metadata.file_path);
+            appendKv(summary, 'Rows', metadata.row_count);
+            appendKv(summary, 'Columns', metadata.column_count);
+            appendKv(summary, 'Schema', metadata.schema_inference ? 'Inferred' : 'Unavailable');
+            appendKv(summary, 'Encoding', metadata.encoding + ' (file fact)');
+            container.appendChild(summary);
+
+            if (state.folderProfile) {
+                const profile = element('aside', 'folder-profile');
+                profile.appendChild(element('h3', null, 'Folder profile · per-file detection'));
+                profile.appendChild(
+                    element(
+                        'p',
+                        'help',
+                        state.folderProfile.fileCount +
+                            ' files · format ' +
+                            state.folderProfile.format +
+                            ' · delimiter ' +
+                            state.folderProfile.delimiter +
+                            ' · encoding ' +
+                            state.folderProfile.encoding +
+                            ' · schema ' +
+                            state.folderProfile.schema +
+                            (state.folderProfile.outlierCount
+                                ? ' · ' + state.folderProfile.outlierCount + ' outlier(s)'
+                                : ''),
+                    ),
+                );
+                container.appendChild(profile);
+            }
+
+            container.appendChild(element('h3', null, 'Common parser options'));
+            const common = element('div', 'parser-grid');
+            state.quickAnalyze.options
+                .filter(function (option) {
+                    return !option.advanced;
+                })
+                .forEach(function (option) {
+                    renderParserOption(common, option);
+                });
+            container.appendChild(common);
+
+            const advanced = document.createElement('details');
+            if (
+                state.quickAnalyze.options.some(function (option) {
+                    return option.advanced && option.warning;
+                })
+            ) {
+                advanced.open = true;
+            }
+            advanced.appendChild(element('summary', null, 'Advanced parser details'));
+            const advancedGrid = element('div', 'parser-grid');
+            state.quickAnalyze.options
+                .filter(function (option) {
+                    return option.advanced;
+                })
+                .forEach(function (option) {
+                    renderParserOption(advancedGrid, option);
+                });
+            advanced.appendChild(advancedGrid);
+            container.appendChild(advanced);
+
+            container.appendChild(element('h3', null, 'Row preview'));
+            renderPreview(container);
+
+            const source = state.quickAnalyze.source;
+            const readiness = element(
+                'aside',
+                source.stagingRequired ? 'source-readiness has-warning' : 'source-readiness',
+            );
+            readiness.appendChild(element('h3', null, 'Source readiness'));
+            readiness.appendChild(
+                element(
+                    'p',
+                    'help',
+                    source.detail +
+                        (source.baseLocation ? ' Base: ' + source.baseLocation + '.' : '') +
+                        (source.relativePath ? ' Relative path: ' + source.relativePath + '.' : ''),
+                ),
+            );
+            if (source.objects.length > 0) {
+                const list = element('ul', 'readiness-list');
+                source.objects.forEach(function (object) {
+                    const item = template('tpl-readiness');
+                    item.querySelector('.readiness-name').textContent =
+                        object.name + (object.required ? ' · required' : ' · not required');
+                    item.querySelector('.provenance').textContent = object.provenance;
+                    item.querySelector('.readiness-detail').textContent = object.detail;
+                    list.appendChild(item);
+                });
+                readiness.appendChild(list);
+            }
+            container.appendChild(readiness);
+
+            const statementLabel = element('label', 'field statement-picker');
+            statementLabel.appendChild(element('span', null, 'Generated statement'));
+            const statementSelect = document.createElement('select');
+            statementSelect.dataset.edit = 'statementKind';
+            TABS.filter(function (tab) {
+                return (
+                    !tab.always &&
+                    typeof (state.statements || {})[tab.id] === 'string' &&
+                    (state.statements || {})[tab.id].trim()
+                );
+            }).forEach(function (tab) {
+                const choice = element('option', null, tab.label);
+                choice.value = tab.id;
+                statementSelect.appendChild(choice);
+            });
+            statementSelect.value = state.quickAnalyze.selectedStatement;
+            statementLabel.appendChild(statementSelect);
+            container.appendChild(statementLabel);
+            if (state.quickAnalyze.polybase.visible) {
+                container.appendChild(
+                    element('aside', 'polybase-guidance has-warning', state.quickAnalyze.polybase.detail),
+                );
+            }
+            const kind = state.quickAnalyze.selectedStatement;
+            const sql = (state.statements || {})[kind];
+            if (sql) {
+                const block = template('tpl-sql');
+                block.dataset.kind = kind;
+                block.querySelector('code').textContent = sql;
+                block.querySelector('pre').setAttribute('aria-label', kind + ' statement');
+                container.appendChild(block);
+            }
         }
         const list = element('dl', 'kv-list');
         appendKv(list, 'File', metadata.file_path);
@@ -426,6 +613,11 @@
             { key: 'schemaName', label: 'Schema', value: state.schemaName },
             { key: 'dataSource', label: 'External data source', value: state.dataSource },
             {
+                key: 'formatName',
+                label: 'External file format',
+                value: state.formatName,
+            },
+            {
                 key: 'credentialName',
                 label: 'Credential name',
                 value: state.credentialName,
@@ -601,7 +793,9 @@
         const panel = byId('panel');
         clear(panel);
         const tab = state.activeTab;
-        if (tab === 'metadata') {
+        if (tab === 'quick_analyze') {
+            renderQuickAnalyze(panel);
+        } else if (tab === 'metadata') {
             renderMetadata(panel);
         } else if (tab === 'preview') {
             renderPreview(panel);
@@ -644,6 +838,21 @@
         const tab = target.closest('.tab');
         if (tab && tab.dataset.tab) {
             post({ type: 'setTab', tab: tab.dataset.tab });
+            return;
+        }
+
+        const sourceTab = target.closest('[data-source-tab]');
+        if (sourceTab) {
+            post({ type: 'setTab', tab: sourceTab.dataset.sourceTab });
+            return;
+        }
+
+        const resetParser = target.closest('[data-reset-parser]');
+        if (resetParser) {
+            const key = 'parser:' + resetParser.dataset.resetParser;
+            cancelDebounce(key);
+            pendingEdits.delete(key);
+            post({ type: 'resetParserOverride', key: resetParser.dataset.resetParser });
             return;
         }
 
@@ -729,6 +938,21 @@
             post({ type: 'setAuthMethod', value: target.value });
             return;
         }
+        if (edit === 'statementKind') {
+            post({ type: 'setStatementKind', kind: target.value });
+            return;
+        }
+        if (target.dataset && target.dataset.parserOption) {
+            const key = 'parser:' + target.dataset.parserOption;
+            cancelDebounce(key);
+            pendingEdits.delete(key);
+            post({
+                type: 'setParserOverride',
+                key: target.dataset.parserOption,
+                value: target.value,
+            });
+            return;
+        }
         if (edit === 'subscription' && target.value) {
             post({ type: 'azureListAccounts', subscriptionId: target.value });
         } else if (edit === 'account' && target.value) {
@@ -746,11 +970,25 @@
 
     document.addEventListener('input', function (event) {
         const target = event.target;
-        if (!(target instanceof Element) || !target.dataset || !target.dataset.edit) {
+        if (
+            !(target instanceof Element) ||
+            !target.dataset ||
+            (!target.dataset.edit && !target.dataset.parserOption)
+        ) {
             return;
         }
         const edit = target.dataset.edit;
         const value = target.value;
+
+        if (target.dataset.parserOption) {
+            const parserKey = target.dataset.parserOption;
+            pendingEdits.set('parser:' + parserKey, value);
+            debounce('parser:' + parserKey, function () {
+                pendingEdits.delete('parser:' + parserKey);
+                post({ type: 'setParserOverride', key: parserKey, value: value });
+            }, 250);
+            return;
+        }
 
         if (edit === 'override') {
             const column = target.dataset.column;
@@ -782,6 +1020,7 @@
             dataSource: 'setDataSource',
             credentialName: 'setCredentialName',
             storageUrl: 'setStorageUrl',
+            formatName: 'setFormatName',
         }[edit];
         if (!messageType) {
             return;

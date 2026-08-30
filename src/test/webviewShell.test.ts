@@ -120,6 +120,8 @@ test('the shell ships templates rather than rendered data', () => {
         'tpl-schema-row',
         'tpl-azure',
         'tpl-format-row',
+        'tpl-parser-option',
+        'tpl-readiness',
     ]) {
         assert.ok(html.includes(`id="${id}"`), `${id} template is missing`);
     }
@@ -143,6 +145,17 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     for (const mode of ['vscode', 'sas', 'connectionString', 'anonymous']) {
         assert.ok(html.includes(`data-azure-connect="${mode}"`), `${mode} is not offered`);
     }
+});
+
+test('Quick Analyze is the primary native workflow with provenance and reset controls', () => {
+    const html = render();
+    assert.match(script, /Quick Analyze/);
+    assert.match(script, /Expected:/);
+    assert.match(script, /resetParserOverride/);
+    assert.match(script, /Source readiness/);
+    assert.match(script, /polybase-guidance/);
+    assert.match(html, /Sources & files/);
+    assert.match(html, /HTTPS \/ Azure/);
 });
 
 test('the shell has no trace of the removed server flow', () => {

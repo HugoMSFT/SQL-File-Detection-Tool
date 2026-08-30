@@ -135,6 +135,19 @@ export interface FileMetadata {
     analysis_truncated?: boolean;
     /** Caller-supplied explicit SQL types keyed by column name. */
     sql_type_overrides?: Record<string, string>;
+    /** Optional UI-authored parser overrides. Omitted on the certified default path. */
+    parser_overrides?: ParserOverrides;
+}
+
+/** Parser settings users may override without changing the detected file facts. */
+export interface ParserOverrides {
+    format?: FileType;
+    firstRow?: number;
+    fieldDelimiter?: string;
+    rowTerminator?: string;
+    quoteCharacter?: string;
+    codepage?: string;
+    compression?: string | null;
 }
 
 /**

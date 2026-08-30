@@ -183,6 +183,34 @@ test('clearing an override is expressed as an empty type, which is allowed', () 
     );
 });
 
+test('Quick Analyze parser messages are allowlisted and bounded', () => {
+    assert.deepEqual(
+        parseWebviewRequest({
+            type: 'setParserOverride',
+            key: 'fieldDelimiter',
+            value: '|',
+        }),
+        { type: 'setParserOverride', key: 'fieldDelimiter', value: '|' },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'resetParserOverride', key: 'codepage' }),
+        { type: 'resetParserOverride', key: 'codepage' },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'setStatementKind', kind: 'openrowset' }),
+        { type: 'setStatementKind', kind: 'openrowset' },
+    );
+    assert.equal(
+        parseWebviewRequest({ type: 'setParserOverride', key: 'encoding', value: 'utf-8' }),
+        undefined,
+        'file encoding is a fact, not an override',
+    );
+    assert.equal(
+        parseWebviewRequest({ type: 'setParserOverride', key: 'fieldDelimiter', value: 'x'.repeat(129) }),
+        undefined,
+    );
+});
+
 test('fuzzing never throws and never invents a request', () => {
     const types = [
         ...UI_TABS,
