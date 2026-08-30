@@ -63,6 +63,8 @@ EXPECTED_SAMPLES = [
     'text/readme_sample.txt',
     'tables/events_delta/_delta_log/00000000000000000000.json',
     'tables/events_iceberg/metadata/v1.metadata.json',
+    'tables/events_iceberg/metadata/demo-m0.avro',
+    'tables/events_iceberg/metadata/snap-1000000000000000001-1-demo.avro',
     'unicode/unicode_utf8.csv',
     'unicode/unicode_utf8_bom.csv',
     'unicode/unicode_utf16le_bom.csv',

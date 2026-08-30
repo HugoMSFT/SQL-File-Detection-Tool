@@ -8,7 +8,7 @@
   "last-partition-id": 999,
   "last-sequence-number": 1,
   "last-updated-ms": 1705307400000,
-  "location": "file:///demo/tables/events_iceberg",
+  "location": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg",
   "metadata-log": [],
   "partition-specs": [
     {
@@ -74,7 +74,7 @@
   ],
   "snapshots": [
     {
-      "manifest-list": "metadata/snap-1000000000000000001-1-demo.avro",
+      "manifest-list": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg/metadata/snap-1000000000000000001-1-demo.avro",
       "schema-id": 0,
       "sequence-number": 1,
       "snapshot-id": 1000000000000000001,

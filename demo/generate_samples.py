@@ -2,7 +2,7 @@
 """Generate the deterministic demo fixtures shipped in ``demo/``.
 
 The generator only uses dependencies that the project already declares
-(``pandas``, ``pyarrow``, ``openpyxl``) plus the standard library.  Every
+(``pandas``, ``pyarrow``, ``openpyxl``, ``fastavro``) plus the standard library.  Every
 sample is written from constant data, so running the script repeatedly
 produces logically identical files.  Text based samples are byte-for-byte
 stable; binary container formats (Parquet / ORC / XLSX) embed writer
@@ -27,6 +27,7 @@ import sys
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from fastavro import writer as avro_writer
 
 DEMO_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,6 +35,10 @@ DEMO_DIR = os.path.dirname(os.path.abspath(__file__))
 # sample depends on the moment it was generated.
 FIXED_TIMESTAMP = dt.datetime(2024, 1, 15, 8, 30, 0)
 FIXED_EPOCH_MS = 1705307400000
+ICEBERG_PUBLIC_ROOT = (
+    'https://publicsamples.blob.core.windows.net/filesamples/'
+    'tables/events_iceberg'
+)
 
 
 # ---------------------------------------------------------------------------
@@ -515,33 +520,274 @@ def generate_iceberg_table(root: str) -> list:
     pq.write_table(data, data_path, compression='snappy', version='2.6')
     created.append(data_path)
 
+    iceberg_schema = {
+        'type': 'struct',
+        'schema-id': 0,
+        'identifier-field-ids': [1],
+        'fields': [
+            {'id': 1, 'name': 'event_id', 'required': True, 'type': 'long'},
+            {'id': 2, 'name': 'event_name', 'required': False,
+             'type': 'string'},
+            {'id': 3, 'name': 'event_value', 'required': False,
+             'type': 'double'},
+            {'id': 4, 'name': 'is_test', 'required': False,
+             'type': 'boolean'},
+            {'id': 5, 'name': 'event_ts', 'required': False,
+             'type': 'timestamptz'},
+            {'id': 6, 'name': 'amount', 'required': False,
+             'type': 'decimal(12, 2)'},
+        ],
+    }
+    manifest_name = 'demo-m0.avro'
+    manifest_path = os.path.join(metadata_dir, manifest_name)
+    manifest_schema = {
+        'type': 'record',
+        'name': 'manifest_entry',
+        'fields': [
+            {'name': 'status', 'type': 'int', 'field-id': 0},
+            {'name': 'snapshot_id', 'type': ['null', 'long'],
+             'default': None, 'field-id': 1},
+            {'name': 'sequence_number', 'type': ['null', 'long'],
+             'default': None, 'field-id': 3},
+            {'name': 'file_sequence_number', 'type': ['null', 'long'],
+             'default': None, 'field-id': 4},
+            {
+                'name': 'data_file',
+                'field-id': 2,
+                'type': {
+                    'type': 'record',
+                    'name': 'data_file',
+                    'fields': [
+                        {'name': 'content', 'type': 'int', 'field-id': 134},
+                        {'name': 'file_path', 'type': 'string', 'field-id': 100},
+                        {'name': 'file_format', 'type': 'string',
+                         'field-id': 101},
+                        {
+                            'name': 'partition',
+                            'field-id': 102,
+                            'type': {
+                                'type': 'record',
+                                'name': 'r102',
+                                'fields': [],
+                            },
+                        },
+                        {'name': 'record_count', 'type': 'long',
+                         'field-id': 103},
+                        {'name': 'file_size_in_bytes', 'type': 'long',
+                         'field-id': 104},
+                        {'name': 'column_sizes', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k117_v118',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 117},
+                                    {'name': 'value', 'type': 'long',
+                                     'field-id': 118},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 108},
+                        {'name': 'value_counts', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k119_v120',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 119},
+                                    {'name': 'value', 'type': 'long',
+                                     'field-id': 120},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 109},
+                        {'name': 'null_value_counts', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k121_v122',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 121},
+                                    {'name': 'value', 'type': 'long',
+                                     'field-id': 122},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 110},
+                        {'name': 'nan_value_counts', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k138_v139',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 138},
+                                    {'name': 'value', 'type': 'long',
+                                     'field-id': 139},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 137},
+                        {'name': 'lower_bounds', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k126_v127',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 126},
+                                    {'name': 'value', 'type': 'bytes',
+                                     'field-id': 127},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 125},
+                        {'name': 'upper_bounds', 'type': ['null', {
+                            'type': 'array',
+                            'logicalType': 'map',
+                            'items': {
+                                'type': 'record',
+                                'name': 'k129_v130',
+                                'fields': [
+                                    {'name': 'key', 'type': 'int',
+                                     'field-id': 129},
+                                    {'name': 'value', 'type': 'bytes',
+                                     'field-id': 130},
+                                ],
+                            },
+                        }], 'default': None, 'field-id': 128},
+                        {'name': 'key_metadata', 'type': ['null', 'bytes'],
+                         'default': None, 'field-id': 131},
+                        {'name': 'split_offsets', 'type': ['null', {
+                            'type': 'array',
+                            'items': 'long',
+                            'element-id': 133,
+                        }], 'default': None, 'field-id': 132},
+                        {'name': 'equality_ids', 'type': ['null', {
+                            'type': 'array',
+                            'items': 'int',
+                            'element-id': 136,
+                        }], 'default': None, 'field-id': 135},
+                        {'name': 'sort_order_id', 'type': ['null', 'int'],
+                         'default': None, 'field-id': 140},
+                    ],
+                },
+            },
+        ],
+    }
+    with open(manifest_path, 'wb') as handle:
+        avro_writer(
+            handle,
+            manifest_schema,
+            [{
+                'status': 1,
+                'snapshot_id': None,
+                'sequence_number': None,
+                'file_sequence_number': None,
+                'data_file': {
+                    'content': 0,
+                    'file_path': f'{ICEBERG_PUBLIC_ROOT}/data/00000-0-demo.parquet',
+                    'file_format': 'PARQUET',
+                    'partition': {},
+                    'record_count': 3,
+                    'file_size_in_bytes': os.path.getsize(data_path),
+                },
+            }],
+            metadata={
+                'schema': json.dumps(iceberg_schema, separators=(',', ':')),
+                'partition-spec': '[]',
+                'partition-spec-id': '0',
+                'format-version': '2',
+                'content': 'data',
+            },
+            sync_marker=b'sqlfdt-iceberg01',
+        )
+    created.append(manifest_path)
+
+    manifest_list_name = 'snap-1000000000000000001-1-demo.avro'
+    manifest_list_path = os.path.join(metadata_dir, manifest_list_name)
+    manifest_list_schema = {
+        'type': 'record',
+        'name': 'manifest_file',
+        'fields': [
+            {'name': 'manifest_path', 'type': 'string', 'field-id': 500},
+            {'name': 'manifest_length', 'type': 'long', 'field-id': 501},
+            {'name': 'partition_spec_id', 'type': 'int', 'field-id': 502},
+            {'name': 'content', 'type': 'int', 'field-id': 517},
+            {'name': 'sequence_number', 'type': 'long', 'field-id': 515},
+            {'name': 'min_sequence_number', 'type': 'long', 'field-id': 516},
+            {'name': 'added_snapshot_id', 'type': 'long', 'field-id': 503},
+            {'name': 'added_files_count', 'type': 'int', 'field-id': 504},
+            {'name': 'existing_files_count', 'type': 'int', 'field-id': 505},
+            {'name': 'deleted_files_count', 'type': 'int', 'field-id': 506},
+            {'name': 'added_rows_count', 'type': 'long', 'field-id': 512},
+            {'name': 'existing_rows_count', 'type': 'long', 'field-id': 513},
+            {'name': 'deleted_rows_count', 'type': 'long', 'field-id': 514},
+            {'name': 'partitions', 'type': ['null', {
+                'type': 'array',
+                'element-id': 508,
+                'items': {
+                    'type': 'record',
+                    'name': 'field_summary',
+                    'fields': [
+                        {'name': 'contains_null', 'type': 'boolean',
+                         'field-id': 509},
+                        {'name': 'contains_nan', 'type': ['null', 'boolean'],
+                         'default': None, 'field-id': 518},
+                        {'name': 'lower_bound', 'type': ['null', 'bytes'],
+                         'default': None, 'field-id': 510},
+                        {'name': 'upper_bound', 'type': ['null', 'bytes'],
+                         'default': None, 'field-id': 511},
+                    ],
+                },
+            }], 'default': None, 'field-id': 507},
+            {'name': 'key_metadata', 'type': ['null', 'bytes'],
+             'default': None, 'field-id': 519},
+        ],
+    }
+    with open(manifest_list_path, 'wb') as handle:
+        avro_writer(
+            handle,
+            manifest_list_schema,
+            [{
+                'manifest_path': f'{ICEBERG_PUBLIC_ROOT}/metadata/{manifest_name}',
+                'manifest_length': os.path.getsize(manifest_path),
+                'partition_spec_id': 0,
+                'content': 0,
+                'sequence_number': 1,
+                'min_sequence_number': 1,
+                'added_snapshot_id': 1000000000000000001,
+                'added_files_count': 1,
+                'existing_files_count': 0,
+                'deleted_files_count': 0,
+                'added_rows_count': 3,
+                'existing_rows_count': 0,
+                'deleted_rows_count': 0,
+                'partitions': [],
+                'key_metadata': None,
+            }],
+            metadata={
+                'snapshot-id': '1000000000000000001',
+                'parent-snapshot-id': 'null',
+                'sequence-number': '1',
+                'format-version': '2',
+            },
+            sync_marker=b'sqlfdt-snaplist1',
+        )
+    created.append(manifest_list_path)
+
     metadata = {
         'format-version': 2,
         'table-uuid': '00000000-0000-0000-0000-0000000000ce',
-        'location': 'file:///demo/tables/events_iceberg',
+        'location': ICEBERG_PUBLIC_ROOT,
         'last-sequence-number': 1,
         'last-updated-ms': FIXED_EPOCH_MS,
         'last-column-id': 6,
         'current-schema-id': 0,
-        'schemas': [{
-            'type': 'struct',
-            'schema-id': 0,
-            'identifier-field-ids': [1],
-            'fields': [
-                {'id': 1, 'name': 'event_id', 'required': True,
-                 'type': 'long'},
-                {'id': 2, 'name': 'event_name', 'required': False,
-                 'type': 'string'},
-                {'id': 3, 'name': 'event_value', 'required': False,
-                 'type': 'double'},
-                {'id': 4, 'name': 'is_test', 'required': False,
-                 'type': 'boolean'},
-                {'id': 5, 'name': 'event_ts', 'required': False,
-                 'type': 'timestamptz'},
-                {'id': 6, 'name': 'amount', 'required': False,
-                 'type': 'decimal(12, 2)'},
-            ],
-        }],
+        'schemas': [iceberg_schema],
         'default-spec-id': 0,
         'partition-specs': [{'spec-id': 0, 'fields': []}],
         'last-partition-id': 999,
@@ -558,8 +804,7 @@ def generate_iceberg_table(root: str) -> list:
                 'total-records': '3',
                 'total-data-files': '1',
             },
-            'manifest-list':
-                'metadata/snap-1000000000000000001-1-demo.avro',
+            'manifest-list': f'{ICEBERG_PUBLIC_ROOT}/metadata/{manifest_list_name}',
             'schema-id': 0,
         }],
         'snapshot-log': [{'timestamp-ms': FIXED_EPOCH_MS,

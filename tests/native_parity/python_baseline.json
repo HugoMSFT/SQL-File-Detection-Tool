@@ -1088,7 +1088,7 @@
    "delta_metadata": null,
    "encoding": "binary",
    "file_name": "events_iceberg",
-   "file_size": 3955,
+   "file_size": 9552,
    "file_type": "iceberg",
    "has_header": false,
    "iceberg_metadata": {
@@ -1096,7 +1096,7 @@
     "default_spec_id": 0,
     "format_version": 2,
     "last_updated": 1705307400000,
-    "location": "file:///demo/tables/events_iceberg",
+    "location": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg",
     "metadata_file": "v1.metadata.json",
     "partition_spec": [],
     "table_uuid": "00000000-0000-0000-0000-0000000000ce"

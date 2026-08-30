@@ -90,7 +90,7 @@ and a `NULL`, so nullability and range handling are both visible.
 | Path | Format | Covers |
 | --- | --- | --- |
 | `tables/events_delta/` | Delta Lake | `_delta_log/00000000000000000000.json` with `protocol`, `metaData`, `add` and `commitInfo` actions plus one Snappy Parquet part file |
-| `tables/events_iceberg/` | Apache Iceberg | `metadata/v1.metadata.json` (format-version 2, schema, partition spec, snapshot with `total-records`) plus `data/00000-0-demo.parquet` |
+| `tables/events_iceberg/` | Apache Iceberg | `metadata/v1.metadata.json` (format-version 2, schema, partition spec, snapshot with `total-records`), `metadata/snap-1000000000000000001-1-demo.avro`, `metadata/demo-m0.avro`, and `data/00000-0-demo.parquet` |
 
 ### Other
 
@@ -352,7 +352,9 @@ Two details the generator handles for you:
 ## 6. Determinism
 
 * Text based samples (CSV, TSV, JSON, NDJSON, `.txt`, `.sql` and the Iceberg
-  metadata) are byte-for-byte identical on every run.
+  metadata) are byte-for-byte identical on every run. Iceberg Avro sidecars are
+  byte-for-byte identical on a given PyArrow and fastavro build; they record the
+  generated Parquet and manifest byte lengths.
 * The Delta log is byte-for-byte identical on every run **on a given PyArrow
   build**, and no further than that. It records the byte length of the Parquet
   file it describes in `add.size`, so a PyArrow upgrade that changes the
