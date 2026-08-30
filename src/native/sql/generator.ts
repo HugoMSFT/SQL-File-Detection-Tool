@@ -1669,7 +1669,7 @@ export function generateBestPractices(
     const rowCount = metadata.row_count;
     const encoding = stringOr(metadata.encoding, 'utf-8').toUpperCase();
     const compression = metadata.compression ?? null;
-    const delimiter = metadata.delimiter ?? ',';
+    const delimiter = stringOr(metadata.delimiter, ',');
     const hasHeader = metadata.has_header ?? true;
 
     const sizeBytes = metadata.file_size ?? 0;

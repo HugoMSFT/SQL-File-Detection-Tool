@@ -20,6 +20,7 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { NativeAnalysisService } from '../../native';
+import { PLATFORMS } from '../../native/sql/typeMapping';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const DEMO = path.join(REPO, 'demo');
@@ -134,6 +135,28 @@ describe('demo fixture support matrix', () => {
                     metadata.native_support,
                     'unsupported_native',
                     `${relative} must stay recognition-only`,
+                );
+            }
+        });
+
+        it(`${relative} generates a whole script on every platform`, async () => {
+            // The Python generator crashed on exactly this path during the
+            // live certification plan: the detector reports no delimiter for
+            // every non-delimited format, and that absent field reached a
+            // string operation. Detector output must never be able to abort
+            // generation.
+            const metadata = await service.analyze({
+                filePath: path.join(DEMO, ...relative.split('/')),
+            });
+            for (const targetPlatform of PLATFORMS) {
+                const statements = service.generateStatements({
+                    metadata,
+                    targetPlatform,
+                });
+                assert.ok(statements.create_table, `${relative} ${targetPlatform}`);
+                assert.ok(
+                    service.generateCompleteDocument({ metadata, targetPlatform }),
+                    `${relative} ${targetPlatform}`,
                 );
             }
         });

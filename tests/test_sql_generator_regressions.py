@@ -483,3 +483,76 @@ def test_platform_matrix_local_files_have_no_data_source_bulk(platform):
         target_platform=platform)
     if 'LakeDS_Bulk' in script:
         assert 'CREATE EXTERNAL DATA SOURCE [LakeDS_Bulk]' in script
+
+
+# -- absent metadata ---------------------------------------------------------
+
+# Fields that feed string operations somewhere in the generator. A detection
+# result routinely carries these keys with ``None``: a Parquet file has no
+# delimiter, an undecided CSV probe has no quote character, and a caller
+# building metadata by hand rarely fills in every key.
+OPTIONAL_TEXT_FIELDS = (
+    'file_name', 'file_type', 'encoding', 'delimiter', 'has_header',
+    'file_size', 'row_count', 'compression', 'columns', 'json_format',
+    'sheet_name', 'quote_char',
+)
+
+
+def _complete_meta():
+    return {
+        'file_path': 'C:/data/sample.csv',
+        'file_name': 'sample.csv',
+        'file_type': 'csv',
+        'encoding': 'utf-8',
+        'delimiter': ',',
+        'has_header': True,
+        'file_size': 1024,
+        'row_count': 10,
+        'compression': None,
+        'columns': [{'name': 'a', 'sql_type': 'INT', 'nullable': True}],
+    }
+
+
+@pytest.mark.parametrize('field', OPTIONAL_TEXT_FIELDS)
+@pytest.mark.parametrize('mode', ('none', 'absent', 'empty'))
+@pytest.mark.parametrize('platform', SQLGenerator.PLATFORMS)
+def test_generation_survives_missing_metadata(field, mode, platform):
+    """No single absent metadata field may abort a whole script.
+
+    ``metadata.get(key, fallback)`` only falls back when the key is *absent*;
+    a key present with ``None`` returned ``None`` and reached ``.upper()`` or
+    an iteration. That crashed generation for a value that usually only feeds
+    a comment.
+    """
+    meta = _complete_meta()
+    if mode == 'none':
+        meta[field] = None
+    elif mode == 'empty':
+        meta[field] = ''
+    else:
+        meta.pop(field, None)
+
+    gen = SQLGenerator()
+    statements = gen.generate_all_statements(meta, target_platform=platform)
+    assert statements['create_table']
+    assert gen.generate_complete_ddl(meta, target_platform=platform)
+    assert gen.generate_best_practices(meta, target_platform=platform)
+
+
+@pytest.mark.parametrize('value', (None, '', ','))
+def test_delimiter_always_reads_as_a_comma_when_absent(value):
+    """The exact crash the live certification plan hit, pinned per entry point."""
+    meta = _complete_meta()
+    meta['delimiter'] = value
+
+    gen = SQLGenerator()
+    guidance = gen.generate_best_practices(meta).splitlines()
+    detected = [line for line in guidance if 'Detected:' in line]
+    assert detected
+    for line in detected:
+        assert 'None' not in line, line
+    assert any('comma-delimited' in line for line in detected)
+
+    for script in (gen.generate_complete_ddl(meta),
+                   '\n'.join(gen.generate_all_statements(meta).values())):
+        assert "FIELDTERMINATOR = ','" in script

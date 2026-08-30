@@ -633,7 +633,7 @@ class SQLGenerator:
         that ``OPENROWSET``/``BULK INSERT`` use ``FIRSTROW`` (no underscore);
         ``FIRST_ROW`` is a ``CREATE EXTERNAL FILE FORMAT`` option.
         """
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
         encoding = (metadata.get('encoding') or 'utf-8').upper()
         codepage = metadata.get('codepage', '65001') or '65001'
@@ -818,8 +818,8 @@ class SQLGenerator:
         if not columns:
             columns = ['    [data] NVARCHAR(MAX) NULL']
 
-        file_type = metadata.get('file_type', 'unknown').upper()
-        file_name = metadata.get('file_name', metadata['file_path'])
+        file_type = _metadata_text(metadata, 'file_type', 'unknown').upper()
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
 
@@ -856,8 +856,8 @@ class SQLGenerator:
             target_platform: str, storage_url: Optional[str],
             data_source: str) -> List[str]:
         """Build platform-specific quick-load guidance for CREATE TABLE."""
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata['file_path'])
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
         lines = [
             '',
             '-- ====================================================================',
@@ -991,9 +991,9 @@ class SQLGenerator:
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
 
-        file_type = metadata.get('file_type', '')
-        file_name = metadata.get('file_name', metadata.get('file_path', '<file>'))
-        encoding = metadata.get('encoding', 'utf-8') or 'utf-8'
+        file_type = _metadata_text(metadata, 'file_type', '')
+        file_name = _metadata_text(metadata, 'file_name', metadata.get('file_path', '<file>'))
+        encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
 
         if file_type not in ('csv', 'text'):
@@ -1003,7 +1003,7 @@ class SQLGenerator:
                 f'use OPENROWSET or CREATE EXTERNAL TABLE instead.\n'
             )
 
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         delim_escaped = _quote_literal(_display_delimiter(delimiter))
         delim_name = self.DELIMITER_NAMES.get(delimiter, repr(delimiter))
 
@@ -1142,8 +1142,8 @@ class SQLGenerator:
                                          storage_url: Optional[str],
                                          data_source: str) -> str:
         """Fabric SQL Database has no BULK INSERT; show OPENROWSET load patterns."""
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata.get('file_path', 'file.csv'))
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata.get('file_path', 'file.csv'))
         detected_type = file_type.upper()
         source_location, relative_path = _fabric_onelake_parts(
             storage_url, file_name
@@ -1265,8 +1265,8 @@ class SQLGenerator:
                 'OPENROWSET', target_platform,
                 f'Alternative: {alt_text}')
 
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata['file_path'])
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
         local_path = _quote_literal(metadata['file_path'].replace('\\', '/'))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
@@ -1311,7 +1311,7 @@ class SQLGenerator:
                                              storage_url: Optional[str],
                                              data_source: str = 'MyDataSource') -> str:
         """SQL Server 2019 OPENROWSET: local paths plus Azure Blob bulk access."""
-        file_type = metadata.get('file_type', 'csv')
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
 
         if file_type in {'parquet', 'delta'}:
             format_label = 'Parquet' if file_type == 'parquet' else 'Delta Lake'
@@ -1368,8 +1368,8 @@ class SQLGenerator:
         ``SINGLE_CLOB``/``SINGLE_NCLOB``, so a whole JSON document is read that
         way rather than through non-printing CSV framing.
         """
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata['file_path'])
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
         bulk_ident, bulk_literal, bulk_cred_ident = _bulk_data_source_names(
             data_source
         )
@@ -1430,11 +1430,11 @@ class SQLGenerator:
                                     storage_url: Optional[str],
                                     data_source: str) -> str:
         """Generate Fabric SQL Database OPENROWSET over Lakehouse Files."""
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata['file_path'])
-        encoding = metadata.get('encoding', 'utf-8') or 'utf-8'
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
         delim_escaped = _quote_literal(_display_delimiter(delimiter))
 
@@ -1522,13 +1522,13 @@ class SQLGenerator:
                                    data_source: str,
                                    target_platform: str) -> str:
         """Generate Azure SQL data virtualization OPENROWSET statements."""
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata['file_path'])
-        encoding = metadata.get('encoding', 'utf-8') or 'utf-8'
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
-        json_format = metadata.get('json_format', 'array')
+        json_format = _metadata_text(metadata, 'json_format', 'array')
         delim_escaped = _quote_literal(_display_delimiter(delimiter))
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
 
@@ -1652,13 +1652,13 @@ class SQLGenerator:
                                    local_path: str,
                                    target_platform: str) -> str:
         """Generate OPENROWSET(BULK ...) for on-prem SQL Server using local file paths."""
-        file_type = metadata.get('file_type', 'csv')
-        encoding = metadata.get('encoding', 'utf-8') or 'utf-8'
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
         delim_escaped = _quote_literal(delimiter.replace('\t', '\\t'))
-        file_name = metadata.get('file_name', metadata['file_path'])
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
 
         if file_type in ('csv', 'text'):
             # A FORMATFILE placeholder makes this statement unrunnable: there is
@@ -1738,13 +1738,13 @@ class SQLGenerator:
             storage_url: Optional[str], data_source: str,
             target_platform: str) -> str:
         """Generate SQL Server 2022+ OPENROWSET over an object storage source."""
-        file_type = metadata.get('file_type', 'parquet')
-        file_name = metadata.get('file_name', metadata['file_path'])
-        encoding = metadata.get('encoding', 'utf-8') or 'utf-8'
+        file_type = _metadata_text(metadata, 'file_type', 'parquet')
+        file_name = _metadata_text(metadata, 'file_name', metadata['file_path'])
+        encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
-        delimiter = metadata.get('delimiter', ',') or ','
+        delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
-        json_format = metadata.get('json_format', 'array')
+        json_format = _metadata_text(metadata, 'json_format', 'array')
         delim_escaped = _quote_literal(_display_delimiter(delimiter))
 
         source_location, relative_path = _sql_server_storage_parts(
@@ -1883,7 +1883,7 @@ class SQLGenerator:
             return self._not_supported_message(
                 'CREATE EXTERNAL FILE FORMAT',
                 target_platform,
-                self._no_external_format_guidance(metadata.get('file_type', '')),
+                self._no_external_format_guidance(_metadata_text(metadata, 'file_type', '')),
             )
         supported_platforms = self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
@@ -2020,7 +2020,7 @@ class SQLGenerator:
             return self._not_supported_message(
                 'CREATE EXTERNAL TABLE',
                 target_platform,
-                self._no_external_format_guidance(metadata.get('file_type', '')),
+                self._no_external_format_guidance(_metadata_text(metadata, 'file_type', '')),
             )
         if target_platform not in self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
@@ -2457,9 +2457,9 @@ class SQLGenerator:
         has_openrowset_cloud = self._supports('openrowset_format_keyword', target_platform)
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', metadata.get('file_path', 'file'))
-        json_format = metadata.get('json_format', 'array')
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', metadata.get('file_path', 'file'))
+        json_format = _metadata_text(metadata, 'json_format', 'array')
         nesting = metadata.get('json_nesting') or {}
         schema = metadata.get('schema') or []
 
@@ -2876,12 +2876,12 @@ class SQLGenerator:
             target_platform = DEFAULT_TARGET_PLATFORM
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
-        file_type = metadata.get('file_type', 'csv')
-        file_name = metadata.get('file_name', 'file')
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        file_name = _metadata_text(metadata, 'file_name', 'file')
         row_count = metadata.get('row_count')
         encoding = (metadata.get('encoding') or 'utf-8').upper()
         compression = metadata.get('compression')
-        delimiter = metadata.get('delimiter', ',')
+        delimiter = metadata.get('delimiter') or ','
         has_header = metadata.get('has_header', True)
 
         size_bytes = metadata.get('file_size', 0)
@@ -3205,11 +3205,11 @@ class SQLGenerator:
     # ------------------------------------------------------------------
 
     def _determine_format_config(self, metadata: Dict[str, Any]) -> ExternalFileFormatConfig:
-        file_type = metadata.get('file_type', 'text')
+        file_type = _metadata_text(metadata, 'file_type', 'text')
         encoding = self._external_format_encoding(metadata.get('encoding'))
 
         if file_type == 'csv':
-            delimiter = metadata.get('delimiter', ',') or ','
+            delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
             has_header = metadata.get('has_header', False)
             return ExternalFileFormatConfig(
                 format_type='DELIMITEDTEXT',
@@ -3536,12 +3536,36 @@ def _sql_comment(value: Any) -> str:
     return _collapse_control_characters(value).strip()
 
 
-def _display_delimiter(value: str) -> str:
-    """Render control delimiters visibly in generated SQL guidance."""
+def _metadata_text(metadata: Dict[str, Any], key: str, fallback: Any) -> str:
+    """Read a text metadata field, tolerating a key that is present but empty.
+
+    ``metadata.get(key, fallback)`` only falls back when the key is *absent*.
+    Detection results routinely carry the key with ``None`` - a Parquet file
+    has no delimiter, an undecided CSV probe has no quote character - and a
+    generator that indexes or upper-cases that value aborts the whole script
+    over a field that only feeds a comment.
+    """
+    value = metadata.get(key)
+    if value is None or value == '':
+        value = fallback
+    if value is None or value == '':
+        return ''
+    return str(value)
+
+
+def _display_delimiter(value: Optional[str]) -> str:
+    """Render control delimiters visibly in generated SQL guidance.
+
+    Metadata reaching here can carry a missing or ``None`` delimiter - a
+    Parquet or JSON file has none, and a CSV probe that could not decide
+    leaves it unset. Falling back to a comma keeps guidance generation total
+    rather than letting one absent field abort a whole script.
+    """
+    source = ',' if value is None or value == '' else str(value)
     control_characters = {'\t': r'\t', '\r': r'\r', '\n': r'\n'}
     return ''.join(
         control_characters.get(character, character)
-        for character in value
+        for character in source
     )
 
 
@@ -3848,7 +3872,7 @@ def _format_keyword(file_type: str) -> str:
 def _best_practices_summary(metadata: Dict[str, Any],
                             target_platform: str,
                             size_mb: float) -> List[str]:
-    file_type = metadata.get('file_type', 'csv')
+    file_type = _metadata_text(metadata, 'file_type', 'csv')
 
     recommended = 'CREATE TABLE + INSERT validation flow'
     fastest = 'OPENROWSET for preview / exploratory access'
@@ -3902,7 +3926,7 @@ def _best_practices_warnings(metadata: Dict[str, Any]) -> List[str]:
     warnings: List[str] = []
     encoding = metadata.get('encoding')
     confidence = metadata.get('encoding_confidence')
-    file_type = metadata.get('file_type', 'csv')
+    file_type = _metadata_text(metadata, 'file_type', 'csv')
     json_nesting = metadata.get('json_nesting') or {}
     max_lengths = metadata.get('max_string_lengths') or {}
     nullable = set(metadata.get('nullable_columns') or [])
@@ -3967,11 +3991,15 @@ def _best_practices_validation_sql(metadata: Dict[str, Any],
     return lines
 
 
-def _best_practices_csv(size_mb: float, encoding: str, delimiter: str,
+def _best_practices_csv(size_mb: float, encoding: str,
+                        delimiter: Optional[str],
                         has_header: bool, compression: str,
                         target_platform: str = DEFAULT_TARGET_PLATFORM) -> List[str]:
-    delim_name = {',' : 'comma', '\t': 'tab', '|': 'pipe', ';': 'semicolon'}.get(delimiter, repr(delimiter))
-    display_delimiter = _sql_comment(_display_delimiter(delimiter))
+    # Guidance must never be the thing that aborts a script, so an absent
+    # delimiter reads as the comma the rest of the generator assumes.
+    resolved = ',' if delimiter is None or delimiter == '' else str(delimiter)
+    delim_name = {',' : 'comma', '\t': 'tab', '|': 'pipe', ';': 'semicolon'}.get(resolved, repr(resolved))
+    display_delimiter = _sql_comment(_display_delimiter(resolved))
     is_fabric = target_platform == 'fabric_sql_db'
     is_azure_sql = target_platform in {'azure_sql_db', 'azure_sql_mi'}
 

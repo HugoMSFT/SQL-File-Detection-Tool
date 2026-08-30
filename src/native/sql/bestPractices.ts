@@ -181,13 +181,19 @@ const CSV_DELIMITER_NAMES: Readonly<Record<string, string>> = {
 export function bestPracticesCsv(
     _sizeMb: number,
     encoding: string,
-    delimiter: string,
+    delimiter: string | null | undefined,
     hasHeader: boolean,
     _compression: string | null,
     targetPlatform: TargetPlatform = DEFAULT_TARGET_PLATFORM,
 ): string[] {
-    const delimName = CSV_DELIMITER_NAMES[delimiter] ?? pythonStringRepr(delimiter);
-    const displayed = sqlComment(displayDelimiter(delimiter));
+    // Guidance must never be the thing that aborts a script, so an absent
+    // delimiter reads as the comma the rest of the generator assumes.
+    const resolved =
+        delimiter === undefined || delimiter === null || delimiter === ''
+            ? ','
+            : String(delimiter);
+    const delimName = CSV_DELIMITER_NAMES[resolved] ?? pythonStringRepr(resolved);
+    const displayed = sqlComment(displayDelimiter(resolved));
     const isFabric = targetPlatform === 'fabric_sql_db';
     const isAzureSql = targetPlatform === 'azure_sql_db' || targetPlatform === 'azure_sql_mi';
 

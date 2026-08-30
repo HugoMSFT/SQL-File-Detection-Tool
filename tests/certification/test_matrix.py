@@ -11,6 +11,7 @@ import re
 import pytest
 
 from certification.matrix import (
+    FIXTURES,
     ACCESS_METHODS,
     HYPOTHESES,
     MATRIX,
@@ -338,3 +339,31 @@ def test_blob_paths_keep_their_case(rules):
     )
     assert 'Yellow/Sales_Scalars.csv' in script
     assert 'yellow/sales_scalars.csv' not in script
+
+
+# -- fixture metadata --------------------------------------------------------
+
+@pytest.mark.parametrize('fixture', FIXTURES, ids=lambda item: item.key)
+def test_every_fixture_generates_on_every_platform(fixture):
+    """Detector output must never be able to abort script generation.
+
+    The live certification plan crashed here: the detector returns
+    ``delimiter=None`` for every non-delimited format - 11 of the 19 fixtures -
+    and ``metadata.get('delimiter', ',')`` only falls back for an *absent* key,
+    so that None reached an iteration and took the whole run down before a
+    single statement was sent.
+    """
+    from external_file_detection.file_detector import FileDetector
+
+    path = os.path.join(REPO_ROOT, fixture.path.replace('/', os.sep))
+    if not os.path.exists(path):
+        pytest.skip(f'fixture not present: {fixture.path}')
+
+    metadata = FileDetector().analyze_file_metadata(path)
+    generator = SQLGenerator()
+    for platform in SQLGenerator.PLATFORMS:
+        statements = generator.generate_all_statements(
+            metadata, target_platform=platform)
+        assert statements['create_table']
+        assert generator.generate_complete_ddl(metadata, target_platform=platform)
+        assert generator.generate_best_practices(metadata, target_platform=platform)

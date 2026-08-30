@@ -14,6 +14,7 @@ import { describe, it } from 'node:test';
 import {
     deduplicateSharedPrerequisites,
     generateAllStatements,
+    generateBestPractices,
     generateCredentialSetup,
     generateBulkInsert,
     generateCompleteDdl,
@@ -576,4 +577,85 @@ describe('storage authentication and object naming', () => {
         assert.ok(!code.includes('[dbo]'));
         assert.match(code, /\[staging\]/);
     });
+});
+
+// -- absent metadata ----------------------------------------------------------
+
+/**
+ * Fields that feed a string operation somewhere in the generator. A detection
+ * result routinely carries these with `null`: a Parquet file has no delimiter,
+ * an undecided CSV probe has no quote character, and metadata built by hand
+ * rarely fills in every key.
+ */
+const OPTIONAL_TEXT_FIELDS = [
+    'file_name', 'file_type', 'encoding', 'delimiter', 'has_header',
+    'file_size', 'row_count', 'compression', 'columns', 'json_format',
+    'sheet_name', 'quote_char',
+] as const;
+
+function completeMetadata(): Record<string, unknown> {
+    return {
+        file_path: 'C:/data/sample.csv',
+        file_name: 'sample.csv',
+        file_type: 'csv',
+        encoding: 'utf-8',
+        delimiter: ',',
+        has_header: true,
+        file_size: 1024,
+        row_count: 10,
+        compression: null,
+        columns: [{ name: 'a', sql_type: 'INT', nullable: true }],
+    };
+}
+
+describe('absent metadata', () => {
+    for (const field of OPTIONAL_TEXT_FIELDS) {
+        for (const mode of ['null', 'absent', 'empty'] as const) {
+            it(`generates a whole script with ${field} ${mode}`, () => {
+                const meta = completeMetadata();
+                if (mode === 'null') {
+                    meta[field] = null;
+                } else if (mode === 'empty') {
+                    meta[field] = '';
+                } else {
+                    delete meta[field];
+                }
+                for (const targetPlatform of PLATFORMS) {
+                    const metadata = meta as unknown as GeneratorMetadata;
+                    const statements = generateAllStatements(metadata, { targetPlatform });
+                    assert.ok(statements.create_table);
+                    assert.ok(generateCompleteDdl(metadata, { targetPlatform }));
+                    assert.ok(generateBestPractices(metadata, { targetPlatform }));
+                }
+            });
+        }
+    }
+
+    // The Python generator crashed here during the live certification plan:
+    // `metadata.get('delimiter', ',')` returns None for a key that is present
+    // and None, and that None reached an iteration.
+    for (const value of [null, '', ','] as const) {
+        it(`treats delimiter ${JSON.stringify(value)} as a comma`, () => {
+            const meta = completeMetadata();
+            meta.delimiter = value;
+            const metadata = meta as unknown as GeneratorMetadata;
+
+            const detected = generateBestPractices(metadata)
+                .split('\n')
+                .filter((line) => line.includes('Detected:'));
+            assert.ok(detected.length > 0);
+            for (const line of detected) {
+                assert.ok(!line.includes('null'), line);
+            }
+            assert.ok(detected.some((line) => line.includes('comma-delimited')));
+
+            const scripts = [
+                generateCompleteDdl(metadata),
+                Object.values(generateAllStatements(metadata)).join('\n'),
+            ];
+            for (const script of scripts) {
+                assert.ok(script.includes("FIELDTERMINATOR = ','"));
+            }
+        });
+    }
 });

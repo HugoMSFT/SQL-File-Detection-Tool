@@ -129,11 +129,20 @@ export function sqlComment(value: unknown): string {
     return pythonStrip(collapseControlCharacters(String(value)));
 }
 
-/** Render control delimiters visibly in generated SQL guidance. */
-export function displayDelimiter(value: string): string {
+/**
+ * Render control delimiters visibly in generated SQL guidance.
+ *
+ * Metadata reaching here can carry a missing or `null` delimiter — a Parquet
+ * or JSON file has none, and a CSV probe that could not decide leaves it
+ * unset. Falling back to a comma keeps guidance generation total rather than
+ * letting one absent field abort a whole script.
+ */
+export function displayDelimiter(value: unknown): string {
+    const source =
+        value === undefined || value === null || value === '' ? ',' : String(value);
     const controls: Record<string, string> = { '\t': '\\t', '\r': '\\r', '\n': '\\n' };
     let out = '';
-    for (const character of value) {
+    for (const character of source) {
         out += controls[character] ?? character;
     }
     return out;
