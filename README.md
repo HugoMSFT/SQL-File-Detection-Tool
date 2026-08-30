@@ -48,6 +48,43 @@ SQL Server 2019 does not generate Parquet or Delta file access. SQL Server 2022
 and later generate Parquet and Delta `OPENROWSET`/external-table scripts against
 supported object storage. Azure data sources use `abs://` for Blob Storage or
 `adls://` for ADLS Gen2 without the retired `TYPE = HADOOP` option.
+`REJECT_TYPE`/`REJECT_VALUE` are emitted only for SQL Server 2019 `TYPE = HADOOP`
+sources, because modern `abs://`, `adls://`, and Fabric sources reject them.
+
+### Azure SQL Database and Managed Instance
+
+Azure SQL Database and Azure SQL Managed Instance support data virtualization
+over Azure Blob Storage and ADLS Gen2: `CREATE EXTERNAL DATA SOURCE`,
+`CREATE EXTERNAL FILE FORMAT`, `CREATE EXTERNAL TABLE`, and `OPENROWSET` for CSV
+and Parquet. Delta external file format is available on Azure SQL Database and
+not on Managed Instance.
+
+`BULK INSERT` on these targets requires a separate `TYPE = BLOB_STORAGE`
+external data source, so generated scripts create a companion
+`<data_source>_Bulk` source and use a container-relative `FROM` path plus
+`DATA_SOURCE`. An absolute `https://` URL is never emitted as the `FROM` value.
+
+### Microsoft Fabric SQL Database
+
+Fabric SQL Database data virtualization is in preview. It supports
+`CREATE EXTERNAL DATA SOURCE`, `CREATE EXTERNAL FILE FORMAT`,
+`CREATE EXTERNAL TABLE`, and `OPENROWSET` over a **Fabric Lakehouse `Files`
+path** using **Microsoft Entra passthrough** - no database scoped credential or
+embedded secret is created.
+
+Constraints reflected in generated output:
+
+- Sources must resolve to a Lakehouse `Files` path, for example
+  `abfss://<workspace_id>@<tenant>.dfs.fabric.microsoft.com/<lakehouse_id>/Files`.
+- CSV and Parquet external tables are supported. JSON is indirect: read as CSV
+  and shred with `OPENJSON`.
+- Delta is not supported by Fabric SQL Database `OPENROWSET`.
+- `BULK INSERT` and `COPY INTO` are unavailable; `OPENROWSET` with
+  `SELECT ... INTO` or `INSERT ... SELECT` is generated instead.
+- OneLake shortcuts can bring external storage into the Lakehouse `Files` area,
+  but the external data source still points at the Lakehouse path.
+- Fabric guidance never recommends Synapse-only syntax such as
+  `PARSER_VERSION` or `HEADER_ROW`.
 
 ## Installation
 
@@ -81,15 +118,31 @@ in the separate `test` extra.
 Analyze a local directory:
 
 ```bash
-external-file-detector analyze C:\data --data-source MyDataSource
+external-file-detector analyze C:\data --data-source MyDataSource \
+  --target-platform sql_server_2022
 ```
 
 Analyze selected local or remote files:
 
 ```bash
 external-file-detector analyze-files orders.csv events.ndjson --format json
-external-file-detector analyze-files s3://my-bucket/data/orders.csv
+external-file-detector analyze-files s3://my-bucket/data/orders.csv \
+  --target-platform azure_sql_db
 ```
+
+`--target-platform` is available on `analyze`, `analyze-files`, and
+`generate-data-source`. Accepted values are `sql_server_2019`,
+`sql_server_2022`, `sql_server_2025`, `azure_sql_db`, `azure_sql_mi`, and
+`fabric_sql_db`. The default is `sql_server_2022`.
+
+Generated SQL output is now complete rather than a single statement. Each file
+produces one script containing every applicable section - prerequisite
+credential/data source setup, external file format, external table, regular
+table, `BULK INSERT`, `OPENROWSET`, JSON functions, `FOR JSON`, best practices,
+and a `COPY INTO` availability section - joined in dependency order with `GO`
+batch separators. The regular table and the external table are given distinct
+names (for example `orders` and `ext_orders`) so the whole script can run
+without object-name collisions.
 
 Export generated output:
 
@@ -135,6 +188,18 @@ loopback-only because its filesystem APIs do not provide authentication.
 For remote access, use `external_file_detection.web_ui.create_app()` behind an
 authenticated production WSGI server and reverse proxy. Do not expose the
 built-in development server.
+
+Production WSGI guidance:
+
+- **Run exactly one worker process.** Analysis sessions and uploaded files are
+  stored in process-local memory and process-local temporary directories, so
+  multiple workers will serve inconsistent results and leak upload directories.
+  Use `gunicorn --workers 1` (threads are fine) or `waitress-serve` with a
+  single process.
+- **Set a stable random `FLASK_SECRET_KEY`.** Without it a new key is generated
+  per process start, which invalidates every existing session cookie on restart.
+  Generate one once with `python -c "import secrets; print(secrets.token_hex(32))"`
+  and supply it through the environment or your secret store.
 
 ## Python API
 

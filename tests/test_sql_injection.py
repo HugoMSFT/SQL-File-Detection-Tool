@@ -93,11 +93,26 @@ def test_malicious_storage_url_is_escaped_in_literal():
     gen = SQLGenerator()
     metadata = {'file_type': 'parquet', 'file_path': 'data.parquet',
                 'schema': [('id', 'int64')]}
-    evil_url = "https://x/y'; DROP TABLE t;--"
+    evil_url = (
+        "abfss://ws@tenant.dfs.fabric.microsoft.com/lh/Files/"
+        "y'; DROP TABLE t;--/data.parquet"
+    )
     sql = gen.generate_openrowset(metadata, storage_url=evil_url,
                                   target_platform='fabric_sql_db')
     assert "y''; DROP TABLE t;--" in sql
     assert "y'; DROP TABLE t;--'" not in sql
+
+
+def test_unknown_storage_url_never_leaks_absolute_path():
+    """An unrecognised URL falls back to a placeholder, not a raw URL."""
+    gen = SQLGenerator()
+    metadata = {'file_type': 'parquet', 'file_path': 'data.parquet',
+                'schema': [('id', 'int64')]}
+    sql = gen.generate_openrowset(metadata,
+                                  storage_url="https://x/y'; DROP TABLE t;--",
+                                  target_platform='fabric_sql_db')
+    assert "BULK 'https://" not in sql
+    assert "DROP TABLE t" not in sql
 
 
 def test_malicious_sql_type_override_is_rejected():

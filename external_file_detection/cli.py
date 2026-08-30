@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Any
 
 from .external_file_detector import ExternalFileDetectorApp
+from .sql_generator import SQLGenerator
 from . import __version__
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,15 @@ def _build_storage_config(aws_access_key_id, aws_secret_access_key, aws_region,
     if azure_connection_string:
         storage_config['azure_connection_string'] = azure_connection_string
     return storage_config
+
+
+def target_platform_option(func):
+    """Shared Click option selecting the SQL platform for generated scripts."""
+    return click.option(
+        '--target-platform', default='sql_server_2022',
+        type=click.Choice(SQLGenerator.PLATFORMS),
+        help='SQL platform the generated script targets',
+    )(func)
 
 
 def storage_options(func):
@@ -94,8 +104,10 @@ def gui(host, port, debug, root_dir):
               help='Output file path for results')
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
+@target_platform_option
 @storage_options
-def analyze(location, data_source, output, format, aws_access_key_id, 
+def analyze(location, data_source, output, format, target_platform,
+           aws_access_key_id,
            aws_secret_access_key, aws_region, azure_account_name,
            azure_account_key, azure_connection_string):
     """Analyze files at the specified location."""
@@ -111,7 +123,8 @@ def analyze(location, data_source, output, format, aws_access_key_id,
     try:
         # Analyze location
         click.echo(f"Analyzing location: {location}")
-        results = app.analyze_location(location, data_source)
+        results = app.analyze_location(location, data_source,
+                                       target_platform=target_platform)
         
         # Display summary
         click.echo(f"\nAnalysis completed!")
@@ -159,8 +172,10 @@ def analyze(location, data_source, output, format, aws_access_key_id,
               help='Output file path for results')
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
+@target_platform_option
 @storage_options
-def analyze_files(files, data_source, output, format, aws_access_key_id,
+def analyze_files(files, data_source, output, format, target_platform,
+                  aws_access_key_id,
                   aws_secret_access_key, aws_region, azure_account_name,
                   azure_account_key, azure_connection_string):
     """Analyze specific files."""
@@ -172,7 +187,8 @@ def analyze_files(files, data_source, output, format, aws_access_key_id,
     app = ExternalFileDetectorApp(storage_config)
     
     try:
-        results = app.analyze_files(list(files), data_source)
+        results = app.analyze_files(list(files), data_source,
+                                    target_platform=target_platform)
         
         click.echo(f"Analyzed {len(results)} files")
         
@@ -216,13 +232,16 @@ def analyze_files(files, data_source, output, format, aws_access_key_id,
 @click.argument('location')
 @click.option('--credential', default=None,
               help='Name of the database credential to use')
-def generate_data_source(name, storage_type, location, credential):
+@target_platform_option
+def generate_data_source(name, storage_type, location, credential,
+                         target_platform):
     """Generate CREATE EXTERNAL DATA SOURCE statement."""
     
     app = ExternalFileDetectorApp()
     
     try:
-        ddl = app.generate_data_source_ddl(name, storage_type, location, credential)
+        ddl = app.generate_data_source_ddl(name, storage_type, location, credential,
+                                          target_platform=target_platform)
         click.echo(ddl)
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)

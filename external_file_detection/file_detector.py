@@ -732,8 +732,31 @@ class FileDetector:
                 return 'dict'
             raw_type = nested_type
 
-        normalized = str(raw_type).lower()
+        normalized = str(raw_type).lower().strip()
         primitive = re.split(r'[\[(]', normalized, maxsplit=1)[0]
+
+        # Preserve decimal precision/scale so the SQL mapper can emit
+        # DECIMAL(p, s) instead of collapsing to a generic decimal type.
+        if primitive in ('decimal', 'decimal128', 'decimal256'):
+            match = re.match(
+                r'^decimal(?:128|256)?\s*\(\s*(\d+)\s*,\s*(-?\d+)\s*\)$',
+                normalized,
+            )
+            if match:
+                return f'decimal({match.group(1)},{match.group(2)})'
+            return 'decimal128'
+
+        # Preserve timezone and nanosecond semantics for timestamps.
+        timestamp_map = {
+            'timestamp': 'timestamp[us]',
+            'timestamp_ntz': 'timestamp[us]',
+            'timestamptz': 'timestamp[us, tz=UTC]',
+            'timestamp_ns': 'timestamp[ns]',
+            'timestamptz_ns': 'timestamp[ns, tz=UTC]',
+        }
+        if primitive in timestamp_map:
+            return timestamp_map[primitive]
+
         type_map = {
             'boolean': 'bool',
             'int': 'int32',
@@ -742,14 +765,10 @@ class FileDetector:
             'double': 'float64',
             'string': 'str',
             'date': 'date',
-            'time': 'time',
-            'timestamp': 'timestamp',
-            'timestamptz': 'timestamp',
-            'timestamp_ntz': 'timestamp',
+            'time': 'time64[us]',
             'binary': 'binary',
             'uuid': 'str',
             'fixed': 'binary',
-            'decimal': 'decimal128',
         }
         return type_map.get(primitive, 'str')
 

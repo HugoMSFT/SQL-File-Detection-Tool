@@ -611,11 +611,38 @@ def test_iceberg_uses_numeric_version_and_current_schema(temp_dir):
 
     metadata = FileDetector().analyze_file_metadata(table_dir)
 
-    assert metadata['schema'] == [('id', 'int64'), ('amount', 'decimal128')]
+    assert metadata['schema'] == [('id', 'int64'), ('amount', 'decimal(10,2)')]
     assert metadata['nullable_columns'] == ['amount']
     assert metadata['row_count'] == 42
     assert metadata['iceberg_metadata']['metadata_file'] == 'v10.metadata.json'
     assert metadata['iceberg_metadata']['partition_spec'][0]['name'] == 'id_bucket'
+
+
+def test_iceberg_type_preserves_decimal_and_timestamp_semantics():
+    """Iceberg logical types must not be flattened to generic SQL types."""
+    detector = FileDetector()
+    assert detector._iceberg_type('decimal(18,4)') == 'decimal(18,4)'
+    assert detector._iceberg_type('decimal(38, 10)') == 'decimal(38,10)'
+    assert detector._iceberg_type('timestamp') == 'timestamp[us]'
+    assert detector._iceberg_type('timestamptz') == 'timestamp[us, tz=UTC]'
+    assert detector._iceberg_type('timestamp_ns') == 'timestamp[ns]'
+    assert detector._iceberg_type('timestamptz_ns') == 'timestamp[ns, tz=UTC]'
+    assert detector._iceberg_type('time') == 'time64[us]'
+
+
+def test_iceberg_types_round_trip_to_sql_types():
+    """The preserved Iceberg types must map to precise SQL types."""
+    from external_file_detection.sql_generator import SQLGenerator
+    detector = FileDetector()
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql(detector._iceberg_type('decimal(18,4)')) == \
+        'DECIMAL(18,4)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamptz')) == \
+        'DATETIMEOFFSET(6)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamp_ns')) == \
+        'DATETIME2(7)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamptz_ns')) == \
+        'DATETIMEOFFSET(7)'
 
 
 def test_iceberg_detects_modern_metadata_filenames(temp_dir):

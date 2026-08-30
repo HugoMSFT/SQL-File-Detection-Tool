@@ -30,6 +30,7 @@ except ImportError:
 
 from .external_file_detector import ExternalFileDetectorApp
 from .file_detector import FileDetector
+from .sql_generator import SQLGenerator
 
 
 # Maximum upload size: 200 MB
@@ -179,6 +180,19 @@ def _clean_results(results):
 def _error_response(message: str, status: int):
     """Return a consistent JSON API error payload."""
     return jsonify({'success': False, 'error': message}), status
+
+
+def _requested_target_platform(source: Any) -> str:
+    """Read a validated target platform from a request payload."""
+    requested = None
+    if source is not None:
+        try:
+            requested = source.get('target_platform')
+        except AttributeError:
+            requested = None
+    if requested in SQLGenerator.PLATFORMS:
+        return requested
+    return 'sql_server_2022'
 
 
 class ExternalFileDetectionWebGUI:
@@ -787,7 +801,9 @@ class ExternalFileDetectionWebGUI:
                 )
                 metadata = self.file_detector.analyze_file_metadata(safe_path)
                 statements = self.detector_app.sql_generator.generate_all_statements(
-                    metadata, data_source=data_source
+                    metadata,
+                    data_source=data_source,
+                    target_platform=_requested_target_platform(data),
                 )
                 # Store in session
                 current = self._get_files()
@@ -831,6 +847,7 @@ class ExternalFileDetectionWebGUI:
 
                 self._set_files(analyzed, upload_dirs=[upload_dir])
                 data_source = request.form.get('data_source', '')
+                target_platform = _requested_target_platform(request.form)
                 results = []
                 for metadata in analyzed:
                     file_name = metadata.get('file_name', 'upload')
@@ -849,7 +866,8 @@ class ExternalFileDetectionWebGUI:
                             metadata,
                             table_name,
                             data_source or None,
-                            file_name,
+                            location=None,
+                            target_platform=target_platform,
                         )
                         results.append({
                             'file_name': file_name,
@@ -913,7 +931,9 @@ class ExternalFileDetectionWebGUI:
             try:
                 app_instance = ExternalFileDetectorApp(storage_config)
                 results = app_instance.analyze_location(
-                    location, data_source if data_source else None
+                    location,
+                    data_source if data_source else None,
+                    target_platform=_requested_target_platform(data),
                 )
                 clean_results = _clean_results(results)
                 return jsonify(clean_results)
@@ -963,9 +983,11 @@ class ExternalFileDetectionWebGUI:
             try:
                 ddl = self.sql_generator.generate_complete_ddl(
                     metadata,
-                    data.get('table_name', 'ext_table'),
+                    data.get('table_name', 'data_table'),
                     data.get('data_source'),
-                    data.get('location', ''),
+                    data.get('location') or None,
+                    target_platform=_requested_target_platform(data),
+                    storage_url=data.get('storage_url') or None,
                 )
                 return jsonify({'sql_ddl': ddl})
             except Exception as e:

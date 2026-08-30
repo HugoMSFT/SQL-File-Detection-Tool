@@ -33,6 +33,7 @@ def test_analyze_files_forwards_cloud_credentials():
     app_type.return_value.analyze_files.assert_called_once_with(
         ['s3://bucket/data.csv'],
         None,
+        target_platform='sql_server_2022',
     )
 
 
@@ -86,3 +87,70 @@ def test_gui_commands_share_the_same_launcher():
         False,
         'other-data',
     )
+
+
+def test_analyze_end_to_end_generates_complete_platform_sql(tmp_path):
+    """Real end-to-end run: the CLI must emit a complete, platform-specific
+    script whose regular and external table names do not collide."""
+    data_dir = tmp_path / 'data'
+    data_dir.mkdir()
+    csv_file = data_dir / 'orders.csv'
+    csv_file.write_text(
+        'id,customer,amount\n1,alice,10.5\n2,bob,20.25\n', encoding='utf-8')
+    out_file = tmp_path / 'out.sql'
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        'analyze', str(data_dir),
+        '--output', str(out_file),
+        '--target-platform', 'azure_sql_db',
+    ])
+
+    assert result.exit_code == 0, result.output
+
+    assert out_file.exists(), result.output
+    script = out_file.read_text(encoding='utf-8')
+
+    # All sections present and GO-separated.
+    for marker in ('CREATE TABLE', 'CREATE EXTERNAL TABLE', 'BULK INSERT',
+                   'OPENROWSET', 'BEST PRACTICES', 'GO'):
+        assert marker in script, marker
+
+    # Distinct regular vs external table names.
+    assert 'CREATE TABLE [dbo].[orders]' in script
+    assert 'CREATE EXTERNAL TABLE [dbo].[ext_orders]' in script
+
+    # Platform-specific: Azure SQL DB, never SQL Server-only HADOOP options.
+    assert 'Azure SQL Database' in script
+    assert 'TYPE = HADOOP' not in script
+    assert 'REJECT_TYPE' not in script
+
+    # No absolute local path smuggled into a cloud FROM/BULK clause.
+    assert 'GO\nGO' not in script
+
+
+def test_analyze_forwards_target_platform_to_app():
+    runner = CliRunner()
+    with patch(
+        'external_file_detection.cli.ExternalFileDetectorApp'
+    ) as app_type:
+        app_type.return_value.analyze_location.return_value = {
+            'files_found': 0, 'files': [], 'summary': {'total_size': 0,
+                                                        'file_types': {}},
+        }
+        result = runner.invoke(main, [
+            'analyze', 'data', '--target-platform', 'fabric_sql_db',
+        ])
+
+    assert result.exit_code == 0
+    kwargs = app_type.return_value.analyze_location.call_args.kwargs
+    assert kwargs['target_platform'] == 'fabric_sql_db'
+
+
+def test_analyze_rejects_unknown_target_platform():
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        'analyze', 'data', '--target-platform', 'oracle',
+    ])
+    assert result.exit_code != 0
+    assert 'oracle' in result.output

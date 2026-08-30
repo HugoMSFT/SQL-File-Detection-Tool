@@ -29,13 +29,15 @@ class ExternalFileDetectorApp:
         self.sql_generator = SQLGenerator()
         self.storage_config = storage_config or {}
     
-    def analyze_location(self, location: str, data_source: str = None) -> Dict[str, Any]:
+    def analyze_location(self, location: str, data_source: str = None,
+                         target_platform: str = 'sql_server_2022') -> Dict[str, Any]:
         """
         Analyze files at the given location and generate SQL DDL.
         
         Args:
             location: Path to analyze (local, S3, or Azure)
             data_source: Name of the external data source for SQL
+            target_platform: SQL platform the generated script targets
             
         Returns:
             Analysis results with file metadata and SQL DDL
@@ -73,7 +75,8 @@ class ExternalFileDetectorApp:
         with temp_context as temp_dir:
             for file_path in files:
                 file_result = self._analyze_single_file(
-                    file_path, storage_handler, data_source, temp_dir
+                    file_path, storage_handler, data_source, temp_dir,
+                    target_platform=target_platform,
                 )
                 results['files'].append(file_result)
                 
@@ -89,7 +92,8 @@ class ExternalFileDetectorApp:
         return results
     
     def _analyze_single_file(self, file_path: str, storage_handler: StorageHandler,
-                           data_source: str = None, temp_dir: str = None) -> Dict[str, Any]:
+                           data_source: str = None, temp_dir: str = None,
+                           target_platform: str = 'sql_server_2022') -> Dict[str, Any]:
         """Analyze a single file and generate SQL DDL."""
         local_path = file_path
         
@@ -102,6 +106,7 @@ class ExternalFileDetectorApp:
                     storage_handler,
                     data_source,
                     owned_temp_dir,
+                    target_platform=target_platform,
                 )
 
         if is_remote:
@@ -141,7 +146,12 @@ class ExternalFileDetectorApp:
         table_name = self._generate_table_name(file_path)
         try:
             ddl = self.sql_generator.generate_complete_ddl(
-                metadata, table_name, data_source, file_path
+                metadata,
+                table_name,
+                data_source,
+                location=None,
+                target_platform=target_platform,
+                storage_url=file_path if is_remote else None,
             )
         except Exception as e:
             logger.error("Failed to generate DDL for %s: %s", file_path, e)
@@ -193,15 +203,17 @@ class ExternalFileDetectorApp:
         if not clean_name:
             clean_name = 'external_table'
         
-        return f"ext_{clean_name}"
+        return clean_name
     
-    def analyze_files(self, file_paths: List[str], data_source: str = None) -> List[Dict[str, Any]]:
+    def analyze_files(self, file_paths: List[str], data_source: str = None,
+                      target_platform: str = 'sql_server_2022') -> List[Dict[str, Any]]:
         """
         Analyze multiple specific files.
         
         Args:
             file_paths: List of file paths to analyze
             data_source: Name of the external data source for SQL
+            target_platform: SQL platform the generated script targets
             
         Returns:
             List of analysis results
@@ -227,6 +239,7 @@ class ExternalFileDetectorApp:
                     handler_cache[cache_key],
                     data_source,
                     temp_dir,
+                    target_platform=target_platform,
                 )
                 results.append(result)
         
