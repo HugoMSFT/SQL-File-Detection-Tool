@@ -2,13 +2,14 @@
  * Pure helpers shared by the extension.
  *
  * These deliberately have no `vscode` import so they can be unit tested with
- * plain `node --test`.
+ * plain `node --test`, and no network or process import so that everything here
+ * is safe to reach from the native activation path. Helpers that only make
+ * sense for the deprecated Python backend live in `legacyBackendUrl.ts`.
  */
 
-import * as net from 'net';
 import * as path from 'path';
 
-/** Platform ids accepted by the backend. Azure SQL Database is the default. */
+/** Platform ids the tool can target. Azure SQL Database is the default. */
 export const DEFAULT_PLATFORM = 'azure_sql_db';
 
 export const SUPPORTED_PLATFORMS = [
@@ -28,76 +29,6 @@ export function normalizePlatform(value: unknown): Platform {
     return (SUPPORTED_PLATFORMS as readonly string[]).includes(candidate)
         ? (candidate as Platform)
         : DEFAULT_PLATFORM;
-}
-
-/** Only loopback hosts are ever used; anything else falls back to 127.0.0.1. */
-export function normalizeHost(value: unknown): string {
-    const candidate = String(value ?? '').trim().toLowerCase();
-    return candidate === 'localhost' ? 'localhost' : '127.0.0.1';
-}
-
-/**
- * Ask the OS for a free TCP port on *host*.
- *
- * Binding to port 0 and reading back the assigned port avoids the race-prone
- * "scan a range and hope" approach and keeps the backend on loopback only.
- */
-export function findFreePort(host = '127.0.0.1'): Promise<number> {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer();
-        server.unref();
-        server.on('error', reject);
-        server.listen({ host, port: 0, exclusive: true }, () => {
-            const address = server.address();
-            if (!address || typeof address === 'string') {
-                server.close(() => reject(new Error('Could not determine a free port')));
-                return;
-            }
-            const { port } = address;
-            server.close((err) => (err ? reject(err) : resolve(port)));
-        });
-    });
-}
-
-export interface AppUrlOptions {
-    host: string;
-    port: number;
-    /** Absolute file path to analyze on open. */
-    path?: string;
-    /** Absolute directory path to analyze on open. */
-    folder?: string;
-    /** Open the Azure Storage explorer immediately. */
-    azure?: boolean;
-}
-
-/**
- * Build the backend URL.
- *
- * Paths are passed as query parameters and always percent-encoded. No token or
- * secret is ever placed in a URL.
- */
-export function buildAppUrl(options: AppUrlOptions): string {
-    const host = normalizeHost(options.host);
-    const port = Number(options.port);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        throw new Error(`Invalid port: ${String(options.port)}`);
-    }
-    const params = new URLSearchParams();
-    if (options.path) {
-        params.set('path', options.path);
-    } else if (options.folder) {
-        params.set('folder', options.folder);
-    }
-    if (options.azure) {
-        params.set('azure', '1');
-    }
-    const query = params.toString();
-    return `http://${host}:${port}/${query ? `?${query}` : ''}`;
-}
-
-/** Build the health probe URL for a running backend. */
-export function buildHealthUrl(host: string, port: number): string {
-    return `http://${normalizeHost(host)}:${port}/api/health`;
 }
 
 const SECRET_PATTERNS: Array<[RegExp, string]> = [
@@ -122,7 +53,7 @@ export function redact(text: unknown): string {
     return value;
 }
 
-/** File extensions the backend can analyze directly. */
+/** File extensions the tool can analyze directly. */
 export const SUPPORTED_EXTENSIONS = new Set([
     '.csv', '.tsv', '.txt', '.json', '.jsonl', '.ndjson',
     '.parquet', '.orc', '.avro', '.xlsx', '.xls',
@@ -141,8 +72,8 @@ export function isSupportedFile(fsPath: string): boolean {
 /**
  * True when *target* is inside *root* (or is *root* itself).
  *
- * Mirrors the backend's `_is_within_root` guard so the extension can predict a
- * rejection before it happens instead of surfacing an opaque server error.
+ * Used to predict a containment rejection before it happens, so the caller can
+ * explain it instead of surfacing an opaque failure.
  */
 export function isWithinRoot(target: string, root: string): boolean {
     if (!target || !root) {
@@ -175,9 +106,9 @@ export interface RootOptions {
 }
 
 /**
- * Choose the directory the backend is allowed to read.
+ * Choose the directory the analysis is allowed to read.
  *
- * The backend confines every local path to a single root, so the extension has
+ * Every local path is confined to a single root, so the caller has
  * to pick one that actually contains what the user asked for. Preference order
  * is: the explicit setting, the workspace folder containing the target, the
  * target's own directory, the first workspace folder, then the home directory.
@@ -201,33 +132,6 @@ export function computeRoot(options: RootOptions): string {
         return folders[0];
     }
     return path.resolve(options.home);
-}
-
-/** Wait until the backend answers its health endpoint, or time out. */
-export async function waitForHealth(
-    url: string,
-    timeoutMs: number,
-    isCancelled: () => boolean = () => false,
-    fetchImpl: typeof fetch = fetch,
-): Promise<Record<string, unknown>> {
-    const deadline = Date.now() + timeoutMs;
-    let lastError = 'backend did not start';
-    while (Date.now() < deadline) {
-        if (isCancelled()) {
-            throw new Error('Cancelled');
-        }
-        try {
-            const response = await fetchImpl(url);
-            if (response.ok) {
-                return (await response.json()) as Record<string, unknown>;
-            }
-            lastError = `health check returned ${response.status}`;
-        } catch (err) {
-            lastError = err instanceof Error ? err.message : String(err);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    throw new Error(`Backend health check failed: ${redact(lastError)}`);
 }
 
 /**

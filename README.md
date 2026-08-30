@@ -18,7 +18,8 @@ Azure SQL Database T-SQL, and attaching Azure Storage.](media/sql-file-detection
 The walkthrough above, in text:
 
 1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
-   sidebar starts the bundled Python backend and opens the full interface.
+   full interface appears immediately, rendered natively — no Python, no server
+   and no browser tab.
 2. Drop in any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a Delta
    or Iceberg table directory.
 3. The **Preview** tab shows real rows read straight from the file. No import
@@ -31,9 +32,10 @@ The walkthrough above, in text:
 6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **EXT TABLE** tabs hold
    the generated T-SQL. Azure SQL output for a local file includes an explicit
    "stage the data in Azure Storage first" prerequisite block.
-7. **Azure Storage** offers eight explicit sign-in modes - Microsoft Entra ID,
-   managed identity, SAS, connection string, account key, or anonymous - with no
-   silent fallback between them.
+7. **Azure Storage** offers four explicit extension sign-in modes - VS Code
+   Microsoft sign-in, SAS, connection string, or anonymous - with no silent
+   fallback between them. The Python web application keeps its wider set,
+   including managed identity.
 8. **Public dataset URL** analyzes any `https://` data file directly.
 
 ## Names and compatibility
@@ -66,9 +68,10 @@ Existing scripts, imports and automation continue to work unchanged.
   Database feature differences.
 - Provides local, S3, and Azure Blob storage handlers.
 - Signs in to Azure Storage the way Azure Storage Explorer does: Microsoft Entra
-  ID, managed identity, SAS, connection string, or account key.
-- Ships as an installable VS Code extension that bundles and manages the
-  Python backend.
+  ID, managed identity, SAS, connection string, or account key. The VS Code
+  extension offers the four of those that are meaningful on the desktop.
+- Ships as an installable VS Code extension that runs entirely natively — no
+  Python interpreter, virtual environment, server or port.
 
 Generated SQL is a starting point. Review data types, credentials, paths, and
 platform requirements before running it in a database.
@@ -303,6 +306,10 @@ Run `sql-file-detection-tool COMMAND --help` for complete command options.
 
 ## Azure Storage authentication
 
+This section describes the **Python** package (CLI and web application). The VS
+Code extension's own four native modes are described under
+[VS Code extension](#vs-code-extension).
+
 The tool attaches to Azure Storage the same way Azure Storage Explorer does.
 Every mode is chosen explicitly; a failed Microsoft Entra ID sign-in is **never**
 silently downgraded to anonymous or shared-key access.
@@ -383,84 +390,85 @@ npm run package          # writes dist/sql-file-detection-tool-<version>.vsix
 code --install-extension dist/sql-file-detection-tool-<version>.vsix
 ```
 
+The extension is **fully native**. It does not create a virtual environment,
+install a package, start a server, choose a port or open a browser. Everything
+runs in the extension host in TypeScript. Python is not required, and is never
+installed or launched on your behalf.
+
 Commands (Command Palette, prefix **SQL File Detection Tool**):
 
 | Command | Purpose |
 | --- | --- |
-| `Open` | Starts the backend and opens the UI |
-| `Analyze Current File` | Opens the UI with the active editor's file analyzed |
+| `Open` | Reveals the native interface in the Activity Bar |
+| `Open in Editor` | Opens the same interface as an editor panel, for more width |
+| `Analyze Current File` | Analyzes the active editor's file |
 | `Analyze Workspace Folder` | Analyzes a workspace folder |
-| `Connect to Azure Storage` | Signs in through VS Code and brokers the token to the backend |
-| `Disconnect Azure Storage` | Clears the brokered token and every connection |
-| `Stop Backend` | Stops the Python process |
-| `Set Up Backend` | Creates or repairs the managed Python environment |
-| `Show Output` | Reveals the output channel |
-
-Supported files and Delta/Iceberg directories also get an **Analyze with SQL File
-Detection Tool** entry in the Explorer context menu.
+| `Analyze with SQL File Detection Tool` | Explorer / editor context menu, on the exact target |
+| `Connect to Azure Storage` | Signs in through VS Code |
+| `Disconnect Azure Storage` | Clears every credential, in memory and in secret storage |
 
 ### Activity Bar
 
-The extension contributes a **SQL File Detection Tool** container to the VS Code
-Activity Bar. Selecting it reveals a compact sidebar with the product name, the
-current backend state, and buttons for **Open Tool**, **Analyze Current File**,
-**Connect Azure Storage**, and **Stop Backend**. If the backend fails to start,
-the sidebar shows the failure and a **Retry** button.
+Selecting the **SQL File Detection Tool** container reveals the complete
+interface immediately, rendered from bundled assets: file list, preview,
+metadata, every statement tab, the schema override editor, export, the platform
+selector, the public dataset URL box, and the Azure Storage browser. On the
+reference machine activation and first render each take under a millisecond.
 
-Revealing the container starts or reuses the managed backend and opens or focuses
-the interface. A few details worth knowing:
+- The webview has a strict, nonce-bound Content Security Policy with
+  `default-src 'none'` and no `connect-src`, so the renderer has no network
+  access at all. There is one local nonced script, no inline handlers and no
+  remote assets.
+- The webview can never name a file. It sends an opaque, host-minted random id;
+  the extension host resolves it to a path and its own allowed root and
+  re-applies a realpath containment check on every read.
+- No token, account key or SAS signature ever reaches the webview, the output
+  channel, a setting, a URL or generated SQL.
 
-- The extension activates on the view, not at VS Code startup, and it ignores a
-  reveal that looks like VS Code restoring the previous layout — one that
-  arrives while the window is still coming up or is not yet focused. Restoring
-  the container from a previous session therefore does **not** launch a backend
-  on its own; only a deliberate click does. Selecting the container at any later
-  point is always treated as a click.
-- Clicking again focuses the interface that is already open. It never starts a
-  second backend process or opens a duplicate tab.
-- Set `sqlFileDetectionTool.openOnActivityBarClick` to `false` to keep the
-  sidebar passive. The **Open Tool** button still works.
-- The sidebar webview has a strict, nonce-bound Content Security Policy, no local
-  resource roots, and carries no URL, port, or token. It can only send a fixed
-  allowlist of command messages to the extension.
+`Open in Editor` and the sidebar share one state store, so they always agree.
 
 ### Settings
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
-| `sqlFileDetectionTool.openOnActivityBarClick` | `true` | Open the interface when the Activity Bar container is revealed |
-| `sqlFileDetectionTool.pythonPath` | `""` | Interpreter used to *create* the managed environment |
-| `sqlFileDetectionTool.backendInterpreter` | `""` | Escape hatch: run the backend with an existing interpreter instead of the managed one |
-| `sqlFileDetectionTool.installAzureExtras` | `true` | Install the `[azure]` extra into the managed environment |
-| `sqlFileDetectionTool.host` | `127.0.0.1` | Loopback bind address |
-| `sqlFileDetectionTool.rootDirectory` | `""` | Directory the backend may read local files from. Empty means "pick automatically" (see below) |
-| `sqlFileDetectionTool.openIn` | `simpleBrowser` | `simpleBrowser` or `externalBrowser` |
 
-### How the extension works
+The platform, the selected tab and the appearance preference are remembered in
+workspace and global state. File contents and credentials are never persisted
+there.
 
-- On first use it creates a virtual environment under the extension's
-  `globalStorageUri` and installs the bundled project with the `[azure]` extra.
-  Your workspace interpreter is never modified.
-- The backend is spawned with an argument array (never a shell string) on a
-  dynamically chosen free loopback port, and the extension waits on
-  `/api/health` before opening anything.
-- The backend confines every local read to one **analysis root**, passed as
-  `--root-dir`. When `sqlFileDetectionTool.rootDirectory` is empty the extension
-  picks the workspace folder containing the file you asked about, falling back to
-  the first workspace folder and then your home directory. Analyzing a file
-  outside the current root restarts the backend with a root that contains it.
-- A cryptographically random per-process control token is passed to the backend
-  through its environment, read once at start-up and removed from the
-  environment. Control endpoints compare it with `hmac.compare_digest`.
-- `Connect to Azure Storage` acquires Microsoft tokens through
-  `vscode.authentication.getSession('microsoft', ...)` and posts them to the
-  protected control endpoint over loopback. Tokens live in memory, are refreshed
-  before expiry, and are cleared on sign-out and on deactivate.
-- The status bar and output channel report backend state with every secret
-  redacted.
+### Azure Storage in the extension
+
+Four authentication modes, all handled in the extension host:
+
+| Mode | Credential | Notes |
+| --- | --- | --- |
+| VS Code sign-in (recommended) | Microsoft account token via `vscode.authentication` | Refreshed before expiry; enables subscription and account discovery |
+| SAS URL | SAS token | Signature is split off immediately and never displayed |
+| Connection string | Account key | Entered through a masked input box; endpoint pinned from the string |
+| Anonymous | none | Public containers only |
+
+Remembering a credential in VS Code `SecretStorage` is opt-in and defaults to
+no. Disconnecting, and deactivating the extension, clear memory *and* delete the
+stored secret. Managed identity is deliberately **not** offered in the desktop
+extension, because a desktop extension does not have one - it remains a
+deployment concern for the CLI and the web application below.
+
+### Optional legacy Python runtime
+
+The CLI and the Flask web application documented elsewhere in this README still
+work and are still tested, but they are now **optional compatibility**, not part
+of the extension. No command, view or menu in the extension reaches them.
+`src/backend.ts`, `src/pythonEnv.ts`, `src/process.ts` and
+`src/legacyBackendUrl.ts` remain as deprecated, unreferenced transition code.
+
+For the full design - message flow, CSP, file-identity model, Azure threat model
+and SSRF policy - see [`docs/native-ui.md`](docs/native-ui.md).
 
 ## Web interface
+
+The Flask web application below is **optional legacy compatibility**. It is not
+used by the VS Code extension and is never started by it.
 
 ```bash
 sql-file-detection-tool gui --root-dir C:\data
@@ -663,10 +671,9 @@ CI runs the tests on Linux and Windows and builds the wheel from
 
 ### Native TypeScript core
 
-`src/native/` holds an in-process TypeScript port of the analysis and T-SQL
-generation logic, built so the extension can eventually drop its Python backend.
-It is not on the shipped runtime path yet — no extension source imports it — but
-it is proven against the Python implementation by a parity baseline:
+`src/native/` holds the in-process TypeScript analysis and T-SQL generation
+engine. It is the only engine the extension uses, and it is proven against the
+Python implementation by a parity baseline:
 
 ```bash
 python scripts/generate_parity_baselines.py --check   # baseline still matches Python
@@ -675,28 +682,40 @@ npm test                                              # Node suites compare agai
 
 See [`docs/native-core.md`](docs/native-core.md) for the module layout, the
 service API, the dependency and license choices, the format matrix, and the one
-explicit limitation (ORC).
+explicit limitation (ORC), and [`docs/native-ui.md`](docs/native-ui.md) for the
+webview message flow, the CSP, and the Azure and SSRF threat models.
 
 ## Project layout
 
 ```text
 package.json                 VS Code extension manifest
+media/webview/               bundled renderer (main.js, main.css)
 src/                         extension TypeScript sources
 |-- extension.ts             activation and commands
-|-- backend.ts               Python backend lifecycle
-|-- pythonEnv.ts             managed virtual environment
-|-- azureSignIn.ts           VS Code Microsoft token brokering
-|-- process.ts               spawn helpers (no vscode import)
+|-- nativeView.ts            WebviewView/Panel provider and UiHost (vscode)
+|-- protocol.ts              webview message contract and validation
+|-- appState.ts              shared state store and opaque file registry
 |-- azureScopes.ts           token scopes and expiry math
-|-- util.ts                  ports, URLs, redaction
+|-- util.ts                  pure helpers (no network, no process)
+|-- ui/                      vscode-free UI layer
+|   |-- controller.ts        all product logic
+|   |-- host.ts              UiHost / AzureBridge seam
+|   `-- webviewShell.ts      HTML shell, CSP, nonce
+|-- azure/                   storage URLs, blob browsing, auth modes
+|-- net/                     SSRF-hardened HTTPS, IP guard, public datasets
 |-- native/                  native analysis + SQL generation core (see docs/)
 |   |-- index.ts             public barrel
 |   |-- service.ts           NativeAnalysisService facade
 |   |-- analysis/            per-format analyzers
 |   `-- sql/                 platform-aware T-SQL generator
+|-- backend.ts               deprecated: Python backend lifecycle
+|-- pythonEnv.ts             deprecated: managed virtual environment
+|-- process.ts               deprecated: spawn helpers
+|-- legacyBackendUrl.ts      deprecated: ports, loopback URLs, health polling
 `-- test/                    node --test suites
 docs/
-`-- native-core.md           native core architecture and parity notes
+|-- native-core.md           native core architecture and parity notes
+`-- native-ui.md             native UI, message flow, and threat models
 external_file_detection/
 |-- azure_auth.py
 |-- cli.py

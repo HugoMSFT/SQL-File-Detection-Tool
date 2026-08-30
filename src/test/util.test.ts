@@ -6,17 +6,19 @@ import * as net from 'net';
 import * as path from 'path';
 
 import {
-    DEFAULT_PLATFORM,
     buildAppUrl,
     buildHealthUrl,
-    computeRoot,
     findFreePort,
+    normalizeHost,
+    waitForHealth,
+} from '../legacyBackendUrl';
+import {
+    DEFAULT_PLATFORM,
+    computeRoot,
     isSupportedFile,
     isWithinRoot,
-    normalizeHost,
     normalizePlatform,
     redact,
-    waitForHealth,
 } from '../util';
 
 test('the default platform is Azure SQL Database', () => {

@@ -17,14 +17,11 @@ import * as vscode from 'vscode';
 import { PythonEnvironment } from './pythonEnv';
 import {
     buildHealthUrl,
-    computeRoot,
     findFreePort,
-    isWithinRoot,
     normalizeHost,
-    normalizePlatform,
-    redact,
     waitForHealth,
-} from './util';
+} from './legacyBackendUrl';
+import { computeRoot, isWithinRoot, normalizePlatform, redact } from './util';
 export interface BackendInfo {
     host: string;
     port: number;

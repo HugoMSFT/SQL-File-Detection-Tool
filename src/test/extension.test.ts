@@ -104,9 +104,14 @@ test('the manifest declares every command the extension registers', () => {
         'sqlFileDetectionTool.connectAzureStorage',
         'sqlFileDetectionTool.disconnectAzureStorage',
         'sqlFileDetectionTool.open',
-        'sqlFileDetectionTool.setupBackend',
-        'sqlFileDetectionTool.stopBackend',
+        'sqlFileDetectionTool.openInEditor',
     ]);
+});
+
+test('the backend lifecycle commands are gone from the manifest', () => {
+    const declared = manifest.contributes.commands.map((c) => c.command);
+    assert.ok(!declared.includes('sqlFileDetectionTool.setupBackend'));
+    assert.ok(!declared.includes('sqlFileDetectionTool.stopBackend'));
 });
 
 test('every registered command exists in the manifest', () => {
@@ -117,7 +122,7 @@ test('every registered command exists in the manifest', () => {
     const registered = [
         ...source.matchAll(/registerCommand\(\s*'([^']+)'/g),
     ].map((m) => m[1]);
-    assert.ok(registered.length >= 8);
+    assert.ok(registered.length >= 7);
     const declared = new Set(manifest.contributes.commands.map((c) => c.command));
     for (const command of registered) {
         assert.ok(declared.has(command), `${command} is missing from package.json`);
@@ -132,10 +137,23 @@ test('the manifest defaults the platform setting to Azure SQL Database', () => {
     assert.equal(setting.enum?.[0], 'azure_sql_db');
 });
 
-test('the manifest only offers loopback hosts', () => {
-    const setting = manifest.contributes.configuration.properties['sqlFileDetectionTool.host'];
-    assert.deepEqual(setting.enum, ['127.0.0.1', 'localhost']);
-    assert.equal(setting.default, '127.0.0.1');
+test('no server or interpreter settings remain in the native manifest', () => {
+    // Layer 2 removed the loopback backend from the default runtime, so the
+    // settings that only made sense for a server must not survive: a stale
+    // "host" or "pythonPath" would imply a runtime the extension no longer has.
+    const properties = Object.keys(manifest.contributes.configuration.properties);
+    for (const removed of [
+        'sqlFileDetectionTool.host',
+        'sqlFileDetectionTool.openIn',
+        'sqlFileDetectionTool.rootDirectory',
+        'sqlFileDetectionTool.pythonPath',
+        'sqlFileDetectionTool.backendInterpreter',
+        'sqlFileDetectionTool.installAzureExtras',
+        'sqlFileDetectionTool.openOnActivityBarClick',
+    ]) {
+        assert.ok(!properties.includes(removed), `${removed} should have been removed`);
+    }
+    assert.deepEqual(properties, ['sqlFileDetectionTool.defaultPlatform']);
 });
 
 test('the explorer context menu is wired to the analyze command', () => {

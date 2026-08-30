@@ -6,7 +6,113 @@ uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The extension is now native by default. Python, Flask, `pip`, virtual
+  environments, localhost and the Simple Browser are gone from the shipped
+  runtime.** Clicking the Activity Bar icon renders a complete interface from
+  bundled assets in about a millisecond. Nothing is downloaded, installed,
+  started or listened on. On the reference machine activation takes under 1 ms,
+  first render under 1 ms, and a first CSV analysis about 20 ms end to end.
+
 ### Added
+
+- **A full `WebviewViewProvider` interface (`sqlFileDetectionTool.sidebar`).**
+  The whole product workflow now lives in the sidebar rather than behind an
+  external browser tab: browse or analyse the current file, a workspace folder,
+  or a picked file/folder; a file list, bounded preview and metadata panel;
+  every statement tab (CREATE TABLE, BULK INSERT, OPENROWSET, COPY INTO,
+  external file format, external table, JSON functions, FOR JSON, credential
+  setup, best practices); a schema override editor; export; the platform
+  selector with Azure SQL Database still the default; public dataset URLs; and
+  Azure Storage. **Open in Editor** opens the same interface as a
+  `WebviewPanel` when more width helps — both surfaces render one shared store,
+  so they cannot disagree.
+- **Native Azure Storage integration**, replacing the backend's Azure
+  endpoints with extension-host TypeScript. Four authentication modes: VS Code
+  Microsoft sign-in (recommended, refreshed before expiry), SAS URL, connection
+  string / account key entered through a masked input box, and anonymous public
+  access. Storage account, container, prefix and blob navigation with bounded
+  paging, cancellation, file-type filtering, and download-to-temp with byte
+  caps. A known account can be attached directly without ARM enumeration.
+- **A native public-dataset workflow** with SSRF protections stronger than the
+  Python implementation it replaces, including per-redirect revalidation and a
+  DNS guard installed as the socket's own `lookup` so a rebinding race cannot
+  reach a private address.
+- **Instrumentation.** The output channel records activation, activation-to-
+  first-render and first-analysis timings, and the test suite asserts budgets
+  for all three.
+- **`docs/native-ui.md`** — the message flow, the CSP, the file-identity model,
+  the Azure authentication threat model, the SSRF policy, and the cancellation
+  and stale-result rules.
+- Extensive new Node suites: message validation and fuzzing, CSP and renderer
+  static analysis, secret non-exposure, cancellation and stale-result
+  suppression, path containment, per-format fixtures, schema overrides, export
+  deduplication, the ORC limitation, all four Azure modes with paging, expiry
+  and disconnect, public-URL SSRF and size cases, state persistence, and an
+  integration-style activation test that runs with `child_process` sabotaged and
+  `PATH` emptied.
+
+### Removed
+
+- The Flask backend, the Simple Browser flow and the compact launcher sidebar
+  are no longer reachable. `src/sidebar.ts`, `src/azureSignIn.ts` and
+  `src/webviewHtml.ts` are deleted. No contributed command sets up, starts or
+  stops a backend; the setup and stop-backend commands are gone.
+
+### Security
+
+- **The renderer can never name a file.** The webview cannot send a path, a root
+  or a directory. It sends an opaque, host-minted random `fileId`; each registry
+  entry carries its own allowed root, and every native call re-applies the Layer
+  1 realpath containment check. A stale or forged id fails closed.
+- **Strict CSP with a per-load nonce and no `connect-src`.** `default-src 'none'`
+  means the renderer has no network access whatsoever, so it cannot be used as
+  an SSRF pivot. One nonced local script, no inline handlers, no `eval`, no
+  remote assets. A test statically fails the build on `innerHTML`, `fetch`,
+  `localStorage`, a second script tag or a remote resource reference.
+- **Every webview message passes one validator.** `parseWebviewRequest()`
+  dispatches through a builder table rather than on a raw string, bounds every
+  field, rejects control characters, and returns `undefined` — never a partial
+  or defaulted request — for anything it does not fully understand. The handler
+  never throws.
+- **Credentials stay in the extension host.** No token, key or SAS signature
+  reaches the webview, the output channel, a setting, a URL, a child process
+  argument or generated SQL. Remembering a secret is opt-in and defaults to no;
+  disconnect and deactivate clear memory *and* delete the stored secret.
+  Managed identity is deliberately not offered as a desktop mode rather than
+  faked.
+- `ipGuard` now rejects leading-zero IPv4 octets, closing an `0177.0.0.1`
+  octal-loopback bypass that depends on resolver behaviour.
+- Public HTTPS fetches are restricted to the default port. A non-443 port is
+  refused on the initial URL and on every redirect hop, so the client cannot be
+  driven as a port scanner against a publicly routable host.
+- `storageUrlFor()` strips the query string and fragment before the value
+  reaches state or generated T-SQL. If a user pastes a SAS-signed blob URL, the
+  `sig=` value is dropped rather than written into a script they might commit.
+- Cancellation is real end to end: an `AbortSignal` reaches the HTTPS request
+  and is re-checked per chunk, so a superseded or cancelled download stops
+  transferring instead of merely having its result discarded.
+- Port binding, loopback URL construction and health polling moved out of
+  `src/util.ts` into `src/legacyBackendUrl.ts`, so no module reachable from
+  activation can open a socket. A test walks the compiled module graph from
+  `extension.js` and fails on `child_process`, `worker_threads`, a spawn call,
+  or any server vocabulary.
+
+### Notes
+
+- The Python CLI and web application remain fully functional but are now
+  **optional legacy compatibility**. `src/backend.ts`, `src/pythonEnv.ts`,
+  `src/process.ts` and `src/legacyBackendUrl.ts` survive as deprecated,
+  unreferenced transition code; Layer 3 removes them together with packaging
+  and dependency pruning.
+- Adds one runtime dependency, `@azure/storage-blob` (MIT), and one development
+  dependency, `esbuild`, used to bundle the extension so the ESM-only
+  `hyparquet` reader ships correctly.
+- The version is unchanged at 1.1.1. Layer 3 owns the version bump, the demo
+  GIF and the Marketplace copy.
+
+### Added (Layer 1 — native analysis core)
 
 - **Native TypeScript analysis core (`src/native/`).** A complete in-process
   port of the Python analysis and T-SQL generation logic, so the VS Code
@@ -67,15 +173,16 @@ uses [semantic versioning](https://semver.org/).
   reports its size and compression codec, but returns a typed
   `unsupported_native` result instead of a schema, because there is no
   maintained pure-JavaScript or WASM ORC reader that avoids a platform-specific
-  native binary. The Python CLI and backend still analyse ORC exactly as before.
-  See [`docs/native-core.md`](docs/native-core.md) for the full rationale.
+  native binary. The extension now states this limitation in the UI and offers a
+  manual, opt-in workaround using the separately installed Python CLI; it never
+  installs or launches Python on your behalf. See
+  [`docs/native-core.md`](docs/native-core.md) for the full rationale.
 
-### Notes
+### Notes (Layer 1)
 
-- Nothing user-facing changed. The extension still starts the managed Python
-  backend and still opens the web UI; no shipped code path imports the native
-  core yet, Python files still ship in the VSIX, and the extension version is
-  unchanged.
+- At the time Layer 1 landed nothing user-facing had changed and no shipped code
+  path imported the native core. The Layer 2 entries above supersede that: the
+  native core is now the only analysis engine the extension uses.
 - Adds four runtime dependencies, all MIT, all pure JavaScript, none with an
   install script or a native binary: `hyparquet`, `iconv-lite`, `chardet`, and
   `fflate`.
