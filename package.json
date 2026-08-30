@@ -2,7 +2,7 @@
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
   "description": "Detect data files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Browse Azure Storage with Storage Explorer-style sign-in.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -29,8 +29,30 @@
   },
   "homepage": "https://github.com/HugoMSFT/SQL-File-Detection-Tool#readme",
   "main": "./out/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:sqlFileDetectionTool.sidebar"
+  ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sqlFileDetectionTool",
+          "title": "SQL File Detection Tool",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "sqlFileDetectionTool": [
+        {
+          "type": "webview",
+          "id": "sqlFileDetectionTool.sidebar",
+          "name": "SQL File Detection Tool",
+          "icon": "media/activity-bar.svg",
+          "visibility": "visible"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "sqlFileDetectionTool.open",
@@ -145,6 +167,11 @@
           "type": "string",
           "default": "",
           "description": "Directory the backend is allowed to read local files from. Leave empty to use the workspace folder that contains the file being analyzed (falling back to the first workspace folder, then your home directory)."
+        },
+        "sqlFileDetectionTool.openOnActivityBarClick": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the full interface automatically when you select the **SQL File Detection Tool** icon in the Activity Bar. When disabled, the sidebar still offers an **Open Tool** button."
         },
         "sqlFileDetectionTool.openIn": {
           "type": "string",

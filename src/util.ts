@@ -229,3 +229,24 @@ export async function waitForHealth(
     }
     throw new Error(`Backend health check failed: ${redact(lastError)}`);
 }
+
+/**
+ * Runs asynchronous work one item at a time, in the order it was requested.
+ *
+ * Unlike collapsing concurrent calls into a single shared promise, every caller
+ * keeps its own arguments and its own result. That matters when the requests
+ * are not interchangeable: opening the interface for a specific file must not
+ * be satisfied by an unrelated request that happened to already be running.
+ * A rejected item is contained so it cannot cancel the ones queued behind it.
+ */
+export function createSerialQueue(): <T>(task: () => Promise<T>) => Promise<T> {
+    let tail: Promise<unknown> = Promise.resolve();
+    return <T>(task: () => Promise<T>): Promise<T> => {
+        const queued = tail.then(
+            () => task(),
+            () => task(),
+        );
+        tail = queued.catch(() => undefined);
+        return queued;
+    };
+}

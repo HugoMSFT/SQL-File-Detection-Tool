@@ -48,6 +48,10 @@ export class BackendManager implements vscode.Disposable {
     private info: BackendInfo | undefined;
     private starting: Promise<BackendInfo> | undefined;
     private state: BackendState = 'stopped';
+    private readonly stateEmitter = new vscode.EventEmitter<BackendState>();
+
+    /** Fires whenever the backend state changes, for the status bar and sidebar. */
+    readonly onDidChangeState = this.stateEmitter.event;
 
     constructor(
         private readonly context: vscode.ExtensionContext,
@@ -60,6 +64,10 @@ export class BackendManager implements vscode.Disposable {
 
     get running(): boolean {
         return this.state === 'running' && !!this.info;
+    }
+
+    get currentState(): BackendState {
+        return this.state;
     }
 
     get current(): BackendInfo | undefined {
@@ -110,8 +118,12 @@ export class BackendManager implements vscode.Disposable {
     }
 
     private setState(state: BackendState): void {
+        const changed = this.state !== state;
         this.state = state;
         this.render();
+        if (changed) {
+            this.stateEmitter.fire(state);
+        }
     }
 
     private render(): void {
@@ -272,6 +284,7 @@ export class BackendManager implements vscode.Disposable {
 
     dispose(): void {
         this.stop();
+        this.stateEmitter.dispose();
         void this.context;
     }
 }

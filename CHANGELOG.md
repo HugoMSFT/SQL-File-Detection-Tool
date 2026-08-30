@@ -4,6 +4,37 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.1.1]
+
+### Added
+
+- **Activity Bar entry point.** The extension now contributes a
+  **SQL File Detection Tool** container to the VS Code Activity Bar, with an
+  original monochrome icon (`media/activity-bar.svg`) that follows the active
+  theme. Selecting it reveals a compact sidebar showing the product name and
+  backend status, plus **Open Tool**, **Analyze Current File**, **Connect Azure
+  Storage**, and **Stop Backend** actions.
+- Revealing the container starts or reuses the managed Python backend and opens
+  or focuses the interface. The extension activates on the view rather than at
+  startup, and a startup grace period stops VS Code from opening the tool merely
+  because it restored the container from the previous session. Repeated clicks
+  focus the existing interface instead of spawning another backend or another
+  browser tab.
+- If the backend fails to start, the sidebar shows the failure and an actionable
+  **Retry** button.
+- New setting `sqlFileDetectionTool.openOnActivityBarClick` (default `true`).
+  When it is disabled, the sidebar still offers **Open Tool**.
+- **Marketplace walkthrough GIF** (`media/sql-file-detection-tool-walkthrough.gif`),
+  captured from the real running interface, plus a **See it in action** section
+  near the top of the README with an accessible text summary of every beat.
+
+### Security
+
+- The sidebar webview is served with a strict, nonce-bound Content Security
+  Policy, is granted no local resource roots, and contains no URL, port, token,
+  or other secret. Messages from the webview are dropped unless they match a
+  fixed command allowlist.
+
 ## [1.1.0]
 
 ### Changed

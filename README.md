@@ -9,6 +9,33 @@ extension.
 web UI, Python API, and VS Code extension - generates Azure SQL Database output
 unless another platform is selected explicitly.
 
+## See it in action
+
+![A walkthrough of SQL File Detection Tool: opening it from the VS Code Activity
+Bar, previewing a Parquet file, reviewing the detected column types, generating
+Azure SQL Database T-SQL, and attaching Azure Storage.](media/sql-file-detection-tool-walkthrough.gif)
+
+The walkthrough above, in text:
+
+1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
+   sidebar starts the bundled Python backend and opens the full interface.
+2. Drop in any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a Delta
+   or Iceberg table directory.
+3. The **Preview** tab shows real rows read straight from the file. No import
+   and no database connection are required.
+4. The **Metadata** tab shows the detected column types, precision, nullability,
+   encoding, and collation.
+5. The **Platform** selector is preset to **Azure SQL Database**. Switch to SQL
+   Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database at any
+   time.
+6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **EXT TABLE** tabs hold
+   the generated T-SQL. Azure SQL output for a local file includes an explicit
+   "stage the data in Azure Storage first" prerequisite block.
+7. **Azure Storage** offers eight explicit sign-in modes - Microsoft Entra ID,
+   managed identity, SAS, connection string, account key, or anonymous - with no
+   silent fallback between them.
+8. **Public dataset URL** analyzes any `https://` data file directly.
+
 ## Names and compatibility
 
 The project was previously called *SQL External File Detector*. The rename is
@@ -372,11 +399,37 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 Supported files and Delta/Iceberg directories also get an **Analyze with SQL File
 Detection Tool** entry in the Explorer context menu.
 
+### Activity Bar
+
+The extension contributes a **SQL File Detection Tool** container to the VS Code
+Activity Bar. Selecting it reveals a compact sidebar with the product name, the
+current backend state, and buttons for **Open Tool**, **Analyze Current File**,
+**Connect Azure Storage**, and **Stop Backend**. If the backend fails to start,
+the sidebar shows the failure and a **Retry** button.
+
+Revealing the container starts or reuses the managed backend and opens or focuses
+the interface. A few details worth knowing:
+
+- The extension activates on the view, not at VS Code startup, and it ignores a
+  reveal that looks like VS Code restoring the previous layout — one that
+  arrives while the window is still coming up or is not yet focused. Restoring
+  the container from a previous session therefore does **not** launch a backend
+  on its own; only a deliberate click does. Selecting the container at any later
+  point is always treated as a click.
+- Clicking again focuses the interface that is already open. It never starts a
+  second backend process or opens a duplicate tab.
+- Set `sqlFileDetectionTool.openOnActivityBarClick` to `false` to keep the
+  sidebar passive. The **Open Tool** button still works.
+- The sidebar webview has a strict, nonce-bound Content Security Policy, no local
+  resource roots, and carries no URL, port, or token. It can only send a fixed
+  allowlist of command messages to the extension.
+
 ### Settings
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
+| `sqlFileDetectionTool.openOnActivityBarClick` | `true` | Open the interface when the Activity Bar container is revealed |
 | `sqlFileDetectionTool.pythonPath` | `""` | Interpreter used to *create* the managed environment |
 | `sqlFileDetectionTool.backendInterpreter` | `""` | Escape hatch: run the backend with an existing interpreter instead of the managed one |
 | `sqlFileDetectionTool.installAzureExtras` | `true` | Install the `[azure]` extra into the managed environment |

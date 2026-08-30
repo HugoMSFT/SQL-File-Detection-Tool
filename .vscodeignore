@@ -31,6 +31,15 @@ venv/**
 AGENTS.md
 demo/**/*.ipynb
 
+# Capture scratch: raw walkthrough frames and tooling never ship.
+# The finished media/activity-bar.svg and the walkthrough GIF DO ship, because
+# the Activity Bar icon and the README's "See it in action" section need them.
+media/frames/**
+media/**/*.psd
+**/frames/**
+capture*.py
+assemble*.py
+
 # Never ship anything credential-shaped
 **/.env
 **/*.pem

@@ -12,11 +12,19 @@ import * as vscode from 'vscode';
 import { AzureSignIn } from './azureSignIn';
 import { BackendManager } from './backend';
 import { PythonEnvironment } from './pythonEnv';
-import { buildAppUrl, isSupportedFile, normalizePlatform, redact } from './util';
+import { SIDEBAR_VIEW_ID, SidebarProvider } from './sidebar';
+import {
+    buildAppUrl,
+    createSerialQueue,
+    isSupportedFile,
+    normalizePlatform,
+    redact,
+} from './util';
 
 let output: vscode.OutputChannel;
 let backend: BackendManager;
 let azure: AzureSignIn;
+let sidebar: SidebarProvider | undefined;
 
 interface OpenOptions {
     path?: string;
@@ -24,7 +32,22 @@ interface OpenOptions {
     azure?: boolean;
 }
 
+/**
+ * Serialises concurrent open requests.
+ *
+ * Two quick clicks on the Activity Bar icon must not race into two backend
+ * starts or two Simple Browser tabs. Requests are queued rather than collapsed:
+ * each caller carries its own target (a file, a folder, or the Azure explorer),
+ * so returning an earlier caller's promise would silently drop the newer
+ * request's path and the analysis-root hint that goes with it.
+ */
+let openQueue = createSerialQueue();
+
 async function openUi(options: OpenOptions = {}): Promise<void> {
+    return openQueue(() => doOpenUi(options));
+}
+
+async function doOpenUi(options: OpenOptions): Promise<void> {
     const info = await backend.ensureStarted({
         hint: options.path ?? options.folder,
         hintIsDirectory: !!options.folder,
@@ -38,13 +61,31 @@ async function openUi(options: OpenOptions = {}): Promise<void> {
         .get<string>('openIn', 'simpleBrowser');
     if (openIn === 'externalBrowser') {
         await vscode.env.openExternal(external);
+        uiOpenedFor = `${info.host}:${info.port}`;
         return;
     }
     try {
+        // Simple Browser keeps a single panel, so this navigates and focuses
+        // the existing tab instead of opening another one.
         await vscode.commands.executeCommand('simpleBrowser.show', external.toString(true));
     } catch {
         await vscode.env.openExternal(external);
     }
+    uiOpenedFor = `${info.host}:${info.port}`;
+}
+
+/**
+ * Identifies the backend instance the interface was last opened against.
+ *
+ * Simple Browser reuses its single panel, but `openExternal` cannot focus an
+ * existing OS browser tab. Recording which backend we already opened lets a
+ * *passive* reveal skip re-opening and avoid piling up tabs; explicit commands
+ * still open unconditionally.
+ */
+let uiOpenedFor: string | undefined;
+
+export function isUiAlreadyOpenFor(host: string, port: number): boolean {
+    return uiOpenedFor === `${host}:${port}`;
 }
 
 async function withErrors(label: string, action: () => Promise<void>): Promise<void> {
@@ -101,7 +142,31 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     const env = new PythonEnvironment(context, output);
     backend = new BackendManager(context, output, env, statusBar);
+    context.subscriptions.push(
+        // A backend that is no longer running cannot have a live interface, and
+        // the OS may hand the same port to its replacement, so drop the record
+        // rather than let it wrongly suppress a later open.
+        backend.onDidChangeState((state) => {
+            if (state !== 'running') {
+                uiOpenedFor = undefined;
+            }
+        }),
+    );
     azure = new AzureSignIn(backend, output);
+    sidebar = new SidebarProvider(
+        context,
+        backend,
+        // Go through the command rather than calling openUi directly, so a
+        // failure surfaces the same redacted notification and "Show Log"
+        // action the user gets from every other entry point.
+        () =>
+            Promise.resolve(
+                vscode.commands.executeCommand('sqlFileDetectionTool.open'),
+            ).then(() => undefined),
+        output,
+        () => process.uptime() * 1000,
+        isUiAlreadyOpenFor,
+    );
 
     const platform = normalizePlatform(
         vscode.workspace
@@ -115,6 +180,10 @@ export function activate(context: vscode.ExtensionContext): void {
         statusBar,
         backend,
         azure,
+        sidebar,
+        vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar, {
+            webviewOptions: { retainContextWhenHidden: false },
+        }),
         vscode.commands.registerCommand('sqlFileDetectionTool.open', () =>
             withErrors('could not open', () => openUi()),
         ),
@@ -213,6 +282,13 @@ export function deactivate(): void {
     try {
         azure?.dispose();
     } finally {
-        backend?.stop();
+        try {
+            sidebar?.dispose();
+        } finally {
+            sidebar = undefined;
+            openQueue = createSerialQueue();
+            uiOpenedFor = undefined;
+            backend?.stop();
+        }
     }
 }
