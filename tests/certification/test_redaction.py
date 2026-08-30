@@ -7,6 +7,7 @@ token would make the artifacts unpublishable, so each of those has a test.
 import pytest
 
 from certification.redaction import (
+    PUBLIC_HOSTS,
     Redactor,
     assert_no_secrets,
     secret_findings,
@@ -155,3 +156,144 @@ def test_a_two_character_literal_is_ignored():
 
 def test_case_does_not_smuggle_a_common_name_past_the_exclusion():
     assert _usable_literals(('Master', 'TEMPDB')) == set()
+
+
+# ---------------------------------------------------------------------------
+# Staging hosts in a shareable manifest
+# ---------------------------------------------------------------------------
+#
+# The plain manifest is meant to be attachable to a pull request, so the hosts
+# an operator staged fixtures on must not survive it. Pattern redaction was not
+# enough: it scrubs the endpoint shapes it was taught and lets everything else
+# through, and the shapes that leak are the ones nobody thinks to teach it.
+
+from certification.manifest import _placeholder_hosts  # noqa: E402
+
+
+LEAKY_SHAPES = [
+    # Pattern redaction anchors on the last five labels, so a private endpoint
+    # keeps the storage account name in front of the part that matched.
+    'contosotenant.privatelink.blob.core.windows.net',
+    # Not an Azure shape at all.
+    'fileserver.corp.contoso.example',
+    # The likely staging host for a VM target.
+    'sqlvm01.westeurope.cloudapp.example',
+    # Static website endpoint: a different label layout again.
+    'contoso.z13.web.core.windows.example',
+]
+
+
+def test_no_staging_host_survives_a_shareable_manifest():
+    placeholders = _placeholder_hosts(LEAKY_SHAPES)
+    for host in LEAKY_SHAPES:
+        assert host not in placeholders
+        # Not even the leading label, which is the account or machine name.
+        assert not any(host.split('.')[0] in p for p in placeholders)
+
+
+def test_placeholders_are_positional_and_stable():
+    assert _placeholder_hosts(['a.example', 'b.example', 'a.example']) == [
+        '[staging-host-0]',
+        '[staging-host-1]',
+        '[staging-host-0]',
+    ]
+
+
+def test_the_same_host_in_different_case_is_the_same_placeholder():
+    assert _placeholder_hosts(['A.Example', 'a.example']) == [
+        '[staging-host-0]',
+        '[staging-host-0]',
+    ]
+
+
+def test_public_fixture_hosts_are_kept():
+    # These belong to Microsoft, are documented, carry no tenant of ours, and
+    # keeping them is what makes the plan reproducible by a reader.
+    kept = _placeholder_hosts(list(PUBLIC_HOSTS))
+    assert kept == list(PUBLIC_HOSTS)
+
+
+def test_a_public_host_does_not_consume_a_placeholder_index():
+    hosts = [PUBLIC_HOSTS[0], 'tenant.example', PUBLIC_HOSTS[1], 'other.example']
+    assert _placeholder_hosts(hosts) == [
+        PUBLIC_HOSTS[0],
+        '[staging-host-0]',
+        PUBLIC_HOSTS[1],
+        '[staging-host-1]',
+    ]
+
+
+def test_the_count_of_distinct_hosts_is_still_readable():
+    # The one fact a reviewer legitimately needs from this field.
+    placeholders = _placeholder_hosts(['a.example', 'b.example', 'a.example'])
+    assert len({p for p in placeholders if p.startswith('[staging-host-')}) == 2
+
+
+# ---------------------------------------------------------------------------
+# The last-resort crash handler
+# ---------------------------------------------------------------------------
+#
+# Everything this harness writes to disk goes through the redactor, so the one
+# remaining way for an endpoint to reach a console or a CI log is an unhandled
+# exception. A driver's message routinely echoes the connection target back.
+
+import argparse  # noqa: E402
+
+from certification.__main__ import main as cert_main  # noqa: E402
+
+
+def _exploding_command(message):
+    def func(args):
+        raise RuntimeError(message)
+
+    namespace = argparse.Namespace(func=func)
+    return namespace
+
+
+def test_a_crash_scrubs_the_host_even_when_it_is_not_an_azure_shape(monkeypatch, capsys):
+    host = 'sqlvm01.westeurope.cloudapp.example'
+    namespace = _exploding_command(f'connection to {host} failed')
+    namespace.host = host
+    namespace.database = 'warehouse_prod'
+    namespace.user = 'certops'
+    monkeypatch.setattr(
+        'certification.__main__.build_parser',
+        lambda: type('P', (), {'parse_args': staticmethod(lambda argv: namespace)})(),
+    )
+
+    assert cert_main([]) == 2
+
+    err = capsys.readouterr().err
+    assert host not in err
+    assert 'warehouse_prod' not in err
+    assert 'certops' not in err
+    assert 'RuntimeError' in err
+
+
+def test_a_crash_without_connection_arguments_still_redacts_patterns(monkeypatch, capsys):
+    # `plan` has no --host/--database/--user, so the handler falls back to
+    # patterns alone. Those still cover the shapes it does know.
+    namespace = _exploding_command('failed at 10.1.2.3 for tenant.database.windows.net')
+    monkeypatch.setattr(
+        'certification.__main__.build_parser',
+        lambda: type('P', (), {'parse_args': staticmethod(lambda argv: namespace)})(),
+    )
+
+    assert cert_main([]) == 2
+
+    err = capsys.readouterr().err
+    assert '10.1.2.3' not in err
+    assert 'tenant.database.windows.net' not in err
+
+
+def test_a_crash_does_not_print_a_traceback(monkeypatch, capsys):
+    # A chained traceback re-prints the driver's own message, which is the thing
+    # being redacted.
+    namespace = _exploding_command('boom')
+    monkeypatch.setattr(
+        'certification.__main__.build_parser',
+        lambda: type('P', (), {'parse_args': staticmethod(lambda argv: namespace)})(),
+    )
+
+    assert cert_main([]) == 2
+    assert 'Traceback' not in capsys.readouterr().err

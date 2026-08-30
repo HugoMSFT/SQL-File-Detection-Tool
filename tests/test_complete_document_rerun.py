@@ -18,6 +18,9 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from external_file_detection.sql_generator import SQLGenerator  # noqa: E402
+from external_file_detection.sql_generator import (  # noqa: E402
+    _owns_load_target,
+)
 
 
 CREATE_LINE = re.compile(
@@ -321,3 +324,48 @@ class EveryPlatformStaysRerunnable(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class OwnershipWhitespaceMatchesTheNativeGenerator(unittest.TestCase):
+    """``str.strip()`` and JS ``trim()`` are not the same function.
+
+    Python strips U+001C-U+001F and U+0085, which JS keeps; JS strips U+FEFF,
+    which Python keeps. Ownership decides whether a ``TRUNCATE`` is emitted live,
+    so a disagreement here is a disagreement about whether the generated script
+    empties a table the user never asked it to empty. The native side uses
+    ``pythonStrip()`` to match this; these cases are mirrored one for one in
+    ``src/test/native/completeDocumentRerun.test.ts``.
+    """
+
+    PYTHON_ONLY_WHITESPACE = ('\x1c', '\x1d', '\x1e', '\x1f', '\x85')
+
+    def test_dbo_padded_with_python_only_whitespace_is_still_dbo(self):
+        for ws in self.PYTHON_ONLY_WHITESPACE:
+            with self.subTest(ws=hex(ord(ws))):
+                self.assertFalse(_owns_load_target('orders', f'dbo{ws}'))
+                self.assertFalse(_owns_load_target('orders', f'{ws}dbo{ws}'))
+
+    def test_a_table_name_of_only_whitespace_is_unnamed(self):
+        for ws in self.PYTHON_ONLY_WHITESPACE:
+            with self.subTest(ws=hex(ord(ws))):
+                self.assertFalse(_owns_load_target(ws, 'cert_run'))
+
+    def test_no_live_truncate_for_a_padded_dbo_schema(self):
+        for ws in self.PYTHON_ONLY_WHITESPACE:
+            with self.subTest(ws=hex(ord(ws))):
+                document = complete(
+                    csv_metadata(file_name='orders.csv', file_path='orders.csv'),
+                    table_name='orders',
+                    schema_name=f'dbo{ws}',
+                )
+                self.assertEqual(live_lines(document, r'TRUNCATE\s+TABLE'), [])
+
+    def test_a_byte_order_mark_is_not_whitespace(self):
+        # Kept by str.strip(), so '\ufeffdbo' is a different schema from 'dbo'
+        # and is owned. It escapes to [\ufeffdbo], which OBJECT_ID resolves to
+        # nothing, so this is safe as well as consistent.
+        self.assertTrue(_owns_load_target('orders', '\ufeffdbo'))
+
+    def test_whitespace_both_languages_agree_on(self):
+        self.assertFalse(_owns_load_target('orders', ' \t\r\n\f\vdbo '))
+        self.assertTrue(_owns_load_target(' orders ', ' cert_run '))

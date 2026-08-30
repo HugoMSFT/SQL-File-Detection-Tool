@@ -288,7 +288,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         # connection string back. Everything this harness writes to disk goes
         # through the redactor; the one remaining way for an endpoint to reach a
         # console or a CI log is a crash, so this is that gap closed.
-        redactor = Redactor()
+        #
+        # Seeded from the arguments rather than bare. A pattern-only redactor
+        # scrubs the endpoint shapes it knows and leaves everything else - an
+        # on-prem host name, a login, a database name - in the message. Those
+        # values are right here on `args`, so they are handed over as literals.
+        # A password never is: it is not an argument, by design.
+        redactor = Redactor(extra_literals=[
+            value for value in (
+                getattr(args, 'host', None),
+                getattr(args, 'database', None),
+                getattr(args, 'user', None),
+            ) if value
+        ])
         print(
             f'{type(exc).__name__}: {redactor.redact(str(exc))}',
             file=sys.stderr,

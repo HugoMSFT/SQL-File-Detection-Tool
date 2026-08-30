@@ -36,6 +36,7 @@ import {
     formatMegabytes,
     quoteJsonPath,
     quoteLiteral,
+    pythonStrip,
     splitGoBatches,
     sqlComment,
 } from './escaping';
@@ -2222,13 +2223,23 @@ function truncateBeforeLoad(targetTable: string, active: boolean): string[] {
  * Both halves matter. An explicit table name in `dbo` is still a name that
  * collides with whatever else lives in `dbo`, and the run-owned schema is what
  * actually separates this document's objects from everyone else's.
+ *
+ * The trimming is {@link pythonStrip}, not `trim()`. This predicate decides
+ * whether a `TRUNCATE` is emitted live or commented out, so the two generators
+ * have to reach the same answer for the same input, and the two whitespace sets
+ * are not the same one. Python strips `\x1c`-`\x1f` and `\x85`, which JS keeps;
+ * JS strips `\uFEFF`, which Python keeps. The first direction is the dangerous
+ * one: with `trim()`, `dbo\x1c` looks un-owned to Python and owned here, and
+ * `collapseControlCharacters` then renders it as `[dbo ]` - which a
+ * trailing-blank-insensitive collation resolves straight back to the `dbo` this
+ * whole guard exists to protect.
  */
 export function ownsLoadTarget(
     tableName: string | null | undefined,
     schemaName: string | null | undefined,
 ): boolean {
-    const named = Boolean((tableName ?? '').trim());
-    const schema = (schemaName ?? '').trim().toLowerCase();
+    const named = Boolean(pythonStrip(tableName ?? ''));
+    const schema = pythonStrip(schemaName ?? '').toLowerCase();
     return named && schema !== '' && schema !== DEFAULT_SCHEMA_NAME;
 }
 

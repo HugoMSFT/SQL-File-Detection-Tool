@@ -231,6 +231,14 @@ def normalize_value(value: Any, *, textual: bool = False) -> Any:
 #: Below this length a literal is more likely to be a fragment of ordinary SQL
 #: than an identifier worth hiding. ``sql``, ``dev`` and ``db`` are the ones
 #: this actually keeps out.
+#:
+#: The threshold is a trade, and it costs something: a three-character login
+#: such as ``dba``, ``svc`` or ``adm`` is no longer substituted. That is
+#: accepted deliberately. A literal that short matches inside so much ordinary
+#: text - and inside the harness's own identifiers - that substituting it
+#: damages the evidence more than it protects the operator, and a login name is
+#: not a credential on its own. A password never depends on this: it is never
+#: an ``extra_literals`` value in the first place.
 _LITERAL_MIN_LENGTH = 4
 
 #: Names that identify nothing. The four system databases are called the same

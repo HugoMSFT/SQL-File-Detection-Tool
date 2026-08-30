@@ -18,21 +18,41 @@ production server that holds real TPC-H data — is how you drop someone's
 | FAIL | 0 | 0 |
 | NOT_EXECUTABLE | 14 | 12 |
 | BLOCKED (negative control) | 1 | 1 |
-| Accepted verdicts | 24 | 23 |
+| Accepted verdicts | 24 | 21 |
 | Confirmed defects | 0 | 0 |
+| Cleanup statements succeeded | all | 34 / 34 |
+| Residue after independent recount | 0 | 0 |
 
-Cleanup was verified independently after each run. On SQL Server 2025 residue
-was zero. On Azure SQL Database it was not: the v7 run left the two
-database-scoped credentials it had created, and they were removed by hand
-afterwards. The cause was in this harness, not in the product — the gate's
-`DROP DATABASE` rule was written as `\bDROP\s+DATABASE\b`, which also matches
-`DROP DATABASE SCOPED CREDENTIAL`, so the cleanup planner's own statement was
-refused as if it were an attempt to drop a database. The rule now carries a
-`(?!\s+SCOPED\s+CREDENTIAL\b)` lookahead, `tests/certification/test_safety.py`
-puts every kind in `CLEANUP_ORDER` through the gate, and the evidence now records
-the outcome of each cleanup statement, so a refusal is visible in the artifact
-instead of showing up as a count that disagrees with itself. **The zero-residue
-claim for Azure SQL Database is pending a fresh run with the fix in place.**
+The two accepted-verdict counts were computed under different rules and are not
+comparable to each other. The Azure figure is the later, stricter one: a cell
+whose static assertions fail no longer counts as accepted, and a cell that
+generated no SQL at all is recorded as not evaluated instead of passing
+vacuously. Three cells that the earlier rule accepted are excluded by the later
+one. The SQL Server number predates that change. Neither engine produced a
+confirmed defect under either rule, which is the number that matters.
+
+Cleanup was verified independently after each run, and on both engines the final
+residue is zero. Getting there on Azure SQL Database took three attempts, and the
+reason is worth keeping. The v7 run left behind the two database-scoped
+credentials it had created. The cause was in this harness, not in the product:
+the gate's `DROP DATABASE` rule was written as `\bDROP\s+DATABASE\b`, which also
+matches `DROP DATABASE SCOPED CREDENTIAL`, so the cleanup planner's own statement
+was refused as if it were an attempt to drop a database. Those two credentials
+were removed by hand. The rule now carries a `(?!\s+SCOPED\s+CREDENTIAL\b)`
+lookahead and `tests/certification/test_safety.py` puts every kind in
+`CLEANUP_ORDER` through the gate.
+
+That fix would have been hard to confirm, because `cleanup_verified` and the
+residue count are both derived from an inventory query and say nothing about
+which statement actually ran — a `DROP` the gate refused looked exactly like one
+that succeeded. So every cleanup statement is now recorded with its outcome. The
+v8 run came back clean, and immediately showed a second, smaller problem that had
+been invisible until then: 34 of 36 statements succeeded, the two failures being
+`DROP TABLE` for external tables that `DROP EXTERNAL TABLE` had already removed.
+`sys.tables` lists external tables, so the same object was inventoried under two
+kinds. The table inventory now excludes `is_external = 1` and the cleanup planner
+deduplicates by scope, and v9 reports **34 of 34 statements successful with an
+empty residue list**, confirmed against an independent baseline count.
 
 The `NOT_EXECUTABLE` cells are the byte-fidelity ones — the all-types, Unicode,
 Delta, ORC, Excel and Iceberg fixtures. Proving those needs those exact bytes

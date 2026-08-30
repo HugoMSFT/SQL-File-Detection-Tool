@@ -4026,6 +4026,12 @@ def _owns_load_target(table_name: Optional[str], schema_name: Optional[str]) -> 
     Both halves matter. An explicit table name in ``dbo`` is still a name that
     collides with whatever else lives in ``dbo``, and the run-owned schema is
     what actually separates this document's objects from everyone else's.
+
+    ``str.strip()`` here is matched by ``pythonStrip()`` - not ``trim()`` - in
+    the native generator. This predicate decides whether a ``TRUNCATE`` is live
+    or commented out, so both implementations have to agree on every input, and
+    the two languages do not strip the same characters. See the note on
+    ``ownsLoadTarget`` in ``src/native/sql/generator.ts``.
     """
     named = bool((table_name or '').strip())
     schema = (schema_name or '').strip().lower()

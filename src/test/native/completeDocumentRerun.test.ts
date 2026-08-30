@@ -140,3 +140,52 @@ describe('an apostrophe in a column name cannot break the batches', () => {
         assert.deepStrictEqual(indented, []);
     });
 });
+
+describe('ownership uses the same whitespace set as Python', () => {
+    // `trim()` and `str.strip()` are not the same function. Python strips
+    // U+001C-U+001F and U+0085, which JS keeps; JS strips U+FEFF, which Python
+    // keeps. Ownership decides whether a TRUNCATE is live, so a disagreement
+    // here is a disagreement about whether the generated script empties a table
+    // the user did not ask it to empty.
+    //
+    // The dangerous direction is the first one. With `trim()`, a schema of
+    // `dbo\u001c` is un-owned to Python and owned here, and the control
+    // character is collapsed to a space on the way out - leaving
+    // `TRUNCATE TABLE [dbo ].[orders]`, which a trailing-blank-insensitive
+    // collation resolves right back to the `dbo.orders` this guard protects.
+    const pythonStripsButJsDoesNot = ['\u001c', '\u001d', '\u001e', '\u001f', '\u0085'];
+
+    for (const ws of pythonStripsButJsDoesNot) {
+        const label = `U+${ws.codePointAt(0)!.toString(16).padStart(4, '0').toUpperCase()}`;
+
+        it(`treats dbo followed by ${label} as the default schema`, () => {
+            assert.strictEqual(ownsLoadTarget('orders', `dbo${ws}`), false);
+            assert.strictEqual(ownsLoadTarget('orders', `${ws}dbo${ws}`), false);
+        });
+
+        it(`treats a table name of only ${label} as unnamed`, () => {
+            assert.strictEqual(ownsLoadTarget(ws, 'cert_run'), false);
+        });
+
+        it(`emits no live TRUNCATE for a dbo schema padded with ${label}`, () => {
+            const document = generateCompleteDdl(ordersCsv(), {
+                rerunTruncate: true,
+                schemaName: `dbo${ws}`,
+                tableName: 'orders',
+            });
+            assert.deepStrictEqual(liveLines(document, 'TRUNCATE TABLE'), []);
+        });
+    }
+
+    it('keeps U+FEFF, exactly as Python does', () => {
+        // Not stripped by `str.strip()`, so `\ufeffdbo` is a different schema
+        // from `dbo` and is owned. It escapes to `[\ufeffdbo]`, which OBJECT_ID
+        // resolves to nothing, so this is safe as well as consistent.
+        assert.strictEqual(ownsLoadTarget('orders', '\ufeffdbo'), true);
+    });
+
+    it('is unmoved by whitespace both languages agree on', () => {
+        assert.strictEqual(ownsLoadTarget('orders', ' \t\r\n\f\vdbo '), false);
+        assert.strictEqual(ownsLoadTarget(' orders ', ' cert_run '), true);
+    });
+});

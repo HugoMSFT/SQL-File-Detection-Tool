@@ -408,12 +408,19 @@ Final run, both engines, no failures:
 | FAIL | 0 | 0 |
 | NOT_EXECUTABLE | 14 | 12 |
 | BLOCKED (negative control) | 1 | 1 |
-| Accepted verdicts | 24 | 23 |
+| Accepted verdicts | 24 | 21 |
 | Confirmed defects | 0 | 0 |
+
+The two accepted-verdict counts come from different rules and should not be
+compared. The Azure figure is the later, stricter one, which stopped counting a
+cell as accepted when its static assertions fail or when it generated no SQL at
+all. Confirmed defects are zero under either rule.
 
 Cleanup was verified independently after both runs: zero residual certification
 schemas, objects, credentials, data sources, file formats, databases or agent
-jobs, and the pre-existing external object counts were unchanged.
+jobs on either engine, and the pre-existing external object counts were
+unchanged. Every individual cleanup statement is recorded with its outcome, and
+in the final runs every one of them succeeded.
 
 `NOT_EXECUTABLE` is honest coverage rather than a failure. Those cells need
 specific bytes staged where the engine itself can read them, and staging them

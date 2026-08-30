@@ -125,6 +125,16 @@ test suites now read the same machine-readable evidence file.
   refused looked identical to one that succeeded. Every cleanup statement is now
   recorded with its outcome, redacted, in the JSON and named in the Markdown when
   it did not run.
+- **Each object is dropped exactly once.** Recording those outcomes immediately
+  exposed a second cleanup bug that the residue count had been hiding: a run that
+  removed everything it created reported 34 of 36 statements successful. An
+  external table is a row in `sys.external_tables` and, because it is still a
+  table, a row in `sys.tables`, so the inventory reported the same object under
+  two kinds and the planner emitted a `DROP` for each - the second failing on
+  something the first had already removed. The table inventory now excludes
+  `is_external = 1`, and the planner deduplicates by namespace so the earlier and
+  more specific kind in `CLEANUP_ORDER` wins, which is also the only correct
+  choice because `DROP TABLE` does not remove an external table.
 - **An assertion that was never evaluated no longer counts as a pass.** Every
   `sql_excludes` check is trivially true against an empty string, so a cell whose
   generator produced nothing came back with a full set of green assertions and
@@ -241,16 +251,16 @@ test suites now read the same machine-readable evidence file.
 - Final certification runs closed with **no failures on either engine**: SQL
   Server 2025 at 16 PASS / 0 FAIL / 14 NOT_EXECUTABLE / 1 negative control, and
   Azure SQL Database at 17 PASS / 0 FAIL / 12 NOT_EXECUTABLE / 1 negative
-  control. Zero confirmed defects. Cleanup was independently verified with zero
-  residue on SQL Server 2025; on Azure SQL Database that run left two
-  database-scoped credentials behind, which were removed by hand. The cause was
-  a harness bug, not a product one — see "The cleanup gate no longer refuses its
-  own cleanup" above — and the zero-residue claim for Azure SQL Database is
-  pending a fresh run with the fix in place. The `NOT_EXECUTABLE` cells are the
-  byte-fidelity fixtures, which need those exact bytes readable by the engine
-  itself; the run had no authorised writable storage and would not change the
-  server's configuration to reach a local path, so they record what could not be
-  proven instead of claiming coverage from a differently-shaped file.
+  control. Zero confirmed defects. Cleanup was independently verified on both
+  engines and **residue is zero on both**; on Azure SQL Database every one of the
+  34 cleanup statements is recorded as successful. Reaching that took three
+  attempts, both of which were harness bugs rather than product ones — see "The
+  cleanup gate no longer refuses its own cleanup" and "Each object is dropped
+  exactly once" above. The `NOT_EXECUTABLE` cells are the byte-fidelity fixtures,
+  which need those exact bytes readable by the engine itself; the run had no
+  authorised writable storage and would not change the server's configuration to
+  reach a local path, so they record what could not be proven instead of claiming
+  coverage from a differently-shaped file.
 - **Excel and Iceberg are pinned by static assertion, not by live execution.**
   Both are settled by the tests that read the generated text — no
   `DELIMITEDTEXT` format, explicit guidance instead — because neither has a

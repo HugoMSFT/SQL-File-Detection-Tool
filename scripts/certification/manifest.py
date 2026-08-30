@@ -36,7 +36,7 @@ from .matrix import (
     entries_for,
     platform_for,
 )
-from .redaction import Redactor
+from .redaction import PUBLIC_HOSTS, Redactor
 from .public_fixtures import resolve_shape, shape_mismatch
 from .runid import RunIdentity
 from .safety import SafetyPolicy, evaluate_batch
@@ -335,6 +335,33 @@ def explicit_cleanup_statements(
 # Manifest
 # ---------------------------------------------------------------------------
 
+def _placeholder_hosts(hosts: Sequence[str]) -> List[str]:
+    """Reduce staging hosts to something safe to attach to a pull request.
+
+    A maintained public fixture host is kept: it is Microsoft's, it is
+    documented, it carries no tenant of ours, and keeping it is what makes the
+    plan reproducible by a reader. Everything else becomes ``[staging-host-N]``.
+
+    Positional rather than pattern-based on purpose. A pattern only redacts the
+    shapes it was taught, and the shapes that leak are precisely the ones nobody
+    thinks to teach it - an on-prem file server, a `*.cloudapp.azure.com` VM
+    name, a private-endpoint name that keeps the storage account in front of the
+    part the pattern matched. The index preserves the one fact a reviewer needs,
+    which is how many distinct hosts a run touched.
+    """
+    placeholders: List[str] = []
+    numbering: Dict[str, str] = {}
+    for host in hosts:
+        if host.lower() in PUBLIC_HOSTS:
+            placeholders.append(host)
+            continue
+        key = host.lower()
+        if key not in numbering:
+            numbering[key] = f'[staging-host-{len(numbering)}]'
+        placeholders.append(numbering[key])
+    return placeholders
+
+
 def build_manifest(
     *,
     target: str,
@@ -387,18 +414,25 @@ def build_manifest(
         'identity': identity.as_dict(),
         # The staging hosts are whatever the operator staged fixtures on, which
         # may well be a tenant storage account, and a plain manifest is meant to
-        # be attachable to a pull request. So they are redacted like every other
-        # environment-bearing field - the maintained public fixture hosts pass
-        # through untouched, which is what keeps the plan readable.
+        # be attachable to a pull request.
         #
-        # They stay in cleartext only in an --emit-sql manifest. That manifest
+        # Pattern redaction is not enough for this field. `Redactor` recognises
+        # the shapes it knows - `*.blob.core.windows.net`, `*.database.windows
+        # .net`, an IPv4 literal - and anything else survives verbatim. An
+        # on-prem file server, an `*.cloudapp.azure.com` VM name or a private
+        # endpoint (where the pattern anchors on the last five labels and leaves
+        # the account name in front of it) would all be written out in full, and
+        # a staging host for the VM target is normally exactly one of those
+        # shapes. So this is an allowlist instead: a maintained public fixture
+        # host passes through, because it belongs to Microsoft and keeps the
+        # plan readable, and everything else becomes a positional placeholder
+        # that reveals only how many distinct hosts were involved.
+        #
+        # Hosts stay in cleartext only in an --emit-sql manifest. That manifest
         # already carries the raw SQL and is documented as machine-local, and
         # `execute` rebuilds the host allowlist from this field: a redacted
         # allowlist against raw SQL would refuse every remote statement.
-        'hosts': (
-            list(staging.hosts) if emit_sql
-            else [redactor.redact(host) for host in staging.hosts]
-        ),
+        'hosts': list(staging.hosts) if emit_sql else _placeholder_hosts(staging.hosts),
         'allow_create_database': target == 'vm',
         'contains_raw_sql': emit_sql,
         'cells': cells,
