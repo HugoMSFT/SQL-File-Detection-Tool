@@ -714,7 +714,12 @@ CATALOG_PRESENCE_QUERIES: Dict[str, str] = {
     'table': (
         'SELECT COUNT(*) FROM sys.tables AS t '
         'JOIN sys.schemas AS s ON s.schema_id = t.schema_id '
-        "WHERE s.name = '{schema}' AND t.name = '{name}'"
+        # sys.tables lists external tables too. Without this an external table
+        # answers a presence check for a regular one, which is how the cleanup
+        # planner ended up issuing a DROP TABLE for an object it had already
+        # dropped with DROP EXTERNAL TABLE.
+        'WHERE t.is_external = 0 '
+        "AND s.name = '{schema}' AND t.name = '{name}'"
     ),
     'external table': (
         'SELECT COUNT(*) FROM sys.external_tables AS t '
@@ -764,7 +769,14 @@ INVENTORY_QUERIES: Dict[str, str] = {
     ),
     'table': (
         'SELECT t.name FROM sys.tables AS t '
-        "JOIN sys.schemas AS s ON s.schema_id = t.schema_id WHERE s.name = '{schema}'"
+        'JOIN sys.schemas AS s ON s.schema_id = t.schema_id '
+        # An external table is a row in sys.tables as well as in
+        # sys.external_tables. Inventorying it as both kinds made the cleanup
+        # planner emit DROP EXTERNAL TABLE and then DROP TABLE for the same
+        # object, and the second one failed with 3701 on an object the first had
+        # already removed - a run that cleaned up perfectly reporting 34 of 36
+        # statements successful.
+        "WHERE t.is_external = 0 AND s.name = '{schema}'"
     ),
     'view': (
         'SELECT v.name FROM sys.views AS v '

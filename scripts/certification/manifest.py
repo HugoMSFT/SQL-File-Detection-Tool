@@ -291,12 +291,29 @@ def explicit_cleanup_statements(
     so an inventory that accidentally includes a pre-existing object cannot
     turn into a destructive script. These names come off a live server rather
     than out of the plan, so they are bracket-escaped as well as filtered.
+
+    A name is dropped once. Catalog views overlap - an external table is a row
+    in ``sys.external_tables`` *and* in ``sys.tables`` - so the same object
+    arrived under two kinds and got two DROPs, the second failing with 3701 on
+    something the first had already removed. The inventory queries now exclude
+    external tables from the table kind, and this is the second line of defence:
+    whatever shape the raw catalog answers come back in, the earlier kind in
+    :data:`CLEANUP_ORDER` wins, which is also the more specific one.
     """
     statements: List[str] = []
+    seen: set = set()
     for kind in CLEANUP_ORDER:
         for raw in inventory.get(kind, []):
             if not identity.owns(raw):
                 continue
+            # Schema-scoped and server-scoped kinds share no namespace, so the
+            # key is the kind's scope rather than the bare name: an external
+            # file format and a table may legitimately be called the same thing.
+            scope = 'schema' if kind in ('table', 'view', 'external table') else kind
+            key = (scope, raw.lower())
+            if key in seen:
+                continue
+            seen.add(key)
             name = _escape_ident(raw)
             schema = _escape_ident(identity.schema)
             if kind == 'schema':

@@ -337,3 +337,73 @@ def test_a_cleanup_statement_for_someone_elses_object_is_refused(identity, polic
     assert not evaluate_batch(
         'DROP EXTERNAL DATA SOURCE [prod_lake];', policy
     ).allowed
+
+
+# ---------------------------------------------------------------------------
+# One object, one DROP
+# ---------------------------------------------------------------------------
+#
+# Catalog views overlap. An external table is a row in `sys.external_tables`
+# and, because it is still a table, a row in `sys.tables`. The inventory read
+# both, the planner saw the same name under two kinds, and cleanup issued
+# `DROP EXTERNAL TABLE` followed by `DROP TABLE` for an object that no longer
+# existed - error 3701. Nothing was left behind, but a run that cleaned up
+# perfectly reported 34 of 36 statements successful, and a cleanup report nobody
+# can read as "all good" is a cleanup report nobody reads.
+
+from certification.adapters import INVENTORY_QUERIES  # noqa: E402
+
+
+def test_an_external_table_is_dropped_once(identity):
+    name = identity.name('c17', 'ext')
+    inventory = {'external table': [name], 'table': [name]}
+
+    statements = explicit_cleanup_statements(identity, inventory)
+
+    assert statements == [f'DROP EXTERNAL TABLE [{identity.schema}].[{name}];']
+
+
+def test_the_more_specific_kind_wins(identity):
+    # CLEANUP_ORDER puts external tables first, which is both the dependency
+    # order and the right answer here: DROP TABLE does not remove an external
+    # table.
+    name = identity.name('c28', 'ext')
+    statements = explicit_cleanup_statements(
+        identity, {'table': [name], 'external table': [name]}
+    )
+    assert 'DROP EXTERNAL TABLE' in statements[0]
+    assert len(statements) == 1
+
+
+def test_two_different_objects_still_get_two_drops(identity):
+    external = identity.name('c17', 'ext')
+    regular = identity.name('c17', 'stage')
+    statements = explicit_cleanup_statements(
+        identity, {'external table': [external], 'table': [regular]}
+    )
+    assert len(statements) == 2
+
+
+def test_a_name_reused_across_scopes_is_not_deduplicated(identity):
+    # A file format and a table are in different namespaces, so the same name
+    # under both kinds is two real objects.
+    name = identity.name('c20', 'shared')
+    statements = explicit_cleanup_statements(
+        identity, {'external file format': [name], 'table': [name]}
+    )
+    assert len(statements) == 2
+
+
+def test_the_table_inventory_excludes_external_tables():
+    # The deduplication above is a second line of defence. This is the first:
+    # the inventory should not report an external table as a table at all.
+    assert 'is_external = 0' in INVENTORY_QUERIES['table']
+    assert 'is_external' not in INVENTORY_QUERIES['external table']
+
+
+def test_case_folding_does_not_smuggle_a_second_drop(identity):
+    name = identity.name('c17', 'ext')
+    statements = explicit_cleanup_statements(
+        identity, {'external table': [name], 'table': [name.upper()]}
+    )
+    assert len(statements) == 1
