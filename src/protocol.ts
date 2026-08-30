@@ -117,6 +117,8 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
+    | (Base & { readonly type: 'setCredentialName'; readonly value: string })
+    | (Base & { readonly type: 'setAuthMethod'; readonly value: string })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
     | (Base & {
           readonly type: 'setColumnOverride';
@@ -227,6 +229,8 @@ export interface AppStateSnapshot {
     readonly tableName: string;
     readonly schemaName: string;
     readonly dataSource: string;
+    readonly credentialName: string;
+    readonly authMethod: string;
     readonly storageUrl: string;
     readonly columnOverrides: Readonly<Record<string, string>>;
     readonly previewRows: number;
@@ -385,6 +389,16 @@ const BUILDERS: Record<string, Builder> = {
     setDataSource: (source) => {
         const value = text(source, 'value', 256);
         return value === undefined ? undefined : { type: 'setDataSource', value };
+    },
+    setCredentialName: (source) => {
+        const value = text(source, 'value', 256);
+        return value === undefined
+            ? undefined
+            : { type: 'setCredentialName', value };
+    },
+    setAuthMethod: (source) => {
+        const value = text(source, 'value', 64);
+        return value === undefined ? undefined : { type: 'setAuthMethod', value };
     },
     setStorageUrl: (source) => {
         const value = text(source, 'value', MAX_URL_LENGTH);

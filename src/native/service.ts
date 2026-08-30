@@ -65,6 +65,8 @@ export interface GenerationRequest {
     readonly tableName?: string | null;
     readonly schemaName?: string;
     readonly dataSource?: string | null;
+    readonly credentialName?: string | null;
+    readonly authMethod?: string | null;
     readonly location?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
@@ -81,6 +83,8 @@ export interface MultiFileRequest {
     readonly entries: readonly ExportEntry[];
     readonly schemaName?: string;
     readonly dataSource?: string | null;
+    readonly credentialName?: string | null;
+    readonly authMethod?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
 }
@@ -184,6 +188,8 @@ export class NativeAnalysisService {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
+            credentialName: request.credentialName ?? null,
+            authMethod: request.authMethod ?? null,
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
@@ -196,6 +202,8 @@ export class NativeAnalysisService {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
+            credentialName: request.credentialName ?? null,
+            authMethod: request.authMethod ?? null,
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
@@ -214,6 +222,8 @@ export class NativeAnalysisService {
                 tableName: entry.tableName ?? null,
                 schemaName: request.schemaName ?? 'dbo',
                 dataSource: request.dataSource ?? 'MyDataSource',
+                credentialName: request.credentialName ?? null,
+                authMethod: request.authMethod ?? null,
                 targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
                 storageUrl: request.storageUrl ?? null,
             });

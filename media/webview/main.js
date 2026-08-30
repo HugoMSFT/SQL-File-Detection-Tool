@@ -425,6 +425,11 @@
             { key: 'tableName', label: 'Table name', value: state.tableName },
             { key: 'schemaName', label: 'Schema', value: state.schemaName },
             { key: 'dataSource', label: 'External data source', value: state.dataSource },
+            {
+                key: 'credentialName',
+                label: 'Credential name',
+                value: state.credentialName,
+            },
             { key: 'storageUrl', label: 'Storage URL', value: state.storageUrl },
         ].forEach(function (field) {
             const label = element('label', 'field');
@@ -438,6 +443,29 @@
             label.appendChild(input);
             row.appendChild(label);
         });
+
+        const authLabel = element('label', 'field');
+        authLabel.appendChild(element('span', null, 'Storage authentication'));
+        const authSelect = document.createElement('select');
+        authSelect.dataset.edit = 'authMethod';
+        [
+            ['', 'Recommended for platform'],
+            ['managed_identity', 'Managed identity (no secret)'],
+            ['sas', 'Shared access signature'],
+            ['storage_key', 'Storage account key'],
+            ['public', 'Public / anonymous'],
+        ].forEach(function (option) {
+            const node = document.createElement('option');
+            node.value = option[0];
+            node.textContent = option[1];
+            if ((state.authMethod || '') === option[0]) {
+                node.selected = true;
+            }
+            authSelect.appendChild(node);
+        });
+        authLabel.appendChild(authSelect);
+        row.appendChild(authLabel);
+
         container.appendChild(row);
     }
 
@@ -697,6 +725,10 @@
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;
+        if (edit === 'authMethod') {
+            post({ type: 'setAuthMethod', value: target.value });
+            return;
+        }
         if (edit === 'subscription' && target.value) {
             post({ type: 'azureListAccounts', subscriptionId: target.value });
         } else if (edit === 'account' && target.value) {
@@ -748,6 +780,7 @@
             tableName: 'setTableName',
             schemaName: 'setSchemaName',
             dataSource: 'setDataSource',
+            credentialName: 'setCredentialName',
             storageUrl: 'setStorageUrl',
         }[edit];
         if (!messageType) {

@@ -4,7 +4,7 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
-## [2.0.1]
+## [2.1.0]
 
 Generated SQL was certified against live engines - an Azure SQL Database
 (12.0.2000.8) and a SQL Server 2025 instance (17.0.4065.4) - and this release
@@ -14,11 +14,14 @@ test suites now read the same machine-readable evidence file.
 
 ### Fixed
 
-- **A file named `orders.csv` no longer targets `dbo.orders`.** Every generated
-  object name is caller-controlled: `--schema`, `--table` and
-  `--credential-name` on the CLI, with the same options in the extension. A
-  derived name landing in `dbo` on a warehouse that already has that table is
-  not a hypothetical problem, and the default was doing it.
+- **A file named `orders.csv` can be kept away from `dbo.orders`.** Every
+  generated object name is caller-controlled: `--schema`, `--table`,
+  `--credential-name` and `--auth-method` on the CLI, and the same fields in the
+  extension, which previously offered no way to set the credential name or the
+  authentication method at all. The default is deliberately unchanged - a
+  derived name still lands in `dbo`, because changing it silently would break
+  existing scripts - so on a warehouse that already has that table, set
+  `--schema`.
 - **The local CSV `OPENROWSET` can actually be run.** It used to emit a
   `FORMATFILE = '<format_file>'` placeholder, which meant the statement could
   never execute as written. It now emits `FORMAT = 'CSV'` with an inline `WITH`
@@ -44,6 +47,12 @@ test suites now read the same machine-readable evidence file.
 
 ### Added
 
+- **The extension can set the credential name and the storage authentication
+  method.** Both were generator options that no part of the UI could reach, so
+  a webview user was stuck with the default credential name and could not pick
+  SAS when a managed identity was unavailable. A multi-file export now also
+  applies the table-name override to the file it was typed for instead of
+  dropping it.
 - **Managed identity is the default way the generated SQL reaches private
   storage.** `CREATE DATABASE SCOPED CREDENTIAL ... WITH IDENTITY = 'MANAGED
   IDENTITY'` stores no secret, so no database master key is created and there is

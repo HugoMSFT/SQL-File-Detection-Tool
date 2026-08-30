@@ -792,6 +792,74 @@ test('an explicit cancel clears progress without leaving an error', async () => 
 
 // -- Azure --------------------------------------------------------------------
 
+test('credential name, auth method and table name reach the generator', async () => {
+    const record = recorder();
+    const seen: Record<string, unknown>[] = [];
+    const multi: Record<string, unknown>[] = [];
+    const timers: (() => void)[] = [];
+    const ui = controller(record, {
+        setTimeoutImpl: (fn: () => void) => {
+            timers.push(fn);
+            return timers.length;
+        },
+        clearTimeoutImpl: () => undefined,
+        service: {
+            listFormats: () => [],
+            normalizePlatform: () => 'azure_sql_db',
+            resolveTableName: () => 'T',
+            analyze: async ({ filePath }: { filePath: string }) => ({
+                file_path: filePath,
+                file_name: 'sample.csv',
+                file_type: 'csv',
+                size_bytes: 1,
+                columns: [],
+            }),
+            analyzeDirectory: async () => ({ root: FIXTURES, files: [] }),
+            preview: async () => ({ columns: [], rows: [], total_rows: 0, truncated: false }),
+            generateStatements: (request: Record<string, unknown>) => {
+                seen.push(request);
+                return { create_table: 'x' };
+            },
+            generateCompleteDocument: (request: Record<string, unknown>) => {
+                multi.push(request);
+                return 'x';
+            },
+            generateMultiFileScript: (request: Record<string, unknown>) => {
+                multi.push(request);
+                return 'x';
+            },
+        },
+    });
+    try {
+        record.activeFile = path.join(FIXTURES, 'sample.csv');
+        await ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+        await ui.handle({ type: 'setCredentialName', value: 'cert_cred' });
+        await ui.handle({ type: 'setAuthMethod', value: 'managed_identity' });
+        await ui.handle({ type: 'setTableName', value: 'staged_orders' });
+        await settle();
+        // The regeneration is debounced, so run whatever the debounce queued.
+        timers.splice(0).forEach((fn) => fn());
+        await settle();
+
+        const last = seen[seen.length - 1];
+        assert.ok(last, 'the generator was called');
+        assert.equal(last.credentialName, 'cert_cred');
+        assert.equal(last.authMethod, 'managed_identity');
+        assert.equal(last.tableName, 'staged_orders');
+
+        await ui.handle({ type: 'exportAllSql' });
+        await settle();
+        const bulk = multi[multi.length - 1];
+        assert.ok(bulk, 'the export path reached the generator');
+        assert.equal(bulk.credentialName, 'cert_cred');
+        assert.equal(bulk.authMethod, 'managed_identity');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 function fakeBrowser(overrides: Partial<BlobBrowser> = {}): BlobBrowser {
     return {
         account: 'myaccount',

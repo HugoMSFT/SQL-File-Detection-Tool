@@ -202,6 +202,14 @@ export class UiController {
                 this.store.update({ dataSource: request.value });
                 this.regenerate();
                 return;
+            case 'setCredentialName':
+                this.store.update({ credentialName: request.value });
+                this.regenerate();
+                return;
+            case 'setAuthMethod':
+                this.store.update({ authMethod: request.value });
+                this.regenerate();
+                return;
             case 'setStorageUrl':
                 this.store.update({ storageUrl: request.value });
                 this.regenerate();
@@ -557,6 +565,8 @@ export class UiController {
             tableName: state.tableName || null,
             schemaName: state.schemaName || 'dbo',
             dataSource: state.dataSource || 'MyDataSource',
+            credentialName: state.credentialName || null,
+            authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
         });
@@ -576,6 +586,8 @@ export class UiController {
             tableName: state.tableName || null,
             schemaName: state.schemaName || 'dbo',
             dataSource: state.dataSource || 'MyDataSource',
+            credentialName: state.credentialName || null,
+            authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
         });
@@ -625,7 +637,7 @@ export class UiController {
 
         const { token, generation } = this.begin();
         const state = this.store.state;
-        const entries: Array<{ metadata: FileMetadata }> = [];
+        const entries: Array<{ metadata: FileMetadata; tableName?: string | null }> = [];
         const budget = Math.min(files.length, MAX_EXPORT_FILES);
         this.store.update({ busy: true, progress: 'Preparing export…', error: null });
         try {
@@ -653,12 +665,20 @@ export class UiController {
                                 ? { ...state.columnOverrides }
                                 : undefined,
                     },
+                    // A table name is a per-file override, so it only applies
+                    // to the file it was typed for.
+                    tableName:
+                        registered.id === state.selectedFileId
+                            ? state.tableName || null
+                            : null,
                 });
             }
             const script = this.service.generateMultiFileScript({
                 entries,
                 schemaName: state.schemaName || 'dbo',
                 dataSource: state.dataSource || 'MyDataSource',
+                credentialName: state.credentialName || null,
+                authMethod: state.authMethod || null,
                 targetPlatform: state.platform as TargetPlatform,
                 storageUrl: state.storageUrl || null,
             });

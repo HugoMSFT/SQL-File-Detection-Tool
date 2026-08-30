@@ -89,6 +89,8 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         tableName: '',
         schemaName: 'dbo',
         dataSource: 'MyDataSource',
+        credentialName: '',
+        authMethod: '',
         storageUrl: '',
         columnOverrides: {},
         previewRows: DEFAULT_PREVIEW_ROWS,

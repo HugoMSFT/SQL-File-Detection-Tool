@@ -316,9 +316,9 @@ Behaviour worth knowing when you consume `generate_complete_ddl` or the
   a call will actually use: blank derives it from the file name, a supplied
   value is cleaned but preserved. `/api/sql_ddl` returns both
   `resolved_table_name` and `derived_table_name` alongside the statements.
-- **`FIRST_ROW` in `CREATE EXTERNAL FILE FORMAT`** is emitted only for SQL
-  Server 2022/2025 and Fabric SQL Database. For SQL Server 2019 and Azure SQL
-  Database/Managed Instance a comment explains that it is not a valid
+- **`FIRST_ROW` in `CREATE EXTERNAL FILE FORMAT`** is emitted for SQL Server
+  2022/2025, Azure SQL Database and Fabric SQL Database. For SQL Server 2019 and
+  Azure SQL Managed Instance a comment explains that it is not a valid
   `FORMAT_OPTIONS` entry there. `FIRSTROW` (no underscore) in `OPENROWSET` and
   `BULK INSERT` is unaffected.
 - **`USE_TYPE_DEFAULT` is `FALSE` and always stated.** The default the engine
@@ -341,14 +341,20 @@ extension. This matters more than it sounds: without an explicit schema, a file
 called `orders.csv` produces a table called `dbo.orders`, and on a warehouse
 that is very likely an existing table.
 
-| CLI option | Effect |
-| --- | --- |
-| `--schema` | Schema every generated object is created in. Set it to keep output out of `dbo`. |
-| `--table` | Explicit table name instead of one derived from the file name. |
-| `--credential-name` | Name for the generated database scoped credential. |
-| `--auth-method` | `managed_identity` (default where supported), `sas`, or `public`. |
+| CLI option | Extension field | Effect |
+| --- | --- | --- |
+| `--schema` | **Schema** | Schema every generated object is created in. Set it to keep output out of `dbo`. |
+| `--table` | **Table name** | Explicit table name instead of one derived from the file name. |
+| `--credential-name` | **Credential name** | Name for the generated database scoped credential. |
+| `--auth-method` | **Storage authentication** | `managed_identity` (default where supported), `sas`, `storage_key`, or `public`. |
 
-`managed_identity` is the default because it stores no secret. A credential
+The default is unchanged: with no `--schema`/`--table`, `orders.csv` still
+produces `dbo.orders`. The overrides exist so you can avoid that, and both the
+CLI and the extension propagate them through every generated statement,
+including a multi-file export.
+
+`managed_identity` is the default on Azure SQL Database, Azure SQL Managed
+Instance and SQL Server 2022/2025 because it stores no secret. A credential
 created with `IDENTITY = 'MANAGED IDENTITY'` needs no database master key, so
 there is no master key password to invent, store or rotate, and the generated
 script does not create one. Choose `sas` only when a managed identity is not
@@ -357,12 +363,13 @@ available; the master key section returns when you do. Grant the identity
 
 ### Certified against live engines
 
-The behaviour described above is not inferred from documentation. It was run
-against a live Azure SQL Database (12.0.2000.8) and a live SQL Server 2025
-instance (17.0.4065.4), and the findings are recorded as machine-readable rules
-in `tests/certification/expected-matrix.json`. Both test suites read that file,
-so neither the TypeScript nor the Python generator can drift away from what the
-engines actually did.
+Rules marked `live` in `tests/certification/expected-matrix.json` are not
+inferred from documentation. They were run against a live Azure SQL Database
+(12.0.2000.8) and a live SQL Server 2025 instance (17.0.4065.4), and the
+findings are recorded there as machine-readable rules. Rules marked `static`
+describe generator behaviour that the suites pin but that no live engine run
+settled. Both test suites read that file, so neither the TypeScript nor the
+Python generator can drift away from what the engines actually did.
 
 What the live runs settled:
 
