@@ -14,6 +14,20 @@ test suites now read the same machine-readable evidence file.
 
 ### Fixed
 
+- **The complete document survives being run twice.** Every `CREATE` in the
+  generated end-to-end script - table, external table, external data source,
+  external file format, database scoped credential - is now wrapped in a
+  catalog-existence guard, and the load target is emptied in its own batch
+  immediately before the first real load. Re-running the document used to stop
+  at error 46502 on the second `CREATE EXTERNAL DATA SOURCE`; guarding the DDL
+  alone would have replaced that with a quieter and worse failure, a row count
+  that went from 150 to 300 without saying anything. The emptying batch names
+  the table it clears and says how to remove it if you meant to append.
+  Individual statement tabs are deliberately left bare: a tab is copied into an
+  editor once, whereas the document is the thing people re-run. Mirrored in the
+  native TypeScript generator and the Python generator, with the boundary
+  pinned by tests in both.
+
 - **A file named `orders.csv` can be kept away from `dbo.orders`.** Every
   generated object name is caller-controlled: `--schema`, `--table`,
   `--credential-name` and `--auth-method` on the CLI, and the same fields in the

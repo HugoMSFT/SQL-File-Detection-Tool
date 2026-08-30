@@ -30,6 +30,22 @@ A batch that fails any of those is never sent. The violation code — for exampl
 `PROTECTED_OBJECT`, `UNPREFIXED_TARGET`, `FORBIDDEN_SCHEMA_DBO` — is recorded
 instead of a result.
 
+`DELETE`, `UPDATE` and `MERGE` are refused outright. `TRUNCATE TABLE <name>` is
+the single admitted exception, because the generated complete document empties
+its own load target so a second run does not double the data. It is admitted
+only in that exact shape — a bare `TRUNCATE`, or one aimed at a variable, is
+still refused — and the name still has to pass the scope rules, so it can only
+ever empty a table the run itself created.
+
+A cell may not create an object its own prerequisite setup already created.
+That is what C14 did on the first live run: the setup step created the
+BLOB_STORAGE data source, and the `BULK INSERT` statement was generated with
+its own prerequisite step, which created it a second time. The server answered
+46502 and the failure arrived looking like evidence against the generator.
+Cells whose `requires` includes `setup` are now generated with
+`include_prereq=False`, and `_reject_duplicate_creates` blocks any plan where
+the same object is created in both places, naming it.
+
 Cleanup is generated as an explicit inverse of the setup, in dependency order,
 and the run captures an object inventory before and after so residue is proven
 to be zero rather than assumed.
@@ -53,6 +69,18 @@ Everything written to disk goes through `redaction.py` first. Hosts, user names,
 IP addresses and connection strings are replaced; the maintained public fixture
 hosts are the only ones allowed through, because the evidence is meaningless if
 you cannot tell which public file was read.
+
+A driver error arrives as `(number, bytes)` from pymssql, so error text is
+decoded — UTF-8 with replacement — before it is redacted. A `b'...'` repr in an
+artifact would be both unreadable and a redaction hole, so all three renderers
+are tested against a real-shaped byte-valued exception.
+
+Connecting tries each available driver in turn and keeps the classification of
+each candidate separately. A transient pymssql transport failure alongside a
+pyodbc "no driver installed" stays retryable: the pair used to be called
+permanent because permanence was OR-ed across candidates, and the retry that
+would have succeeded never happened. An authentication or certificate failure
+anywhere still makes the aggregate permanent, because retrying cannot fix it.
 
 ## Commands
 

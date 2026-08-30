@@ -166,6 +166,10 @@ _HEAD_TOKENS: Tuple[str, ...] = tuple(
     )
 )
 
+#: The single admitted shape of a ``TRUNCATE``. Anything else is refused at
+#: layer 1; this one is still scope checked at layer 3.
+_TRUNCATE_TABLE_RE = re.compile(r'TRUNCATE\s+TABLE\s+[\[A-Za-z_]', re.I)
+
 
 # ---------------------------------------------------------------------------
 # Layer 2 — forbidden patterns
@@ -201,8 +205,10 @@ _FORBIDDEN: Tuple[Tuple[str, Pattern[str], str], ...] = (
      'a pre-existing master key must never be dropped or altered'),
     ('SERVER_CREDENTIAL', re.compile(r'\b(?:CREATE|ALTER|DROP)\s+CREDENTIAL\b', re.I),
      'server-scoped credentials are shared state; only DATABASE SCOPED CREDENTIAL is allowed'),
-    ('DESTRUCTIVE_DML', re.compile(r'\b(?:DELETE|UPDATE|MERGE|TRUNCATE)\b', re.I),
-     'the certification matrix never mutates existing rows; cleanup uses DROP'),
+    ('DESTRUCTIVE_DML', re.compile(r'\b(?:DELETE|UPDATE|MERGE)\b|\bTRUNCATE\b(?!\s+TABLE\s+[\[\w])', re.I),
+     'the certification matrix never mutates existing rows; cleanup uses DROP. '
+     'TRUNCATE TABLE of a named table is the one exception and is still scope '
+     'checked, so it can only ever empty a table this run created'),
     ('WAITFOR', re.compile(r'\bWAITFOR\b', re.I), 'timing statements can hold locks'),
 )
 
@@ -216,6 +222,11 @@ _FORBIDDEN: Tuple[Tuple[str, Pattern[str], str], ...] = (
 _TARGET_RULES: Tuple[Tuple[str, bool, Pattern[str]], ...] = (
     ('table', True, re.compile(rf'\bCREATE\s+TABLE\s+(?P<name>{_QNAME})', re.I)),
     ('table', True, re.compile(rf'\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?P<name>{_QNAME})', re.I)),
+    # TRUNCATE is otherwise forbidden. It is allowed here only because the
+    # scope rule forces the target to carry this run's prefix, which means it
+    # can only ever empty a table the run itself created.
+    ('truncate target', True,
+     re.compile(rf'\bTRUNCATE\s+TABLE\s+(?P<name>{_QNAME})', re.I)),
     ('view', True, re.compile(rf'\bCREATE\s+(?:OR\s+ALTER\s+)?VIEW\s+(?P<name>{_QNAME})', re.I)),
     ('view', True, re.compile(rf'\bDROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?(?P<name>{_QNAME})', re.I)),
     ('external table', True,
@@ -610,6 +621,17 @@ def _head_violations(masked: str, upper: str) -> List[Violation]:
                     )
                 )
             continue
+        if head == 'truncate':
+            # TRUNCATE is refused everywhere else. It is admitted here only in
+            # the exact `TRUNCATE TABLE <name>` shape, because the generated
+            # complete document empties its own load target so a second run
+            # does not double the data. Layer 3 still forces that name to carry
+            # this run's prefix, so it can only ever empty a table this run
+            # created. Any other TRUNCATE - a bare one, or a variable target -
+            # falls through to the refusal below.
+            tail = upper[match.end(1) - len(match.group(1)) :]
+            if _TRUNCATE_TABLE_RE.match(tail):
+                continue
         violations.append(
             Violation(
                 'STATEMENT_NOT_ALLOWED',

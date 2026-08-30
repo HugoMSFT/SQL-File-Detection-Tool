@@ -3,7 +3,7 @@
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
 
@@ -3040,7 +3040,16 @@ class SQLGenerator:
                               credential_name: str = None,
                               auth_method: str = None,
                               file_path_override: str = None) -> str:
-        """Return every generated section as one runnable, GO-separated script."""
+        """Return every generated section as one runnable, GO-separated script.
+
+        The document is rerunnable. A single statement tab is something you copy
+        into an editor once, but a complete script is something people run again
+        after fixing a typo three sections down - and the first live run proved
+        it: re-executing the document failed at error 46502 because the external
+        data source it had just created still existed. So every CREATE here is
+        guarded by an existence check, and the load empties its target first so
+        a second run does not double the rows.
+        """
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
             schema_name, target_platform=target_platform,
@@ -3093,15 +3102,23 @@ class SQLGenerator:
             )
 
         parts: List[str] = []
+        target_table = (
+            f'[{_escape_identifier(schema_name)}].'
+            f'[{_escape_identifier(_clean_identifier(table_name or _metadata_base_name(metadata)))}]'
+        )
+        truncated = False
         for key in ordered_sections:
             section = (statements.get(key) or '').strip()
             if not section:
                 continue
+            if not truncated and _loads_into(section, target_table):
+                parts.append('\n'.join(_truncate_before_load(target_table)))
+                truncated = True
             parts.append(section)
             if not section.endswith('GO'):
                 parts.append('GO')
 
-        return '\n\n'.join(parts) + '\n'
+        return _guard_create_statements('\n\n'.join(parts)) + '\n'
 
     @staticmethod
     def resolve_table_name(metadata: Dict[str, Any],
@@ -3770,6 +3787,156 @@ def _credential_identifier(
 ) -> str:
     """Return the escaped database scoped credential identifier."""
     return _escape_identifier(credential_name or f'cred_{data_source}')
+
+
+# ---------------------------------------------------------------------------
+# Rerun safety for the complete document
+# ---------------------------------------------------------------------------
+
+#: Each guardable CREATE, with the existence test that makes re-running it safe.
+#: ``catalog`` names a catalog view keyed by object name; ``object_id`` uses
+#: ``OBJECT_ID`` because tables live in a schema and a bare name is ambiguous.
+_GUARDED_CREATES: Tuple[Tuple[str, str, str], ...] = (
+    (r'CREATE\s+EXTERNAL\s+DATA\s+SOURCE', 'catalog', 'sys.external_data_sources'),
+    (r'CREATE\s+EXTERNAL\s+FILE\s+FORMAT', 'catalog', 'sys.external_file_formats'),
+    (r'CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL', 'catalog',
+     'sys.database_scoped_credentials'),
+    (r'CREATE\s+EXTERNAL\s+TABLE', 'object_id', 'U'),
+    (r'CREATE\s+TABLE', 'object_id', 'U'),
+)
+
+_GUARD_RE = re.compile(
+    r'^(?P<indent>[ \t]*)(?P<head>' +
+    '|'.join(pattern for pattern, _kind, _arg in _GUARDED_CREATES) +
+    r')\s+(?P<name>\[[^\]]+\](?:\.\[[^\]]+\])?|[^\s(;]+)',
+    re.IGNORECASE,
+)
+
+
+def _unbracket(name: str) -> str:
+    """The catalog form of an identifier: brackets off, doubling undone."""
+    name = name.strip()
+    if name.startswith('[') and name.endswith(']'):
+        return name[1:-1].replace(']]', ']')
+    return name
+
+
+def _statement_end(lines: Sequence[str], start: int) -> int:
+    """Index of the last line of the statement beginning at *start*.
+
+    Semicolons inside string literals do not end a statement - a
+    semicolon-delimited CSV puts one in ``FIELD_TERMINATOR = ';'`` - so the scan
+    tracks quoting rather than looking for the character.
+    """
+    in_string = False
+    for index in range(start, len(lines)):
+        line = lines[index]
+        position = 0
+        while position < len(line):
+            char = line[position]
+            if in_string:
+                if char == "'":
+                    if position + 1 < len(line) and line[position + 1] == "'":
+                        position += 1
+                    else:
+                        in_string = False
+            elif char == "'":
+                in_string = True
+            elif char == '-' and line[position:position + 2] == '--':
+                break
+            elif char == ';':
+                return index
+            position += 1
+    return len(lines) - 1
+
+
+def _guard_for(head: str, name: str) -> str:
+    """The ``IF NOT EXISTS`` line that makes creating *name* rerunnable."""
+    normalized = re.sub(r'\s+', ' ', head.strip()).upper()
+    for pattern, kind, argument in _GUARDED_CREATES:
+        if not re.fullmatch(pattern.replace(r'\s+', ' '), normalized, re.IGNORECASE):
+            continue
+        if kind == 'catalog':
+            literal = _quote_literal(_unbracket(name))
+            return (
+                f"IF NOT EXISTS (SELECT 1 FROM {argument} "
+                f"WHERE name = N'{literal}')"
+            )
+        return f"IF OBJECT_ID(N'{_quote_literal(name)}', N'{argument}') IS NULL"
+    return ''
+
+
+def _guard_create_statements(sql: str) -> str:
+    """Wrap every guardable CREATE in the document in an existence check.
+
+    Re-running a script that created an external data source used to fail at
+    error 46502 on the second run. Nothing was wrong with the DDL; it simply
+    said CREATE where a document you may run twice has to say "create if it is
+    not already there".
+    """
+    lines = sql.split('\n')
+    output: List[str] = []
+    index = 0
+    while index < len(lines):
+        match = _GUARD_RE.match(lines[index])
+        if not match:
+            output.append(lines[index])
+            index += 1
+            continue
+        guard = _guard_for(match.group('head'), match.group('name'))
+        if not guard:
+            output.append(lines[index])
+            index += 1
+            continue
+        end = _statement_end(lines, index)
+        indent = match.group('indent')
+        output.append(f'{indent}{guard}')
+        output.append(f'{indent}BEGIN')
+        output.extend(f'    {line}' if line.strip() else line
+                      for line in lines[index:end + 1])
+        output.append(f'{indent}END')
+        index = end + 1
+    return '\n'.join(output)
+
+
+#: A line that actually loads rows, as opposed to one describing a load. Comment
+#: lines are excluded by the line anchor: the generator comments alternatives out.
+_LOAD_RE = re.compile(
+    r'^[ \t]*(?:BULK\s+INSERT|INSERT\s+INTO|COPY\s+INTO)\s+(?P<target>\S+)',
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _loads_into(section: str, target_table: str) -> bool:
+    """True when *section* really loads rows into *target_table*."""
+    return any(
+        match.group('target').rstrip(';,') == target_table
+        for match in _LOAD_RE.finditer(section)
+    )
+
+
+def _truncate_before_load(target_table: str) -> List[str]:
+    """Empty the load target so a second run of the document does not double it.
+
+    Idempotence is not only about DDL. A script whose CREATEs are all guarded
+    still doubles its data on the second run, and a row count that quietly went
+    from 150 to 300 is a worse outcome than an error.
+    """
+    return [
+        '-- ====================================================================',
+        '-- RERUN SAFETY',
+        '-- ====================================================================',
+        '-- This document is safe to run more than once: every CREATE above is',
+        '-- guarded, and the load target is emptied here so a second run does',
+        '-- not insert the same rows twice.',
+        f'-- WARNING: this empties {target_table}. That table is meant to be',
+        '-- owned by this script. If a table of that name already holds data you',
+        '-- care about, change the target name before running (--table/--schema).',
+        '-- Delete this batch if you mean to append to existing data.',
+        f"IF OBJECT_ID(N'{_quote_literal(target_table)}', N'U') IS NOT NULL",
+        f'    TRUNCATE TABLE {target_table};',
+        'GO',
+    ]
 
 
 #: Authentication methods the generator can emit for storage access.

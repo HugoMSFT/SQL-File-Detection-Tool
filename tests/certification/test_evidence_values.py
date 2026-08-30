@@ -303,3 +303,108 @@ def test_a_binary_secret_never_reaches_an_artifact_whole(tmp_path):
     text = path.read_text(encoding='utf-8')
     assert secret.hex().upper() not in text
     assert '256 bytes' in text
+
+
+# -- driver errors, which arrive as (int, bytes) -----------------------------
+
+class _PymssqlShapedError(Exception):
+    """What pymssql actually raises: the number first, the message as bytes."""
+
+
+def _pymssql_error(number, message):
+    return _PymssqlShapedError(number, message.encode('utf-8'))
+
+
+def test_a_bytes_error_message_is_decoded_not_repr_ed():
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_pymssql_error(
+        4806, 'SINGLE_CLOB requires a DBCS char data file. Try SINGLE_NCLOB.',
+    ))
+
+    assert facts['error_number'] == 4806
+    assert facts['error_message'].startswith('SINGLE_CLOB requires')
+    assert "b'" not in facts['error_message']
+
+
+def test_a_bytes_message_survives_non_ascii():
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_pymssql_error(547, "近接 '日本語' の構文が正しくありません。"))
+
+    assert '日本語' in facts['error_message']
+    assert "b'" not in facts['error_message']
+
+
+def test_undecodable_bytes_do_not_raise_or_leak_a_repr():
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_PymssqlShapedError(50000, b'\xff\xfe not utf-8 \xc3\x28'))
+
+    assert "b'" not in facts['error_message']
+    assert 'not utf-8' in facts['error_message']
+
+
+def test_a_single_bytes_argument_is_decoded_too():
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_PymssqlShapedError(b'Adaptive Server connection failed'))
+
+    assert facts['error_message'] == 'Adaptive Server connection failed'
+    assert "b'" not in facts['error_message']
+
+
+def test_a_pyodbc_shaped_error_still_yields_its_number():
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_PymssqlShapedError(
+        '42000', '[42000] [Microsoft][ODBC Driver 18](4806) SINGLE_CLOB requires DBCS.',
+    ))
+
+    assert facts['error_number'] == 4806
+    assert facts['sqlstate'] == '42000'
+
+
+def test_no_renderer_prints_a_python_bytes_repr(tmp_path):
+    """The end of the path, not just the start.
+
+    A live run's markdown carried `b'...'` on line 66. Decoding in one place is
+    only worth something if every artifact is checked, so this drives a bytes
+    message through JSON, JUnit and Markdown together.
+    """
+    from certification.execute import _error_facts
+
+    facts = _error_facts(_pymssql_error(
+        4861, "Cannot bulk load because the file 'ERRORLOG' could not be opened.",
+    ))
+    cell = CellResult(
+        cell_id='C01',
+        target='vm',
+        platform='sql_server_2025',
+        fixture='csv_scalar',
+        statement_kind='bulk_insert',
+        access='engine_local',
+        hypothesis='H6',
+        intent='locked file',
+        verdict='FAIL',
+        accepts=('PASS',),
+        sql_sha256='a' * 64,
+        sql_redacted='BULK INSERT [s].[t] FROM \'x\';',
+    )
+    cell.batches = [BatchResult(
+        index=0, start_line=1, verdict='FAIL',
+        error_number=facts['error_number'],
+        error_message=facts['error_message'],
+    )]
+    evidence = RunEvidence(run_id='0123abcd', target='vm', platform='sql_server_2025')
+    evidence.cells = [cell]
+    redactor = Redactor()
+
+    written = [str(tmp_path / name) for name in ('e.json', 'e.xml', 'e.md')]
+    write_json(evidence, written[0], redactor=redactor)
+    write_junit(evidence, written[1], redactor=redactor)
+    write_markdown(evidence, written[2], redactor=redactor)
+    for path in written:
+        text = open(path, encoding='utf-8').read()
+        assert "b'" not in text, f'{path} carries a Python bytes repr'
+        assert 'could not be opened' in text, f'{path} lost the message'

@@ -669,3 +669,152 @@ describe('absent metadata', () => {
         });
     }
 });
+
+// ---------------------------------------------------------------------------
+// Rerun safety
+// ---------------------------------------------------------------------------
+
+const CREATE_LINE =
+    /^[ \t]*CREATE\s+(?:EXTERNAL\s+DATA\s+SOURCE|EXTERNAL\s+FILE\s+FORMAT|DATABASE\s+SCOPED\s+CREDENTIAL|EXTERNAL\s+TABLE|TABLE)\b/i;
+
+/** Every CREATE in *document* that nothing checked for first. */
+function unguardedCreates(document: string): string[] {
+    const lines = document.split('\n');
+    const offenders: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        if (!CREATE_LINE.test(lines[index])) {
+            continue;
+        }
+        const preceding = lines
+            .slice(Math.max(0, index - 3), index)
+            .map((line) => line.trim().toUpperCase())
+            .filter((line) => line.length > 0);
+        if (
+            !preceding.some(
+                (line) => line.startsWith('IF NOT EXISTS') || line.startsWith('IF OBJECT_ID'),
+            )
+        ) {
+            offenders.push(lines[index].trim());
+        }
+    }
+    return offenders;
+}
+
+function completeDocument(
+    metadata: GeneratorMetadata = csvMetadata(),
+    options: Record<string, unknown> = {},
+): string {
+    return generateCompleteDdl(metadata, {
+        tableName: 'cert_iris',
+        schemaName: 'cert_schema',
+        dataSource: 'cert_src',
+        targetPlatform: 'sql_server_2025',
+        storageUrl: 'abs://datasets@example.blob.core.windows.net',
+        ...options,
+    });
+}
+
+describe('the complete document survives being run twice', () => {
+    it('guards every CREATE', () => {
+        assert.deepStrictEqual(unguardedCreates(completeDocument()), []);
+    });
+
+    it('guards against the right catalog', () => {
+        const document = completeDocument();
+        assert.ok(
+            document.includes(
+                "IF NOT EXISTS (SELECT 1 FROM sys.external_data_sources WHERE name = N'cert_src')",
+            ),
+            'external data source guard missing',
+        );
+        assert.ok(
+            document.includes("IF OBJECT_ID(N'[cert_schema].[cert_iris]', N'U') IS NULL"),
+            'table guard missing',
+        );
+    });
+
+    it('looks the catalog name up unbracketed', () => {
+        // sys.external_data_sources.name holds cert_src, not [cert_src]. A guard
+        // comparing the bracketed form never matches, so the CREATE runs every
+        // time - which is the bug the guard exists to prevent.
+        assert.ok(!completeDocument().includes("WHERE name = N'[cert_src]'"));
+    });
+
+    it('empties the load target before loading it', () => {
+        const document = completeDocument();
+        const truncate = document.indexOf('TRUNCATE TABLE [cert_schema].[cert_iris];');
+        const load = document.indexOf('BULK INSERT [cert_schema].[cert_iris]');
+        assert.ok(truncate >= 0 && load >= 0, 'expected a truncate and a load');
+        assert.ok(truncate < load, 'the truncate must come first');
+    });
+
+    it('guards the truncate, because the table may genuinely be absent', () => {
+        assert.ok(
+            completeDocument().includes(
+                "IF OBJECT_ID(N'[cert_schema].[cert_iris]', N'U') IS NOT NULL",
+            ),
+        );
+    });
+
+    it('does not count a commented-out load as a load', () => {
+        const document = completeDocument();
+        assert.ok(document.indexOf('TRUNCATE TABLE') > document.indexOf('QUICK LOAD'));
+    });
+
+    it('adds no truncate to a document that loads nothing', () => {
+        assert.ok(!completeDocument(parquetMetadata()).includes('TRUNCATE TABLE'));
+    });
+
+    it('does not mistake a semicolon inside a literal for the end of a statement', () => {
+        const document = completeDocument({ ...csvMetadata(), delimiter: ';' });
+        assert.ok(document.includes("FIELD_TERMINATOR = ';'"));
+        const body = document.slice(document.indexOf('CREATE EXTERNAL FILE FORMAT'));
+        assert.ok(
+            !body.slice(0, body.indexOf(');')).includes('END'),
+            'END landed inside the statement',
+        );
+        assert.deepStrictEqual(unguardedCreates(document), []);
+    });
+
+    it('balances every BEGIN with an END', () => {
+        for (const delimiter of [',', ';', '|', '\t']) {
+            const document = completeDocument({ ...csvMetadata(), delimiter });
+            const begins = (document.match(/^\s*BEGIN\s*$/gm) || []).length;
+            const ends = (document.match(/^\s*END\s*$/gm) || []).length;
+            assert.strictEqual(begins, ends, `unbalanced for delimiter ${delimiter}`);
+            assert.ok(begins > 0);
+        }
+    });
+
+    it('leaves no bare CREATE on any platform', () => {
+        for (const platform of PLATFORMS as readonly TargetPlatform[]) {
+            assert.deepStrictEqual(
+                unguardedCreates(completeDocument(csvMetadata(), { targetPlatform: platform })),
+                [],
+                `${platform} left a bare CREATE`,
+            );
+        }
+    });
+});
+
+describe('individual statement tabs stay bare', () => {
+    it('gives the CREATE TABLE tab no guard', () => {
+        const statements = generateAllStatements(csvMetadata(), {
+            tableName: 'cert_iris',
+            schemaName: 'cert_schema',
+            targetPlatform: 'sql_server_2025',
+        });
+        assert.ok(statements.create_table.includes('CREATE TABLE'));
+        assert.ok(!statements.create_table.includes('IF OBJECT_ID'));
+    });
+
+    it('gives the prerequisite setup tab no guard', () => {
+        const statements = generateAllStatements(csvMetadata(), {
+            dataSource: 'cert_src',
+            targetPlatform: 'sql_server_2025',
+            storageUrl: 'abs://datasets@example.blob.core.windows.net',
+        });
+        assert.ok(statements.credential_setup.includes('CREATE EXTERNAL DATA SOURCE'));
+        assert.ok(!statements.credential_setup.includes('sys.external_data_sources'));
+    });
+});

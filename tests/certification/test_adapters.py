@@ -274,3 +274,99 @@ def test_adapter_smoke_round_trip():  # pragma: no cover - opt-in, credentialed
     with connect(settings, take_password(prompt=False)) as connection:
         result = connection.execute('SELECT 1 AS one;')
     assert result.rows == [(1,)]
+
+
+# -- mixed driver candidates -------------------------------------------------
+
+class _FakePyodbcWithoutADriver:
+    """pyodbc is importable but no Microsoft ODBC driver is installed."""
+
+    @staticmethod
+    def drivers():
+        return ['SQLite3 ODBC Driver']
+
+    @staticmethod
+    def connect(*_args, **_kwargs):
+        raise AssertionError('must not be reached: there is no usable driver')
+
+
+class _FakePymssqlThatTimesOut:
+    @staticmethod
+    def connect(**_kwargs):
+        raise OSError(20009, b'DB-Lib error: Net-Lib error 10060 connection timed out')
+
+
+def _mixed_candidates(monkeypatch):
+    """pymssql times out; pyodbc is present but has no driver to offer."""
+    modules = __import__('sys').modules
+    monkeypatch.setitem(modules, 'pymssql', _FakePymssqlThatTimesOut())
+    monkeypatch.setitem(modules, 'pyodbc', _FakePyodbcWithoutADriver())
+
+
+def test_a_transient_driver_and_a_missing_one_stay_retryable(monkeypatch):
+    """The failure that cost a live run.
+
+    pymssql timed out - the same connection had worked by hand a minute
+    earlier - and pyodbc reported that no ODBC driver was installed. Permanence
+    was OR-ed across the two, so the pair was called permanent and the retry
+    that would have succeeded never happened.
+    """
+    _mixed_candidates(monkeypatch)
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect(_settings(), 'not-a-real-password')
+    assert excinfo.value.permanent is False
+    assert is_transient_connect_error(excinfo.value) is True
+
+
+def test_an_auth_failure_beside_a_missing_driver_stays_permanent(monkeypatch):
+    """Retrying cannot fix the candidate that will not budge."""
+    class _LoginFailed:
+        @staticmethod
+        def connect(**_kwargs):
+            raise OSError(18456, b"Login failed for user 'x'.")
+
+    modules = __import__('sys').modules
+    monkeypatch.setitem(modules, 'pymssql', _LoginFailed())
+    monkeypatch.setitem(modules, 'pyodbc', _FakePyodbcWithoutADriver())
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect(_settings(), 'not-a-real-password')
+    assert is_transient_connect_error(excinfo.value) is False
+
+
+def test_every_candidate_permanent_stays_permanent(monkeypatch):
+    class _AlsoNoDriver:
+        @staticmethod
+        def connect(**_kwargs):
+            raise AdapterUnavailable('no driver', permanent=True)
+
+    modules = __import__('sys').modules
+    monkeypatch.setitem(modules, 'pymssql', _AlsoNoDriver())
+    monkeypatch.setitem(modules, 'pyodbc', _FakePyodbcWithoutADriver())
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect(_settings(), 'not-a-real-password')
+    assert excinfo.value.permanent is True
+    assert is_transient_connect_error(excinfo.value) is False
+
+
+def test_the_aggregate_never_repeats_the_drivers_own_message(monkeypatch):
+    _mixed_candidates(monkeypatch)
+    with pytest.raises(AdapterUnavailable) as excinfo:
+        connect(_settings(), 'not-a-real-password')
+    text = str(excinfo.value)
+    assert 'Net-Lib' not in text
+    assert "b'" not in text
+    assert 'not-a-real-password' not in text
+
+
+def test_a_mixed_failure_is_actually_retried(monkeypatch):
+    """Classification is only worth anything if the retry loop acts on it."""
+    from certification.adapters import connect_with_retry
+
+    _mixed_candidates(monkeypatch)
+    slept = []
+    with pytest.raises(AdapterUnavailable):
+        connect_with_retry(
+            _settings(), 'not-a-real-password',
+            attempts=3, backoff=(0.0,), sleep=slept.append,
+        )
+    assert len(slept) == 2, 'a retryable aggregate must be retried'

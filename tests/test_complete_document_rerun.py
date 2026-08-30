@@ -1,0 +1,197 @@
+"""The complete document has to survive being run twice.
+
+A single statement tab is something you copy into an editor once. The complete
+document is something people re-run after fixing a typo three sections down, and
+the first live certification run proved what happened when they did: error 46502,
+because the external data source the script had just created still existed.
+
+These tests pin both halves of rerun safety - guarded DDL, and a load that does
+not double the rows - and they pin the boundary: the individual tabs are *not*
+guarded, because a bare CREATE is what a person copying one statement wants.
+"""
+
+import os
+import re
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from external_file_detection.sql_generator import SQLGenerator  # noqa: E402
+
+
+CREATE_LINE = re.compile(
+    r'^[ \t]*CREATE\s+(?:EXTERNAL\s+DATA\s+SOURCE|EXTERNAL\s+FILE\s+FORMAT'
+    r'|DATABASE\s+SCOPED\s+CREDENTIAL|EXTERNAL\s+TABLE|TABLE)\b',
+    re.IGNORECASE,
+)
+
+
+def csv_metadata(**overrides):
+    metadata = {
+        'file_type': 'csv',
+        'file_name': 'iris.csv',
+        'file_path': 'iris.csv',
+        'delimiter': ',',
+        'encoding': 'utf-8',
+        'codepage': '65001',
+        'has_header': True,
+        'row_count': 150,
+        'column_count': 5,
+        'schema': [
+            ['sepal_length', 'float64'],
+            ['sepal_width', 'float64'],
+            ['petal_length', 'float64'],
+            ['petal_width', 'float64'],
+            ['species', 'object'],
+        ],
+    }
+    metadata.update(overrides)
+    return metadata
+
+
+def complete(metadata=None, **options):
+    settings = {
+        'table_name': 'cert_iris',
+        'schema_name': 'cert_schema',
+        'data_source': 'cert_src',
+        'target_platform': 'sql_server_2025',
+        'storage_url': 'abs://datasets@example.blob.core.windows.net',
+    }
+    settings.update(options)
+    return SQLGenerator().generate_complete_ddl(metadata or csv_metadata(), **settings)
+
+
+def unguarded_creates(document):
+    """Every CREATE in *document* that nothing checked for first."""
+    lines = document.split('\n')
+    offenders = []
+    for index, line in enumerate(lines):
+        if not CREATE_LINE.match(line):
+            continue
+        preceding = [
+            earlier.strip().upper()
+            for earlier in lines[max(0, index - 3):index]
+            if earlier.strip()
+        ]
+        if not any(
+            text.startswith('IF NOT EXISTS') or text.startswith('IF OBJECT_ID')
+            for text in preceding
+        ):
+            offenders.append(line.strip())
+    return offenders
+
+
+class CompleteDocumentIsRerunnable(unittest.TestCase):
+    def test_every_create_is_guarded(self):
+        self.assertEqual([], unguarded_creates(complete()))
+
+    def test_the_guard_names_the_right_catalog(self):
+        document = complete()
+        self.assertIn(
+            "IF NOT EXISTS (SELECT 1 FROM sys.external_data_sources "
+            "WHERE name = N'cert_src')",
+            document,
+        )
+        self.assertIn(
+            "IF OBJECT_ID(N'[cert_schema].[cert_iris]', N'U') IS NULL", document,
+        )
+
+    def test_the_guard_uses_the_unbracketed_name_for_catalog_lookups(self):
+        # sys.external_data_sources.name holds cert_src, not [cert_src]: a guard
+        # that compared the bracketed form would never match and the CREATE
+        # would run every time, which is the bug it exists to prevent.
+        document = complete()
+        self.assertNotIn("WHERE name = N'[cert_src]'", document)
+
+    def test_the_load_target_is_emptied_before_the_load(self):
+        document = complete()
+        truncate = document.index('TRUNCATE TABLE [cert_schema].[cert_iris];')
+        load = document.index('BULK INSERT [cert_schema].[cert_iris]')
+        self.assertLess(truncate, load)
+
+    def test_the_truncate_is_its_own_batch(self):
+        document = complete()
+        tail = document[document.index('TRUNCATE TABLE'):]
+        self.assertRegex(tail.split('\n', 2)[1], r'^\s*GO\s*$')
+
+    def test_the_truncate_is_guarded_too(self):
+        # On a first run against a database where the table does not exist yet
+        # the guard above skipped the CREATE only if it was there; TRUNCATE has
+        # no such luxury and would fail on a table that is genuinely absent.
+        self.assertIn(
+            "IF OBJECT_ID(N'[cert_schema].[cert_iris]', N'U') IS NOT NULL",
+            complete(),
+        )
+
+    def test_a_commented_load_does_not_trigger_a_truncate(self):
+        # The CREATE TABLE section ends with a commented-out QUICK LOAD. If that
+        # counted as a load the table would be emptied immediately after being
+        # created, which is harmless but says something untrue about the script.
+        document = complete()
+        quick_load = document.index('QUICK LOAD')
+        truncate = document.index('TRUNCATE TABLE')
+        self.assertGreater(truncate, quick_load)
+
+    def test_a_document_with_no_load_gets_no_truncate(self):
+        # Parquet has no BULK INSERT path, so there is nothing to double.
+        document = complete(csv_metadata(
+            file_type='parquet', file_name='data.parquet', file_path='data.parquet',
+            delimiter=None, has_header=None,
+        ))
+        self.assertNotIn('TRUNCATE TABLE', document)
+
+    def test_a_semicolon_inside_a_literal_does_not_end_the_statement(self):
+        # A semicolon-delimited CSV puts a semicolon in FIELD_TERMINATOR. If the
+        # guard treated that as the end of the CREATE, END would land in the
+        # middle of the statement and the script would not parse.
+        document = complete(csv_metadata(delimiter=';'))
+        self.assertIn("FIELD_TERMINATOR = ';'", document)
+        start = document.index('CREATE EXTERNAL FILE FORMAT')
+        body = document[start:]
+        end_of_statement = body.index(');')
+        self.assertNotIn('END', body[:end_of_statement])
+        self.assertEqual([], unguarded_creates(document))
+
+    def test_every_begin_has_an_end(self):
+        for delimiter in (',', ';', '|', '\t'):
+            document = complete(csv_metadata(delimiter=delimiter))
+            begins = len(re.findall(r'^\s*BEGIN\s*$', document, re.MULTILINE))
+            ends = len(re.findall(r'^\s*END\s*$', document, re.MULTILINE))
+            self.assertEqual(begins, ends, f'unbalanced for delimiter {delimiter!r}')
+            self.assertGreater(begins, 0)
+
+
+class IndividualTabsAreNotGuarded(unittest.TestCase):
+    """The rerun contract belongs to the document, not to every statement."""
+
+    def test_the_create_table_tab_is_a_bare_create(self):
+        statements = SQLGenerator().generate_all_statements(
+            csv_metadata(), 'cert_iris', 'cert_src', None, 'cert_schema',
+            target_platform='sql_server_2025',
+        )
+        self.assertNotIn('IF OBJECT_ID', statements['create_table'])
+        self.assertIn('CREATE TABLE', statements['create_table'])
+
+    def test_the_credential_setup_tab_is_a_bare_create(self):
+        statements = SQLGenerator().generate_all_statements(
+            csv_metadata(), 'cert_iris', 'cert_src', None, 'cert_schema',
+            target_platform='sql_server_2025',
+            storage_url='abs://datasets@example.blob.core.windows.net',
+        )
+        setup = statements['credential_setup']
+        self.assertIn('CREATE EXTERNAL DATA SOURCE', setup)
+        self.assertNotIn('sys.external_data_sources', setup)
+
+
+class EveryPlatformStaysRerunnable(unittest.TestCase):
+    def test_no_platform_emits_an_unguarded_create(self):
+        for platform in SQLGenerator.PLATFORMS:
+            document = complete(target_platform=platform)
+            self.assertEqual(
+                [], unguarded_creates(document), f'{platform} left a bare CREATE',
+            )
+
+
+if __name__ == '__main__':
+    unittest.main()

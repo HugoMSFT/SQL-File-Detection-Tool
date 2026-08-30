@@ -25,7 +25,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from .batches import Batch, split_batches
 from .evidence import BLOCKED, NOT_EXECUTABLE
@@ -154,6 +154,7 @@ def _generate(
     credential_name: Optional[str] = None,
     auth_method: Optional[str] = None,
     file_path_override: Optional[str] = None,
+    include_prereq: bool = True,
 ) -> str:
     _ensure_repo_on_path()
     from external_file_detection.sql_generator import SQLGenerator  # noqa: WPS433
@@ -174,6 +175,25 @@ def _generate(
     if statement_kind == 'complete_ddl':
         return generator.generate_complete_ddl(metadata, **common)
     statements = generator.generate_all_statements(metadata, **common)
+    if statement_kind == 'bulk_insert' and not include_prereq:
+        # The cell runs after its prerequisite setup, which already created the
+        # BLOB_STORAGE source. Generating the statement with its own Step 0
+        # creates that source a second time and the run dies at 46502 - which
+        # reads as a product defect and is in fact the harness asking for the
+        # same object twice. The generator's own complete document solves this
+        # the same way.
+        return generator.generate_bulk_insert(
+            metadata,
+            generator.resolve_table_name(metadata, table_name),
+            schema_name,
+            target_platform=platform,
+            storage_url=storage_url,
+            data_source=data_source,
+            include_prereq=False,
+            credential_name=credential_name,
+            auth_method=auth_method,
+            file_path_override=file_path_override,
+        )
     return statements.get(statement_kind, '')
 
 
@@ -567,7 +587,13 @@ def _plan_cell(
         'database_scoped_credential': credential_name,
     }
 
-    sql = _generate(metadata, statement_kind=entry.statement_kind, **common)
+    sql = _generate(
+        metadata, statement_kind=entry.statement_kind,
+        # 'setup' is the generator's own prerequisite section, and for a bulk
+        # load it already creates the BLOB_STORAGE source the statement needs.
+        include_prereq='setup' not in entry.requires,
+        **common,
+    )
 
     planned['sql_sha256'] = _sha256(sql)
     planned['sql_redacted'] = redactor.redact(sql)
@@ -623,9 +649,21 @@ def _plan_cell(
         if not verification_block['all_allowed']:
             all_allowed = False
 
+    _reject_duplicate_creates(planned)
+
     if not planned['batches']:
         planned['plan_verdict'] = NOT_EXECUTABLE
         planned['reason'] = 'generator produced no executable batch'
+    elif planned.get('duplicate_creates'):
+        # Creating the same object in setup and again in the cell is a plan the
+        # server will reject at 46502 / 2714, and the run will read that as a
+        # product defect. Refuse to send it.
+        planned['plan_verdict'] = BLOCKED
+        names = ', '.join(planned['duplicate_creates'])
+        planned['reason'] = (
+            f'prerequisite setup and the cell both create {names}; '
+            f'the second CREATE would fail as already-exists'
+        )
     elif all_allowed:
         planned['plan_verdict'] = 'READY'
     elif any_substitution and not any(
@@ -641,6 +679,57 @@ def _plan_cell(
 
 
 _TOP_CAP_RE = re.compile(r'\bTOP\s*\(\s*(\d+)\s*\)', re.IGNORECASE)
+
+#: The object kinds a cell and its prerequisites can both try to create. Each
+#: pattern captures the object name so the check compares names, not kinds: two
+#: different data sources are fine, the same one twice is not.
+_CREATE_PATTERNS: Tuple[Tuple[str, 're.Pattern[str]'], ...] = (
+    ('external data source', re.compile(
+        r'^\s*CREATE\s+EXTERNAL\s+DATA\s+SOURCE\s+(\[[^\]]+\]|\S+)',
+        re.IGNORECASE | re.MULTILINE)),
+    ('external file format', re.compile(
+        r'^\s*CREATE\s+EXTERNAL\s+FILE\s+FORMAT\s+(\[[^\]]+\]|\S+)',
+        re.IGNORECASE | re.MULTILINE)),
+    ('database scoped credential', re.compile(
+        r'^\s*CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+(\[[^\]]+\]|\S+)',
+        re.IGNORECASE | re.MULTILINE)),
+    ('external table', re.compile(
+        r'^\s*CREATE\s+EXTERNAL\s+TABLE\s+(\S+)',
+        re.IGNORECASE | re.MULTILINE)),
+    ('table', re.compile(
+        r'^\s*CREATE\s+TABLE\s+(\S+)',
+        re.IGNORECASE | re.MULTILINE)),
+)
+
+
+def _created_objects(batches: Sequence[Dict[str, Any]]) -> Set[str]:
+    """Every object these batches create, as ``kind name`` keys."""
+    created: Set[str] = set()
+    for batch in batches:
+        sql = batch.get('sql') or batch.get('sql_redacted') or ''
+        for kind, pattern in _CREATE_PATTERNS:
+            for name in pattern.findall(sql):
+                created.add(f'{kind} {name.strip().rstrip(";")}')
+    return created
+
+
+def _reject_duplicate_creates(planned: Dict[str, Any]) -> None:
+    """Name any object the prerequisites and the cell both create.
+
+    The first live run of C14 died at 46502. The prerequisite setup created the
+    BLOB_STORAGE source and then the BULK INSERT statement, generated with its
+    own Step 0, created it again. Nothing in the plan noticed that it was asking
+    the server to make one object twice, so the failure arrived as evidence
+    against the generator. This is the invariant that would have caught it.
+    """
+    setup_objects: Set[str] = set()
+    for step in planned.get('setup') or []:
+        setup_objects |= _created_objects(step.get('batches') or [])
+    if not setup_objects:
+        return
+    duplicates = sorted(setup_objects & _created_objects(planned.get('batches') or []))
+    if duplicates:
+        planned['duplicate_creates'] = duplicates
 
 
 def _cap_row_expectation(planned: Dict[str, Any], sql: str) -> None:

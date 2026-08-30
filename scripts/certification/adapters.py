@@ -55,6 +55,15 @@ class AdapterUnavailable(RuntimeError):
     installed, a driver that cannot honour the required encryption, a disposed
     factory - so the retry loop stops immediately instead of sleeping through
     three pointless attempts.
+
+    ``transient`` is the opposite assertion, and it exists because aggregating
+    several candidate drivers loses information. A run once tried pymssql, got a
+    transport timeout, tried pyodbc, found no ODBC driver installed, and
+    reported the pair as permanent - so the retry that would have succeeded on
+    the second attempt never happened. When one candidate failed in a way worth
+    retrying, the aggregate says so explicitly rather than leaving
+    :func:`is_transient_connect_error` to re-derive it from a message that no
+    longer contains the driver's text.
     """
 
     def __init__(
@@ -63,10 +72,12 @@ class AdapterUnavailable(RuntimeError):
         error_numbers: Sequence[int] = (),
         *,
         permanent: bool = False,
+        transient: bool = False,
     ) -> None:
         super().__init__(message)
         self.error_numbers: Tuple[int, ...] = tuple(error_numbers)
         self.permanent = permanent
+        self.transient = transient
 
 
 @dataclass
@@ -349,6 +360,14 @@ def is_transient_connect_error(exc: BaseException) -> bool:
     """
     if isinstance(exc, AdapterUnavailable) and getattr(exc, 'permanent', False):
         return False
+    if isinstance(exc, AdapterUnavailable) and getattr(exc, 'transient', False):
+        # An aggregate that already classified its candidates. Re-deriving the
+        # answer from its message would fail closed, because the message
+        # deliberately carries no driver text to derive it from.
+        return not any(
+            int(n) in AUTH_ERROR_NUMBERS
+            for n in (getattr(exc, 'error_numbers', ()) or ())
+        )
     numbers = [int(n) for n in (getattr(exc, 'error_numbers', ()) or ())]
     if not numbers:
         for value in getattr(exc, 'args', ()) or ():
@@ -504,7 +523,12 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
         )
     errors: List[str] = []
     numbers: List[int] = []
-    permanent = False
+    # Candidates are classified one by one and combined at the end. Combining as
+    # we go loses the distinction: a pymssql transport timeout followed by "no
+    # ODBC driver installed" is not a permanent failure, it is a retryable one
+    # whose second driver happens to be missing.
+    candidate_permanent: List[bool] = []
+    candidate_transient: List[bool] = []
     for name in candidates:
         try:
             if name == 'pymssql':
@@ -535,7 +559,10 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
             # string, and its own permanence is already known. Preserving that
             # flag is what stops "this pymssql cannot encrypt" being retried
             # four times.
-            permanent = permanent or exc.permanent
+            candidate_permanent.append(exc.permanent)
+            candidate_transient.append(
+                not exc.permanent and is_transient_connect_error(exc)
+            )
             numbers.extend(exc.error_numbers)
             errors.append(f'{name}: {exc}')
         except Exception as exc:  # pragma: no cover - environment specific
@@ -545,14 +572,22 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
             number = _error_number(exc)
             if number is not None:
                 numbers.append(number)
+            transient = is_transient_connect_error(exc)
+            candidate_permanent.append(not transient)
+            candidate_transient.append(transient)
             errors.append(
                 f'{name}: {type(exc).__name__}'
                 + (f' number={number}' if number is not None else '')
+                + ('' if transient else ' (permanent)')
             )
+    # Retry if any candidate is worth retrying. Permanent only when every one of
+    # them was permanent - otherwise a missing second driver silently converts a
+    # recoverable timeout into a dead run.
     raise AdapterUnavailable(
         'could not connect using ' + ', '.join(errors),
         numbers,
-        permanent=permanent,
+        permanent=bool(candidate_permanent) and all(candidate_permanent),
+        transient=any(candidate_transient),
     )
 
 

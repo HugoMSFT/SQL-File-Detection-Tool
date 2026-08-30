@@ -210,3 +210,59 @@ def test_ordinary_continuation_lines_are_not_mistaken_for_statements(policy):
     )
     report = evaluate_batch(sql, policy)
     assert report.allowed, report.codes
+
+
+# -- TRUNCATE: the one admitted destructive statement ------------------------
+
+def test_allows_truncate_of_a_table_this_run_created(identity, policy):
+    """The generated complete document empties its own load target.
+
+    Without this the document doubles its rows on a second run, and a count
+    that silently went 150 -> 300 is worse than an error. The narrow shape is
+    what makes it acceptable: the name still has to be this run's.
+    """
+    table = f'[{identity.schema}].[{identity.name("c28", "csv")}]'
+    report = evaluate_batch(f'TRUNCATE TABLE {table};', policy)
+    assert report.allowed, report.as_dict()
+    assert ('truncate target', table) in report.targets
+
+
+def test_refuses_truncate_of_a_table_this_run_did_not_create(identity, policy):
+    sql = f'TRUNCATE TABLE [{identity.schema}].[staging_table];'
+    assert 'UNPREFIXED_TARGET' in codes(sql, policy)
+
+
+def test_refuses_truncate_of_dbo(policy):
+    # The accident this whole gate exists for.
+    assert 'FORBIDDEN_SCHEMA_DBO' in codes('TRUNCATE TABLE [dbo].[orders];', policy)
+
+
+def test_refuses_truncate_of_a_tpch_table(policy):
+    assert 'PROTECTED_OBJECT' in codes('TRUNCATE TABLE orders;', policy)
+
+
+@pytest.mark.parametrize(
+    'sql',
+    [
+        'TRUNCATE TABLE;',
+        'TRUNCATE TABLE @target;',
+        "DELETE FROM [s].[t];",
+        "UPDATE [s].[t] SET a = 1;",
+        "MERGE [s].[t] AS x USING [s].[u] AS y ON 1 = 1;",
+    ],
+)
+def test_widening_truncate_did_not_widen_anything_else(sql, policy):
+    """Admitting one shape must not admit the family.
+
+    ``TRUNCATE TABLE <name>`` is allowed; a bare TRUNCATE, a variable target
+    and every other mutating verb stay refused.
+    """
+    assert not evaluate_batch(sql, policy).allowed, sql
+
+
+def test_a_truncate_hidden_after_a_legitimate_statement_is_still_scoped(identity, policy):
+    sql = (
+        f'CREATE TABLE [{identity.schema}].[{identity.name("c28", "csv")}] (id INT);\n'
+        'TRUNCATE TABLE [dbo].[lineitem];'
+    )
+    assert not evaluate_batch(sql, policy).allowed

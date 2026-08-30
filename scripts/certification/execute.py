@@ -808,7 +808,8 @@ def run_session(
                     lifecycle['dropped_database'] = bool(dropped.get('dropped'))
                     if dropped.get('errors'):
                         lifecycle['drop_errors'] = [
-                            redactor.redact(str(e)) for e in dropped['errors']
+                            redactor.redact(_decode_error_arg(e))
+                            for e in dropped['errors']
                         ]
                     if not dropped.get('dropped'):
                         evidence.cleanup_verified = False
@@ -816,7 +817,11 @@ def run_session(
                             f'database:{identity.database}'
                         ]
                 except Exception as exc:  # pragma: no cover - defensive
-                    lifecycle['drop_errors'] = [redactor.redact(str(exc))]
+                    # str(exc) on a pymssql error renders its bytes message as a
+                    # Python repr, and the `b'` prefix ends up in the artifacts.
+                    lifecycle['drop_errors'] = [
+                        redactor.redact(_error_facts(exc)['error_message'])
+                    ]
                     evidence.cleanup_verified = False
                     evidence.residue = list(evidence.residue) + [
                         f'database:{identity.database}'

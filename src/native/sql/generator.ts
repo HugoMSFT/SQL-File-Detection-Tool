@@ -1949,7 +1949,194 @@ export function generateAllStatements(
     };
 }
 
-/** Return every generated section as one runnable, GO-separated script. */
+// ---------------------------------------------------------------------------
+// Rerun safety for the complete document
+// ---------------------------------------------------------------------------
+
+/**
+ * Each guardable CREATE, with the existence test that makes re-running it safe.
+ * `catalog` names a catalog view keyed by object name; `objectId` uses
+ * `OBJECT_ID` because tables live in a schema and a bare name is ambiguous.
+ */
+const GUARDED_CREATES: ReadonlyArray<{
+    readonly source: string;
+    readonly kind: 'catalog' | 'objectId';
+    readonly argument: string;
+}> = [
+    {
+        source: 'CREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE',
+        kind: 'catalog',
+        argument: 'sys.external_data_sources',
+    },
+    {
+        source: 'CREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT',
+        kind: 'catalog',
+        argument: 'sys.external_file_formats',
+    },
+    {
+        source: 'CREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL',
+        kind: 'catalog',
+        argument: 'sys.database_scoped_credentials',
+    },
+    { source: 'CREATE\\s+EXTERNAL\\s+TABLE', kind: 'objectId', argument: 'U' },
+    { source: 'CREATE\\s+TABLE', kind: 'objectId', argument: 'U' },
+];
+
+const GUARD_RE = new RegExp(
+    `^([ \\t]*)(${GUARDED_CREATES.map((entry) => entry.source).join('|')})` +
+        '\\s+(\\[[^\\]]+\\](?:\\.\\[[^\\]]+\\])?|[^\\s(;]+)',
+    'i',
+);
+
+/** The catalog form of an identifier: brackets off, doubling undone. */
+function unbracket(name: string): string {
+    const trimmed = name.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        return trimmed.slice(1, -1).replace(/\]\]/g, ']');
+    }
+    return trimmed;
+}
+
+/**
+ * Index of the last line of the statement beginning at *start*.
+ *
+ * Semicolons inside string literals do not end a statement - a
+ * semicolon-delimited CSV puts one in `FIELD_TERMINATOR = ';'` - so the scan
+ * tracks quoting rather than looking for the character.
+ */
+function statementEnd(lines: readonly string[], start: number): number {
+    let inString = false;
+    for (let index = start; index < lines.length; index += 1) {
+        const line = lines[index];
+        let position = 0;
+        while (position < line.length) {
+            const char = line[position];
+            if (inString) {
+                if (char === "'") {
+                    if (line[position + 1] === "'") {
+                        position += 1;
+                    } else {
+                        inString = false;
+                    }
+                }
+            } else if (char === "'") {
+                inString = true;
+            } else if (char === '-' && line.slice(position, position + 2) === '--') {
+                break;
+            } else if (char === ';') {
+                return index;
+            }
+            position += 1;
+        }
+    }
+    return lines.length - 1;
+}
+
+/** The `IF NOT EXISTS` line that makes creating *name* rerunnable. */
+function guardFor(head: string, name: string): string {
+    const normalized = head.trim().replace(/\s+/g, ' ').toUpperCase();
+    for (const entry of GUARDED_CREATES) {
+        const full = new RegExp(`^${entry.source.replace(/\\s\+/g, ' ')}$`, 'i');
+        if (!full.test(normalized)) {
+            continue;
+        }
+        if (entry.kind === 'catalog') {
+            return (
+                `IF NOT EXISTS (SELECT 1 FROM ${entry.argument} ` +
+                `WHERE name = N'${quoteLiteral(unbracket(name))}')`
+            );
+        }
+        return `IF OBJECT_ID(N'${quoteLiteral(name)}', N'${entry.argument}') IS NULL`;
+    }
+    return '';
+}
+
+/**
+ * Wrap every guardable CREATE in the document in an existence check.
+ *
+ * Re-running a script that created an external data source used to fail at
+ * error 46502 on the second run. Nothing was wrong with the DDL; it simply said
+ * CREATE where a document you may run twice has to say "create if it is not
+ * already there".
+ */
+export function guardCreateStatements(sql: string): string {
+    const lines = sql.split('\n');
+    const output: string[] = [];
+    let index = 0;
+    while (index < lines.length) {
+        const match = GUARD_RE.exec(lines[index]);
+        const guard = match ? guardFor(match[2], match[3]) : '';
+        if (!match || !guard) {
+            output.push(lines[index]);
+            index += 1;
+            continue;
+        }
+        const end = statementEnd(lines, index);
+        const indent = match[1];
+        output.push(`${indent}${guard}`);
+        output.push(`${indent}BEGIN`);
+        for (const line of lines.slice(index, end + 1)) {
+            output.push(line.trim() ? `    ${line}` : line);
+        }
+        output.push(`${indent}END`);
+        index = end + 1;
+    }
+    return output.join('\n');
+}
+
+/**
+ * A line that actually loads rows, as opposed to one describing a load. Comment
+ * lines are excluded by the line anchor: the generator comments alternatives out.
+ */
+const LOAD_RE = /^[ \t]*(?:BULK\s+INSERT|INSERT\s+INTO|COPY\s+INTO)\s+(\S+)/gim;
+
+/** True when *section* really loads rows into *targetTable*. */
+function loadsInto(section: string, targetTable: string): boolean {
+    LOAD_RE.lastIndex = 0;
+    for (const match of section.matchAll(LOAD_RE)) {
+        if ((match[1] ?? '').replace(/[;,]+$/, '') === targetTable) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Empty the load target so a second run of the document does not double it.
+ *
+ * Idempotence is not only about DDL. A script whose CREATEs are all guarded
+ * still doubles its data on the second run, and a row count that quietly went
+ * from 150 to 300 is a worse outcome than an error.
+ */
+function truncateBeforeLoad(targetTable: string): string[] {
+    return [
+        '-- ====================================================================',
+        '-- RERUN SAFETY',
+        '-- ====================================================================',
+        '-- This document is safe to run more than once: every CREATE above is',
+        '-- guarded, and the load target is emptied here so a second run does',
+        '-- not insert the same rows twice.',
+        `-- WARNING: this empties ${targetTable}. That table is meant to be`,
+        '-- owned by this script. If a table of that name already holds data you',
+        '-- care about, change the target name before running (--table/--schema).',
+        '-- Delete this batch if you mean to append to existing data.',
+        `IF OBJECT_ID(N'${quoteLiteral(targetTable)}', N'U') IS NOT NULL`,
+        `    TRUNCATE TABLE ${targetTable};`,
+        'GO',
+    ];
+}
+
+/**
+ * Return every generated section as one runnable, GO-separated script.
+ *
+ * The document is rerunnable. A single statement tab is something you copy into
+ * an editor once, but a complete script is something people run again after
+ * fixing a typo three sections down - and the first live run proved it:
+ * re-executing the document failed at error 46502 because the external data
+ * source it had just created still existed. So every CREATE here is guarded by
+ * an existence check, and the load empties its target first so a second run
+ * does not double the rows.
+ */
 export function generateCompleteDdl(
     metadata: GeneratorMetadata,
     options: GenerateAllOptions = {},
@@ -2002,10 +2189,18 @@ export function generateCompleteDdl(
     }
 
     const parts: string[] = [];
+    const targetTable =
+        `[${escapeIdentifier(schemaName)}].` +
+        `[${escapeIdentifier(resolveTableName(metadata, options.tableName))}]`;
+    let truncated = false;
     for (const key of orderedSections) {
         const section = (statements[key] || '').trim();
         if (!section) {
             continue;
+        }
+        if (!truncated && loadsInto(section, targetTable)) {
+            parts.push(truncateBeforeLoad(targetTable).join('\n'));
+            truncated = true;
         }
         parts.push(section);
         if (!section.endsWith('GO')) {
@@ -2013,7 +2208,7 @@ export function generateCompleteDdl(
         }
     }
 
-    return `${parts.join('\n\n')}\n`;
+    return `${guardCreateStatements(parts.join('\n\n'))}\n`;
 }
 
 // ---------------------------------------------------------------------------
