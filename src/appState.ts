@@ -34,7 +34,6 @@ import {
 } from './quickAnalyze';
 import type {
     AppStateSnapshot,
-    AppearanceMode,
     AzureState,
     FileEntry,
     Limitation,
@@ -79,7 +78,6 @@ export interface AppStateOptions {
     readonly version: string;
     readonly platform?: TargetPlatform;
     readonly activeTab?: UiTab;
-    readonly appearance?: AppearanceMode;
     readonly formats?: readonly SupportedFormat[];
     /** Workspace folders, used to build relative display labels. */
     readonly workspaceFolders?: readonly string[];
@@ -147,7 +145,6 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         limitation: null,
         azure: EMPTY_AZURE_STATE,
         formats: options.formats ?? [],
-        appearance: options.appearance ?? 'auto',
         lastAnalysisMs: null,
     };
 }
@@ -349,7 +346,6 @@ export class AppStateStore {
         this.snapshot = Object.freeze({
             ...initialSnapshot(this.options),
             platform: this.snapshot.platform,
-            appearance: this.snapshot.appearance,
             formats: this.snapshot.formats,
         });
         for (const listener of [...this.listeners]) {

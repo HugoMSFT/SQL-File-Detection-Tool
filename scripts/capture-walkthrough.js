@@ -201,21 +201,21 @@ function buildScenes(states) {
             state: clone(states.credential_setup),
             hold: 3000,
             panel: true,
-            scroll: 160,
+            scroll: 180,
         },
         {
             caption: 'create-table',
             state: clone(states.create_table),
             hold: 2800,
             panel: true,
-            scroll: 150,
+            scroll: 180,
         },
         {
             caption: 'openrowset',
             state: clone(states.openrowset),
             hold: 2400,
             panel: true,
-            scroll: 150,
+            scroll: 180,
         },
         { caption: 'azure', state: clone(states.azure, { azure }), hold: 2200, panel: true },
         {
@@ -231,7 +231,7 @@ function buildScenes(states) {
             hold: 2200,
             panel: true,
             theme: 'light',
-            scroll: 150,
+            scroll: 180,
         },
     ];
 }

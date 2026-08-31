@@ -219,14 +219,13 @@ test('clearing the selection keeps user-entered options', () => {
 test('reset clears files and registry but keeps durable preferences', () => {
     const model = store();
     const entries = model.setFiles(listing(2));
-    model.update({ platform: 'sql_server_2022', appearance: 'compact', tableName: 'X' });
+    model.update({ platform: 'sql_server_2022', tableName: 'X' });
     model.reset();
 
     assert.deepEqual(model.state.files, []);
     assert.equal(model.lookup(entries[0].id), undefined);
     assert.equal(model.state.tableName, '');
     assert.equal(model.state.platform, 'sql_server_2022');
-    assert.equal(model.state.appearance, 'compact');
 });
 
 test('the selected getter follows the registry, not the id alone', () => {

@@ -151,7 +151,6 @@ export class UiController {
         this.store.setWorkspaceFolders(this.host.workspaceFolders());
         this.store.update({
             formats: this.service.listFormats(),
-            appearance: this.host.getPreference('appearance', 'auto'),
         });
     }
 
@@ -232,10 +231,6 @@ export class UiController {
                 void this.host.setPreference('activeTab', request.tab);
                 return;
             }
-            case 'setPreference':
-                this.store.update({ appearance: request.appearance });
-                void this.host.setPreference('appearance', request.appearance);
-                return;
             case 'selectFile':
                 return this.queue(() => this.selectFile(request.fileId));
             case 'openFileDialog':
@@ -481,7 +476,7 @@ export class UiController {
     }
 
     /**
-     * Analyse a directory and list every supported file inside it.
+     * Analyse the selected directory and its immediate child folders.
      *
      * The directory itself becomes the allowed root, so nothing outside the
      * folder the user chose can be read even if it is linked into it.
@@ -511,6 +506,7 @@ export class UiController {
             const result = await this.service.analyzeDirectory({
                 filePath: directory,
                 allowedRoot: directory,
+                maxDepth: 1,
                 token: token.token,
             });
             if (!this.isCurrent(generation)) {
@@ -627,11 +623,13 @@ export class UiController {
         const changed = this.store.state.selectedFileId !== fileId;
         this.store.update({
             selectedFileId: fileId,
+            activeTab: 'preview',
             parserOverrides: changed ? {} : this.store.state.parserOverrides,
             columnOverrides: changed ? {} : this.store.state.columnOverrides,
             error: null,
             notice: null,
         });
+        void this.host.setPreference('activeTab', 'preview');
         await this.analyzeSelected(file);
     }
 

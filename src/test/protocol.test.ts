@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    APPEARANCE_MODES,
     AZURE_AUTH_MODES,
     MAX_PREVIEW_ROWS,
     MAX_TEXT_LENGTH,
@@ -152,9 +151,10 @@ test('enumerated fields accept only their own members', () => {
         parseWebviewRequest({ type: 'setAuthMethod', value: 'connection-string' }),
         undefined,
     );
-    for (const appearance of APPEARANCE_MODES) {
-        assert.ok(parseWebviewRequest({ type: 'setPreference', appearance }));
-    }
+    assert.equal(
+        parseWebviewRequest({ type: 'setPreference', appearance: 'compact' }),
+        undefined,
+    );
     for (const kind of STATEMENT_KINDS) {
         assert.deepEqual(parseWebviewRequest({ type: 'copyStatement', kind }), {
             type: 'copyStatement',

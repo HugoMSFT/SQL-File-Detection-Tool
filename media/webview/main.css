@@ -12,10 +12,6 @@
   --radius: 3px;
 }
 
-body.density-compact {
-  --gap: 6px;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -355,12 +351,16 @@ body.surface-sidebar .file-pane {
 
 .file-item {
   min-height: 22px;
-  padding: 2px 7px 2px 4px;
+  padding: 3px 7px 4px 4px;
   cursor: pointer;
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 5px;
+  grid-template-columns: 14px minmax(0, 1fr);
+  grid-template-areas:
+    'icon name'
+    '. meta';
+  align-items: start;
+  column-gap: 5px;
+  row-gap: 1px;
 }
 
 .file-item[aria-selected='true'] {
@@ -373,12 +373,22 @@ body.surface-sidebar .file-pane {
 }
 
 .file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  grid-area: name;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.file-item > .file-icon,
+.file-item > .table-icon {
+  grid-area: icon;
+  align-self: center;
 }
 
 .file-meta {
+  grid-area: meta;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.82em;
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;

@@ -445,11 +445,12 @@ test('choosing a folder lists files and selects the first', async () => {
     }
 });
 
-test('folder scans build safe relative paths and skip non-SQL files', async () => {
+test('folder scans stop after one child level and skip non-SQL files', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-tree-'));
     fs.mkdirSync(path.join(root, 'year', 'month'), { recursive: true });
     fs.writeFileSync(path.join(root, 'top.csv'), 'id,name\n1,top\n');
-    fs.writeFileSync(path.join(root, 'year', 'month', 'nested.csv'), 'id,name\n2,nested\n');
+    fs.writeFileSync(path.join(root, 'year', 'direct.csv'), 'id,name\n2,direct\n');
+    fs.writeFileSync(path.join(root, 'year', 'month', 'deep.csv'), 'id,name\n3,deep\n');
     fs.writeFileSync(path.join(root, 'script.py'), 'id,name\n3,python\n');
     fs.writeFileSync(path.join(root, 'workbook.xlsx'), 'id,name\n4,excel\n');
     fs.writeFileSync(path.join(root, 'table.delta'), 'id,name\n5,not-a-delta-table\n');
@@ -462,12 +463,13 @@ test('folder scans build safe relative paths and skip non-SQL files', async () =
         const state = snapshot(record);
         assert.deepEqual(
             state.files.map((entry) => entry.label).sort(),
-            ['nested.csv', 'top.csv'],
+            ['direct.csv', 'top.csv'],
         );
         assert.equal(
-            state.files.find((entry) => entry.label === 'nested.csv')?.folderLabel,
-            'year/month',
+            state.files.find((entry) => entry.label === 'direct.csv')?.folderLabel,
+            'year',
         );
+        assert.ok(!state.files.some((entry) => entry.label === 'deep.csv'));
 
         await ui.loadFiles([path.join(root, 'script.py')]);
         assert.equal(snapshot(record).files.length, 0);
@@ -529,6 +531,37 @@ test('the renderer can only select files the host listed', async () => {
         await ui.handle({ type: 'selectFile', fileId: path.join(os.homedir(), '.ssh', 'id_rsa') });
         await settle();
         assert.equal(snapshot(record).selectedFileId, good);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('selecting a listed file analyzes it immediately and opens Preview', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([
+            path.join(FIXTURES, 'sample.csv'),
+            path.join(FIXTURES, 'sample.parquet'),
+        ]);
+        await settle();
+        await ui.handle({ type: 'setTab', tab: 'metadata' });
+        const parquet = snapshot(record).files.find(
+            (entry) => entry.label === 'sample.parquet',
+        );
+        assert.ok(parquet);
+
+        await ui.handle({ type: 'selectFile', fileId: parquet.id });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(state.selectedFileId, parquet.id);
+        assert.equal(state.activeTab, 'preview');
+        assert.equal(state.metadata?.file_type, 'parquet');
+        assert.equal(state.metadata?.file_name, 'sample.parquet');
+        assert.ok((state.preview?.rows.length ?? 0) > 0);
+        assert.equal(record.preferences.get('activeTab'), 'preview');
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1447,7 +1480,6 @@ test('non-sensitive preferences are persisted and file contents are not', async 
     const ui = controller(record);
     try {
         await ui.handle({ type: 'setTab', tab: 'preview' });
-        await ui.handle({ type: 'setPreference', appearance: 'compact' });
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
         await settle();
 
@@ -1455,7 +1487,6 @@ test('non-sensitive preferences are persisted and file contents are not', async 
             [...record.preferences.entries()].sort(),
             [
                 ['activeTab', 'preview'],
-                ['appearance', 'compact'],
                 ['platform', 'sql_server_2019'],
             ],
         );

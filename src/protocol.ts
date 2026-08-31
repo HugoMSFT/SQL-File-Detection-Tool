@@ -100,11 +100,6 @@ export const AZURE_AUTH_MODES = [
 
 export type AzureAuthMode = (typeof AZURE_AUTH_MODES)[number];
 
-/** UI appearance preference layered on top of the VS Code theme. */
-export const APPEARANCE_MODES = ['auto', 'comfortable', 'compact'] as const;
-
-export type AppearanceMode = (typeof APPEARANCE_MODES)[number];
-
 // ---------------------------------------------------------------------------
 // Webview -> host
 // ---------------------------------------------------------------------------
@@ -162,10 +157,6 @@ export type WebviewRequest =
     | (Base & { readonly type: 'exportAllSql' })
     | (Base & { readonly type: 'openInEditor' })
     | (Base & { readonly type: 'openDocumentation'; readonly id: DocumentationId })
-    | (Base & {
-          readonly type: 'setPreference';
-          readonly appearance: AppearanceMode;
-      })
     | (Base & { readonly type: 'azureConnect'; readonly mode: AzureAuthMode })
     | (Base & { readonly type: 'azureDisconnect' })
     | (Base & { readonly type: 'azureListSubscriptions' })
@@ -277,7 +268,6 @@ export interface AppStateSnapshot {
     readonly limitation: Limitation | null;
     readonly azure: AzureState;
     readonly formats: readonly SupportedFormat[];
-    readonly appearance: AppearanceMode;
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
 }
@@ -500,12 +490,6 @@ const BUILDERS: Record<string, Builder> = {
         return kind === undefined
             ? undefined
             : { type: 'openStatementInEditor', kind };
-    },
-    setPreference: (source) => {
-        const appearance = member(source, 'appearance', APPEARANCE_MODES);
-        return appearance === undefined
-            ? undefined
-            : { type: 'setPreference', appearance };
     },
     azureConnect: (source) => {
         const mode = member(source, 'mode', AZURE_AUTH_MODES);

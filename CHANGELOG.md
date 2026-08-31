@@ -42,9 +42,12 @@ project test results, not Microsoft certification.
 - **The native interface now uses the Power Studio visual language** recovered
   from the original design mockup, while continuing to use VS Code theme
   variables for dark, light, and high-contrast compatibility.
-- **Sources now use an Explorer-style folder tree.** Folder and subfolder
-  structure is preserved without exposing absolute paths, while source actions
-  live together in the top toolbar.
+- **Sources now use an Explorer-style folder tree.** The selected folder and one
+  child level are shown without exposing absolute paths or running an unbounded
+  recursive scan, while source actions live together in the top toolbar.
+  Filenames use their own row so type and size details no longer truncate them.
+- **Appearance follows VS Code directly.** The extra Appearance control and
+  density modes were removed.
 - **The Schema tab now shows recommended `SQL Type` values** instead of empty
   override boxes. Recommendations use the same length-aware mapping as generated
   SQL and remain editable.
@@ -61,6 +64,8 @@ project test results, not Microsoft certification.
   Delta/Iceberg tables remain available; Hudi folders expose Parquet data files.
 - **Credential inputs now retain focus and caret position** when regenerated SQL
   pushes a new shared-state snapshot into the webview.
+- **Selecting a supported Explorer file now analyzes it immediately** and opens
+  Preview so JSON, Parquet, and other results are visible without another action.
 
 - **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`
   is consulted.** `chardet` is a statistical guess, and on some builds it scores

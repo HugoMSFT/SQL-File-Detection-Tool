@@ -236,8 +236,6 @@
             });
         }
         platform.value = state.platform;
-        byId('appearance').value = state.appearance;
-        document.body.classList.toggle('density-compact', state.appearance === 'compact');
     }
 
     function renderStatus() {
@@ -273,7 +271,9 @@
                 'aria-selected',
                 file.id === state.selectedFileId ? 'true' : 'false',
             );
-            item.querySelector('.file-name').textContent = file.label;
+            const name = item.querySelector('.file-name');
+            name.textContent = file.label;
+            name.title = file.label;
             const parts = [];
             parts.push(file.fileType);
             if (file.sizeBytes > 0) {
@@ -1082,10 +1082,6 @@
         }
         if (target.id === 'platform') {
             post({ type: 'setPlatform', platform: target.value });
-            return;
-        }
-        if (target.id === 'appearance') {
-            post({ type: 'setPreference', appearance: target.value });
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;

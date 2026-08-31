@@ -155,6 +155,8 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(html, /Sources &amp; files/);
     assert.match(html, />Explorer</);
     assert.match(html, /HTTPS \/ Azure/);
+    assert.doesNotMatch(html, /Appearance|id="appearance"/);
+    assert.doesNotMatch(script, /setPreference|density-compact/);
     assert.match(script, /label: 'EXT TABLE'/);
     assert.match(script, /\['Column', 'Source type', 'SQL Type'\]/);
     assert.match(script, /recommendedSqlTypes/);
@@ -176,6 +178,18 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     );
     assert.ok(!explorer.includes('data-action="openFileDialog"'));
     assert.ok(!explorer.includes('data-action="openFolderDialog"'));
+    assert.doesNotMatch(html, /class="source-actions"/);
+
+    const toolbar = html.slice(
+        html.indexOf('<div class="toolbar"'),
+        html.indexOf('<div class="option-row">'),
+    );
+    assert.match(
+        toolbar,
+        /Browse files[\s\S]*Browse folder[\s\S]*HTTPS \/ Azure/,
+    );
+    assert.equal((html.match(/data-action="openFileDialog"/g) ?? []).length, 1);
+    assert.equal((html.match(/data-action="openFolderDialog"/g) ?? []).length, 1);
 });
 
 test('the shell has no trace of the removed server flow', () => {
@@ -272,6 +286,12 @@ test('the stylesheet uses theme variables rather than fixed colours', () => {
         !styles.includes('@import') && !styles.includes('url(http'),
         'the stylesheet must not pull a remote resource',
     );
+});
+
+test('the explorer gives the filename its own readable row', () => {
+    assert.match(styles, /grid-template-areas:\s*'icon name'\s*'\. meta'/);
+    assert.match(styles, /\.file-name[\s\S]*overflow-wrap: anywhere/);
+    assert.match(script, /name\.title = file\.label/);
 });
 
 test('the renderer keeps the keyboard workflow', () => {

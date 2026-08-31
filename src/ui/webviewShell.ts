@@ -93,14 +93,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
         <select id="platform" aria-describedby="platform-help"></select>
       </label>
       <p id="platform-help" class="help">Azure SQL Database is the default target.</p>
-      <label class="field">
-        <span>Appearance</span>
-        <select id="appearance">
-          <option value="auto">Match VS Code</option>
-          <option value="comfortable">Comfortable</option>
-          <option value="compact">Compact</option>
-        </select>
-      </label>
     </div>
   </header>
 

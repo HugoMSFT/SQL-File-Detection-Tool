@@ -21,6 +21,7 @@ export {
     nativeAnalysisService,
     type AnalysisRequest,
     type DirectoryAnalysis,
+    type DirectoryAnalysisRequest,
     type ExportEntry,
     type GenerationRequest,
     type MultiFileRequest,

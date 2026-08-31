@@ -617,6 +617,10 @@ remain available. Set `sqlFileDetectionTool.defaultView` to `sidebar` to keep th
 Activity Bar instead. There is no loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
 
+**Browse folder** scans files in the selected folder and its immediate child
+folders only. Clicking a listed source analyzes it immediately and returns to
+Preview.
+
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never
 applies the selected file's parser facts to every file. Local paths expose direct
@@ -645,9 +649,8 @@ The editor panel and sidebar share one state store, so they always agree.
 | `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
 | `sqlFileDetectionTool.defaultView` | `editor` | Primary interface surface (`editor` or `sidebar`) |
 
-The platform, the selected tab and the appearance preference are remembered in
-workspace and global state. File contents and credentials are never persisted
-there.
+The platform and selected tab are remembered in workspace and global state.
+File contents and credentials are never persisted there.
 
 ### Guided SQL credential setup
 

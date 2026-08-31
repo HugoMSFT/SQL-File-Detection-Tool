@@ -61,6 +61,11 @@ export interface PreviewRequest extends AnalysisRequest {
     readonly maxRows?: number;
 }
 
+/** Options for a directory scan. Depth zero means only the selected root. */
+export interface DirectoryAnalysisRequest extends AnalysisRequest {
+    readonly maxDepth?: number;
+}
+
 /** Options for the SQL generation entry points. */
 export interface GenerationRequest {
     readonly metadata: GeneratorMetadata;
@@ -149,13 +154,13 @@ export class NativeAnalysisService {
      * Delta and Iceberg table directories are treated as a single logical
      * table rather than a list of Parquet parts.
      */
-    async analyzeDirectory(request: AnalysisRequest): Promise<DirectoryAnalysis> {
+    async analyzeDirectory(request: DirectoryAnalysisRequest): Promise<DirectoryAnalysis> {
         const token = request.token ?? NEVER_CANCELLED;
         throwIfCancelled(token);
         reportProgress(request.progress, 'Resolving directory');
         const reference = await this.resolve(request);
         reportProgress(request.progress, 'Scanning directory');
-        const files = await scanDirectory(reference, token);
+        const files = await scanDirectory(reference, token, request.maxDepth);
         return { root: reference.realPath, files };
     }
 

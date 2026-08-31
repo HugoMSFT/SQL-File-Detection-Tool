@@ -7,6 +7,9 @@ Three ways in, all local and all native:
 - Right-click a file or folder in the Explorer and choose
   **Analyze with SQL File Detection Tool**.
 
+Folder browsing checks the selected folder and one child level. Selecting any
+listed source analyzes it immediately and opens Preview.
+
 | Format | What is read |
 | --- | --- |
 | CSV, TSV, DAT, delimited text | Delimiter, encoding, sampled schema, row count |

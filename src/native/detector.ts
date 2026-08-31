@@ -392,7 +392,7 @@ export async function firstCharacter(filePath: string, encoding: string): Promis
 }
 
 /**
- * Recursively analyse every supported file beneath a directory.
+ * Analyse supported files beneath a directory, optionally bounded by depth.
  *
  * Delta and Iceberg folders are reported as a single table entry and are not
  * descended into, matching `FileDetector.scan_directory`.
@@ -400,11 +400,18 @@ export async function firstCharacter(filePath: string, encoding: string): Promis
 export async function scanDirectory(
     reference: StorageReference,
     token?: CancellationToken,
+    maxDepth = Number.POSITIVE_INFINITY,
 ): Promise<FileMetadata[]> {
     if (!reference.isDirectory) {
         throw new NativeAnalysisError(
             'not_a_directory',
             `Directory does not exist: ${reference.requestedPath}`,
+        );
+    }
+    if (maxDepth !== Number.POSITIVE_INFINITY && (!Number.isInteger(maxDepth) || maxDepth < 0)) {
+        throw new NativeAnalysisError(
+            'malformed_input',
+            'Directory scan depth must be a non-negative integer.',
         );
     }
     if (
@@ -415,11 +422,14 @@ export async function scanDirectory(
     }
 
     const results: FileMetadata[] = [];
-    const queue: StorageReference[] = [reference];
+    const queue: Array<{ reference: StorageReference; depth: number }> = [
+        { reference, depth: 0 },
+    ];
     const visited = new Set<string>();
 
     while (queue.length > 0) {
-        const current = queue.shift() as StorageReference;
+        const currentItem = queue.shift() as { reference: StorageReference; depth: number };
+        const current = currentItem.reference;
         if (visited.has(current.realPath)) {
             continue;
         }
@@ -428,21 +438,23 @@ export async function scanDirectory(
 
         const entries = await listContainedEntries(current);
         const directories: StorageReference[] = [];
-        for (const entry of entries) {
-            if (!entry.isDirectory) {
-                continue;
-            }
-            const name = path.basename(entry.realPath);
-            if (name.startsWith('.') || name === '__pycache__') {
-                continue;
-            }
-            if (
-                (await isDeltaTableDirectory(entry.realPath)) ||
-                (await isIcebergTableDirectory(entry.realPath))
-            ) {
-                results.push(await analyzeFileMetadata(entry, token));
-            } else {
-                directories.push(entry);
+        if (currentItem.depth < maxDepth) {
+            for (const entry of entries) {
+                if (!entry.isDirectory) {
+                    continue;
+                }
+                const name = path.basename(entry.realPath);
+                if (name.startsWith('.') || name === '__pycache__') {
+                    continue;
+                }
+                if (
+                    (await isDeltaTableDirectory(entry.realPath)) ||
+                    (await isIcebergTableDirectory(entry.realPath))
+                ) {
+                    results.push(await analyzeFileMetadata(entry, token));
+                } else {
+                    directories.push(entry);
+                }
             }
         }
 
@@ -454,7 +466,12 @@ export async function scanDirectory(
                 results.push(await analyzeFileMetadata(entry, token));
             }
         }
-        queue.push(...directories);
+        queue.push(
+            ...directories.map((entry) => ({
+                reference: entry,
+                depth: currentItem.depth + 1,
+            })),
+        );
     }
     return results;
 }
