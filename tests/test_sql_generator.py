@@ -3,8 +3,20 @@
 from external_file_detection.sql_generator import SQLGenerator
 
 
+def code_only(sql: str) -> str:
+    """Return *sql* with whole-line ``--`` comments removed.
+
+    Lets assertions check what the script actually executes without
+    matching explanatory comment text.
+    """
+    return '\n'.join(
+        line for line in sql.splitlines()
+        if not line.strip().startswith('--')
+    )
+
+
 def test_csv_file_format_generation():
-    """Test CSV file format generation."""
+    """Test CSV file format generation on a platform that supports FIRST_ROW."""
     generator = SQLGenerator()
     
     metadata = {
@@ -15,14 +27,44 @@ def test_csv_file_format_generation():
         'schema': [('id', 'int64'), ('name', 'object'), ('age', 'int64')]
     }
     
-    ddl = generator.generate_external_file_format(metadata, 'test_csv_format')
+    ddl = generator.generate_external_file_format(
+        metadata, 'test_csv_format', target_platform='sql_server_2022'
+    )
     
     assert 'CREATE EXTERNAL FILE FORMAT [test_csv_format]' in ddl
     assert 'FORMAT_TYPE = DELIMITEDTEXT' in ddl
     assert 'FORMAT_OPTIONS (' in ddl
     assert "FIELD_TERMINATOR = ','" in ddl
     assert 'FIRST_ROW = 2' in ddl
-    assert 'USE_TYPE_DEFAULT = TRUE' in ddl
+    # Live evidence (Azure SQL DB 12.0.2000.8 / SQL Server 2025 17.0.4065.4):
+    # USE_TYPE_DEFAULT = TRUE replaces missing values with 0 / '' and destroys
+    # source NULL semantics, so the generator defaults to FALSE and always
+    # states the choice explicitly.
+    assert 'USE_TYPE_DEFAULT = FALSE' in ddl
+
+
+def test_csv_file_format_default_platform_is_azure_sql_database():
+    """With no explicit platform the generator targets Azure SQL Database.
+
+    Live certification proved Azure SQL Database *does* accept the FIRST_ROW
+    format option: without it a header row raises error 4864, and with
+    ``FIRST_ROW = 2`` the same external table returns every data row.
+    """
+    generator = SQLGenerator()
+
+    metadata = {
+        'file_type': 'csv',
+        'delimiter': ',',
+        'has_header': True,
+        'encoding': 'utf-8',
+        'schema': [('id', 'int64'), ('name', 'object')],
+    }
+
+    ddl = generator.generate_external_file_format(metadata, 'test_csv_format')
+
+    assert 'Azure SQL Database' in ddl
+    assert 'FIRST_ROW = 2' in ddl
+    assert 'FORMAT_TYPE = DELIMITEDTEXT' in ddl
 
 
 def test_json_file_format_generation():
@@ -644,13 +686,55 @@ def test_copy_into_delta_fallback():
 # -------------------------------------------------------------------
 
 def test_credential_setup():
-    """Credential setup generates master key, credential, and data source."""
+    """Credential setup defaults to managed identity and needs no master key.
+
+    Live evidence (Azure SQL Database): creating a database scoped credential
+    with IDENTITY = 'MANAGED IDENTITY' left the database master key count at 0
+    before, during and after, so the master key step is not emitted.
+    """
     gen = SQLGenerator()
     sql = gen.generate_credential_setup('TestDS', 'ff_csv', {'file_type': 'csv'})
-    assert 'MASTER KEY' in sql
+    assert "IDENTITY = 'MANAGED IDENTITY'" in sql
+    assert 'CREATE MASTER KEY' not in sql
     assert 'DATABASE SCOPED CREDENTIAL' in sql
     assert 'EXTERNAL DATA SOURCE [TestDS]' in sql
     assert 'cred_TestDS' in sql
+
+
+def test_credential_setup_sas_still_emits_master_key():
+    """Opting into a SAS token restores the master key prerequisite."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'}, auth_method='sas'
+    )
+    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
+    assert 'CREATE MASTER KEY' in sql
+
+
+def test_credential_setup_public_container_needs_no_credential():
+    """A public container gets no credential, no secret and no master key."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'}, auth_method='public'
+    )
+    assert 'CREATE DATABASE SCOPED CREDENTIAL' not in sql
+    assert 'CREATE MASTER KEY' not in sql
+    assert 'SECRET' not in sql
+    assert 'CREDENTIAL = [' not in sql
+    assert 'EXTERNAL DATA SOURCE [TestDS]' in sql
+
+
+def test_credential_name_override_is_propagated():
+    """A caller-supplied credential name replaces every derived one."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'TestDS', 'ff_csv', {'file_type': 'csv'},
+        credential_name='sqlfdt_cert_abc_cred',
+        storage_url='https://acct.blob.core.windows.net/raw/x.csv',
+    )
+    assert 'CREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_abc_cred]' in sql
+    assert 'CREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_abc_cred_Bulk]' in sql
+    assert 'cred_TestDS' not in sql
 
 
 def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
@@ -671,8 +755,16 @@ def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
         in sql
     )
     assert 'TYPE = HADOOP' not in sql
-    assert "LOCATION = 'https://" not in sql
-    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
+    # The data virtualization source must not use https://; the separate
+    # TYPE = BLOB_STORAGE bulk source must.
+    virtualization_source = sql.split('-- 4.')[0]
+    assert "LOCATION = 'https://" not in virtualization_source
+    assert "TYPE = BLOB_STORAGE" in sql
+    assert ("LOCATION = 'https://account.blob.core.windows.net/container'"
+            in sql)
+    # Managed identity is now the default, so no SAS secret is emitted.
+    assert "IDENTITY = 'MANAGED IDENTITY'" in sql
+    assert 'SECRET' not in sql
 
 
 def test_credential_setup_uses_abs_for_blob_storage_on_sql_server_2025():
@@ -863,10 +955,26 @@ def test_external_table_no_trailing_comma_reject_type():
         'file_type': 'csv', 'file_path': 'data.csv',
         'schema': [('id', 'int64')],
     }
-    sql = gen.generate_external_table(meta, 'tbl', 'ds', 'loc', 'fmt')
+    sql = gen.generate_external_table(meta, 'tbl', 'ds', 'loc', 'fmt',
+                                      target_platform='sql_server_2019')
     # No double-comma (the old bug had VALUE, followed by ,\n from join)
     assert 'VALUE,,' not in sql
     assert 'REJECT_TYPE = VALUE' in sql
+
+
+def test_external_table_reject_options_only_for_hadoop_sources():
+    """REJECT_TYPE/REJECT_VALUE are PolyBase HADOOP-only options."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'data.csv',
+        'schema': [('id', 'int64')],
+    }
+    for platform in ('sql_server_2022', 'sql_server_2025', 'azure_sql_db',
+                     'azure_sql_mi', 'fabric_sql_db'):
+        sql = gen.generate_external_table(meta, 'tbl', 'ds', 'loc', 'fmt',
+                                          target_platform=platform)
+        assert 'REJECT_TYPE' not in sql, platform
+        assert 'REJECT_VALUE' not in sql, platform
 
 
 # -------------------------------------------------------------------
@@ -936,14 +1044,21 @@ def test_bulk_insert_on_azure_sql_mi():
     assert 'NOT AVAILABLE' not in sql
 
 
-def test_openrowset_azure_sql_db_blob_storage():
-    """OPENROWSET on Azure SQL Database should generate BLOB_STORAGE syntax."""
+def test_openrowset_azure_sql_db_data_virtualization():
+    """Azure SQL DB OPENROWSET uses a relative BULK path plus DATA_SOURCE."""
     gen = SQLGenerator()
     meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
-    sql = gen.generate_openrowset(meta, target_platform='azure_sql_db')
-    assert 'BLOB_STORAGE' in sql
-    assert 'DATA_SOURCE' in sql
-    assert 'BlobDS' in sql
+    sql = gen.generate_openrowset(
+        meta,
+        storage_url='https://acct.blob.core.windows.net/raw/landing/x.csv',
+        data_source='LakeDS', target_platform='azure_sql_db')
+    assert "BULK 'landing/x.csv'" in sql
+    assert "DATA_SOURCE     = 'LakeDS'" in sql
+    # The row-oriented read uses the abs:// virtualization source; only the
+    # single-LOB whole-file read may reference the TYPE = BLOB_STORAGE source.
+    assert 'BLOB_STORAGE' not in sql.split('-- ---- Whole file as one value')[0]
+    assert 'https://' not in sql.split('-- Data source location')[1].split('\n')[1]
+    assert 'abs://raw@acct.blob.core.windows.net' in sql
 
 
 def test_openrowset_local_on_sql_server_2022():
@@ -965,17 +1080,18 @@ def test_external_table_not_on_azure_sql_mi():
     gen = SQLGenerator()
     meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
     sql = gen.generate_external_table(meta, target_platform='azure_sql_mi')
-    assert 'NOT AVAILABLE' in sql
+    assert 'CREATE EXTERNAL TABLE [dbo].[ext_x]' in sql
 
 
-def test_external_table_not_on_fabric_sql_db():
-    """CREATE EXTERNAL TABLE should show guidance on Fabric SQL Database."""
+def test_external_table_on_fabric_sql_db_preview():
+    """Fabric SQL Database supports CREATE EXTERNAL TABLE in preview."""
     gen = SQLGenerator()
     meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
     sql = gen.generate_external_table(meta, target_platform='fabric_sql_db')
-    assert 'not natively supported' in sql
-    assert 'Fabric Shortcuts' in sql
-    assert 'Mirroring' in sql
+    assert 'CREATE EXTERNAL TABLE [dbo].[ext_x]' in sql
+    assert 'preview' in sql
+    assert 'Entra passthrough' in sql
+    assert 'Synapse' not in sql
 
 
 def test_for_json_on_azure_sql_db():
@@ -1024,7 +1140,9 @@ def test_credential_not_on_azure_sql_mi():
     """Credential setup not available on Azure SQL MI."""
     gen = SQLGenerator()
     sql = gen.generate_credential_setup('DS', 'ff', target_platform='azure_sql_mi')
-    assert 'NOT AVAILABLE' in sql
+    assert 'CREATE EXTERNAL DATA SOURCE [DS]' in sql
+    assert 'CREATE EXTERNAL DATA SOURCE [DS_Bulk]' in sql
+    assert 'TYPE = BLOB_STORAGE' in sql
 
 
 def test_best_practices_includes_platform_methods():
@@ -1035,7 +1153,6 @@ def test_best_practices_includes_platform_methods():
         'encoding': 'utf-8', 'file_size': 1024,
     }
     bp = gen.generate_best_practices(meta, target_platform='sql_server_2022')
-    assert 'COPY INTO' in bp
     assert 'CREATE EXTERNAL TABLE' in bp
 
     bp2 = gen.generate_best_practices(meta, target_platform='sql_server_2022')
@@ -1048,26 +1165,48 @@ def test_best_practices_includes_platform_methods():
 # -------------------------------------------------------------------
 
 def test_openrowset_azure_sql_db_json():
-    """OPENROWSET on Azure SQL DB for JSON produces SINGLE_CLOB + OPENJSON."""
+    """Whole-document JSON uses the BLOB_STORAGE `_Bulk` source + SINGLE_CLOB.
+
+    Live certification (Azure SQL DB and SQL Server 2025, public blob
+    ``azcliprod/cli/vm/aliases.json``) proved SINGLE_CLOB *is* valid with a
+    DATA_SOURCE whose TYPE is BLOB_STORAGE. The restriction applies only to
+    the abs:// / adls:// virtualization connectors.
+    """
     gen = SQLGenerator()
     meta = {
         'file_type': 'json', 'file_path': 'data.json',
         'schema': [('id', 'int64'), ('name', 'object')],
         'json_nesting': {'id': 'scalar', 'name': 'scalar'},
     }
-    sql = gen.generate_openrowset(meta, target_platform='azure_sql_db')
-    assert 'SINGLE_CLOB' in sql
+    sql = gen.generate_openrowset(meta, data_source='LakeDS',
+                                  target_platform='azure_sql_db')
+    code = code_only(sql)
+    assert 'SINGLE_CLOB' in code
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in code
+    assert 'BulkColumn' in code
     assert 'OPENJSON' in sql
-    assert 'BlobDS' in sql
+    # A whole JSON document is never row-framed.
+    assert "FIELDQUOTE      = '0x0b'" not in code
 
 
 def test_openrowset_azure_sql_mi():
-    """OPENROWSET on Azure SQL MI produces BLOB_STORAGE syntax."""
+    """OPENROWSET on Azure SQL MI uses data virtualization syntax."""
     gen = SQLGenerator()
     meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
     sql = gen.generate_openrowset(meta, target_platform='azure_sql_mi')
-    assert 'BLOB_STORAGE' in sql
+    # The row-oriented read uses data virtualization; the single-LOB whole-file
+    # read is the only place a TYPE = BLOB_STORAGE source may appear.
+    assert 'BLOB_STORAGE' not in sql.split('-- ---- Whole file as one value')[0]
     assert 'DATA_SOURCE' in sql
+    assert "FORMAT          = 'CSV'" in sql
+
+
+def test_openrowset_azure_sql_mi_delta_unsupported():
+    """Azure SQL MI has no Delta support."""
+    gen = SQLGenerator()
+    meta = {'file_type': 'delta', 'file_path': 'x', 'schema': [('id', 'int64')]}
+    sql = gen.generate_openrowset(meta, target_platform='azure_sql_mi')
+    assert 'Delta is NOT supported' in sql
 
 
 def test_storage_url_in_openrowset():
@@ -1126,15 +1265,15 @@ def test_generate_all_statements_passes_storage_url():
     assert 'BULK INSERT' in stmts['bulk_insert']
 
 
-def test_fabric_sql_db_external_table_guidance():
-    """Fabric SQL DB external table shows detailed guidance with alternatives."""
+def test_fabric_sql_db_bulk_insert_alternatives():
+    """Fabric SQL DB has no BULK INSERT and offers OPENROWSET alternatives."""
     gen = SQLGenerator()
-    meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')]}
-    sql = gen.generate_external_table(meta, target_platform='fabric_sql_db')
-    assert 'Shortcuts' in sql
-    assert 'Mirroring' in sql
-    assert 'Cross-warehouse' in sql
-    assert 'Dataflows' in sql
+    meta = {'file_type': 'csv', 'file_path': 'x.csv', 'schema': [('id', 'int64')],
+            'delimiter': ',', 'has_header': True}
+    sql = gen.generate_bulk_insert(meta, target_platform='fabric_sql_db')
+    assert 'FROM OPENROWSET(' in sql
+    assert 'COPY INTO' not in sql
+    assert 'Synapse' not in sql
 
 
 # -------------------------------------------------------------------
@@ -1196,7 +1335,343 @@ def test_credential_setup_in_all_statements():
     }
     stmts = gen.generate_all_statements(meta)
     assert 'credential_setup' in stmts
-    assert 'CREATE MASTER KEY' in stmts['credential_setup'] or 'NOT AVAILABLE' in stmts['credential_setup']
+    setup = stmts['credential_setup']
+    # Managed identity is the default, so no master key is emitted.
+    assert (
+        "IDENTITY = 'MANAGED IDENTITY'" in setup or 'NOT AVAILABLE' in setup
+    )
+
+
+def test_all_statements_object_name_overrides():
+    """Every generated object name can be overridden by the caller.
+
+    This is what lets a run confine its objects to a disposable prefix instead
+    of writing into dbo, where real tables such as the TPC-H `orders` table
+    live.
+    """
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv',
+        'schema': [('id', 'int64')],
+        'delimiter': ',', 'has_header': True, 'encoding': 'utf-8',
+    }
+    stmts = gen.generate_all_statements(
+        meta,
+        table_name='sqlfdt_cert_abc_tbl',
+        schema_name='sqlfdt_cert_abc',
+        data_source='sqlfdt_cert_abc_ds',
+        format_name='sqlfdt_cert_abc_fmt',
+        external_table_name='sqlfdt_cert_abc_ext',
+        credential_name='sqlfdt_cert_abc_cred',
+        target_platform='azure_sql_db',
+        storage_url='https://acct.blob.core.windows.net/raw/orders.csv',
+    )
+    joined = '\n'.join(stmts.values())
+    code = '\n'.join(
+        line for line in joined.split('\n')
+        if not line.lstrip().startswith('--')
+    )
+    assert 'ff_csv_format' not in code
+    assert 'ext_orders' not in code
+    assert 'cred_sqlfdt_cert_abc_ds' not in code
+    assert '[dbo]' not in code
+    assert 'sqlfdt_cert_abc_fmt' in stmts['external_file_format']
+    assert 'sqlfdt_cert_abc_ext' in stmts['create_external_table']
+    assert 'sqlfdt_cert_abc_cred' in stmts['credential_setup']
+
+
+# -------------------------------------------------------------------
+# Type mapping accuracy
+# -------------------------------------------------------------------
+
+def test_int8_maps_to_smallint_and_uint8_to_tinyint():
+    """Arrow int8 is signed and cannot use TINYINT (0-255)."""
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('int8') == 'SMALLINT'
+    assert gen._map_type_to_sql('uint8') == 'TINYINT'
+
+
+def test_structural_types_map_to_nvarchar_max():
+    """Struct/list/map/union types are serialised as text."""
+    gen = SQLGenerator()
+    for arrow_type in (
+        'struct<a: int64, b: string>',
+        'list<item: int64>',
+        'large_list<item: string>',
+        'fixed_size_list<item: int64>[4]',
+        'map<string, int64>',
+        'dense_union<a: int64>',
+    ):
+        assert gen._map_type_to_sql(arrow_type) == 'NVARCHAR(MAX)', arrow_type
+
+
+def test_nested_string_type_does_not_become_bigint():
+    """A nested type containing int64 must not fall back to BIGINT."""
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('list<item: int64>') == 'NVARCHAR(MAX)'
+    assert gen._map_type_to_sql('struct<id: int64>') == 'NVARCHAR(MAX)'
+
+
+def test_decimal_precision_and_scale_preserved():
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('decimal128(18,4)') == 'DECIMAL(18,4)'
+    assert gen._map_type_to_sql('decimal256(20,2)') == 'DECIMAL(20,2)'
+    assert gen._map_type_to_sql('decimal(10,2)') == 'DECIMAL(10,2)'
+    assert gen._map_type_to_sql('numeric(9,3)') == 'DECIMAL(9,3)'
+    assert gen._map_type_to_sql('decimal128(38,0)') == 'DECIMAL(38,0)'
+
+
+def test_decimal_out_of_range_or_negative_scale_is_safe():
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('decimal256(50,4)') == 'NVARCHAR(MAX)'
+    # Negative scale is absorbed into the precision budget.
+    assert gen._map_type_to_sql('decimal128(10,-2)') == 'DECIMAL(12,0)'
+    assert gen._map_type_to_sql('decimal128(38,-4)') == 'NVARCHAR(MAX)'
+
+
+def test_timestamp_units_and_timezone():
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('timestamp[s]') == 'DATETIME2(0)'
+    assert gen._map_type_to_sql('timestamp[ms]') == 'DATETIME2(3)'
+    assert gen._map_type_to_sql('timestamp[us]') == 'DATETIME2(6)'
+    assert gen._map_type_to_sql('timestamp[ns]') == 'DATETIME2(7)'
+    assert gen._map_type_to_sql('timestamp[us, tz=UTC]') == 'DATETIMEOFFSET(6)'
+    assert gen._map_type_to_sql('timestamp[ns, tz=UTC]') == 'DATETIMEOFFSET(7)'
+    assert gen._map_type_to_sql('datetime64[ns]') == 'DATETIME2(7)'
+
+
+# -------------------------------------------------------------------
+# Remote SQL Server OPENROWSET routing
+# -------------------------------------------------------------------
+
+def test_openrowset_sql_server_2022_remote_csv_uses_data_source():
+    """Remote CSV on 2022 must use a relative BULK path + DATA_SOURCE."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'encoding': 'utf-8', 'codepage': '65001',
+        'delimiter': ',', 'has_header': True,
+    }
+    sql = gen.generate_openrowset(
+        meta,
+        storage_url='abfss://raw@acct.dfs.core.windows.net/landing/orders.csv',
+        data_source='LakeDS', target_platform='sql_server_2022')
+    assert "BULK 'landing/orders.csv'" in sql
+    assert "DATA_SOURCE     = 'LakeDS'" in sql
+    assert "FORMATFILE" not in sql
+    assert "BULK N'" not in sql
+
+
+def test_openrowset_sql_server_2022_remote_json_uses_data_source():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'json', 'file_path': 'orders.json',
+        'file_name': 'orders.json',
+        'schema': [('id', 'int64')], 'json_nesting': {'id': 'scalar'},
+    }
+    sql = gen.generate_openrowset(
+        meta,
+        storage_url='abfss://raw@acct.dfs.core.windows.net/landing/orders.json',
+        data_source='LakeDS', target_platform='sql_server_2022')
+    assert "BULK 'landing/orders.json'" in sql
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in sql
+    # Live evidence: SINGLE_CLOB is valid with a TYPE = BLOB_STORAGE source.
+    assert 'SINGLE_CLOB' in code_only(sql)
+    assert 'BulkColumn' in code_only(sql)
+    assert 'OPENJSON' in sql
+    assert "BULK N'" not in sql
+
+
+def test_openrowset_sql_server_2019_remote_gives_staging_guidance():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'delimiter': ',', 'has_header': True,
+    }
+    sql = gen.generate_openrowset(
+        meta, storage_url='s3://bucket/landing/orders.csv',
+        target_platform='sql_server_2019')
+    assert 'cannot read this object storage URL' in sql
+    assert "BULK N'https://" not in sql
+    assert "BULK 's3://" not in sql
+    assert 'SQL Server 2022' in sql
+    assert 'TYPE = BLOB_STORAGE' in sql
+
+
+def test_openrowset_sql_server_2019_azure_blob_uses_bulk_data_source():
+    """SQL Server 2017+ can bulk-read Azure Blob via TYPE = BLOB_STORAGE."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'delimiter': ',', 'has_header': True,
+        'encoding': 'utf-8', 'codepage': '65001',
+    }
+    sql = gen.generate_openrowset(
+        meta,
+        storage_url='https://acct.blob.core.windows.net/raw/landing/orders.csv',
+        data_source='LakeDS', target_platform='sql_server_2019')
+    assert "BULK 'landing/orders.csv'" in sql
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in sql
+    assert "FIRSTROW        = 2" in sql
+    # An absolute URL must never appear as a BULK path.
+    assert "BULK 'https://" not in sql
+    assert "BULK N'https://" not in sql
+
+
+def test_openrowset_local_still_used_without_storage_url():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': r'C:\data\orders.csv',
+        'schema': [('id', 'int64')], 'delimiter': ',', 'has_header': True,
+        'encoding': 'utf-8', 'codepage': '65001',
+    }
+    sql = gen.generate_openrowset(meta, target_platform='sql_server_2022')
+    assert "BULK N'C:/data/orders.csv'" in sql
+    assert 'DATA_SOURCE' not in sql
+
+
+def test_azure_url_never_used_as_bulk_insert_path():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'delimiter': ',', 'has_header': True,
+        'encoding': 'utf-8', 'codepage': '65001',
+    }
+    sql = gen.generate_bulk_insert(
+        meta, 'orders',
+        storage_url='https://acct.blob.core.windows.net/raw/landing/orders.csv',
+        data_source='LakeDS', target_platform='azure_sql_db')
+    assert "FROM 'landing/orders.csv'" in sql
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in sql
+    assert 'TYPE = BLOB_STORAGE' in sql
+    assert "FROM 'https://" not in sql
+
+
+def test_internal_azure_scheme_url_is_split():
+    """azure://container/path from the storage handler must not leak."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'parquet', 'file_path': 'orders.parquet',
+        'file_name': 'orders.parquet', 'schema': [('id', 'int64')],
+    }
+    sql = gen.generate_openrowset(
+        meta, storage_url='azure://raw/landing/orders.parquet',
+        data_source='LakeDS', target_platform='sql_server_2022')
+    assert "BULK 'landing/orders.parquet'" in sql
+    assert 'azure://' not in sql
+
+
+# -------------------------------------------------------------------
+# Best-practice validation SQL targets the real table
+# -------------------------------------------------------------------
+
+def test_best_practices_validation_uses_resolved_table_and_schema():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': '2024 sales.csv',
+        'file_name': '2024 sales.csv', 'schema': [('id', 'int64')],
+        'encoding': 'utf-8', 'file_size': 1024,
+    }
+    stmts = gen.generate_all_statements(meta, table_name='2024 sales',
+                                        schema_name='staging')
+    assert 'CREATE TABLE [staging].[col_2024_sales]' in stmts['create_table']
+    assert ('SELECT COUNT(*) AS loaded_rows FROM [staging].[col_2024_sales];'
+            in stmts['best_practices'])
+    assert 'CREATE EXTERNAL TABLE [staging].[ext_col_2024_sales]' in \
+        stmts['create_external_table']
+
+
+def test_complete_ddl_has_distinct_regular_and_external_tables():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'encoding': 'utf-8', 'codepage': '65001',
+        'delimiter': ',', 'has_header': True, 'file_size': 1024,
+    }
+    script = gen.generate_complete_ddl(meta, table_name='orders',
+                                       data_source='LakeDS')
+    assert 'CREATE TABLE [dbo].[orders]' in script
+    assert 'CREATE EXTERNAL TABLE [dbo].[ext_orders]' in script
+    assert '\nGO\nGO' not in script
+    assert script.count('CREATE TABLE [dbo].[orders]') == 1
+
+
+def test_complete_ddl_contains_all_sections():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'encoding': 'utf-8', 'codepage': '65001',
+        'delimiter': ',', 'has_header': True, 'file_size': 1024,
+    }
+    script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
+    for marker in ('PREREQUISITE SETUP', 'CREATE EXTERNAL FILE FORMAT',
+                   'CREATE EXTERNAL TABLE', 'CREATE TABLE', 'BULK INSERT',
+                   'OPENROWSET', 'FOR JSON',
+                   'BEST PRACTICES', 'COPY INTO'):
+        assert marker in script, marker
+    # The JSON parse / DML section is gated to JSON input.
+    assert 'JSON FUNCTIONS' not in script
+
+
+def test_complete_ddl_includes_json_functions_for_json_input():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'json', 'file_path': 'orders.json',
+        'file_name': 'orders.json', 'json_format': 'array',
+        'schema': [('id', 'int64')], 'json_nesting': {'id': 'scalar'},
+        'encoding': 'utf-8', 'file_size': 1024,
+    }
+    script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
+    assert 'JSON FUNCTIONS' in script
+
+
+def test_complete_ddl_declares_json_variable_at_most_once_per_batch():
+    """Two DECLARE @json statements in one batch would fail to compile."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'json', 'file_path': 'orders.json',
+        'file_name': 'orders.json', 'json_format': 'array',
+        'schema': [('id', 'int64')], 'json_nesting': {'id': 'scalar'},
+        'encoding': 'utf-8', 'file_size': 1024,
+    }
+    for platform in SQLGenerator.PLATFORMS:
+        script = gen.generate_complete_ddl(
+            meta, target_platform=platform,
+            storage_url='abs://raw@acct.blob.core.windows.net/landing/orders.json')
+        for batch in script.split('\nGO\n'):
+            assert batch.count('DECLARE @json ') <= 1, platform
+
+
+def test_complete_ddl_does_not_duplicate_bulk_data_source():
+    """The _Bulk BLOB_STORAGE source must be created exactly once."""
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'encoding': 'utf-8', 'codepage': '65001',
+        'delimiter': ',', 'has_header': True, 'file_size': 1024,
+    }
+    script = gen.generate_complete_ddl(
+        meta, table_name='orders', data_source='LakeDS',
+        target_platform='azure_sql_db',
+        storage_url='https://acct.blob.core.windows.net/raw/landing/orders.csv')
+    assert script.count('CREATE EXTERNAL DATA SOURCE [LakeDS_Bulk]') == 1
+    assert script.count('CREATE DATABASE SCOPED CREDENTIAL [cred_LakeDS_Bulk]') == 1
+    assert script.count('CREATE EXTERNAL DATA SOURCE [LakeDS]') == 1
+    # The BULK INSERT section still references it.
+    assert "DATA_SOURCE     = 'LakeDS_Bulk'" in script
+
+
+def test_bulk_insert_standalone_still_includes_prereq():
+    gen = SQLGenerator()
+    meta = {
+        'file_type': 'csv', 'file_path': 'orders.csv', 'file_name': 'orders.csv',
+        'schema': [('id', 'int64')], 'encoding': 'utf-8', 'codepage': '65001',
+        'delimiter': ',', 'has_header': True,
+    }
+    sql = gen.generate_bulk_insert(
+        meta, 'orders', target_platform='azure_sql_db', data_source='LakeDS',
+        storage_url='https://acct.blob.core.windows.net/raw/landing/orders.csv')
+    assert 'CREATE EXTERNAL DATA SOURCE [LakeDS_Bulk]' in sql
 
 
 if __name__ == '__main__':

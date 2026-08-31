@@ -1,6 +1,7 @@
 ﻿"""File type detection and metadata analysis module."""
 
 import os
+import codecs
 import json
 import csv
 import math
@@ -94,9 +95,19 @@ class FileDetector:
         'utf-16-le': '1200',
         'utf-16-be': '1201',
         'shift_jis': '932',
+        'shift-jis': '932',
+        'sjis': '932',
+        'cp932': '932',
+        'ms932': '932',
         'euc-jp': '20932',
+        'euc_jp': '20932',
         'gbk': '936',
+        'cp936': '936',
+        'gb2312': '936',
         'big5': '950',
+        'cp950': '950',
+        'cp1251': '1251',
+        'windows-1251': '1251',
     }
 
     def __init__(self, cache_max_entries: int = CACHE_MAX_ENTRIES):
@@ -234,8 +245,79 @@ class FileDetector:
     # Encoding detection
     # ------------------------------------------------------------------
 
+    #: Byte-order marks that settle the encoding outright. Ordered longest
+    #: first so the UTF-32LE mark is never read as UTF-16LE followed by NULs.
+    _BOM_ENCODINGS: Tuple[Tuple[bytes, str], ...] = (
+        (codecs.BOM_UTF8, 'utf-8-sig'),
+        (codecs.BOM_UTF32_LE, 'utf-32'),
+        (codecs.BOM_UTF32_BE, 'utf-32'),
+        (codecs.BOM_UTF16_LE, 'utf-16'),
+        (codecs.BOM_UTF16_BE, 'utf-16'),
+    )
+
+    @staticmethod
+    def _looks_like_bomless_utf16(raw: bytes) -> Optional[str]:
+        """Return a UTF-16 codec name when *raw* looks like UTF-16 without a BOM.
+
+        Latin text encoded as UTF-16 is a run of `XX 00` pairs, so every byte
+        is below 0x80 and a plain ASCII test claims it - reading it back as a
+        single byte codepage then treats the NUL padding as data and doubles
+        the apparent row count.
+
+        The tell is not the NUL bytes themselves but *where* they sit: real
+        text has none at all, and binary formats scatter them across both
+        parities. Only a sample whose NULs land exclusively on one parity, and
+        often enough to be structural rather than incidental, is claimed here.
+        """
+        usable = len(raw) - (len(raw) % 2)
+        if usable < 4:
+            return None
+        head = raw[:usable]
+        evens = head[0::2]
+        odds = head[1::2]
+        zeros_even = evens.count(0)
+        zeros_odd = odds.count(0)
+        # A quarter of one side being NUL is far past anything text produces
+        # and is the density a Latin UTF-16 stream shows.
+        threshold = max(2, len(odds) // 4)
+        if zeros_even == 0 and zeros_odd >= threshold:
+            return 'utf-16-le'
+        if zeros_odd == 0 and zeros_even >= threshold:
+            return 'utf-16-be'
+        return None
+
+    @staticmethod
+    def _decodes_as_utf8(raw: bytes, truncated: bool) -> bool:
+        """Return True when *raw* is valid UTF-8.
+
+        A capped read can slice a multi-byte character in half, which is an
+        artefact of the cap and not evidence the file is something else, so a
+        failure in the final three bytes of a truncated read is retried
+        without the incomplete tail.
+        """
+        try:
+            raw.decode('utf-8')
+            return True
+        except UnicodeDecodeError as exc:
+            if not (truncated and exc.end >= len(raw) and exc.start >= len(raw) - 3):
+                return False
+            try:
+                raw[: exc.start].decode('utf-8')
+                return True
+            except UnicodeDecodeError:
+                return False
+
     def detect_encoding(self, file_path: str) -> Tuple[str, float]:
-        """Detect file encoding using chardet when available."""
+        """Detect a file's encoding.
+
+        A byte-order mark, pure ASCII and valid UTF-8 are *facts about the
+        bytes*; ``chardet`` is a statistical guess. Asking the guess first made
+        the answer depend on which chardet build happened to be installed --
+        under Python 3.9 it classified valid UTF-8 fixtures as a charmap codec,
+        and every later read of those files then died on byte 0x81. The
+        certain answers are therefore established first, and chardet is left to
+        do the job only it can do: naming a legacy codepage such as CP932.
+        """
         signature = self._get_file_signature(file_path)
         if signature:
             with self._cache_lock:
@@ -243,37 +325,55 @@ class FileDetector:
                 if cached is not None:
                     return cached
 
-        try:
-            import chardet
-            with open(file_path, 'rb') as f:
-                raw = f.read(ENCODING_DETECTION_BYTES)
-            result = chardet.detect(raw)
-            encoding = (result.get('encoding') or 'utf-8').lower()
-            confidence = float(result.get('confidence') or 0.0)
-            detected = (encoding, confidence)
-            if signature:
-                with self._cache_lock:
-                    self._cache_set(self._encoding_cache, signature, detected)
-            return detected
-        except ImportError:
-            pass
-
-        for enc in ['utf-8-sig', 'utf-8', 'cp1252', 'latin-1']:
-            try:
-                with open(file_path, 'r', encoding=enc) as f:
-                    f.read(4096)
-                detected = (enc, 0.5)
-                if signature:
-                    with self._cache_lock:
-                        self._cache_set(self._encoding_cache, signature, detected)
-                return detected
-            except (UnicodeDecodeError, LookupError):
-                continue
-        detected = ('utf-8', 0.0)
+        detected = self._detect_encoding_uncached(file_path)
         if signature:
             with self._cache_lock:
                 self._cache_set(self._encoding_cache, signature, detected)
         return detected
+
+    def _detect_encoding_uncached(self, file_path: str) -> Tuple[str, float]:
+        try:
+            import chardet
+        except ImportError:
+            chardet = None
+
+        with open(file_path, 'rb') as handle:
+            raw = handle.read(ENCODING_DETECTION_BYTES)
+            truncated = bool(handle.read(1))
+
+        for bom, encoding in self._BOM_ENCODINGS:
+            if raw.startswith(bom):
+                return (encoding, 1.0)
+
+        if raw:
+            # UTF-16 without a byte order mark is a stream of `XX 00` pairs when
+            # the text is Latin, and every one of those bytes is below 0x80. The
+            # ASCII check below would happily claim it, so this runs first.
+            bomless_utf16 = self._looks_like_bomless_utf16(raw)
+            if bomless_utf16:
+                return (bomless_utf16, 0.95)
+            # ASCII is a subset of UTF-8 but maps to a different SQL Server
+            # codepage, so it keeps its own answer rather than being folded in.
+            if max(raw) < 0x80:
+                return ('ascii', 1.0)
+            if self._decodes_as_utf8(raw, truncated):
+                return ('utf-8', 1.0)
+
+        if chardet is not None:
+            result = chardet.detect(raw) or {}
+            return (
+                (result.get('encoding') or 'utf-8').lower(),
+                float(result.get('confidence') or 0.0),
+            )
+
+        for enc in ['utf-8-sig', 'utf-8', 'cp1252', 'latin-1']:
+            try:
+                with open(file_path, 'r', encoding=enc) as handle:
+                    handle.read(4096)
+                return (enc, 0.5)
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return ('utf-8', 0.0)
 
     def encoding_to_codepage(self, encoding: str) -> str:
         """Return the SQL Server codepage string for a given Python encoding name."""
@@ -340,6 +440,8 @@ class FileDetector:
                 metadata.update(self._analyze_csv(file_path, encoding))
             elif file_type == 'parquet':
                 metadata.update(self._analyze_parquet(file_path))
+            elif file_type == 'orc':
+                metadata.update(self._analyze_orc(file_path))
             elif file_type == 'delta':
                 metadata.update(self._analyze_delta(file_path))
             elif file_type == 'iceberg':
@@ -478,6 +580,12 @@ class FileDetector:
 
             schema = [(field.name, str(field.type)) for field in arrow_schema]
             nullable_cols = [field.name for field in arrow_schema if field.nullable]
+            physical_types = {
+                column.path: column.physical_type
+                for index in range(len(pf.schema))
+                for column in (pf.schema.column(index),)
+                if '.' not in column.path
+            }
 
             compression = None
             if pq_meta.num_row_groups > 0:
@@ -501,6 +609,7 @@ class FileDetector:
                 'compression': compression,
                 'nullable_columns': nullable_cols,
                 'encoding': 'binary',
+                'parquet_physical_types': physical_types,
                 'parquet_metadata': {
                     'created_by': pq_meta.created_by,
                     'num_row_groups': pq_meta.num_row_groups,
@@ -508,6 +617,35 @@ class FileDetector:
                     'format_version': str(pq_meta.format_version),
                     'key_value_metadata': kv_meta,
                 },
+            }
+        except Exception as e:
+            return {'error': str(e), 'encoding': 'binary'}
+
+    def _analyze_orc(self, file_path: str) -> Dict[str, Any]:
+        """Analyse ORC file metadata using the Arrow ORC reader."""
+        _ensure_pyarrow()
+        try:
+            import pyarrow.orc as orc
+        except ImportError:
+            return {
+                'error': 'ORC analysis requires a pyarrow build with ORC '
+                         'support. Install with: pip install pyarrow',
+                'encoding': 'binary',
+            }
+
+        try:
+            reader = orc.ORCFile(file_path)
+            arrow_schema = reader.schema
+            compression = getattr(reader, 'compression', None)
+            return {
+                'schema': [(f.name, str(f.type)) for f in arrow_schema],
+                'row_count': reader.nrows,
+                'column_count': len(arrow_schema),
+                'compression': str(compression) if compression else None,
+                'nullable_columns': [
+                    f.name for f in arrow_schema if f.nullable
+                ],
+                'encoding': 'binary',
             }
         except Exception as e:
             return {'error': str(e), 'encoding': 'binary'}
@@ -732,8 +870,31 @@ class FileDetector:
                 return 'dict'
             raw_type = nested_type
 
-        normalized = str(raw_type).lower()
+        normalized = str(raw_type).lower().strip()
         primitive = re.split(r'[\[(]', normalized, maxsplit=1)[0]
+
+        # Preserve decimal precision/scale so the SQL mapper can emit
+        # DECIMAL(p, s) instead of collapsing to a generic decimal type.
+        if primitive in ('decimal', 'decimal128', 'decimal256'):
+            match = re.match(
+                r'^decimal(?:128|256)?\s*\(\s*(\d+)\s*,\s*(-?\d+)\s*\)$',
+                normalized,
+            )
+            if match:
+                return f'decimal({match.group(1)},{match.group(2)})'
+            return 'decimal128'
+
+        # Preserve timezone and nanosecond semantics for timestamps.
+        timestamp_map = {
+            'timestamp': 'timestamp[us]',
+            'timestamp_ntz': 'timestamp[us]',
+            'timestamptz': 'timestamp[us, tz=UTC]',
+            'timestamp_ns': 'timestamp[ns]',
+            'timestamptz_ns': 'timestamp[ns, tz=UTC]',
+        }
+        if primitive in timestamp_map:
+            return timestamp_map[primitive]
+
         type_map = {
             'boolean': 'bool',
             'int': 'int32',
@@ -742,14 +903,10 @@ class FileDetector:
             'double': 'float64',
             'string': 'str',
             'date': 'date',
-            'time': 'time',
-            'timestamp': 'timestamp',
-            'timestamptz': 'timestamp',
-            'timestamp_ntz': 'timestamp',
+            'time': 'time64[us]',
             'binary': 'binary',
             'uuid': 'str',
             'fixed': 'binary',
-            'decimal': 'decimal128',
         }
         return type_map.get(primitive, 'str')
 

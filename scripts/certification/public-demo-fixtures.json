@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "base_url": "https://publicsamples.blob.core.windows.net/filesamples",
+  "publication_status": "published_and_anonymously_verified",
+  "anonymous_container_status": 200,
+  "artifact_count": 23,
+  "publication_verification": {
+    "uploaded": 23,
+    "unchanged": 0,
+    "anonymous_exact_bytes_sha256": 23,
+    "anonymous_listed": 23,
+    "verified_at": "2026-08-30T23:40:00Z"
+  },
+  "reference_validation": {
+    "delta": "complete",
+    "iceberg": "complete"
+  },
+  "artifacts": [
+    {
+      "local_path": "demo/csv/sales_scalars.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/csv/sales_scalars.csv",
+      "bytes": 670,
+      "sha256": "1b89d03fcbce56fb1394dcc333b7ebbc1391934cd6244793fa6cf2e6233c1878",
+      "format": "csv",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/csv/sales_scalars.tsv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/csv/sales_scalars.tsv",
+      "bytes": 668,
+      "sha256": "4ae8fec8d8b06990e5c43d143a482b78a88676f0b1dcbf0ab60fd9a0b03fd76d",
+      "format": "tsv",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/csv/sales_scalars_pipe.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/csv/sales_scalars_pipe.csv",
+      "bytes": 668,
+      "sha256": "942fc3771bba7b491de2549ff6749da0a9a4c27e724893e28e608cb1a413442c",
+      "format": "pipe-delimited csv",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/excel/inventory.xlsx",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/excel/inventory.xlsx",
+      "bytes": 5209,
+      "sha256": "01c5e3eaa22e998fed0a54c7253e80800220f7e7669976653d9e8c0497e485bd",
+      "format": "excel",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/json/order_single_object.json",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/json/order_single_object.json",
+      "bytes": 458,
+      "sha256": "e2075a9de0529691aa9e212e59f05961c6516a145529471f009f6f8a2cfe841c",
+      "format": "json object",
+      "encoding": "ascii",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/json/orders.ndjson",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/json/orders.ndjson",
+      "bytes": 863,
+      "sha256": "8ee60ff687936f9593f812803a9f590d065ca22b2d3c5e33680ee9c125d9cf93",
+      "format": "ndjson",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/json/orders_array.json",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/json/orders_array.json",
+      "bytes": 1283,
+      "sha256": "04e7dbcdb83e1b67864222fe974343db93c945306e6a85818a5f54bfef8850e9",
+      "format": "json array",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/orc/all_types.orc",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/orc/all_types.orc",
+      "bytes": 2695,
+      "sha256": "2c09592c9e25c8be77a0e6525a282d683622ec3e8e0b1c712c022c1f865e9bb0",
+      "format": "orc",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/parquet/all_types.parquet",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/parquet/all_types.parquet",
+      "bytes": 8547,
+      "sha256": "52bfec64ae2d7365a9fd663a3754537e7ce5f2e4547daf5373056ff42a7c6cd4",
+      "format": "parquet",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/parquet/sales.parquet",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/parquet/sales.parquet",
+      "bytes": 1883,
+      "sha256": "6a2779df51ed825c2e528022b4193620423ead3e01cea87c3a816d249dc49f13",
+      "format": "parquet",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_delta/_delta_log/00000000000000000000.json",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_delta/_delta_log/00000000000000000000.json",
+      "bytes": 1110,
+      "sha256": "120149e3ca24ea42604d2e5d1f66d3a26e0e46cded6c716630a673c5f623d3be",
+      "format": "delta transaction log",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_delta/part-00000-demo-c000.snappy.parquet",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_delta/part-00000-demo-c000.snappy.parquet",
+      "bytes": 1579,
+      "sha256": "7b65ef850dbb61eb922acdfff73f08b6e59cabfb2478d0b93e1194358fa9279a",
+      "format": "delta parquet part (snappy)",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_iceberg/data/00000-0-demo.parquet",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg/data/00000-0-demo.parquet",
+      "bytes": 1948,
+      "sha256": "1dc7f9ce7090aff46e9f112f8c25cb2b9f3f9d6b3c3e0dc4ff428977c4b8d10c",
+      "format": "iceberg parquet data",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_iceberg/metadata/demo-m0.avro",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg/metadata/demo-m0.avro",
+      "bytes": 3723,
+      "sha256": "4cd02346bebbd41b844102a3a15b79658cadefd60160911c0a75449d551bb441",
+      "format": "iceberg avro metadata",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_iceberg/metadata/snap-1000000000000000001-1-demo.avro",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg/metadata/snap-1000000000000000001-1-demo.avro",
+      "bytes": 1753,
+      "sha256": "24e0854f6746a334a84575c28ae64f8a0635774320b996ba2c496ac1f53fce6e",
+      "format": "iceberg avro metadata",
+      "encoding": "binary",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/tables/events_iceberg/metadata/v1.metadata.json",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/tables/events_iceberg/metadata/v1.metadata.json",
+      "bytes": 2128,
+      "sha256": "7ae2f9687d1ca9ba41498d28bbc4714a3b0be28a89f045680bb10db751714819",
+      "format": "iceberg metadata",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/text/readme_sample.txt",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/text/readme_sample.txt",
+      "bytes": 458,
+      "sha256": "88dc40411d1732d495a85a35e7591fae64082f1b4ae0f04b06207c9f21ebe023",
+      "format": "text",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/collation_cases_utf8.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/collation_cases_utf8.csv",
+      "bytes": 881,
+      "sha256": "0405253044661f3e2a88cac58d4ab223e5c2d55ffddb089c059d4c2b14a68b0a",
+      "format": "csv",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/japanese_cp932.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/japanese_cp932.csv",
+      "bytes": 201,
+      "sha256": "f96a8701b098ed4c27b6a0c0dd7730e9b4fe70f5424d8a46befcc1c42ef0d454",
+      "format": "csv",
+      "encoding": "cp932",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/unicode_utf16le_bom.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf16le_bom.csv",
+      "bytes": 2682,
+      "sha256": "40976c845376d3557e79a2652b8f5d5c81e29fe17f6284a65892e1f874e7a078",
+      "format": "csv",
+      "encoding": "utf-16le-bom",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/unicode_utf16le_bom.tsv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf16le_bom.tsv",
+      "bytes": 2678,
+      "sha256": "c4431c7a2b72165fcd38fa510ccf93d5df179d72cf2b8d6b099740a875e9b127",
+      "format": "tsv",
+      "encoding": "utf-16le-bom",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/unicode_utf8.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf8.csv",
+      "bytes": 1508,
+      "sha256": "04993d1bec749c4fd089425d6db4a6766da67a94387364eddefcb870c301d233",
+      "format": "csv",
+      "encoding": "utf-8",
+      "expected_availability": "public_anonymous"
+    },
+    {
+      "local_path": "demo/unicode/unicode_utf8_bom.csv",
+      "url": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf8_bom.csv",
+      "bytes": 1511,
+      "sha256": "9ae04b307baa902c5365f5fb96e72b0a4d43cee9f20eba0374b3fa9c91bf9730",
+      "format": "csv",
+      "encoding": "utf-8-bom",
+      "expected_availability": "public_anonymous"
+    }
+  ]
+}

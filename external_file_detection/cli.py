@@ -1,4 +1,4 @@
-"""Command-line interface for External File Detection."""
+"""Command-line interface for the SQL File Detection Tool."""
 
 import click
 import json
@@ -6,14 +6,18 @@ import logging
 from typing import Dict, Any
 
 from .external_file_detector import ExternalFileDetectorApp
-from . import __version__
+from .sql_generator import AUTH_METHODS, DEFAULT_TARGET_PLATFORM, SQLGenerator
+from .azure_auth import AUTH_MODES as AZURE_AUTH_MODES
+from .azure_auth import redact as _redact
+from . import __product_name__, __version__
 
 logger = logging.getLogger(__name__)
 
 
 def _build_storage_config(aws_access_key_id, aws_secret_access_key, aws_region,
                           azure_account_name, azure_account_key,
-                          azure_connection_string) -> Dict[str, Any]:
+                          azure_connection_string, azure_sas=None,
+                          azure_auth_mode=None) -> Dict[str, Any]:
     """Build storage configuration dict from CLI options."""
     storage_config: Dict[str, Any] = {}
     if aws_access_key_id:
@@ -28,11 +32,77 @@ def _build_storage_config(aws_access_key_id, aws_secret_access_key, aws_region,
         storage_config['azure_account_key'] = azure_account_key
     if azure_connection_string:
         storage_config['azure_connection_string'] = azure_connection_string
+    if azure_sas:
+        storage_config['azure_sas_token'] = azure_sas
+    if azure_auth_mode:
+        storage_config['azure_auth_mode'] = azure_auth_mode
     return storage_config
+
+
+def target_platform_option(func):
+    """Shared Click option selecting the SQL platform for generated scripts."""
+    return click.option(
+        '--target-platform', default=DEFAULT_TARGET_PLATFORM,
+        show_default=True,
+        type=click.Choice(SQLGenerator.PLATFORMS),
+        help='SQL platform the generated script targets',
+    )(func)
+
+
+def naming_options(func):
+    """Shared Click options controlling generated object names and auth.
+
+    Without an explicit schema, a table name derived from the file name lands
+    in ``dbo``, where it can collide with a real table -- a file called
+    ``orders.csv`` targets ``dbo.orders``. These options make every generated
+    name caller-controlled.
+    """
+    func = click.option(
+        '--auth-method', default=None,
+        type=click.Choice(AUTH_METHODS),
+        help='How the generated SQL authenticates to storage. Defaults to '
+             'managed_identity where the platform supports it, which needs '
+             'no secret and no database master key. Use public for a '
+             'container that allows anonymous read.',
+    )(func)
+    func = click.option(
+        '--credential-name', default=None,
+        help='Name for the generated database scoped credential '
+             '(default: cred_<data-source>).',
+    )(func)
+    func = click.option(
+        '--table', 'table_name', default=None,
+        help='Explicit table name instead of one derived from the file name. '
+             'Only valid when analysing a single file.',
+    )(func)
+    func = click.option(
+        '--schema', 'schema_name', default='dbo', show_default=True,
+        help='Schema every generated object is created in. Set this to keep '
+             'generated objects out of dbo.',
+    )(func)
+    return func
+
+
+def storage_url_option(func):
+    """Shared Click option naming where the data is staged for SQL."""
+    return click.option(
+        '--storage-url', default=None,
+        help='Cloud location the data is (or will be) staged at, for '
+             'example abs://container@account.blob.core.windows.net/folder. '
+             'Used verbatim in the generated SQL; local files need this '
+             'because a cloud SQL engine cannot read your disk.',
+    )(func)
 
 
 def storage_options(func):
     """Shared Click options for cloud storage credentials."""
+    func = click.option('--azure-auth-mode', default=None,
+                        type=click.Choice(AZURE_AUTH_MODES),
+                        help='Explicit Azure Storage authentication mode. '
+                             'Use managed_identity in production; '
+                             'entra_default reuses a local developer sign-in.')(func)
+    func = click.option('--azure-sas', default=None, envvar='AZURE_STORAGE_SAS_TOKEN',
+                        help='Azure storage SAS URL or token (or set AZURE_STORAGE_SAS_TOKEN env var)')(func)
     func = click.option('--azure-connection-string', default=None, envvar='AZURE_STORAGE_CONNECTION_STRING',
                         help='Azure storage connection string (or set AZURE_STORAGE_CONNECTION_STRING env var)')(func)
     func = click.option('--azure-account-key', default=None, envvar='AZURE_STORAGE_KEY',
@@ -57,7 +127,7 @@ def _run_web_gui(host: str, port: int, debug: bool,
         app.run(host=host, port=port, debug=debug)
     except ImportError as e:
         raise click.ClickException(
-            f"Could not launch web GUI: {e}. "
+            f"Could not launch the {__product_name__} web interface: {e}. "
             f"Please ensure Flask is installed: pip install flask"
         ) from e
     except Exception as e:
@@ -68,7 +138,11 @@ def _run_web_gui(host: str, port: int, debug: bool,
 @click.version_option(version=__version__)
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging')
 def main(verbose):
-    """External File Detector - Detect file types and generate SQL DDL."""
+    """SQL File Detection Tool - detect data files and generate SQL DDL.
+
+    Generated scripts target Azure SQL Database by default; pass
+    --target-platform to choose another SQL platform.
+    """
     level = logging.DEBUG if verbose else logging.WARNING
     logging.basicConfig(
         level=level,
@@ -94,15 +168,22 @@ def gui(host, port, debug, root_dir):
               help='Output file path for results')
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
+@target_platform_option
+@storage_url_option
+@naming_options
 @storage_options
-def analyze(location, data_source, output, format, aws_access_key_id, 
+def analyze(location, data_source, output, format, target_platform,
+           storage_url, schema_name, table_name, credential_name, auth_method,
+           aws_access_key_id,
            aws_secret_access_key, aws_region, azure_account_name,
-           azure_account_key, azure_connection_string):
+           azure_account_key, azure_connection_string, azure_sas,
+           azure_auth_mode):
     """Analyze files at the specified location."""
     
     storage_config = _build_storage_config(
         aws_access_key_id, aws_secret_access_key, aws_region,
-        azure_account_name, azure_account_key, azure_connection_string
+        azure_account_name, azure_account_key, azure_connection_string,
+        azure_sas, azure_auth_mode
     )
     
     # Initialize application
@@ -111,7 +192,13 @@ def analyze(location, data_source, output, format, aws_access_key_id,
     try:
         # Analyze location
         click.echo(f"Analyzing location: {location}")
-        results = app.analyze_location(location, data_source)
+        results = app.analyze_location(location, data_source,
+                                       target_platform=target_platform,
+                                       storage_url=storage_url,
+                                       schema_name=schema_name,
+                                       table_name=table_name,
+                                       auth_method=auth_method,
+                                       credential_name=credential_name)
         
         # Display summary
         click.echo(f"\nAnalysis completed!")
@@ -143,7 +230,7 @@ def analyze(location, data_source, output, format, aws_access_key_id,
                         click.echo()
         
         if 'error' in results:
-            click.echo(f"Warning: {results['error']}", err=True)
+            click.echo(f"Warning: {_redact(results['error'])}", err=True)
             
     except click.ClickException:
         raise
@@ -159,20 +246,34 @@ def analyze(location, data_source, output, format, aws_access_key_id,
               help='Output file path for results')
 @click.option('--format', '-f', default='sql', type=click.Choice(['sql', 'json']),
               help='Output format')
+@target_platform_option
+@storage_url_option
+@naming_options
 @storage_options
-def analyze_files(files, data_source, output, format, aws_access_key_id,
+def analyze_files(files, data_source, output, format, target_platform,
+                  storage_url, schema_name, table_name, credential_name,
+                  auth_method,
+                  aws_access_key_id,
                   aws_secret_access_key, aws_region, azure_account_name,
-                  azure_account_key, azure_connection_string):
+                  azure_account_key, azure_connection_string, azure_sas,
+                  azure_auth_mode):
     """Analyze specific files."""
 
     storage_config = _build_storage_config(
         aws_access_key_id, aws_secret_access_key, aws_region,
-        azure_account_name, azure_account_key, azure_connection_string
+        azure_account_name, azure_account_key, azure_connection_string,
+        azure_sas, azure_auth_mode
     )
     app = ExternalFileDetectorApp(storage_config)
     
     try:
-        results = app.analyze_files(list(files), data_source)
+        results = app.analyze_files(list(files), data_source,
+                                    target_platform=target_platform,
+                                    storage_url=storage_url,
+                                    schema_name=schema_name,
+                                    table_name=table_name,
+                                    auth_method=auth_method,
+                                    credential_name=credential_name)
         
         click.echo(f"Analyzed {len(results)} files")
         
@@ -216,16 +317,19 @@ def analyze_files(files, data_source, output, format, aws_access_key_id,
 @click.argument('location')
 @click.option('--credential', default=None,
               help='Name of the database credential to use')
-def generate_data_source(name, storage_type, location, credential):
+@target_platform_option
+def generate_data_source(name, storage_type, location, credential,
+                         target_platform):
     """Generate CREATE EXTERNAL DATA SOURCE statement."""
     
     app = ExternalFileDetectorApp()
     
     try:
-        ddl = app.generate_data_source_ddl(name, storage_type, location, credential)
+        ddl = app.generate_data_source_ddl(name, storage_type, location, credential,
+                                          target_platform=target_platform)
         click.echo(ddl)
     except Exception as e:
-        click.echo(f"Error: {str(e)}", err=True)
+        click.echo(f"Error: {_redact(str(e))}", err=True)
         raise SystemExit(1)
 
 
@@ -245,14 +349,16 @@ def supported_types():
 @click.argument('location')
 @storage_options
 def list_files(location, aws_access_key_id, aws_secret_access_key, aws_region,
-               azure_account_name, azure_account_key, azure_connection_string):
+               azure_account_name, azure_account_key, azure_connection_string,
+               azure_sas, azure_auth_mode):
     """List files at the specified location."""
     
     from .storage_handlers import StorageFactory
     
     storage_config = _build_storage_config(
         aws_access_key_id, aws_secret_access_key, aws_region,
-        azure_account_name, azure_account_key, azure_connection_string
+        azure_account_name, azure_account_key, azure_connection_string,
+        azure_sas, azure_auth_mode
     )
     
     try:
@@ -266,7 +372,7 @@ def list_files(location, aws_access_key_id, aws_secret_access_key, aws_region,
         click.echo(f"\nTotal files: {len(files)}")
         
     except Exception as e:
-        click.echo(f"Error: {str(e)}", err=True)
+        click.echo(f"Error: {_redact(str(e))}", err=True)
         raise SystemExit(1)
 
 

@@ -198,54 +198,148 @@ class S3StorageHandler(StorageHandler):
 
 
 class AzureStorageHandler(StorageHandler):
-    """Handler for Azure Blob Storage."""
-    
-    def __init__(self, account_name: str = None, account_key: str = None, 
-                 connection_string: str = None):
-        """Initialize Azure storage handler."""
-        try:
-            from azure.storage.blob import BlobServiceClient
-            from azure.identity import DefaultAzureCredential
-        except ImportError:
-            raise ImportError(
-                "azure-storage-blob and azure-identity are required for Azure storage. "
-                "Install with: pip install azure-storage-blob azure-identity"
+    """Handler for Azure Blob Storage.
+
+    Authentication is expressed as an explicit mode rather than an implicit
+    chain. Supported modes are the ones in
+    :mod:`external_file_detection.azure_auth`: Microsoft Entra ID (developer,
+    interactive, managed identity or a VS Code brokered token), SAS,
+    connection string, account key, and anonymous public read.
+    """
+
+    #: Hard ceiling on blobs returned by :meth:`list_files` so a container
+    #: with millions of blobs cannot exhaust memory.
+    MAX_LISTED_FILES = 5000
+
+    #: Instance override default, also used when a handler is built without
+    #: running ``__init__`` (as some tests do).
+    max_listed_files = MAX_LISTED_FILES
+
+    def __init__(self, account_name: str = None, account_key: str = None,
+                 connection_string: str = None, sas_token: str = None,
+                 auth_mode: str = None, credential: Any = None,
+                 connection: Any = None,
+                 max_listed_files: int = None):
+        """Initialize the Azure storage handler.
+
+        Args:
+            account_name: Storage account name.
+            account_key: Shared key (least preferred).
+            connection_string: Storage connection string.
+            sas_token: SAS token or full SAS URL.
+            auth_mode: One of ``azure_auth.AUTH_MODES``. Inferred from the
+                supplied material when omitted.
+            credential: A ready ``TokenCredential``.
+            connection: An ``azure_auth.AzureConnection`` to reuse, which also
+                reuses its cached clients.
+            max_listed_files: Override the listing ceiling.
+        """
+        from . import azure_auth
+
+        self.max_listed_files = int(max_listed_files or self.MAX_LISTED_FILES)
+        self._connection = connection
+
+        if connection is not None:
+            self.auth_mode = connection.mode
+            self.account_name = account_name or connection.account_name
+            self.blob_service_client = connection.blob_service_client(
+                self.account_name
             )
+            return
+
+        BlobServiceClient = azure_auth._require_azure_storage()
         self.account_name = account_name
-        if connection_string:
-            self.blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-        elif account_name:
-            if account_key:
-                account_url = f"https://{account_name}.blob.core.windows.net"
-                self.blob_service_client = BlobServiceClient(
-                    account_url=account_url,
-                    credential=account_key
-                )
+
+        if auth_mode is None:
+            if connection_string:
+                auth_mode = azure_auth.AUTH_CONNECTION_STRING
+            elif sas_token:
+                auth_mode = azure_auth.AUTH_SAS
+            elif account_key:
+                auth_mode = azure_auth.AUTH_ACCOUNT_KEY
+            elif credential is not None:
+                auth_mode = azure_auth.AUTH_ENTRA_DEFAULT
+            elif account_name:
+                auth_mode = azure_auth.AUTH_ENTRA_DEFAULT
             else:
-                # Use default Azure credentials
-                from azure.identity import DefaultAzureCredential
-                account_url = f"https://{account_name}.blob.core.windows.net"
-                credential = DefaultAzureCredential()
-                self.blob_service_client = BlobServiceClient(
-                    account_url=account_url,
-                    credential=credential
+                raise ValueError(
+                    "Either connection_string or account_name must be provided"
                 )
-        else:
-            raise ValueError("Either connection_string or account_name must be provided")
-    
+        self.auth_mode = auth_mode
+
+        if auth_mode == azure_auth.AUTH_CONNECTION_STRING:
+            if not connection_string:
+                raise ValueError("connection_string is required for this mode")
+            resolved, _ = azure_auth.parse_connection_string(connection_string)
+            self.account_name = account_name or resolved
+            self.blob_service_client = BlobServiceClient.from_connection_string(
+                connection_string
+            )
+            return
+
+        if auth_mode == azure_auth.AUTH_SAS:
+            parsed_account, _container, token = azure_auth.parse_sas_input(
+                sas_token or ''
+            )
+            self.account_name = account_name or parsed_account
+            if not self.account_name:
+                raise ValueError(
+                    "A bare SAS token also needs the storage account name"
+                )
+            self.blob_service_client = BlobServiceClient(
+                self._account_url(), credential=token
+            )
+            return
+
+        if not self.account_name:
+            raise ValueError(
+                "Either connection_string or account_name must be provided"
+            )
+
+        if auth_mode == azure_auth.AUTH_ACCOUNT_KEY:
+            if not account_key:
+                raise ValueError("account_key is required for this mode")
+            self.blob_service_client = BlobServiceClient(
+                self._account_url(), credential=account_key
+            )
+            return
+
+        if auth_mode == azure_auth.AUTH_ANONYMOUS:
+            self.blob_service_client = BlobServiceClient(
+                self._account_url(), credential=None
+            )
+            return
+
+        resolved_credential = credential
+        if resolved_credential is None:
+            resolved_credential = azure_auth.build_entra_credential(auth_mode)
+        self.blob_service_client = BlobServiceClient(
+            self._account_url(), credential=resolved_credential
+        )
+
+    def _account_url(self) -> str:
+        return f"https://{self.account_name}.blob.core.windows.net"
+
     def list_files(self, path: str) -> List[str]:
-        """List files in Azure blob container."""
+        """List files in an Azure blob container, bounded by the ceiling."""
         container, prefix = _parse_azure_path(path)
-        
+
         files = []
         container_client = self.blob_service_client.get_container_client(container)
 
         blob_list = container_client.list_blobs(name_starts_with=prefix)
         for blob in blob_list:
-            if not blob.name.endswith('/'):  # Skip directories
-                encoded_name = quote(blob.name, safe='/')
-                files.append(f"azure://{container}/{encoded_name}")
-        
+            if blob.name.endswith('/'):  # Skip directory placeholders
+                continue
+            encoded_name = quote(blob.name, safe='/')
+            files.append(f"azure://{container}/{encoded_name}")
+            if len(files) >= self.max_listed_files:
+                logger.warning(
+                    "Stopped listing %s after %d blobs; narrow the prefix to "
+                    "see the rest.", container, self.max_listed_files,
+                )
+                break
+
         return files
     
     def get_file_info(self, file_path: str) -> Dict[str, Any]:
@@ -312,7 +406,11 @@ class StorageFactory:
             return AzureStorageHandler(
                 account_name=kwargs.get('azure_account_name'),
                 account_key=kwargs.get('azure_account_key'),
-                connection_string=kwargs.get('azure_connection_string')
+                connection_string=kwargs.get('azure_connection_string'),
+                sas_token=kwargs.get('azure_sas_token'),
+                auth_mode=kwargs.get('azure_auth_mode'),
+                credential=kwargs.get('azure_credential'),
+                connection=kwargs.get('azure_connection'),
             )
         else:
             return LocalStorageHandler()

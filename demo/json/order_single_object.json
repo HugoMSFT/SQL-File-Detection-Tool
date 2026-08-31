@@ -1,0 +1,31 @@
+{
+  "customer": {
+    "address": {
+      "city": "London",
+      "postcode": "NW1"
+    },
+    "id": "C-1",
+    "name": "Ada Lovelace"
+  },
+  "discount": null,
+  "is_paid": true,
+  "items": [
+    {
+      "price": 19.99,
+      "qty": 2,
+      "sku": "W-1"
+    },
+    {
+      "price": 249.0,
+      "qty": 1,
+      "sku": "G-2"
+    }
+  ],
+  "order_id": 1001,
+  "placed_at": "2024-01-15T08:30:00Z",
+  "tags": [
+    "priority",
+    "gift"
+  ],
+  "total": 288.98
+}

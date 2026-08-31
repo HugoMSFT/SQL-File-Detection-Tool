@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "compile",
+      "group": "build",
+      "problemMatcher": "$tsc",
+      "label": "npm: compile"
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch",
+      "label": "npm: watch"
+    },
+    {
+      "type": "npm",
+      "script": "bundle:dev",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: bundle:dev",
+      "detail": "Build dist/extension.js with an inline source map. This is what F5 launches, because package.json main points at the bundle, not at out/."
+    },
+    {
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "pytest", "-q"],
+      "group": "test",
+      "problemMatcher": [],
+      "label": "pytest"
+    }
+  ]
+}

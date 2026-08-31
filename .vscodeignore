@@ -1,0 +1,33 @@
+# What ships in the VSIX
+#
+# This file is an allowlist, not a blocklist. Everything in the repository is
+# excluded first, then the extension payload is added back one entry at a time.
+#
+# The reason is the whole point of version 2.0: the extension is native, so the
+# package must be provably free of the Python distribution that shares this
+# repository. A blocklist can only exclude what someone remembered to name, and
+# a new Python module, notebook or fixture added later would silently ship. An
+# allowlist cannot fail that way — a new file has to be named here to be
+# included. `scripts/audit-vsix.js` re-checks the built archive mechanically.
+#
+# vsce always includes package.json, and README.md / CHANGELOG.md / LICENSE are
+# listed below so the Marketplace page and the license notice are present.
+
+**
+
+!dist/extension.js
+
+!media/icon.png
+!media/activity-bar.svg
+!media/sql-file-detection-tool-walkthrough.gif
+!media/webview/main.js
+!media/webview/main.css
+!media/walkthrough/open.md
+!media/walkthrough/analyze.md
+!media/walkthrough/sql.md
+!media/walkthrough/azure.md
+
+!README.md
+!CHANGELOG.md
+!LICENSE
+!THIRD_PARTY_NOTICES.md

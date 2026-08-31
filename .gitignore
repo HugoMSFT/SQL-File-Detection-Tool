@@ -33,10 +33,22 @@ env.bak/
 venv.bak/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+
+# Node / VS Code extension build output
+node_modules/
+out/
+*.vsix
+certification-evidence.json
+certification-evidence.md
+scripts/certification/evidence/
+.vscode-test/
 
 # Testing
 .pytest_cache/
@@ -71,3 +83,14 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+# Scratch SQL from running the generator by hand. These land in the repo root
+# the moment somebody redirects `generate_all_statements` to a file, and one of
+# them (_doc.sql) was committed by accident. The generated corpus lives in
+# tests/parity and demo/, never here.
+/*.sql
+gen_out.sql
+_doc.sql
+
+# Test-runner transcripts. `npm test` is redirected here while debugging.
+node-test.log
+*.junit.xml

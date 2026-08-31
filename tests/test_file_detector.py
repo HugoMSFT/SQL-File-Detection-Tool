@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 import external_file_detection.file_detector as file_detector_module
 from external_file_detection.file_detector import FileDetector
@@ -332,6 +333,7 @@ def test_parquet_metadata_analysis(sample_parquet):
     assert 'id' in col_names
     assert 'name' in col_names
     assert 'score' in col_names
+    assert metadata['parquet_physical_types']['id'] == 'INT64'
 
 
 def test_parquet_preview_does_not_load_full_file(sample_parquet):
@@ -611,11 +613,38 @@ def test_iceberg_uses_numeric_version_and_current_schema(temp_dir):
 
     metadata = FileDetector().analyze_file_metadata(table_dir)
 
-    assert metadata['schema'] == [('id', 'int64'), ('amount', 'decimal128')]
+    assert metadata['schema'] == [('id', 'int64'), ('amount', 'decimal(10,2)')]
     assert metadata['nullable_columns'] == ['amount']
     assert metadata['row_count'] == 42
     assert metadata['iceberg_metadata']['metadata_file'] == 'v10.metadata.json'
     assert metadata['iceberg_metadata']['partition_spec'][0]['name'] == 'id_bucket'
+
+
+def test_iceberg_type_preserves_decimal_and_timestamp_semantics():
+    """Iceberg logical types must not be flattened to generic SQL types."""
+    detector = FileDetector()
+    assert detector._iceberg_type('decimal(18,4)') == 'decimal(18,4)'
+    assert detector._iceberg_type('decimal(38, 10)') == 'decimal(38,10)'
+    assert detector._iceberg_type('timestamp') == 'timestamp[us]'
+    assert detector._iceberg_type('timestamptz') == 'timestamp[us, tz=UTC]'
+    assert detector._iceberg_type('timestamp_ns') == 'timestamp[ns]'
+    assert detector._iceberg_type('timestamptz_ns') == 'timestamp[ns, tz=UTC]'
+    assert detector._iceberg_type('time') == 'time64[us]'
+
+
+def test_iceberg_types_round_trip_to_sql_types():
+    """The preserved Iceberg types must map to precise SQL types."""
+    from external_file_detection.sql_generator import SQLGenerator
+    detector = FileDetector()
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql(detector._iceberg_type('decimal(18,4)')) == \
+        'DECIMAL(18,4)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamptz')) == \
+        'DATETIMEOFFSET(6)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamp_ns')) == \
+        'DATETIME2(7)'
+    assert gen._map_type_to_sql(detector._iceberg_type('timestamptz_ns')) == \
+        'DATETIMEOFFSET(7)'
 
 
 def test_iceberg_detects_modern_metadata_filenames(temp_dir):
@@ -643,3 +672,171 @@ def test_iceberg_detects_modern_metadata_filenames(temp_dir):
         '00001-table.metadata.json'
     )
     assert detector.scan_directory(table_dir)[0]['file_type'] == 'iceberg'
+
+# ---------------------------------------------------------------------------
+# Encoding detection must not depend on which chardet build is installed.
+#
+# Under Python 3.9 CI, chardet classified valid UTF-8 demo fixtures as a
+# charmap codec; every later read then died with "'charmap' codec can't decode
+# byte 0x81". A byte-order mark, pure ASCII and valid UTF-8 are facts about the
+# bytes, so they are settled before the statistical guess is consulted.
+# ---------------------------------------------------------------------------
+
+class _WrongChardet:
+    """Stands in for a chardet build that guesses badly."""
+
+    def __init__(self, encoding='Windows-1252', confidence=0.99):
+        self.encoding = encoding
+        self.confidence = confidence
+        self.calls = 0
+
+    def detect(self, raw):
+        self.calls += 1
+        return {'encoding': self.encoding, 'confidence': self.confidence}
+
+
+@pytest.fixture
+def sabotaged_chardet(monkeypatch):
+    import sys as _sys
+    fake = _WrongChardet()
+    monkeypatch.setitem(_sys.modules, 'chardet', fake)
+    return fake
+
+
+@pytest.mark.parametrize(
+    'payload, expected',
+    [
+        ('row_id,name\n1,caf\u00e9 na\u00efve\n', 'utf-8'),
+        ('row_id,name\n1,\u3053\u3093\u306b\u3061\u306f\n', 'utf-8'),
+        ('row_id,name\n1,\U0001f600 emoji\n', 'utf-8'),
+        ('row_id,name\n1,plain ascii\n', 'ascii'),
+    ],
+)
+def test_certain_encodings_ignore_a_misbehaving_chardet(
+        tmp_path, sabotaged_chardet, payload, expected):
+    path = tmp_path / 'sample.csv'
+    path.write_bytes(payload.encode('utf-8'))
+
+    encoding, confidence = FileDetector().detect_encoding(str(path))
+
+    assert encoding == expected
+    assert confidence == 1.0
+    assert sabotaged_chardet.calls == 0, 'chardet must not be consulted'
+
+
+@pytest.mark.parametrize(
+    'payload, expected',
+    [
+        (b'\xef\xbb\xbfid,name\n', 'utf-8-sig'),
+        (b'\xff\xfei\x00d\x00', 'utf-16'),
+        (b'\xfe\xff\x00i\x00d', 'utf-16'),
+        (b'\xff\xfe\x00\x00i\x00\x00\x00', 'utf-32'),
+        (b'\x00\x00\xfe\xff\x00\x00\x00i', 'utf-32'),
+    ],
+)
+def test_a_byte_order_mark_settles_the_encoding(
+        tmp_path, sabotaged_chardet, payload, expected):
+    # The UTF-32LE mark begins with the UTF-16LE mark, so the longer mark has
+    # to be tested first or every UTF-32LE file reads as UTF-16LE.
+    path = tmp_path / 'sample.csv'
+    path.write_bytes(payload)
+
+    encoding, _ = FileDetector().detect_encoding(str(path))
+
+    assert encoding == expected
+    assert sabotaged_chardet.calls == 0
+
+
+def test_chardet_still_names_a_legacy_codepage():
+    """Naming CP932 is the job only the statistical guess can do.
+
+    Uses the committed fixture rather than a synthetic one: chardet needs
+    enough representative text to be confident, and this is the file whose
+    classification must not regress.
+    """
+    pytest.importorskip('chardet')
+    fixture = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'demo', 'unicode', 'japanese_cp932.csv')
+
+    detector = FileDetector()
+    encoding, _ = detector.detect_encoding(fixture)
+
+    assert encoding not in ('utf-8', 'ascii')
+    assert detector.encoding_to_codepage(encoding) == '932'
+
+
+def test_a_multibyte_character_split_by_the_read_cap_is_still_utf8(
+    tmp_path, sabotaged_chardet
+):
+    """A capped read can slice a character in half; that is not a verdict."""
+    from external_file_detection import file_detector as fd
+
+    path = tmp_path / 'big.csv'
+    body = ('row_id,name\n' + '1,\u00e9\u00e9\u00e9\u00e9\u00e9\n' * 4000).encode('utf-8')
+    path.write_bytes(body)
+
+    # Force the cap to land inside a two-byte character.
+    cut = body.rindex('\u00e9'.encode('utf-8')) + 1
+    monkey = pytest.MonkeyPatch()
+    try:
+        monkey.setattr(fd, 'ENCODING_DETECTION_BYTES', cut)
+        encoding, confidence = FileDetector().detect_encoding(str(path))
+    finally:
+        monkey.undo()
+
+    assert encoding == 'utf-8'
+    # Without the tolerance the sliced tail would fail the strict decode and
+    # the answer would come from chardet instead, so the verdict has to be the
+    # certain one and chardet has to have been left alone.
+    assert confidence == 1.0
+    assert sabotaged_chardet.calls == 0
+
+@pytest.mark.parametrize(
+    'codec, expected, codepage',
+    [
+        ('utf-16-le', 'utf-16-le', '1200'),
+        ('utf-16-be', 'utf-16-be', '1201'),
+    ],
+)
+def test_utf16_without_a_bom_is_not_mistaken_for_ascii(
+    tmp_path, codec, expected, codepage
+):
+    """Latin UTF-16 is all bytes below 0x80, which is not the same as ASCII."""
+    path = tmp_path / 'nobom.csv'
+    path.write_bytes('id,name,city\r\n1,Alice,Paris\r\n2,Bob,Tokyo\r\n'.encode(codec))
+
+    detector = FileDetector()
+    encoding, _ = detector.detect_encoding(str(path))
+
+    assert encoding == expected
+    assert detector.encoding_to_codepage(encoding) == codepage
+
+
+def test_utf16_without_a_bom_still_counts_its_rows(tmp_path):
+    """Reading UTF-16 as a single byte codepage turns NUL padding into data."""
+    path = tmp_path / 'nobom.csv'
+    path.write_bytes('id,name,city\r\n1,Alice,Paris\r\n2,Bob,Tokyo\r\n'.encode('utf-16-le'))
+
+    metadata = FileDetector().analyze_file_metadata(str(path))
+
+    assert metadata.get('error') is None
+    assert metadata['codepage'] == '1200'
+    assert [name for name, _ in metadata['schema']] == ['id', 'name', 'city']
+    # Read as a single byte codepage the NUL padding becomes data and this is 6.
+    assert metadata['row_count'] == 2
+    assert metadata['sample_rows'] == [[1, 'Alice', 'Paris'], [2, 'Bob', 'Tokyo']]
+
+
+@pytest.mark.parametrize(
+    'name, body',
+    [
+        ('plain ascii', b'id,name\r\n1,Alice\r\n2,Bob\r\n'),
+        ('utf-8 text', 'id,name\r\n1,Bj\u00f6rk\r\n'.encode('utf-8')),
+        ('nuls on both parities', bytes([0, 0, 1, 2]) * 64),
+        ('too short to judge', b'\x41\x00'),
+    ],
+)
+def test_the_utf16_heuristic_keeps_to_itself(name, body):
+    """It must claim UTF-16 only, never ordinary text or binary."""
+    assert FileDetector._looks_like_bomless_utf16(body) is None, name

@@ -4,9 +4,11 @@ import unittest
 import io
 import json
 import os
+import shutil
 import tempfile
 import time
 from unittest.mock import patch, MagicMock
+from urllib.parse import quote
 
 from external_file_detection.web_gui import ExternalFileDetectionWebGUI
 
@@ -40,14 +42,30 @@ class TestWebGUI(unittest.TestCase):
             }
         ]
         
+    def tearDown(self):
+        """Remove temp directories so tests do not leak them."""
+        _cleanup_gui(self.web_gui)
+        shutil.rmtree(self.test_root, ignore_errors=True)
+
     def test_home_page(self):
         """Test home page loads correctly."""
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'External File Detection Tool', response.data)
+        self.assertIn(b'SQL File Detection Tool', response.data)
         self.assertIn(b'Best Practices', response.data)
         self.assertIn(b'Schema Editor', response.data)
         self.assertIn(b"adls://", response.data)
+
+    def test_home_page_defaults_to_azure_sql_database(self):
+        """The rendered page must advertise the Azure SQL Database default."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        body = response.data.decode('utf-8')
+        marker = '<script id="appConfig" type="application/json">'
+        start = body.index(marker) + len(marker)
+        config = json.loads(body[start:body.index('</script>', start)])
+        self.assertEqual(config['defaultPlatform'], 'azure_sql_db')
+        self.assertTrue(config['sessionToken'])
 
     def test_initial_path_api(self):
         """Test /api/initial_path returns a valid directory."""
@@ -433,6 +451,115 @@ class TestWebGUI(unittest.TestCase):
         # but the metadata structure must be valid
         self.assertTrue(data['success'])
         self.assertIn('encoding_confidence', data['files'][0])
+
+
+def _cleanup_gui(gui):
+    """Release the GUI's upload TemporaryDirectory if it has one."""
+    tmpdir = getattr(gui, '_upload_tempdir', None)
+    if tmpdir is not None:
+        try:
+            tmpdir.cleanup()
+        except Exception:
+            pass
+
+
+class TestPathContainmentRoutes(unittest.TestCase):
+    """Real filesystem tests (no os.path mocking) for root containment.
+
+    The other test classes patch os.path.* globally, which neutralises the
+    containment checks. These tests use genuine temp directories so the
+    validation logic is actually exercised.
+    """
+
+    def setUp(self):
+        self.test_root = tempfile.mkdtemp(prefix='efd_root_')
+        self.outside_root = tempfile.mkdtemp(prefix='efd_outside_')
+
+        self.inside_csv = os.path.join(self.test_root, 'inside.csv')
+        with io.open(self.inside_csv, 'w', encoding='utf-8') as fh:
+            fh.write('id,name\n1,alice\n')
+
+        self.outside_csv = os.path.join(self.outside_root, 'outside.csv')
+        with io.open(self.outside_csv, 'w', encoding='utf-8') as fh:
+            fh.write('id,name\n1,mallory\n')
+
+        self.web_gui = ExternalFileDetectionWebGUI(root_dir=self.test_root)
+        self.app = self.web_gui.app
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    def tearDown(self):
+        _cleanup_gui(self.web_gui)
+        shutil.rmtree(self.test_root, ignore_errors=True)
+        shutil.rmtree(self.outside_root, ignore_errors=True)
+
+    def test_browse_rejects_outside_root(self):
+        resp = self.client.get('/api/browse',
+                               query_string={'path': self.outside_root})
+        self.assertEqual(resp.status_code, 400)
+        data = json.loads(resp.data)
+        self.assertFalse(data['success'])
+
+    def test_browse_allows_inside_root(self):
+        resp = self.client.get('/api/browse',
+                               query_string={'path': self.test_root})
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertTrue(data['success'])
+
+    def test_browse_rejects_traversal_outside_root(self):
+        traversal = os.path.join(self.test_root, '..', '..')
+        resp = self.client.get('/api/browse', query_string={'path': traversal})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_analyze_file_rejects_outside_root(self):
+        resp = self.client.post('/api/analyze_file',
+                                json={'file_path': self.outside_csv})
+        self.assertEqual(resp.status_code, 400)
+        data = json.loads(resp.data)
+        self.assertFalse(data['success'])
+
+    def test_analyze_file_accepts_inside_root(self):
+        resp = self.client.post('/api/analyze_file',
+                                json={'file_path': self.inside_csv})
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertTrue(data['success'])
+
+    def test_analyze_files_reports_error_for_outside_root(self):
+        resp = self.client.post('/api/analyze_files',
+                                json={'files': [self.outside_csv]})
+        data = json.loads(resp.data)
+        results = data.get('results') or data.get('files') or []
+        self.assertTrue(results, data)
+        self.assertIn('error', results[0])
+
+    def test_preview_table_rejects_stored_outside_root_entry(self):
+        """A poisoned session entry must still be re-validated on preview."""
+        # Establish a session, then tamper with the stored entry.
+        self.client.post('/api/analyze_files', json={'files': [self.inside_csv]})
+        for entry in self.web_gui._sessions.values():
+            for stored in entry['files']:
+                stored['file_path'] = self.outside_csv
+
+        route_path = quote(
+            self.outside_csv.replace(os.sep, '/').lstrip('/'), safe='/:')
+        resp = self.client.get('/api/preview_table/' + route_path)
+        self.assertIn(resp.status_code, (400, 403, 404))
+        self.assertFalse(json.loads(resp.data)['success'])
+
+    def test_symlink_inside_root_pointing_outside_is_rejected(self):
+        link = os.path.join(self.test_root, 'link.csv')
+        try:
+            os.symlink(self.outside_csv, link)
+        except (OSError, NotImplementedError, AttributeError) as exc:
+            raise unittest.SkipTest(f'cannot create symlinks here: {exc}')
+        if not os.path.islink(link):
+            raise unittest.SkipTest('symlink not created')
+
+        resp = self.client.post('/api/analyze_file', json={'file_path': link})
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertFalse(json.loads(resp.data)['success'])
 
 
 class TestSafeDebug(unittest.TestCase):

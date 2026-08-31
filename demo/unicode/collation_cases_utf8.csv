@@ -1,0 +1,15 @@
+pair_id,category,left_value,right_value,differs_under
+1,kana_type,ひらがな,ヒラガナ,kana sensitivity (_KS)
+2,kana_width,カタカナ,ｶﾀｶﾅ,width sensitivity (_WS)
+3,latin_width,ABC123,ＡＢＣ１２３,width sensitivity (_WS)
+4,case,straße,STRASSE,case sensitivity (_CS)
+5,sharp_s,straße,strasse,German sharp s expansion
+6,accent,resume,résumé,accent sensitivity (_AS)
+7,unicode_form,café,café,binary collations only (_BIN2)
+8,turkish_i,ISTANBUL,istanbul,Turkish_100 dotless i
+9,turkish_dotted,İstanbul,Istanbul,Turkish_100 dotted I
+10,trailing_space,value,value   ,trailing spaces ignored by = but not by DATALENGTH
+11,lookalike,A,Α,Latin A vs Greek Alpha
+12,lookalike_cyrillic,A,А,Latin A vs Cyrillic A
+13,kana_prolonged,コーヒー,コ－ヒ－,prolonged sound mark vs full-width hyphen
+14,identical,😀,😀,identical supplementary-plane characters
