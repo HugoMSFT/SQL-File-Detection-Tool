@@ -27,22 +27,16 @@
 
     /** Tabs in display order. Statement tabs appear only when they have text. */
     const TABS = [
-        { id: 'quick_analyze', label: 'Quick Analyze', always: true },
-        { id: 'metadata', label: 'Metadata', always: true },
         { id: 'preview', label: 'Preview', always: true },
+        { id: 'metadata', label: 'Metadata', always: true },
         { id: 'schema', label: 'Schema', always: true },
         { id: 'create_table', label: 'CREATE TABLE' },
         { id: 'bulk_insert', label: 'BULK INSERT' },
         { id: 'openrowset', label: 'OPENROWSET' },
-        { id: 'copy_into', label: 'COPY INTO' },
         { id: 'external_file_format', label: 'File format' },
         { id: 'create_external_table', label: 'External table' },
         { id: 'credential_setup', label: 'Credential setup' },
-        { id: 'json_functions', label: 'JSON' },
-        { id: 'for_json', label: 'FOR JSON' },
-        { id: 'best_practices', label: 'Best practices' },
         { id: 'azure', label: 'Azure & URLs', always: true },
-        { id: 'formats', label: 'Formats', always: true },
     ];
 
     const SUPPORT_LABEL = {
@@ -87,14 +81,6 @@
         if (existing !== undefined) {
             clearTimeout(existing);
         }
-
-        function cancelDebounce(key) {
-            const timer = debounceTimers.get(key);
-            if (timer !== undefined) {
-                clearTimeout(timer);
-                debounceTimers.delete(key);
-            }
-        }
         debounceTimers.set(
             key,
             setTimeout(function () {
@@ -102,6 +88,14 @@
                 fn();
             }, ms),
         );
+    }
+
+    function cancelDebounce(key) {
+        const timer = debounceTimers.get(key);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+            debounceTimers.delete(key);
+        }
     }
 
     function clear(node) {
@@ -271,189 +265,6 @@
             return;
         }
 
-        function renderParserOption(container, option) {
-            const node = template('tpl-parser-option');
-            node.classList.toggle('has-warning', Boolean(option.warning));
-            node.querySelector('label').textContent = option.label;
-            node.querySelector('.provenance').textContent = option.provenance;
-            node.querySelector('.expected').textContent =
-                'Expected: ' + option.expectedValue + ' · ' + option.provenance;
-            node.querySelector('.evidence').textContent =
-                option.warning || option.evidence || '';
-            const control = node.querySelector('.parser-control');
-            if (option.label === 'File encoding') {
-                control.appendChild(element('strong', null, option.value));
-            } else {
-                let input;
-                if (option.key === 'format') {
-                    input = document.createElement('select');
-                    (state.formats || []).forEach(function (format) {
-                        const entry = element('option', null, format.label);
-                        entry.value = format.fileType;
-                        input.appendChild(entry);
-                    });
-                } else {
-                    input = document.createElement('input');
-                    input.type = option.key === 'firstRow' ? 'number' : 'text';
-                    input.spellcheck = false;
-                    input.autocomplete = 'off';
-                }
-                input.value = editable('parser:' + option.key, option.value);
-                input.dataset.parserOption = option.key;
-                input.setAttribute('aria-label', option.label);
-                control.appendChild(input);
-            }
-            const reset = node.querySelector('.reset-option');
-            reset.hidden = !option.overridden;
-            reset.dataset.resetParser = option.key;
-            container.appendChild(node);
-        }
-
-        function renderQuickAnalyze(container) {
-            const metadata = state.metadata;
-            container.appendChild(element('h2', null, 'Quick Analyze'));
-            renderLimitation(container);
-            if (!metadata) {
-                container.appendChild(
-                    element('p', 'empty', 'Choose a source and file to analyze it.'),
-                );
-                return;
-            }
-
-            const summary = element('dl', 'kv-list quick-facts');
-            appendKv(summary, 'Selected file', metadata.file_path);
-            appendKv(summary, 'Rows', metadata.row_count);
-            appendKv(summary, 'Columns', metadata.column_count);
-            appendKv(summary, 'Schema', metadata.schema_inference ? 'Inferred' : 'Unavailable');
-            appendKv(summary, 'Encoding', metadata.encoding + ' (file fact)');
-            container.appendChild(summary);
-
-            if (state.folderProfile) {
-                const profile = element('aside', 'folder-profile');
-                profile.appendChild(element('h3', null, 'Folder profile · per-file detection'));
-                profile.appendChild(
-                    element(
-                        'p',
-                        'help',
-                        state.folderProfile.fileCount +
-                            ' files · format ' +
-                            state.folderProfile.format +
-                            ' · delimiter ' +
-                            state.folderProfile.delimiter +
-                            ' · encoding ' +
-                            state.folderProfile.encoding +
-                            ' · schema ' +
-                            state.folderProfile.schema +
-                            (state.folderProfile.outlierCount
-                                ? ' · ' + state.folderProfile.outlierCount + ' outlier(s)'
-                                : ''),
-                    ),
-                );
-                container.appendChild(profile);
-            }
-
-            container.appendChild(element('h3', null, 'Common parser options'));
-            const common = element('div', 'parser-grid');
-            state.quickAnalyze.options
-                .filter(function (option) {
-                    return !option.advanced;
-                })
-                .forEach(function (option) {
-                    renderParserOption(common, option);
-                });
-            container.appendChild(common);
-
-            const advanced = document.createElement('details');
-            if (
-                state.quickAnalyze.options.some(function (option) {
-                    return option.advanced && option.warning;
-                })
-            ) {
-                advanced.open = true;
-            }
-            advanced.appendChild(element('summary', null, 'Advanced parser details'));
-            const advancedGrid = element('div', 'parser-grid');
-            state.quickAnalyze.options
-                .filter(function (option) {
-                    return option.advanced;
-                })
-                .forEach(function (option) {
-                    renderParserOption(advancedGrid, option);
-                });
-            advanced.appendChild(advancedGrid);
-            container.appendChild(advanced);
-
-            container.appendChild(element('h3', null, 'Row preview'));
-            renderPreview(container);
-
-            const source = state.quickAnalyze.source;
-            const readiness = element(
-                'aside',
-                source.stagingRequired ? 'source-readiness has-warning' : 'source-readiness',
-            );
-            readiness.appendChild(element('h3', null, 'Source readiness'));
-            readiness.appendChild(
-                element(
-                    'p',
-                    'help',
-                    source.detail +
-                        (source.baseLocation ? ' Base: ' + source.baseLocation + '.' : '') +
-                        (source.relativePath ? ' Relative path: ' + source.relativePath + '.' : ''),
-                ),
-            );
-            if (source.objects.length > 0) {
-                const list = element('ul', 'readiness-list');
-                source.objects.forEach(function (object) {
-                    const item = template('tpl-readiness');
-                    item.querySelector('.readiness-name').textContent =
-                        object.name + (object.required ? ' · required' : ' · not required');
-                    item.querySelector('.provenance').textContent = object.provenance;
-                    item.querySelector('.readiness-detail').textContent = object.detail;
-                    renderDocumentationLinks(item, [object.documentation]);
-                    list.appendChild(item);
-                });
-                readiness.appendChild(list);
-            }
-            container.appendChild(readiness);
-
-            const statementLabel = element('label', 'field statement-picker');
-            statementLabel.appendChild(element('span', null, 'Generated statement'));
-            const statementSelect = document.createElement('select');
-            statementSelect.dataset.edit = 'statementKind';
-            TABS.filter(function (tab) {
-                return (
-                    !tab.always &&
-                    typeof (state.statements || {})[tab.id] === 'string' &&
-                    (state.statements || {})[tab.id].trim()
-                );
-            }).forEach(function (tab) {
-                const choice = element('option', null, tab.label);
-                choice.value = tab.id;
-                statementSelect.appendChild(choice);
-            });
-            statementSelect.value = state.quickAnalyze.selectedStatement;
-            statementLabel.appendChild(statementSelect);
-            container.appendChild(statementLabel);
-            renderDocumentationLinks(container, state.quickAnalyze.documentation);
-            if (state.quickAnalyze.polybase.visible) {
-                const polybase = element(
-                    'aside',
-                    'polybase-guidance has-warning',
-                    state.quickAnalyze.polybase.detail,
-                );
-                renderDocumentationLinks(polybase, state.quickAnalyze.polybase.documentation);
-                container.appendChild(polybase);
-            }
-            const kind = state.quickAnalyze.selectedStatement;
-            const sql = (state.statements || {})[kind];
-            if (sql) {
-                const block = template('tpl-sql');
-                block.dataset.kind = kind;
-                block.querySelector('code').textContent = sql;
-                block.querySelector('pre').setAttribute('aria-label', kind + ' statement');
-                container.appendChild(block);
-            }
-        }
         const list = element('dl', 'kv-list');
         appendKv(list, 'File', metadata.file_path);
         appendKv(list, 'Type', metadata.file_type);
@@ -658,35 +469,10 @@
             row.appendChild(label);
         });
 
-        const authLabel = element('label', 'field');
-        authLabel.appendChild(element('span', null, 'Storage authentication'));
-        const authSelect = document.createElement('select');
-        authSelect.dataset.edit = 'authMethod';
-        [
-            ['', 'Recommended for platform'],
-            ['managed_identity', 'Managed identity (no secret)'],
-            ['sas', 'Shared access signature'],
-            ['storage_key', 'Storage account key'],
-            ['public', 'Public / anonymous'],
-        ].forEach(function (option) {
-            const node = document.createElement('option');
-            node.value = option[0];
-            node.textContent = option[1];
-            if ((state.authMethod || '') === option[0]) {
-                node.selected = true;
-            }
-            authSelect.appendChild(node);
-        });
-        authLabel.appendChild(authSelect);
-        row.appendChild(authLabel);
-
         container.appendChild(row);
     }
 
-    function renderStatement(container, kind) {
-        renderNamingOptions(container);
-        renderLimitation(container);
-        const text = (state.statements || {})[kind];
+    function renderSqlBlock(container, kind, text) {
         if (!text) {
             container.appendChild(
                 element('p', 'empty', 'Analyze a file to generate this statement.'),
@@ -698,6 +484,206 @@
         block.querySelector('code').textContent = text;
         block.querySelector('pre').setAttribute('aria-label', kind + ' statement');
         container.appendChild(block);
+    }
+
+    function renderStatement(container, kind) {
+        renderNamingOptions(container);
+        renderLimitation(container);
+        renderSqlBlock(container, kind, (state.statements || {})[kind]);
+    }
+
+    function selectControl(labelText, edit, options, selected) {
+        const label = element('label', 'field wizard-field');
+        label.appendChild(element('span', null, labelText));
+        const select = document.createElement('select');
+        select.dataset.edit = edit;
+        options.forEach(function (option) {
+            const node = document.createElement('option');
+            node.value = option.id;
+            node.textContent = option.label;
+            node.selected = option.id === selected;
+            select.appendChild(node);
+        });
+        label.appendChild(select);
+        return label;
+    }
+
+    function textControl(labelText, edit, value, placeholder) {
+        const label = element('label', 'field wizard-field');
+        label.appendChild(element('span', null, labelText));
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.spellcheck = false;
+        input.autocomplete = 'off';
+        input.dataset.edit = edit;
+        input.value = editable(edit, value || '');
+        if (placeholder) {
+            input.placeholder = placeholder;
+        }
+        label.appendChild(input);
+        return label;
+    }
+
+    function wizardStep(number, title, detail) {
+        const card = element('section', 'wizard-step');
+        const heading = element('div', 'wizard-step-heading');
+        heading.appendChild(element('span', 'wizard-step-number', number));
+        const copy = element('div');
+        copy.appendChild(element('h3', null, title));
+        copy.appendChild(element('p', 'wizard-step-detail', detail));
+        heading.appendChild(copy);
+        card.appendChild(heading);
+        return card;
+    }
+
+    function renderCredentialSetup(container) {
+        const wizard = state.credentialSetup;
+        const intro = element('div', 'credential-intro');
+        intro.appendChild(element('div', 'credential-mark', 'SQL'));
+        const introCopy = element('div');
+        introCopy.appendChild(element('h2', null, 'Configure external storage access'));
+        introCopy.appendChild(
+            element(
+                'p',
+                null,
+                'Choose the SQL platform, storage service, and authentication method. The script updates after every choice.',
+            ),
+        );
+        intro.appendChild(introCopy);
+        container.appendChild(intro);
+
+        const steps = element('div', 'credential-steps');
+
+        const platformStep = wizardStep(
+            '1',
+            'Target platform',
+            'Only storage and authentication choices supported by this SQL product are offered.',
+        );
+        platformStep.appendChild(
+            selectControl(
+                'SQL platform',
+                'wizardPlatform',
+                state.platforms,
+                state.platform,
+            ),
+        );
+        steps.appendChild(platformStep);
+
+        const sourceOption = wizard.dataSourceOptions.find(function (option) {
+            return option.id === wizard.dataSourceType;
+        });
+        const sourceStep = wizardStep(
+            '2',
+            'External data source',
+            sourceOption ? sourceOption.detail : '',
+        );
+        sourceStep.appendChild(
+            selectControl(
+                'Storage service',
+                'dataSourceType',
+                wizard.dataSourceOptions,
+                wizard.dataSourceType,
+            ),
+        );
+        const prefix = element('p', 'connector-prefix');
+        prefix.appendChild(element('span', null, 'Generated connector'));
+        prefix.appendChild(element('strong', null, wizard.locationPrefix));
+        sourceStep.appendChild(prefix);
+        steps.appendChild(sourceStep);
+
+        const authOption = wizard.authOptions.find(function (option) {
+            return option.id === wizard.authMethod;
+        });
+        const authStep = wizardStep(
+            '3',
+            'Authentication',
+            authOption ? authOption.detail : '',
+        );
+        authStep.appendChild(
+            selectControl(
+                'Authentication method',
+                'authMethod',
+                wizard.authOptions,
+                wizard.authMethod,
+            ),
+        );
+        steps.appendChild(authStep);
+
+        const objectStep = wizardStep(
+            '4',
+            'Names and location',
+            'Use the suggested object names or replace them with names that match your database standards.',
+        );
+        const objectFields = element('div', 'wizard-object-fields');
+        objectFields.appendChild(
+            textControl('External data source name', 'dataSource', state.dataSource),
+        );
+        objectFields.appendChild(
+            textControl(
+                'Database scoped credential name',
+                'credentialName',
+                state.credentialName,
+                'cred_' + (state.dataSource || 'storage'),
+            ),
+        );
+        objectFields.appendChild(
+            textControl(
+                'Storage URL (optional)',
+                'storageUrl',
+                state.storageUrl,
+                'Leave blank to generate safe placeholders',
+            ),
+        );
+        objectStep.appendChild(objectFields);
+        steps.appendChild(objectStep);
+
+        container.appendChild(steps);
+
+        const flow = element('div', 'object-flow');
+        [
+            {
+                number: '1',
+                kind: 'Database scoped credential',
+                name:
+                    state.credentialName
+                    || 'cred_' + (state.dataSource || 'storage'),
+                status: authOption ? authOption.label : wizard.authMethod,
+            },
+            {
+                number: '2',
+                kind: 'External data source',
+                name: state.dataSource || 'MyDataSource',
+                status: wizard.locationPrefix + ' location',
+            },
+        ].forEach(function (object) {
+            const card = element('div', 'object-card');
+            card.appendChild(
+                element('span', 'object-kind', object.number + '. ' + object.kind),
+            );
+            card.appendChild(element('strong', 'object-name', object.name));
+            card.appendChild(element('span', 'object-status', object.status));
+            flow.appendChild(card);
+        });
+        container.appendChild(flow);
+
+        const note = element('aside', 'wizard-note');
+        note.appendChild(element('strong', null, 'Platform guidance'));
+        note.appendChild(element('p', null, wizard.note));
+        note.appendChild(
+            element(
+                'p',
+                'secret-note',
+                'This extension never asks for or stores SAS tokens, access keys, or master-key passwords. Replace placeholders only in a secure SQL editor.',
+            ),
+        );
+        container.appendChild(note);
+
+        renderLimitation(container);
+        renderSqlBlock(
+            container,
+            'credential_setup',
+            (state.statements || {}).credential_setup,
+        );
     }
 
     function renderAzure(container) {
@@ -779,45 +765,11 @@
         container.appendChild(node);
     }
 
-    function renderFormats(container) {
-        container.appendChild(
-            element(
-                'p',
-                'help',
-                'What the bundled TypeScript reader can do with each format. Nothing here launches an external process.',
-            ),
-        );
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headRow = document.createElement('tr');
-        ['Format', 'Extensions', 'Support', 'Notes'].forEach(function (label) {
-            const cell = element('th', null, label);
-            cell.scope = 'col';
-            headRow.appendChild(cell);
-        });
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        (state.formats || []).forEach(function (format) {
-            const row = template('tpl-format-row');
-            row.querySelector('th').textContent = format.label;
-            row.querySelector('.fmt-ext').textContent = (format.extensions || []).join(', ');
-            row.querySelector('.fmt-support').textContent =
-                SUPPORT_LABEL[format.support] || format.support;
-            row.querySelector('.fmt-notes').textContent = format.notes || '';
-            tbody.appendChild(row);
-        });
-        table.appendChild(tbody);
-        container.appendChild(table);
-    }
-
     function renderPanel() {
         const panel = byId('panel');
         clear(panel);
         const tab = state.activeTab;
-        if (tab === 'quick_analyze') {
-            renderQuickAnalyze(panel);
-        } else if (tab === 'metadata') {
+        if (tab === 'metadata') {
             renderMetadata(panel);
         } else if (tab === 'preview') {
             renderPreview(panel);
@@ -825,8 +777,8 @@
             renderSchema(panel);
         } else if (tab === 'azure') {
             renderAzure(panel);
-        } else if (tab === 'formats') {
-            renderFormats(panel);
+        } else if (tab === 'credential_setup') {
+            renderCredentialSetup(panel);
         } else {
             renderStatement(panel, tab);
         }
@@ -866,15 +818,6 @@
         const sourceTab = target.closest('[data-source-tab]');
         if (sourceTab) {
             post({ type: 'setTab', tab: sourceTab.dataset.sourceTab });
-            return;
-        }
-
-        const resetParser = target.closest('[data-reset-parser]');
-        if (resetParser) {
-            const key = 'parser:' + resetParser.dataset.resetParser;
-            cancelDebounce(key);
-            pendingEdits.delete(key);
-            post({ type: 'resetParserOverride', key: resetParser.dataset.resetParser });
             return;
         }
 
@@ -962,12 +905,16 @@
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;
-        if (edit === 'authMethod') {
-            post({ type: 'setAuthMethod', value: target.value });
+        if (edit === 'wizardPlatform') {
+            post({ type: 'setPlatform', platform: target.value });
             return;
         }
-        if (edit === 'statementKind') {
-            post({ type: 'setStatementKind', kind: target.value });
+        if (edit === 'dataSourceType') {
+            post({ type: 'setDataSourceType', value: target.value });
+            return;
+        }
+        if (edit === 'authMethod') {
+            post({ type: 'setAuthMethod', value: target.value });
             return;
         }
         if (target.dataset && target.dataset.parserOption) {

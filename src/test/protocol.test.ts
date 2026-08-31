@@ -21,6 +21,7 @@ import {
     parseWebviewRequest,
 } from '../protocol';
 import { DOCUMENTATION_IDS } from '../documentation';
+import { EXTERNAL_DATA_SOURCE_TYPES, GUIDED_AUTH_METHODS } from '../native';
 
 test('a well formed message is accepted and normalised', () => {
     const parsed = parseWebviewRequest({ type: 'setTab', tab: 'preview' });
@@ -131,6 +132,26 @@ test('enumerated fields accept only their own members', () => {
         undefined,
         'managed identity is not a desktop auth mode',
     );
+    for (const value of EXTERNAL_DATA_SOURCE_TYPES) {
+        assert.deepEqual(parseWebviewRequest({ type: 'setDataSourceType', value }), {
+            type: 'setDataSourceType',
+            value,
+        });
+    }
+    assert.equal(
+        parseWebviewRequest({ type: 'setDataSourceType', value: 'unsupported-source' }),
+        undefined,
+    );
+    for (const value of [...GUIDED_AUTH_METHODS, 'public'] as const) {
+        assert.deepEqual(parseWebviewRequest({ type: 'setAuthMethod', value }), {
+            type: 'setAuthMethod',
+            value,
+        });
+    }
+    assert.equal(
+        parseWebviewRequest({ type: 'setAuthMethod', value: 'connection-string' }),
+        undefined,
+    );
     for (const appearance of APPEARANCE_MODES) {
         assert.ok(parseWebviewRequest({ type: 'setPreference', appearance }));
     }
@@ -197,7 +218,7 @@ test('clearing an override is expressed as an empty type, which is allowed', () 
     );
 });
 
-test('Quick Analyze parser messages are allowlisted and bounded', () => {
+test('parser override messages are allowlisted and bounded', () => {
     assert.deepEqual(
         parseWebviewRequest({
             type: 'setParserOverride',
@@ -210,9 +231,9 @@ test('Quick Analyze parser messages are allowlisted and bounded', () => {
         parseWebviewRequest({ type: 'resetParserOverride', key: 'codepage' }),
         { type: 'resetParserOverride', key: 'codepage' },
     );
-    assert.deepEqual(
+    assert.equal(
         parseWebviewRequest({ type: 'setStatementKind', kind: 'openrowset' }),
-        { type: 'setStatementKind', kind: 'openrowset' },
+        undefined,
     );
     assert.equal(
         parseWebviewRequest({ type: 'setParserOverride', key: 'encoding', value: 'utf-8' }),

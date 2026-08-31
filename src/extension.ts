@@ -3,9 +3,9 @@
  *
  * The default runtime is entirely native. Activation registers commands and a
  * webview view provider; it does not create a virtual environment, install a
- * package, start a server, choose a port or launch a browser. The first reveal
- * of the Activity Bar view renders bundled HTML, CSS and JavaScript, and all
- * analysis runs in the extension host through `src/native`.
+ * package, start a server, choose a port or launch a browser. The primary editor
+ * panel renders bundled HTML, CSS and JavaScript, and all analysis runs in the
+ * extension host through `src/native`.
  *
  * The Python package remains available as an optional, separately installed
  * command line and web application. Nothing here launches it, and no contributed
@@ -80,7 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
             webviewOptions: { retainContextWhenHidden: false },
         }),
         vscode.commands.registerCommand('sqlFileDetectionTool.open', () =>
-            withErrors('could not open', () => native.reveal()),
+            withErrors('could not open', () => native.openDefault()),
         ),
         vscode.commands.registerCommand('sqlFileDetectionTool.openInEditor', () =>
             withErrors('could not open the editor panel', () => native.openPanel()),
@@ -88,11 +88,6 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('sqlFileDetectionTool.analyzeCurrentFile', () =>
             withErrors('could not analyze the current file', () =>
                 native.analyzeCurrentFile(),
-            ),
-        ),
-        vscode.commands.registerCommand('sqlFileDetectionTool.analyzeWorkspaceFolder', () =>
-            withErrors('could not analyze the workspace folder', () =>
-                native.analyzeWorkspaceFolder(),
             ),
         ),
         vscode.commands.registerCommand(

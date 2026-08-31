@@ -44,7 +44,6 @@ interface Recorder {
     readonly dialogs: OpenDialogOptions[];
     readonly downloadDir: string;
     dialogResult: readonly string[] | undefined;
-    workspaceFolderResult: string | undefined;
     activeFile: string | undefined;
     activeLimitation: string | undefined;
     saveResult: string | undefined;
@@ -127,7 +126,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         dialogs: [],
         downloadDir,
         dialogResult: undefined,
-        workspaceFolderResult: undefined,
         activeFile: undefined,
         activeLimitation: undefined,
         saveResult: undefined,
@@ -145,7 +143,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
             state.dialogs.push(dialogOptions);
             return state.dialogResult;
         },
-        pickWorkspaceFolder: async () => state.workspaceFolderResult,
         copyToClipboard: async (text) => void state.clipboard.push(text),
         openUntitledDocument: async (content, languageId) =>
             void state.untitled.push({ content, languageId }),
@@ -195,7 +192,7 @@ function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
 
-test('Quick Analyze controller applies and resets parser overrides per selected file', async () => {
+test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();
     const timers: Array<() => void> = [];
     const ui = controller(record, {
@@ -209,7 +206,7 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
     try {
         await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
         await settle();
-        assert.equal(snapshot(record).activeTab, 'quick_analyze');
+        assert.equal(snapshot(record).activeTab, 'preview');
         await ui.handle({
             type: 'setParserOverride',
             key: 'fieldDelimiter',
@@ -235,28 +232,6 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
             'Inferred',
         );
 
-        await ui.handle({
-            type: 'setStatementKind',
-            kind: 'create_external_table',
-        });
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2019',
-        );
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2022',
-        );
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2025' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, false);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2025',
-        );
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -440,12 +415,12 @@ test('an unsupported editor scheme is reported instead of failing obscurely', as
     }
 });
 
-test('analyzing a workspace folder lists files and selects the first', async () => {
+test('choosing a folder lists files and selects the first', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
 
         const state = snapshot(record);
@@ -466,9 +441,7 @@ test('cancelling the folder picker leaves the state untouched', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = undefined;
         record.dialogResult = undefined;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
         await ui.handle({ type: 'openFileDialog' });
         await ui.handle({ type: 'openFolderDialog' });
         await settle();
@@ -767,8 +740,8 @@ test('export all emits shared prerequisites once across many files', async () =>
     const ui = controller(record);
     try {
         record.saveResult = path.join(record.downloadDir, 'out.sql');
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
         assert.ok(snapshot(record).files.length > 2);
 
@@ -1406,8 +1379,8 @@ test('no snapshot ever contains an absolute filesystem path', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
         const serialised = JSON.stringify(snapshot(record));
         assert.ok(!serialised.includes(FIXTURES.replace(/\\/g, '\\\\')), 'no workspace root');

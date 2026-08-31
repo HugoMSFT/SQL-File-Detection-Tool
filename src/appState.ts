@@ -40,6 +40,10 @@ import type {
     Limitation,
     UiTab,
 } from './protocol';
+import {
+    credentialWizardState,
+    normalizeDataSourceType,
+} from './native';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -82,11 +86,14 @@ export interface AppStateOptions {
 }
 
 function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
+    const platform = options.platform ?? DEFAULT_TARGET_PLATFORM;
+    const dataSourceType = normalizeDataSourceType(null, platform);
+    const credentialSetup = credentialWizardState(platform, dataSourceType, null);
     return {
         version: options.version,
-        platform: options.platform ?? DEFAULT_TARGET_PLATFORM,
+        platform,
         platforms: PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] })),
-        activeTab: options.activeTab ?? 'quick_analyze',
+        activeTab: options.activeTab ?? 'preview',
         files: [],
         selectedFileId: null,
         sourceLabel: null,
@@ -96,8 +103,10 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         tableName: '',
         schemaName: 'dbo',
         dataSource: 'MyDataSource',
+        dataSourceType,
         credentialName: '',
-        authMethod: '',
+        authMethod: credentialSetup.authMethod,
+        credentialSetup,
         storageUrl: '',
         formatName: '',
         parserOverrides: {},
@@ -213,7 +222,18 @@ export class AppStateStore {
     }
 
     update(patch: Partial<AppStateSnapshot>): AppStateSnapshot {
-        this.snapshot = Object.freeze({ ...this.snapshot, ...patch });
+        const next = { ...this.snapshot, ...patch };
+        const credentialSetup = credentialWizardState(
+            next.platform,
+            next.dataSourceType,
+            next.authMethod,
+        );
+        this.snapshot = Object.freeze({
+            ...next,
+            dataSourceType: credentialSetup.dataSourceType,
+            authMethod: credentialSetup.authMethod,
+            credentialSetup,
+        });
         for (const listener of [...this.listeners]) {
             listener(this.snapshot);
         }

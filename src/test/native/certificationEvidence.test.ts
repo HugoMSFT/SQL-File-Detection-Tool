@@ -148,7 +148,8 @@ describe('live certification evidence', () => {
             const secretBased = generateCredentialSetup({
                 dataSource: 'TestDS',
                 metadata: csvMetadata(),
-                targetPlatform: 'azure_sql_db',
+                targetPlatform:
+                    method === 's3_access_key' ? 'sql_server_2022' : 'azure_sql_db',
                 authMethod: method,
             });
             assert.match(

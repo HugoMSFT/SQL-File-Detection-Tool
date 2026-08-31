@@ -56,7 +56,6 @@ test('the manifest declares every command the extension registers', () => {
     assert.deepEqual(declared, [
         'sqlFileDetectionTool.analyzeCurrentFile',
         'sqlFileDetectionTool.analyzeSelected',
-        'sqlFileDetectionTool.analyzeWorkspaceFolder',
         'sqlFileDetectionTool.connectAzureStorage',
         'sqlFileDetectionTool.disconnectAzureStorage',
         'sqlFileDetectionTool.open',
@@ -78,7 +77,7 @@ test('every registered command exists in the manifest', () => {
     const registered = [
         ...source.matchAll(/registerCommand\(\s*'([^']+)'/g),
     ].map((m) => m[1]);
-    assert.ok(registered.length >= 7);
+    assert.ok(registered.length >= 6);
     const declared = new Set(manifest.contributes.commands.map((c) => c.command));
     for (const command of registered) {
         assert.ok(declared.has(command), `${command} is missing from package.json`);
@@ -91,6 +90,13 @@ test('the manifest defaults the platform setting to Azure SQL Database', () => {
     assert.equal(setting.default, 'azure_sql_db');
     assert.ok(setting.enum?.includes('azure_sql_db'));
     assert.equal(setting.enum?.[0], 'azure_sql_db');
+});
+
+test('the manifest defaults the interface to an editor tab', () => {
+    const setting =
+        manifest.contributes.configuration.properties['sqlFileDetectionTool.defaultView'];
+    assert.equal(setting.default, 'editor');
+    assert.deepEqual(setting.enum, ['editor', 'sidebar']);
 });
 
 test('no server or interpreter settings remain in the native manifest', () => {
@@ -109,7 +115,10 @@ test('no server or interpreter settings remain in the native manifest', () => {
     ]) {
         assert.ok(!properties.includes(removed), `${removed} should have been removed`);
     }
-    assert.deepEqual(properties, ['sqlFileDetectionTool.defaultPlatform']);
+    assert.deepEqual(properties, [
+        'sqlFileDetectionTool.defaultPlatform',
+        'sqlFileDetectionTool.defaultView',
+    ]);
 });
 
 test('the explorer context menu is wired to the analyze command', () => {

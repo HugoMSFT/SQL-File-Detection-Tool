@@ -255,9 +255,11 @@ def _azure_virtualization_parts(storage_url: Optional[str],
     account, container, relative_path = _parse_azure_storage_url(
         storage_url, file_name
     )
-    prefix = (
-        'adls' if account.lower().endswith('.dfs.core.windows.net') else 'abs'
-    )
+    lower_account = account.lower()
+    prefix = 'adls' if lower_account.endswith((
+        '.dfs.core.windows.net',
+        '.dfs.fabric.microsoft.com',
+    )) else 'abs'
     return f'{prefix}://{container}@{account}', relative_path
 
 
@@ -877,7 +879,7 @@ class SQLGenerator:
         if file_type == 'json':
             return lines + [
                 '-- JSON is not an OPENROWSET file format.',
-                '-- Use the JSON Functions tab for SINGLE_CLOB + OPENJSON.',
+                '-- Use the OPENROWSET tab for SINGLE_CLOB + OPENJSON.',
             ]
 
         if target_platform == 'sql_server_2019':
@@ -1236,7 +1238,7 @@ class SQLGenerator:
             'AS src;',
             '',
             f'-- Detected source type: {_sql_comment(detected_type)}',
-            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see JSON Functions tab).',
+            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see OPENROWSET tab).',
         ]
         return '\n'.join(header + body)
 
@@ -1268,7 +1270,7 @@ class SQLGenerator:
             if self._supports('bulk_insert', target_platform):
                 alts.append('BULK INSERT (see BULK INSERT tab)')
             if self._supports('json_openjson', target_platform):
-                alts.append('JSON functions (see JSON Functions tab)')
+                alts.append('OPENROWSET with OPENJSON / JSON_VALUE')
             alt_text = ', '.join(alts) if alts else 'Use the appropriate data access method for your platform.'
             return self._not_supported_message(
                 'OPENROWSET', target_platform,
@@ -2018,7 +2020,7 @@ class SQLGenerator:
             if self._supports('bulk_insert', target_platform):
                 alts.append('BULK INSERT (see BULK INSERT tab)')
             if self._supports('json_openjson', target_platform):
-                alts.append('JSON functions (see JSON Functions tab)')
+                alts.append('OPENROWSET with OPENJSON / JSON_VALUE')
             alt_text = ', '.join(alts) if alts else 'Use the appropriate data access method.'
             return self._not_supported_message(
                 'CREATE EXTERNAL TABLE', target_platform,
@@ -2261,8 +2263,7 @@ class SQLGenerator:
             )
         if self._supports('json_openjson', target_platform):
             alternatives.append(
-                'OPENJSON / JSON_VALUE for JSON ingestion '
-                '(see JSON Functions tab).'
+                'OPENROWSET with OPENJSON / JSON_VALUE for JSON ingestion.'
             )
         if target_platform == 'fabric_sql_db':
             alternatives.append(
@@ -2335,20 +2336,27 @@ class SQLGenerator:
                 f'-- ====================================================================',
                 f'-- PREREQUISITE SETUP  ({_sql_comment(platform_label)})',
                 f'-- Data virtualization on Fabric SQL Database is in PREVIEW.',
-                f'-- Authorisation uses Microsoft Entra passthrough, so there is no',
-                f'-- master key, database scoped credential, SAS token, or secret.',
+                f'-- Authorisation uses Microsoft Entra passthrough. USER IDENTITY is',
+                f'-- explicit here so the generated external objects are self-describing.',
                 f'-- The caller must have access to the target Fabric Lakehouse.',
                 f'-- https://learn.microsoft.com/fabric/database/sql/data-virtualization',
                 f'-- ====================================================================',
                 f'',
-                f'-- 1. External Data Source over the Lakehouse Files area',
+                f'-- 1. Master key: NOT required.',
+                f'-- IDENTITY = \'USER IDENTITY\' stores no secret, so there is',
+                f'-- nothing for a database master key to encrypt.',
+                f'',
+                *_credential_ddl(cred_ident, auth_method, '2.'),
+                f'',
+                f'-- 3. External Data Source over the Lakehouse Files area',
                 f'CREATE EXTERNAL DATA SOURCE [{data_source}]',
                 f'WITH (',
-                f'    LOCATION = \'{_quote_literal(source_location)}\'',
+                f'    LOCATION = \'{_quote_literal(source_location)}\',',
+                f'    CREDENTIAL = [{cred_ident}]',
                 f');',
                 f'GO',
                 f'',
-                f'-- 2. External File Format (see EXTERNAL FILE FORMAT section)',
+                f'-- 4. External File Format (see EXTERNAL FILE FORMAT section)',
                 f'-- Fabric SQL Database supports DELIMITEDTEXT and PARQUET.',
                 f'-- JSON is read indirectly through the CSV reader + OPENJSON.',
                 f'-- Delta tables must be reached through a OneLake shortcut in a',
@@ -2376,7 +2384,7 @@ class SQLGenerator:
             ]
         lines += self._cloud_staging_notice(storage_url, target_platform,
                                             file_name)
-        if auth_method in ('managed_identity', 'public'):
+        if auth_method in ('managed_identity', 'user_identity', 'public'):
             lines += [
                 f'-- 1. Master key: NOT required.',
             ]
@@ -2384,13 +2392,14 @@ class SQLGenerator:
                 f'-- {_sql_comment(note_line)}'
                 for note_line in _AUTH_NO_MASTER_KEY_NOTE[auth_method]
             ]
-            lines += [
-                f'-- Certified live on Azure SQL Database: the database master',
-                f'-- key count stayed 0 before, during and after the credential',
-                f'-- existed, so no master key password has to be invented,',
-                f'-- stored or rotated.',
-                f'',
-            ]
+            if auth_method == 'managed_identity':
+                lines += [
+                    f'-- Certified live on Azure SQL Database: the database master',
+                    f'-- key count stayed 0 before, during and after the credential',
+                    f'-- existed, so no master key password has to be invented,',
+                    f'-- stored or rotated.',
+                ]
+            lines += [f'']
         else:
             lines += [
                 f'-- 1. Master key (required once per database for this auth method)',
@@ -3147,16 +3156,6 @@ class SQLGenerator:
             'create_table',
             'bulk_insert',
             'openrowset',
-        ]
-        # The JSON parse / DML section only makes sense for JSON input; emitting
-        # it for CSV or Parquet produces statements that reference a file the
-        # script never reads. FOR JSON stays because it exports any table.
-        if metadata.get('file_type') == 'json':
-            ordered_sections.append('json_functions')
-        ordered_sections += [
-            'for_json',
-            'best_practices',
-            'copy_into',
         ]
 
         # The prerequisite setup section already creates the BLOB_STORAGE
@@ -4119,12 +4118,23 @@ def _owns_load_target(table_name: Optional[str], schema_name: Optional[str]) -> 
 #: the credential was created, 0 while it existed, and 0 after it was dropped.
 #: That removes the need to invent and store a master key password or a SAS
 #: token, so it is both simpler and secret-free.
-AUTH_METHODS = ('managed_identity', 'sas', 'storage_key', 'public')
+AUTH_METHODS = (
+    'managed_identity',
+    'user_identity',
+    'sas',
+    's3_access_key',
+    'storage_key',
+    'public',
+)
 
 #: Why the master key step is skipped, per secret-free authentication method.
 _AUTH_NO_MASTER_KEY_NOTE = {
     'managed_identity': (
         "IDENTITY = 'MANAGED IDENTITY' stores no secret, so there is",
+        'nothing for a database master key to encrypt.',
+    ),
+    'user_identity': (
+        "IDENTITY = 'USER IDENTITY' stores no secret, so there is",
         'nothing for a database master key to encrypt.',
     ),
     'public': (
@@ -4133,12 +4143,17 @@ _AUTH_NO_MASTER_KEY_NOTE = {
     ),
 }
 
-#: Platforms where ``IDENTITY = 'MANAGED IDENTITY'`` is the preferred default.
+#: Platforms that can use ``IDENTITY = 'MANAGED IDENTITY'``.
 MANAGED_IDENTITY_PLATFORMS = frozenset({
     'azure_sql_db',
     'azure_sql_mi',
-    'sql_server_2022',
     'sql_server_2025',
+})
+
+#: Platforms that can use Microsoft Entra passthrough.
+USER_IDENTITY_PLATFORMS = frozenset({
+    'azure_sql_db',
+    'fabric_sql_db',
 })
 
 
@@ -4146,10 +4161,31 @@ def _resolve_auth_method(auth_method: Optional[str],
                          target_platform: str) -> str:
     """Return the effective authentication method for a platform."""
     if auth_method in AUTH_METHODS:
-        return auth_method
-    if target_platform in MANAGED_IDENTITY_PLATFORMS:
+        if (
+            auth_method == 'public'
+            or (
+                auth_method == 'managed_identity'
+                and target_platform in MANAGED_IDENTITY_PLATFORMS
+            )
+            or (
+                auth_method == 'user_identity'
+                and target_platform in USER_IDENTITY_PLATFORMS
+            )
+            or (
+                auth_method == 's3_access_key'
+                and target_platform in ('sql_server_2022', 'sql_server_2025')
+            )
+            or (
+                auth_method in ('sas', 'storage_key')
+                and target_platform != 'fabric_sql_db'
+            )
+        ):
+            return auth_method
+    if target_platform == 'fabric_sql_db':
+        return 'user_identity'
+    if target_platform in ('azure_sql_db', 'azure_sql_mi'):
         return 'managed_identity'
-    return 'storage_key' if target_platform == 'sql_server_2019' else 'sas'
+    return 'sas'
 
 
 def _credential_ddl(cred_ident: str, auth_method: str,
@@ -4177,15 +4213,36 @@ def _credential_ddl(cred_ident: str, auth_method: str,
             '-- Database: creating this credential left the database master key',
             '-- count at 0.',
             '-- Availability: Azure SQL Database and Azure SQL Managed Instance',
-            '-- have a service identity of their own. A SQL Server instance has',
-            '-- one only when it is Azure Arc-enabled with a system-assigned',
-            '-- managed identity; on a SQL Server without Arc this credential',
+            '-- have a service identity of their own. SQL Server 2025 can use',
+            '-- managed identity when Azure Arc-enabled and configured with the',
+            '-- selected user-assigned identity; on a SQL Server without Arc this',
             '-- cannot authenticate, and a SAS credential is the route that',
             '-- works. Managed identity was certified live on Azure SQL Database',
             '-- only.',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = 'MANAGED IDENTITY';",
+            'GO',
+        ]
+    if auth_method == 'user_identity':
+        return [
+            f'--{prefix}Database Scoped Credential (Microsoft Entra passthrough)',
+            '-- The signed-in database user accesses storage as themselves.',
+            '-- No secret and no database master key are required.',
+            f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
+            'WITH',
+            "    IDENTITY = 'USER IDENTITY';",
+            'GO',
+        ]
+    if auth_method == 's3_access_key':
+        return [
+            f'--{prefix}Database Scoped Credential (S3 access key)',
+            '-- Requires a database master key (step 1). Keep real access keys',
+            '-- outside this extension and replace the placeholders securely.',
+            f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
+            'WITH',
+            "    IDENTITY = 'S3 ACCESS KEY',",
+            "    SECRET   = '<access_key_id>:<secret_access_key>';",
             'GO',
         ]
     if auth_method == 'storage_key':

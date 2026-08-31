@@ -155,16 +155,15 @@
       "statement": "CREATE DATABASE SCOPED CREDENTIAL WITH IDENTITY = 'MANAGED IDENTITY' succeeded; the database master key count was 0 before, during and after, and cleanup left zero residue.",
       "expect": {
         "default_auth_method": "managed_identity",
-        "master_key_required_for": ["sas", "storage_key"],
+        "master_key_required_for": ["sas", "s3_access_key", "storage_key"],
         "master_key_required_for_managed_identity": false,
         "supported_platforms": [
           "azure_sql_db",
           "azure_sql_mi",
-          "sql_server_2022",
           "sql_server_2025"
         ]
       },
-      "caveat": "Blob RBAC itself was never exercised: no user storage account was authorised for the run."
+      "caveat": "Blob RBAC itself was never exercised: no user storage account was authorised for the run. SQL Server 2025 requires Azure Arc for managed identity."
     },
     {
       "id": "R10",

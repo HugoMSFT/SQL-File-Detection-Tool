@@ -15,7 +15,7 @@ TypeScript running in the extension host.
 
 | Module | `vscode` import? | Responsibility |
 | --- | --- | --- |
-| `src/extension.ts` | yes | Activation. Registers seven commands and one `WebviewViewProvider`. Nothing else. |
+| `src/extension.ts` | yes | Activation. Registers six commands and one `WebviewViewProvider`. Nothing else. |
 | `src/nativeView.ts` | yes | The only other module that touches the VS Code API. Implements `UiHost` and `AuthEnvironment` and owns the sidebar and panel surfaces. |
 | `src/ui/controller.ts` | no | All product logic. Receives untrusted messages, drives the native service, mutates the shared store. |
 | `src/ui/host.ts` | no | The `UiHost` / `AzureBridge` seam. Everything the controller needs from the editor, expressed as an interface. |
@@ -56,40 +56,31 @@ including the round trip. Those numbers are asserted, not just documented:
 render exceeds 1.5 s, and the output channel records all three timings so a slow
 machine can be diagnosed from a bug report.
 
-## Quick Analyze
+## Preview-first workflow
 
-Quick Analyze is the initial tab and the primary workflow. The left navigator
-persists across tabs and keeps file, folder/workspace, public HTTPS, and Azure
-Storage entry points together. The main view combines the selected file's
-analyzed facts, bounded real preview rows, common parser options, source
-readiness, and one selected production-generator statement. Metadata, Schema,
-all statement details, Azure/URLs, Formats, copy/open, and export remain
-available; there is no wizard or second expert mode.
+Preview is the initial tab and primary workflow. The left navigator persists
+across tabs, while the main view starts with bounded real rows from the selected
+file. Metadata and Schema separate detected facts from type overrides. Focused
+tabs expose `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, external file format,
+external table, credential setup, and Azure/URL workflows. Quick Analyze,
+Formats, Best Practices, COPY INTO, JSON, and FOR JSON are not navigation tabs.
+JSON guidance is emitted only in the relevant `OPENROWSET` or external-table
+context.
 
-Parser values carry explicit provenance: `Detected` for content evidence,
-`Inferred` for sample/heuristic conclusions, `Assumed` for an unobserved safe
-default, `Mapped` for a file fact translated to target SQL, `From source` for
-path/auth-derived values, `Platform default`, `Unavailable`, `Unsupported`,
-`Mixed`, and `Overridden`. Manual parser changes are optional
-`parser_overrides`; reset removes the property entirely. Consequently a request
-with no overrides enters the same certified generator with the same metadata and
-retains byte-compatible output. In particular, overriding `CODEPAGE` does not
-rewrite the analyzed file encoding.
+The credential tab is a four-step wizard: target platform, external data source,
+authentication, then object names and location. `credentialWizard.ts` constrains
+every combination before it reaches generation. Fabric SQL Database allows only
+OneLake over ABFSS with `USER IDENTITY`; OneLake on the other supported products
+uses the ADLS connector; SQL Server 2022 S3 uses `S3 ACCESS KEY`; and SQL Server
+2025 managed identity carries its Azure Arc and user-assigned identity caveat.
+The webview receives no SAS token, access key, or master-key password. Generated
+SQL contains placeholders that users replace later in a secure editor.
 
-Folder scans retain one metadata record per file. Their summary computes
-consensus only for display and reports `Mixed` plus outliers where facts differ.
-Generation and schema overrides remain selected-file scoped.
-
-For Azure blobs, the source card derives a container-level base and a relative
-blob path and suggests sanitized credential, data source, and file-format names.
-Anonymous access marks the credential as not required. Local files never produce
-readiness for fabricated cloud objects: SQL Server targets show direct
-local/UNC-read requirements, while cloud targets show explicit staging.
-PolyBase installation guidance appears only when SQL Server 2019 or 2022
-external-table generation selects a construct that requires it. The guidance
-distinguishes installing **PolyBase Query Service for External Data** in SQL
-Server Setup from enabling the already-installed feature with
-`sp_configure 'polybase enabled'`.
+Folder scans retain one metadata record per file. Generation and schema
+overrides remain selected-file scoped. For Azure blobs, the controller derives
+sanitized credential, data-source, and file-format names. Anonymous access marks
+the credential as not required. Local files expose direct SQL Server/UNC reads
+where supported and otherwise state that staging is required.
 
 Generated-statement headers and relevant external-object readiness entries show
 platform-aware Microsoft Learn links. The renderer receives only typed

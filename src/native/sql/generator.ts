@@ -27,6 +27,11 @@ import type {
     StatementKind,
     TargetPlatform,
 } from '../types';
+import type { ExternalDataSourceType } from './credentialWizard';
+import {
+    effectiveStorageUrl,
+    normalizeDataSourceType,
+} from './credentialWizard';
 import {
     bulkDataSourceNames,
     cleanIdentifier,
@@ -232,7 +237,7 @@ function createTableQuickLoad(
     if (fileType === 'json') {
         return lines.concat([
             '-- JSON is not an OPENROWSET file format.',
-            '-- Use the JSON Functions tab for SINGLE_CLOB + OPENJSON.',
+            '-- Use the OPENROWSET tab for SINGLE_CLOB + OPENJSON.',
         ]);
     }
 
@@ -495,7 +500,7 @@ function bulkInsertFabricAlternatives(
             'AS src;',
             '',
             `-- Detected source type: ${sqlComment(detectedType)}`,
-            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see JSON Functions tab).',
+            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see OPENROWSET tab).',
         ]);
 
     return header.concat(body).join('\n');
@@ -861,7 +866,7 @@ export function generateExternalTable(
             alts.push('BULK INSERT (see BULK INSERT tab)');
         }
         if (supports('json_openjson', targetPlatform)) {
-            alts.push('JSON functions (see JSON Functions tab)');
+            alts.push('OPENROWSET with OPENJSON (see OPENROWSET tab)');
         }
         const altText =
             alts.length > 0 ? alts.join(', ') : 'Use the appropriate data access method.';
@@ -1050,7 +1055,7 @@ export function generateCopyInto(
         );
     }
     if (supports('json_openjson', targetPlatform)) {
-        alternatives.push('OPENJSON / JSON_VALUE for JSON ingestion (see JSON Functions tab).');
+        alternatives.push('OPENROWSET with OPENJSON / JSON_VALUE for JSON ingestion.');
     }
     if (targetPlatform === 'fabric_sql_db') {
         alternatives.push(
@@ -1186,20 +1191,24 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
             '-- ====================================================================',
             `-- PREREQUISITE SETUP  (${sqlComment(platformLabel)})`,
             '-- Data virtualization on Fabric SQL Database is in PREVIEW.',
-            '-- Authorisation uses Microsoft Entra passthrough, so there is no',
-            '-- master key, database scoped credential, SAS token, or secret.',
+            '-- Authorisation uses Microsoft Entra passthrough. USER IDENTITY is',
+            '-- explicit here so the generated external objects are self-describing.',
             '-- The caller must have access to the target Fabric Lakehouse.',
             '-- https://learn.microsoft.com/fabric/database/sql/data-virtualization',
             '-- ====================================================================',
             '',
-            '-- 1. External Data Source over the Lakehouse Files area',
+            ...masterKeyLines(authMethod),
+            ...credentialDdl(credIdent, authMethod, '2.'),
+            '',
+            '-- 3. External Data Source over the Lakehouse Files area',
             `CREATE EXTERNAL DATA SOURCE [${dataSource}]`,
             'WITH (',
-            `    LOCATION = '${quoteLiteral(sourceLocation)}'`,
+            `    LOCATION = '${quoteLiteral(sourceLocation)}',`,
+            `    CREDENTIAL = [${credIdent}]`,
             ');',
             'GO',
             '',
-            '-- 2. External File Format (see EXTERNAL FILE FORMAT section)',
+            '-- 4. External File Format (see EXTERNAL FILE FORMAT section)',
             '-- Fabric SQL Database supports DELIMITEDTEXT and PARQUET.',
             '-- JSON is read indirectly through the CSV reader + OPENJSON.',
             '-- Delta tables must be reached through a OneLake shortcut in a',
@@ -1909,6 +1918,8 @@ export interface GenerateAllOptions {
     schemaName?: string;
     targetPlatform?: TargetPlatform | string | null;
     storageUrl?: string | null;
+    /** Connector selected by the guided external data source setup. */
+    dataSourceType?: ExternalDataSourceType | string | null;
     /**
      * Name for the generated external file format. Defaults to
      * `ff_<file_type>_format`.
@@ -1963,6 +1974,18 @@ export function generateAllStatements(
     const schemaName = options.schemaName ?? 'dbo';
     const dataSource = options.dataSource || 'MyDataSource';
     const tableName = resolveTableName(effectiveMetadata, options.tableName);
+    const selectedSourceType = options.dataSourceType
+        ? normalizeDataSourceType(options.dataSourceType, targetPlatform)
+        : null;
+    const externalStorageUrl = selectedSourceType
+        ? effectiveStorageUrl(
+            targetPlatform,
+            selectedSourceType,
+            storageUrl,
+            displayFileName(effectiveMetadata),
+        )
+        : storageUrl;
+    const openrowsetStorageUrl = selectedSourceType ? externalStorageUrl : storageUrl;
 
     // The external table must not collide with the regular table in the same
     // script, so it always gets its own name.
@@ -1977,7 +2000,7 @@ export function generateAllStatements(
         tableName,
         schemaName,
         targetPlatform,
-        storageUrl,
+        storageUrl: openrowsetStorageUrl,
         dataSource,
     };
 
@@ -1989,7 +2012,7 @@ export function generateAllStatements(
             authMethod: options.authMethod,
         }),
         openrowset: generateOpenrowset(effectiveMetadata, {
-            storageUrl,
+            storageUrl: openrowsetStorageUrl,
             dataSource,
             targetPlatform,
         }),
@@ -2005,7 +2028,7 @@ export function generateAllStatements(
             fileFormat: fmtName,
             schemaName,
             targetPlatform,
-            storageUrl,
+            storageUrl: externalStorageUrl,
         }),
         json_functions: generateJsonFunctions(effectiveMetadata, shared),
         for_json: generateForJsonPath(effectiveMetadata, shared),
@@ -2014,7 +2037,7 @@ export function generateAllStatements(
             fileFormat: fmtName,
             metadata: effectiveMetadata,
             targetPlatform,
-            storageUrl,
+            storageUrl: externalStorageUrl,
             credentialName: options.credentialName,
             authMethod: options.authMethod,
         }),
@@ -2349,13 +2372,6 @@ export function generateCompleteDdl(
         'bulk_insert',
         'openrowset',
     ];
-    // The JSON parse / DML section only makes sense for JSON input; emitting it
-    // for CSV or Parquet produces statements that reference a file the script
-    // never reads. FOR JSON stays because it exports any table.
-    if (metadata.file_type === 'json') {
-        orderedSections.push('json_functions');
-    }
-    orderedSections.push('for_json', 'best_practices', 'copy_into');
 
     // The prerequisite setup section already creates the BLOB_STORAGE source
     // that BULK INSERT needs, so do not create it twice.

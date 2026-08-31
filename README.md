@@ -17,33 +17,31 @@ unless another platform is selected explicitly.
 ## See it in action
 
 ![Walkthrough of the native VS Code extension: selecting the SQL File Detection
-Tool icon in the Activity Bar, the interface rendering immediately with no setup
-step, a Parquet file analysed in place, the detected column types, Azure SQL
-Database preselected as the target platform with the generated CREATE TABLE and
-OPENROWSET scripts, the Azure Storage sign-in modes and public dataset URL box,
-and the same screen following a light VS Code theme.](media/sql-file-detection-tool-walkthrough.gif)
+Tool icon in the Activity Bar, the Power Studio interface opening immediately in
+an editor tab, a Parquet file analyzed in the Preview tab, the guided external
+storage credential setup, generated T-SQL, and the Azure Storage browser.](media/sql-file-detection-tool-walkthrough.gif)
 
 The walkthrough above, in text:
 
 1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
-   full interface appears immediately, rendered natively — no Python, no server
-   and no browser tab. There is no install or setup step to sit through.
+   full interface opens immediately in an editor tab, rendered natively — no
+   Python, no server and no browser tab. There is no install or setup step to
+   sit through.
 2. Point it at any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a
    Delta or Iceberg table directory. The walkthrough analyses
    `demo/parquet/sales.parquet` from this repository.
-3. **Quick Analyze** is the default view. It keeps the selected file, analyzed
-   facts, real row preview, common parser controls, source readiness, and
-   generated SQL together. Advanced parser details remain one disclosure away.
-4. Every parser value states its provenance: **Detected**, **Inferred**,
-   **Assumed**, **Mapped**, **From source**, **Platform default**,
-   **Unavailable/Unsupported**, **Mixed**, or **Overridden**. An override can be
-   reset to the analyzed expected value without changing the underlying file fact.
-5. The **Target platform** selector is preset to **Azure SQL Database**. Switch
+3. **Preview** is the first and default tab, showing real rows from the selected
+   file. **Metadata** and **Schema** keep detection details and type overrides
+   nearby without crowding the initial experience.
+4. The **Target platform** selector is preset to **Azure SQL Database**. Switch
    to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
    at any time.
-6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **External table** tabs
+5. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **External table** tabs
    hold the generated T-SQL. Azure SQL output for a local file includes an
    explicit "stage the data in Azure Storage first" prerequisite block.
+6. **Credential setup** guides the platform, storage service, authentication,
+   object names, and location. It offers only compatible choices and generates
+   placeholders rather than collecting SAS tokens, S3 keys, or passwords.
 7. **Azure & URLs** offers four explicit extension sign-in modes - VS Code
    Microsoft sign-in, SAS, connection string, or anonymous - with no silent
    fallback between them, plus a **Public dataset or HTTPS URL** box that
@@ -83,7 +81,7 @@ Existing scripts, imports and automation continue to work unchanged.
 - Reads Delta Lake metadata when the optional Delta dependency is installed.
 - Selects current Apache Iceberg schemas and partition specs from table metadata.
 - Generates `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, external-table,
-  credential, JSON, and best-practice scripts where the target supports them.
+  file-format, and guided credential/data-source scripts where supported.
 - Keeps generated SQL aligned with SQL Server, Azure SQL, and Fabric SQL
   Database feature differences.
 - Provides local, S3, and Azure Blob storage handlers.
@@ -166,8 +164,9 @@ external data source, so generated scripts create a companion
 Fabric SQL Database data virtualization is in preview. It supports
 `CREATE EXTERNAL DATA SOURCE`, `CREATE EXTERNAL FILE FORMAT`,
 `CREATE EXTERNAL TABLE`, and `OPENROWSET` over a **Fabric Lakehouse `Files`
-path** using **Microsoft Entra passthrough** - no database scoped credential or
-embedded secret is created.
+path** using an explicit `IDENTITY = 'USER IDENTITY'` database scoped
+credential for **Microsoft Entra passthrough**. No embedded secret or database
+master key is created.
 
 Constraints reflected in generated output:
 
@@ -193,8 +192,8 @@ tab. Nothing outside the `.vsix` is downloaded or executed.
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-2.0.0.vsix
-code --install-extension dist/sql-file-detection-tool-2.0.0.vsix --force
+npm run package     # writes dist/sql-file-detection-tool-2.1.0.vsix
+code --install-extension dist/sql-file-detection-tool-2.1.0.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -278,9 +277,9 @@ as directly runnable.
 Generated SQL output is now complete rather than a single statement. Each file
 produces one script containing every applicable section - prerequisite
 credential/data source setup, external file format, external table, regular
-table, `BULK INSERT`, `OPENROWSET`, JSON functions, `FOR JSON`, best practices,
-and a `COPY INTO` availability section - joined in dependency order with `GO`
-batch separators. The regular table and the external table are given distinct
+table, `BULK INSERT`, and `OPENROWSET` - joined in dependency order with `GO`
+batch separators. JSON-specific reading help appears inside `OPENROWSET` only
+for JSON input. The regular table and the external table are given distinct
 names (for example `orders` and `ext_orders`) so the whole script can run
 without object-name collisions.
 
@@ -297,13 +296,9 @@ explaining why, so the ordering stays stable across platforms.
 Behaviour worth knowing when you consume `generate_complete_ddl` or the
 `/api/sql_ddl` endpoint:
 
-- **JSON sections are gated to JSON input.** The `OPENJSON`/`JSON_VALUE` parse
-  and DML section is emitted only when `metadata['file_type'] == 'json'`. It is
-  no longer produced for CSV, Parquet, Delta or Excel input. `FOR JSON` is kept
-  for every file type because it only describes exporting query results.
-- **`@json` is declared at most once per `GO` batch**, so a complete script can
-  be executed batch by batch without `Variable name '@json' has already been
-  declared` errors.
+- **JSON help is contextual.** `OPENJSON` guidance appears in the `OPENROWSET`
+  output only when the selected file is JSON. JSON-only and `FOR JSON` sections
+  are not added to the complete loading document.
 - **Multi-file export deduplicates shared prerequisites.** When several files
   are exported into one `.sql` file, master keys, database scoped credentials,
   external data sources and external file formats are created once. Later
@@ -565,7 +560,7 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension, version **2.0.0**. See
+The repository root is also a VS Code extension, version **2.1.0**. See
 [Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
@@ -585,7 +580,7 @@ slack for a shared CI runner.
 | --- | --- | --- |
 | Load the bundle (cold `require`) | 86 ms | < 1500 ms |
 | `activate()` | 0.8 ms | < 500 ms |
-| Activity Bar click to rendered shell | 0.8 ms | < 400 ms |
+| Activity Bar click to editor panel | 0.8 ms | < 400 ms |
 | Subsequent Activity Bar click | 0.2 ms | < 100 ms |
 | First analysis of a 5-column CSV | 30 ms | < 8000 ms |
 | Re-analysis of the same file | 4 ms | < 2000 ms |
@@ -600,23 +595,22 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 
 | Command | Purpose |
 | --- | --- |
-| `Open` | Reveals the native interface in the Activity Bar |
-| `Open in Editor` | Opens the same interface as an editor panel, for more width |
+| `Open` | Opens the native interface in an editor tab by default |
+| `Open in Editor` | Opens or focuses the editor tab explicitly |
 | `Analyze Current File` | Analyzes the active editor's file |
-| `Analyze Workspace Folder` | Analyzes a workspace folder |
 | `Analyze with SQL File Detection Tool` | Explorer / editor context menu, on the exact target |
 | `Connect to Azure Storage` | Signs in through VS Code |
 | `Disconnect Azure Storage` | Clears every credential, in memory and in secret storage |
 
-### Activity Bar
+### Editor panel and Activity Bar
 
-Selecting the **SQL File Detection Tool** container reveals the complete
-interface immediately, rendered from bundled assets. **Quick Analyze** is the
-default view, with a persistent source/file navigator, selected-file facts, real
-preview rows, provenance-aware parser options, source readiness, and generated
-SQL. Metadata, Schema, statement details, export, Formats, public HTTPS URLs, and
-the Azure Storage browser remain available through progressive disclosure. There is no
-loading state to wait through and nothing to install; see
+Selecting the **SQL File Detection Tool** container opens the complete interface
+in an editor tab and closes the temporary sidebar. **Preview** is the first and
+default tab, with a persistent source/file navigator and real rows from the
+selected file. Metadata, Schema, focused loading-statement tabs, the guided
+credential/data-source setup, public HTTPS URLs, and the Azure Storage browser
+remain available. Set `sqlFileDetectionTool.defaultView` to `sidebar` to keep the interface in the
+Activity Bar instead. There is no loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
@@ -638,17 +632,39 @@ rather than inventing a cloud external source.
 - No token, account key or SAS signature ever reaches the webview, the output
   channel, a setting, a URL or generated SQL.
 
-`Open in Editor` and the sidebar share one state store, so they always agree.
+The editor panel and sidebar share one state store, so they always agree.
 
 ### Settings
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
+| `sqlFileDetectionTool.defaultView` | `editor` | Primary interface surface (`editor` or `sidebar`) |
 
 The platform, the selected tab and the appearance preference are remembered in
 workspace and global state. File contents and credentials are never persisted
 there.
+
+### Guided SQL credential setup
+
+The **Credential setup** tab asks for the target SQL platform, storage service,
+authentication method, and object names. Each choice immediately constrains the
+next one:
+
+| Target | Storage choices | Guided authentication |
+| --- | --- | --- |
+| SQL Server 2019 | Azure Blob, ADLS Gen2 | SAS |
+| SQL Server 2022 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS; S3 access key for S3 |
+| SQL Server 2025 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS or user-assigned managed identity; S3 access key for S3 |
+| Azure SQL Database | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity, Microsoft Entra `USER IDENTITY`, or SAS |
+| Azure SQL Managed Instance | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity or SAS |
+| Fabric SQL Database | Fabric OneLake only, using ABFSS | Microsoft Entra `USER IDENTITY` |
+
+SQL Server 2025 managed identity requires an Azure Arc-enabled instance with the
+selected user-assigned identity configured. The wizard never asks for or stores
+a SAS token, S3 access key, or master-key password. It emits clearly marked
+placeholders for secret-bearing methods so the values can be supplied later in
+a secure SQL editor.
 
 ### Azure Storage in the extension
 
@@ -663,9 +679,10 @@ Four authentication modes, all handled in the extension host:
 
 Remembering a credential in VS Code `SecretStorage` is opt-in and defaults to
 no. Disconnecting, and deactivating the extension, clear memory *and* delete the
-stored secret. Managed identity is deliberately **not** offered in the desktop
-extension, because a desktop extension does not have one - it remains a
-deployment concern for the CLI and the web application below.
+stored secret. Managed identity is deliberately **not** offered as an extension-host sign-in,
+because a desktop extension does not have one. The separate **Credential setup**
+wizard can still generate `MANAGED IDENTITY` T-SQL for database platforms that
+support it; it never attempts to authenticate the desktop extension that way.
 
 ### Relationship to the Python CLI
 
@@ -676,7 +693,7 @@ and version 2.0.0 removed the last of the backend-lifecycle code: there is no
 `backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
 module left in the extension sources.
 
-The two distributions version independently. The extension is at 2.0.0; the
+The two distributions version independently. The extension is at 2.1.0; the
 Python distribution keeps its own version line, because nothing about the CLI
 changed when the extension stopped using it.
 

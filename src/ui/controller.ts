@@ -24,7 +24,10 @@ import {
     CancellationError,
     SimpleCancellationTokenSource,
     describeError,
+    inferDataSourceType,
     nativeAnalysisService,
+    normalizeDataSourceType,
+    normalizeGuidedAuthMethod,
     type FileMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
@@ -177,7 +180,16 @@ export class UiController {
                 return;
             case 'setPlatform': {
                 const platform = this.service.normalizePlatform(request.platform);
-                this.store.update({ platform });
+                const dataSourceType = normalizeDataSourceType(
+                    this.store.state.dataSourceType,
+                    platform,
+                );
+                const authMethod = normalizeGuidedAuthMethod(
+                    this.store.state.authMethod,
+                    platform,
+                    dataSourceType,
+                );
+                this.store.update({ platform, dataSourceType, authMethod });
                 this.refreshQuickAnalyze();
                 void this.host.setPreference('platform', platform);
                 this.regenerate();
@@ -199,8 +211,6 @@ export class UiController {
                 return this.queue(() => this.browse(true));
             case 'analyzeCurrentFile':
                 return this.queue(() => this.analyzeCurrentFile());
-            case 'analyzeWorkspaceFolder':
-                return this.queue(() => this.analyzeWorkspaceFolder());
             case 'setTableName':
                 this.store.update({ tableName: request.value });
                 this.regenerate();
@@ -214,35 +224,55 @@ export class UiController {
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
+            case 'setDataSourceType': {
+                const dataSourceType = normalizeDataSourceType(
+                    request.value,
+                    this.store.state.platform,
+                );
+                const authMethod = normalizeGuidedAuthMethod(
+                    this.store.state.authMethod,
+                    this.store.state.platform,
+                    dataSourceType,
+                );
+                this.store.update({ dataSourceType, authMethod });
+                this.refreshQuickAnalyze();
+                this.regenerate();
+                return;
+            }
             case 'setCredentialName':
                 this.store.update({ credentialName: request.value });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
             case 'setAuthMethod':
-                this.store.update({ authMethod: request.value });
+                this.store.update({
+                    authMethod:
+                        request.value === 'public'
+                        && this.store.state.authMethod === 'public'
+                            ? 'public'
+                            : normalizeGuidedAuthMethod(
+                                request.value,
+                                this.store.state.platform,
+                                this.store.state.dataSourceType,
+                            ),
+                });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
-            case 'setStorageUrl':
-                this.store.update({ storageUrl: request.value });
+            case 'setStorageUrl': {
+                const inferred = inferDataSourceType(request.value);
+                const dataSourceType = inferred
+                    ? normalizeDataSourceType(inferred, this.store.state.platform)
+                    : this.store.state.dataSourceType;
+                this.store.update({ storageUrl: request.value, dataSourceType });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
+            }
             case 'setFormatName':
                 this.store.update({ formatName: request.value });
                 this.refreshQuickAnalyze();
                 this.regenerate();
-                return;
-            case 'setStatementKind':
-                this.store.update({
-                    activeTab: 'quick_analyze',
-                    quickAnalyze: {
-                        ...this.store.state.quickAnalyze,
-                        selectedStatement: request.kind,
-                    },
-                });
-                this.refreshQuickAnalyze();
                 return;
             case 'setParserOverride': {
                 const value = this.parseParserOverride(request.key, request.value);
@@ -411,14 +441,6 @@ export class UiController {
         await this.loadFiles([target]);
     }
 
-    private async analyzeWorkspaceFolder(): Promise<void> {
-        const folder = await this.host.pickWorkspaceFolder();
-        if (!folder) {
-            return;
-        }
-        await this.loadDirectory(folder);
-    }
-
     /**
      * Analyse a directory and list every supported file inside it.
      *
@@ -429,9 +451,18 @@ export class UiController {
         this.sourceReferenceUrl = '';
         this.folderMetadata = [];
         this.rawMetadata = null;
+        const state = this.store.state;
         this.store.update({
             sourceKind: 'local',
             storageUrl: '',
+            authMethod:
+                state.authMethod === 'public'
+                    ? normalizeGuidedAuthMethod(
+                          null,
+                          state.platform,
+                          state.dataSourceType,
+                      )
+                    : state.authMethod,
             parserOverrides: {},
             folderProfile: null,
         });
@@ -498,10 +529,19 @@ export class UiController {
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
         const { label } = displayLabel(paths[0], this.host.workspaceFolders());
+        const state = this.store.state;
         this.store.update({
             sourceLabel: label,
             sourceKind,
             storageUrl: sourceKind === 'local' ? '' : this.store.state.storageUrl,
+            authMethod:
+                sourceKind === 'local' && state.authMethod === 'public'
+                    ? normalizeGuidedAuthMethod(
+                          null,
+                          state.platform,
+                          state.dataSourceType,
+                      )
+                    : state.authMethod,
             parserOverrides: {},
             folderProfile: null,
             error: null,
@@ -624,7 +664,7 @@ export class UiController {
                 : suggestedObjectNames(
                       state.storageUrl,
                       metadata.file_type,
-                      state.authMethod || (state.azure.mode === 'anonymous' ? 'public' : ''),
+                      state.authMethod,
                   );
         this.store.update({
             metadata: display,
@@ -633,11 +673,7 @@ export class UiController {
             dataSource: sourceNames?.dataSource ?? state.dataSource,
             credentialName: sourceNames?.credentialName ?? state.credentialName,
             formatName: sourceNames?.formatName ?? state.formatName,
-            authMethod:
-                state.authMethod ||
-                (state.sourceKind === 'azure' && state.azure.mode === 'anonymous'
-                    ? 'public'
-                    : state.authMethod),
+            authMethod: state.authMethod,
             lastAnalysisMs: Math.max(0, Math.round(elapsedMs)),
         });
         this.refreshQuickAnalyze();
@@ -743,6 +779,7 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            dataSourceType: state.dataSourceType,
             formatName: state.formatName || null,
             parserOverrides:
                 Object.keys(state.parserOverrides).length > 0
@@ -769,6 +806,7 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            dataSourceType: state.dataSourceType,
             formatName: state.formatName || null,
             parserOverrides:
                 Object.keys(state.parserOverrides).length > 0
@@ -870,6 +908,7 @@ export class UiController {
                 authMethod: state.authMethod || null,
                 targetPlatform: state.platform as TargetPlatform,
                 storageUrl: state.storageUrl || null,
+                dataSourceType: state.dataSourceType,
             });
             if (!this.isCurrent(generation)) {
                 return;
@@ -1098,7 +1137,16 @@ export class UiController {
                 return;
             }
             this.sourceReferenceUrl = browser.blobUrl(container, blob);
-            this.store.update({ storageUrl: this.sourceReferenceUrl });
+            this.store.update({
+                storageUrl: this.sourceReferenceUrl,
+                dataSourceType:
+                    inferDataSourceType(this.sourceReferenceUrl)
+                    ?? this.store.state.dataSourceType,
+                authMethod:
+                    this.store.state.azure.mode === 'anonymous'
+                        ? 'public'
+                        : this.store.state.authMethod,
+            });
             await this.loadFiles([downloaded.path], 'azure');
             this.store.update({
                 notice:
@@ -1169,7 +1217,13 @@ export class UiController {
             } catch {
                 this.sourceReferenceUrl = '';
             }
-            this.store.update({ storageUrl: queryable ?? '' });
+            this.store.update({
+                storageUrl: queryable ?? '',
+                dataSourceType:
+                    inferDataSourceType(queryable)
+                    ?? this.store.state.dataSourceType,
+                authMethod: queryable ? 'public' : this.store.state.authMethod,
+            });
             await this.loadFiles(
                 [downloaded.path],
                 queryable && isAzureStorageUrl(queryable) ? 'azure' : 'public_https',

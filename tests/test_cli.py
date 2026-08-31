@@ -150,9 +150,12 @@ def test_analyze_end_to_end_generates_complete_platform_sql(tmp_path):
     script = out_file.read_text(encoding='utf-8')
 
     # All sections present and GO-separated.
-    for marker in ('CREATE TABLE', 'CREATE EXTERNAL TABLE', 'BULK INSERT',
-                   'OPENROWSET', 'BEST PRACTICES', 'GO'):
+    for marker in ('PREREQUISITE SETUP', 'CREATE EXTERNAL FILE FORMAT',
+                   'CREATE TABLE', 'CREATE EXTERNAL TABLE', 'BULK INSERT',
+                   'OPENROWSET', 'GO'):
         assert marker in script, marker
+    for removed in ('BEST PRACTICES', 'COPY INTO', 'FOR JSON'):
+        assert removed not in script, removed
 
     # Distinct regular vs external table names.
     assert 'CREATE TABLE [dbo].[orders]' in script

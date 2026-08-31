@@ -65,11 +65,6 @@
         "category": "SQL File Detection Tool"
       },
       {
-        "command": "sqlFileDetectionTool.analyzeWorkspaceFolder",
-        "title": "Analyze Workspace Folder",
-        "category": "SQL File Detection Tool"
-      },
-      {
         "command": "sqlFileDetectionTool.connectAzureStorage",
         "title": "Connect to Azure Storage",
         "category": "SQL File Detection Tool"
@@ -140,6 +135,19 @@
             "Fabric SQL Database"
           ],
           "markdownDescription": "Target SQL platform used when generating T-SQL. Defaults to **Azure SQL Database**."
+        },
+        "sqlFileDetectionTool.defaultView": {
+          "type": "string",
+          "default": "editor",
+          "enum": [
+            "editor",
+            "sidebar"
+          ],
+          "enumDescriptions": [
+            "Open the full interface in an editor tab (default)",
+            "Keep the full interface in the Activity Bar sidebar"
+          ],
+          "markdownDescription": "Where **Open**, analysis commands, Azure connect, and the Activity Bar entry display the interface."
         }
       }
     },
@@ -152,7 +160,7 @@
           {
             "id": "openTool",
             "title": "Open the tool",
-            "description": "Select the SQL File Detection Tool icon in the Activity Bar. The interface renders immediately — there is no setup step, no interpreter check and no server to wait for.\n[Open the tool](command:sqlFileDetectionTool.open)",
+            "description": "Select the SQL File Detection Tool icon in the Activity Bar. The full interface opens immediately in an editor tab — there is no setup step, no interpreter check and no server to wait for.\n[Open the tool](command:sqlFileDetectionTool.open)",
             "media": {
               "markdown": "media/walkthrough/open.md"
             },
@@ -174,7 +182,7 @@
           {
             "id": "reviewSql",
             "title": "Review the generated T-SQL",
-            "description": "CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Azure SQL Database is the default; switch platforms at any time.",
+            "description": "Preview is the first tab. CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Credential setup guides compatible storage and authentication choices without collecting secrets.",
             "media": {
               "markdown": "media/walkthrough/sql.md"
             }
@@ -202,6 +210,7 @@
     "watch": "tsc -watch -p ./",
     "typecheck": "tsc -p ./ --noEmit",
     "lint": "eslint src scripts --ext .ts,.js",
+    "icon": "node scripts/generate-icon.js",
     "notices": "node scripts/generate-notices.js",
     "test": "npm run compile && npm run bundle && node scripts/run-tests.js",
     "package": "node scripts/ensure-dist.js && vsce package --out dist",

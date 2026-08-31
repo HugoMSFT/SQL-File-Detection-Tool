@@ -119,9 +119,6 @@ test('the shell ships templates rather than rendered data', () => {
         'tpl-limitation',
         'tpl-schema-row',
         'tpl-azure',
-        'tpl-format-row',
-        'tpl-parser-option',
-        'tpl-readiness',
     ]) {
         assert.ok(html.includes(`id="${id}"`), `${id} template is missing`);
     }
@@ -133,7 +130,6 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'openFileDialog',
         'openFolderDialog',
         'analyzeCurrentFile',
-        'analyzeWorkspaceFolder',
         'exportAllSql',
         'openInEditor',
         'publicUrlAnalyze',
@@ -147,19 +143,15 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     }
 });
 
-test('Quick Analyze is the primary native workflow with provenance and reset controls', () => {
+test('Preview is the primary workflow and credential setup is guided', () => {
     const html = render();
-    assert.match(script, /Quick Analyze/);
-    assert.match(script, /Expected:/);
-    assert.match(script, /resetParserOverride/);
-    assert.match(script, /Source readiness/);
-    assert.match(script, /polybase-guidance/);
+    assert.match(script, /Configure external storage access/);
+    assert.match(script, /setDataSourceType/);
+    assert.match(script, /Authentication method/);
+    assert.match(script, /never asks for or stores SAS tokens/);
     assert.match(script, /openDocumentation/);
     assert.match(script, /opens Microsoft Learn externally/);
     assert.match(script, /dataset\.documentation/);
-    assert.match(script, /state\.quickAnalyze\.documentation/);
-    assert.match(script, /object\.documentation/);
-    assert.match(script, /polybase\.documentation/);
     assert.match(html, /Sources & files/);
     assert.match(html, /HTTPS \/ Azure/);
 });

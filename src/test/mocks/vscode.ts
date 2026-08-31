@@ -39,6 +39,8 @@ export interface MockState {
     readonly context: Record<string, unknown>;
     readonly commands: Map<string, (...args: unknown[]) => unknown>;
     readonly views: Map<string, unknown>;
+    readonly panels: MockView[];
+    readonly executedCommands: string[];
     readonly messages: string[];
     readonly secrets: Map<string, string>;
     readonly globalState: Map<string, unknown>;
@@ -82,6 +84,8 @@ class MockUri {
 export function createMockVscode(): { module: Record<string, unknown>; state: MockState } {
     const commands = new Map<string, (...args: unknown[]) => unknown>();
     const views = new Map<string, unknown>();
+    const panels: MockView[] = [];
+    const executedCommands: string[] = [];
     const messages: string[] = [];
     const secrets = new Map<string, string>();
     const globalState = new Map<string, unknown>();
@@ -92,6 +96,8 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
     const state: MockState = {
         commands,
         views,
+        panels,
+        executedCommands,
         messages,
         secrets,
         globalState,
@@ -246,12 +252,13 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
                 return disposable();
             },
             createWebviewPanel: () => {
-                const view = state.makeView();
-                return Object.assign(view, {
+                const panel = Object.assign(state.makeView(), {
                     viewColumn: 1,
                     reveal: (): void => undefined,
                     onDidChangeViewState: () => disposable(),
                 });
+                panels.push(panel);
+                return panel;
             },
             showErrorMessage: async (message: string): Promise<undefined> => {
                 messages.push(`error: ${message}`);
@@ -296,6 +303,7 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
                 return disposable();
             },
             executeCommand: async (id: string, ...args: unknown[]): Promise<unknown> => {
+                executedCommands.push(id);
                 const handler = commands.get(id);
                 return handler ? handler(...args) : undefined;
             },

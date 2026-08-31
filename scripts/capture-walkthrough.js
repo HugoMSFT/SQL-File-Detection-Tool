@@ -119,7 +119,14 @@ async function collectStates() {
         await analyze();
         await settle(8000);
 
-        for (const tab of ['preview', 'metadata', 'create_table', 'openrowset', 'azure']) {
+        for (const tab of [
+            'preview',
+            'metadata',
+            'credential_setup',
+            'create_table',
+            'openrowset',
+            'azure',
+        ]) {
             await view.receive({ type: 'setTab', tab });
             await settle(4000);
             captured[tab] = latestState(view.webview.posted);
@@ -179,6 +186,13 @@ function buildScenes(states) {
         { caption: 'shell', state: clone(states.shell), hold: 1800, panel: true },
         { caption: 'preview', state: clone(states.preview), hold: 2400, panel: true },
         { caption: 'metadata', state: clone(states.metadata), hold: 2400, panel: true },
+        {
+            caption: 'credential-setup',
+            state: clone(states.credential_setup),
+            hold: 3000,
+            panel: true,
+            scroll: 160,
+        },
         {
             caption: 'create-table',
             state: clone(states.create_table),
@@ -570,7 +584,7 @@ async function main() {
 
 const CAPTIONS = {
     'activity-bar': 'Select the SQL File Detection Tool icon in the Activity Bar',
-    shell: 'The native interface renders immediately — no Python, no server, no setup',
+    shell: 'The native editor interface opens immediately — no Python, no server, no setup',
     preview: 'Preview: real rows read straight from the file',
     metadata: 'Metadata: detected types, nullability, encoding and collation',
     'create-table': 'Azure SQL Database is the default target — CREATE TABLE',

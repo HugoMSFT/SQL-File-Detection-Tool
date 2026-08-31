@@ -22,7 +22,7 @@ body.density-compact {
 
 body {
   margin: 0;
-  padding: var(--gap);
+  padding: 14px;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
@@ -65,16 +65,33 @@ body {
 /* -------------------------------------------------------------- header --- */
 
 .app-header {
-  border-bottom: 1px solid var(--vscode-panel-border, transparent);
-  padding-bottom: var(--gap);
-  margin-bottom: var(--gap);
+  color: var(--vscode-button-foreground);
+  background: linear-gradient(
+    135deg,
+    var(--vscode-button-background),
+    var(--vscode-textLink-activeForeground, var(--vscode-button-background))
+  );
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  padding: 13px 16px;
 }
 
 .title-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.title-copy {
+  flex: 1 1 auto;
+}
+
+.title-copy p {
+  margin: 2px 0 0;
+  font-size: 0.82em;
+  opacity: 0.78;
 }
 
 h1 {
@@ -97,7 +114,8 @@ h3 {
 
 .version {
   font-size: 0.85em;
-  color: var(--vscode-descriptionForeground);
+  color: inherit;
+  opacity: 0.8;
 }
 
 .toolbar {
@@ -113,6 +131,32 @@ h3 {
   gap: var(--gap);
   align-items: flex-end;
   margin-top: 8px;
+}
+
+.app-header .field > span,
+.app-header .help {
+  color: inherit;
+  opacity: 0.82;
+}
+
+.app-header .btn {
+  color: var(--vscode-button-foreground);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+.app-header .btn.primary {
+  color: var(--vscode-button-background);
+  background: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-foreground);
+}
+
+.app-header .btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.app-header .btn.primary:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground);
 }
 
 .help {
@@ -194,6 +238,8 @@ input[type='number'] {
   align-items: center;
   gap: 8px;
   min-height: 0;
+  padding: 0 10px;
+  border-inline: 1px solid var(--vscode-panel-border, transparent);
 }
 
 .progress,
@@ -224,14 +270,21 @@ input[type='number'] {
 /* --------------------------------------------------------------- layout --- */
 
 .layout {
-  display: flex;
-  gap: var(--gap);
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+  gap: 0;
   align-items: flex-start;
-  margin-top: var(--gap);
+  min-height: 560px;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+  background: var(--vscode-editor-background);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
 }
 
 body.surface-sidebar .layout {
   flex-direction: column;
+  display: flex;
 }
 
 body.surface-sidebar .file-pane,
@@ -240,9 +293,12 @@ body.surface-sidebar .content {
 }
 
 .file-pane {
-  flex: 0 0 240px;
-  max-width: 280px;
+  max-width: none;
   min-width: 0;
+  min-height: 560px;
+  padding: 12px;
+  border-right: 1px solid var(--vscode-panel-border, transparent);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
 }
 
 body.surface-sidebar .file-pane {
@@ -253,6 +309,7 @@ body.surface-sidebar .file-pane {
 .content {
   flex: 1 1 auto;
   min-width: 0;
+  padding: 0 12px 12px;
 }
 
 .source {
@@ -325,13 +382,15 @@ body.surface-sidebar .file-pane {
   flex-wrap: wrap;
   gap: 2px;
   border-bottom: 1px solid var(--vscode-panel-border, transparent);
-  margin-bottom: var(--gap);
+  margin: 0 -12px var(--gap);
+  padding: 0 8px;
+  background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
 }
 
 .tab {
   font-family: inherit;
   font-size: 0.9em;
-  padding: 4px 8px;
+  padding: 9px 8px 7px;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -342,6 +401,8 @@ body.surface-sidebar .file-pane {
 .tab[aria-selected='true'] {
   border-bottom-color: var(--vscode-focusBorder);
   font-weight: 600;
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
 }
 
 .tab:hover {
@@ -409,6 +470,197 @@ thead th {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.credential-intro {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  margin-bottom: var(--gap);
+  border-radius: 9px;
+  color: var(--vscode-button-foreground);
+  background: linear-gradient(
+    135deg,
+    var(--vscode-button-background),
+    var(--vscode-textLink-activeForeground, var(--vscode-button-background))
+  );
+}
+
+.credential-intro h2,
+.credential-intro p {
+  margin: 0;
+}
+
+.credential-intro p {
+  margin-top: 2px;
+  font-size: 0.88em;
+  opacity: 0.82;
+}
+
+.credential-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 9px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.credential-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: var(--gap);
+}
+
+.wizard-step {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.wizard-step-heading {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 10px;
+}
+
+.wizard-step-heading h3,
+.wizard-step-detail {
+  margin: 0;
+}
+
+.wizard-step-detail {
+  margin-top: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82em;
+}
+
+.wizard-step-number {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  font-weight: 700;
+  font-size: 0.85em;
+}
+
+.wizard-field {
+  max-width: none;
+}
+
+.wizard-object-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.wizard-object-fields .field:last-child {
+  grid-column: 1 / -1;
+}
+
+.connector-prefix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82em;
+}
+
+.connector-prefix strong {
+  padding: 2px 7px;
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 999px;
+  color: var(--vscode-textLink-foreground);
+  background: var(--vscode-editor-background);
+  letter-spacing: 0.06em;
+}
+
+.object-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  margin: var(--gap) 0;
+}
+
+.object-card {
+  position: relative;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: 7px;
+  background: var(--vscode-editor-background);
+}
+
+.object-card:first-child::after {
+  content: '>';
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: calc(var(--gap) / -2);
+  transform: translate(50%, -50%);
+  color: var(--vscode-textLink-foreground);
+  font-weight: 700;
+}
+
+.object-kind,
+.object-status {
+  display: block;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.78em;
+}
+
+.object-kind {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.object-name {
+  display: block;
+  margin: 3px 0;
+  overflow: hidden;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.88em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-status {
+  color: var(--vscode-testing-iconPassed, var(--vscode-textLink-foreground));
+}
+
+.wizard-note {
+  padding: 10px 12px;
+  margin-bottom: var(--gap);
+  border-left: 3px solid var(--vscode-textLink-foreground);
+  background: var(--vscode-textBlockQuote-background, transparent);
+}
+
+.wizard-note p {
+  margin: 3px 0 0;
+  font-size: 0.86em;
+}
+
+.secret-note {
+  color: var(--vscode-descriptionForeground);
+}
+
+@media (max-width: 900px) {
+  .credential-steps {
+    grid-template-columns: 1fr;
+  }
 }
 
 .parser-grid {

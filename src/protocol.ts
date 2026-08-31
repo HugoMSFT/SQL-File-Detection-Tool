@@ -42,6 +42,13 @@ import type {
     QuickAnalyzeState,
     SourceKind,
 } from './quickAnalyze';
+import {
+    EXTERNAL_DATA_SOURCE_TYPES,
+    GUIDED_AUTH_METHODS,
+    type CredentialWizardState,
+    type ExternalDataSourceType,
+    type GuidedAuthMethod,
+} from './native';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -55,22 +62,16 @@ export const MAX_PREVIEW_ROWS = 500;
 
 /** Tabs the native interface can show. */
 export const UI_TABS = [
-    'quick_analyze',
-    'metadata',
     'preview',
+    'metadata',
+    'schema',
     'create_table',
     'bulk_insert',
     'openrowset',
-    'copy_into',
     'external_file_format',
     'create_external_table',
-    'json_functions',
-    'for_json',
     'credential_setup',
-    'best_practices',
-    'schema',
     'azure',
-    'formats',
 ] as const;
 
 export type UiTab = (typeof UI_TABS)[number];
@@ -124,12 +125,18 @@ export type WebviewRequest =
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
     | (Base & { readonly type: 'analyzeCurrentFile' })
-    | (Base & { readonly type: 'analyzeWorkspaceFolder' })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
+    | (Base & {
+          readonly type: 'setDataSourceType';
+          readonly value: ExternalDataSourceType;
+      })
     | (Base & { readonly type: 'setCredentialName'; readonly value: string })
-    | (Base & { readonly type: 'setAuthMethod'; readonly value: string })
+    | (Base & {
+          readonly type: 'setAuthMethod';
+          readonly value: GuidedAuthMethod | 'public';
+      })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
     | (Base & { readonly type: 'setFormatName'; readonly value: string })
     | (Base & {
@@ -138,7 +145,6 @@ export type WebviewRequest =
           readonly value: string;
       })
     | (Base & { readonly type: 'resetParserOverride'; readonly key: keyof ParserOverrides })
-    | (Base & { readonly type: 'setStatementKind'; readonly kind: StatementKind })
     | (Base & {
           readonly type: 'setColumnOverride';
           readonly column: string;
@@ -249,8 +255,10 @@ export interface AppStateSnapshot {
     readonly tableName: string;
     readonly schemaName: string;
     readonly dataSource: string;
+    readonly dataSourceType: ExternalDataSourceType;
     readonly credentialName: string;
     readonly authMethod: string;
+    readonly credentialSetup: CredentialWizardState;
     readonly storageUrl: string;
     readonly formatName: string;
     readonly parserOverrides: Readonly<ParserOverrides>;
@@ -382,7 +390,6 @@ const BUILDERS: Record<string, Builder> = {
     openFileDialog: () => ({ type: 'openFileDialog' }),
     openFolderDialog: () => ({ type: 'openFolderDialog' }),
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
-    analyzeWorkspaceFolder: () => ({ type: 'analyzeWorkspaceFolder' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
@@ -419,6 +426,10 @@ const BUILDERS: Record<string, Builder> = {
         const value = text(source, 'value', 256);
         return value === undefined ? undefined : { type: 'setDataSource', value };
     },
+    setDataSourceType: (source) => {
+        const value = member(source, 'value', EXTERNAL_DATA_SOURCE_TYPES);
+        return value === undefined ? undefined : { type: 'setDataSourceType', value };
+    },
     setCredentialName: (source) => {
         const value = text(source, 'value', 256);
         return value === undefined
@@ -426,7 +437,7 @@ const BUILDERS: Record<string, Builder> = {
             : { type: 'setCredentialName', value };
     },
     setAuthMethod: (source) => {
-        const value = text(source, 'value', 64);
+        const value = member(source, 'value', [...GUIDED_AUTH_METHODS, 'public'] as const);
         return value === undefined ? undefined : { type: 'setAuthMethod', value };
     },
     setStorageUrl: (source) => {
@@ -463,10 +474,6 @@ const BUILDERS: Record<string, Builder> = {
             'compression',
         ] as const);
         return key === undefined ? undefined : { type: 'resetParserOverride', key };
-    },
-    setStatementKind: (source) => {
-        const kind = member(source, 'kind', STATEMENT_KINDS);
-        return kind === undefined ? undefined : { type: 'setStatementKind', kind };
     },
     setColumnOverride: (source) => {
         const column = text(source, 'column', 256);

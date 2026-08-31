@@ -1,6 +1,6 @@
 # Attach Azure Storage
 
-The **Azure Storage** tab offers four explicit sign-in modes, with no silent
+The **Azure & URLs** tab offers four explicit sign-in modes, with no silent
 fallback between them:
 
 | Mode | What it uses |

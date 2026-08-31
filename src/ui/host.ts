@@ -72,7 +72,6 @@ export interface UiHost {
     activeFileLimitation(): string | undefined;
 
     showOpenDialog(options: OpenDialogOptions): Promise<readonly string[] | undefined>;
-    pickWorkspaceFolder(): Promise<string | undefined>;
 
     copyToClipboard(text: string): Promise<void>;
     openUntitledDocument(content: string, languageId: string): Promise<void>;

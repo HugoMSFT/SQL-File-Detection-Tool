@@ -480,7 +480,7 @@ describe('complete document assembly', () => {
         assert.ok(!/\nGO\s*\nGO\b/.test(ddl), 'document must not contain doubled GO');
     });
 
-    it('includes the OPENJSON helper tab only for JSON sources', () => {
+    it('keeps JSON guidance in OPENROWSET and out of complete exports', () => {
         const jsonTabs = generateAllStatements(jsonMetadata(), {
             targetPlatform: 'azure_sql_db',
         });
@@ -508,14 +508,21 @@ describe('complete document assembly', () => {
             targetPlatform: 'azure_sql_db',
         });
         assert.ok(jsonDdl.length > 0 && csvDdl.length > 0);
-        // The json_functions section is spliced into the document for JSON only.
         assert.ok(
-            jsonDdl.includes(jsonTabs.json_functions.trim()),
-            'JSON document must embed the json_functions section',
+            /OPENJSON/i.test(jsonTabs.openrowset),
+            'JSON OPENROWSET must include OPENJSON guidance',
         );
         assert.ok(
-            !csvDdl.includes(csvTabs.json_functions.trim()),
-            'CSV document must omit the json_functions section',
+            !jsonDdl.includes(jsonTabs.json_functions.trim()),
+            'complete exports must omit the standalone JSON section',
+        );
+        assert.ok(
+            !csvDdl.includes(csvTabs.best_practices.trim()),
+            'complete exports must omit the standalone best-practices section',
+        );
+        assert.ok(
+            !csvDdl.includes(csvTabs.copy_into.trim()),
+            'complete exports must omit COPY INTO',
         );
     });
 
@@ -557,6 +564,95 @@ describe('storage authentication and object naming', () => {
         });
         assert.match(setup, /IDENTITY = 'SHARED ACCESS SIGNATURE'/);
         assert.match(setup, /CREATE MASTER KEY/);
+    });
+
+    it('uses USER IDENTITY with an ABFSS OneLake source on Fabric SQL Database', () => {
+        const setup = generateCredentialSetup({
+            dataSource: 'FabricLake',
+            metadata: csvMeta(),
+            targetPlatform: 'fabric_sql_db',
+            storageUrl:
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.csv',
+            authMethod: 'user_identity',
+        });
+        assert.match(setup, /IDENTITY = 'USER IDENTITY'/);
+        assert.match(setup, /LOCATION = 'abfss:/i);
+        assert.match(setup, /CREDENTIAL = \[cred_FabricLake\]/);
+        assert.ok(!setup.includes('CREATE MASTER KEY'));
+        assert.ok(!setup.includes('SECRET'));
+    });
+
+    it('uses S3 ACCESS KEY placeholders on SQL Server 2022', () => {
+        const setup = generateCredentialSetup({
+            dataSource: 'S3Lake',
+            metadata: csvMeta(),
+            targetPlatform: 'sql_server_2022',
+            storageUrl: 's3://bucket/data.csv',
+            authMethod: 's3_access_key',
+        });
+        assert.match(setup, /IDENTITY = 'S3 ACCESS KEY'/);
+        assert.match(setup, /SECRET\s+= '<access_key_id>:<secret_access_key>'/);
+        assert.match(setup, /CREATE MASTER KEY/);
+    });
+
+    it('threads a selected S3 placeholder through every SQL Server statement', () => {
+        const statements = generateAllStatements(csvMeta(), {
+            dataSource: 'S3Lake',
+            targetPlatform: 'sql_server_2022',
+            dataSourceType: 's3',
+            authMethod: 's3_access_key',
+        });
+        assert.match(statements.credential_setup, /LOCATION = 's3:\/\/<bucket>'/);
+        assert.match(statements.openrowset, /Data source location: s3:\/\/<bucket>/);
+        assert.match(statements.bulk_insert, /cannot read S3-compatible object storage/);
+    });
+
+    it('maps OneLake to ADLS on Azure SQL Database', () => {
+        const setup = generateCredentialSetup({
+            dataSource: 'OneLake',
+            metadata: csvMeta(),
+            targetPlatform: 'azure_sql_db',
+            storageUrl:
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.csv',
+        });
+        assert.match(
+            setup,
+            /LOCATION = 'adls:\/\/workspace@onelake\.dfs\.fabric\.microsoft\.com'/,
+        );
+        assert.ok(!setup.includes("LOCATION = 'abs://"));
+    });
+
+    it('gates managed identity to SQL Server 2025 and explains the Arc requirement', () => {
+        const setup2022 = generateCredentialSetup({
+            metadata: csvMeta(),
+            targetPlatform: 'sql_server_2022',
+            authMethod: 'managed_identity',
+        });
+        assert.match(setup2022, /IDENTITY = 'SHARED ACCESS SIGNATURE'/);
+
+        const setup2025 = generateCredentialSetup({
+            metadata: csvMeta(),
+            targetPlatform: 'sql_server_2025',
+            authMethod: 'managed_identity',
+        });
+        assert.match(setup2025, /IDENTITY = 'MANAGED IDENTITY'/);
+        assert.match(setup2025, /Azure Arc-enabled/);
+        assert.match(setup2025, /user-assigned identity/);
+    });
+
+    it('never points JSON users at the removed JSON Functions tab', () => {
+        const statements = generateAllStatements(
+            {
+                ...csvMeta(),
+                file_type: 'json',
+                file_name: 'data.json',
+                file_path: 'data.json',
+                json_format: 'array',
+            },
+            { targetPlatform: 'sql_server_2022' },
+        );
+        assert.ok(!Object.values(statements).join('\n').includes('JSON Functions tab'));
+        assert.match(statements.openrowset, /OPENJSON/);
     });
 
     it('creates no credential at all for a public container', () => {

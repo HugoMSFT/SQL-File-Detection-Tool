@@ -77,6 +77,20 @@ export {
     type PlatformFeature,
 } from './sql/typeMapping';
 export {
+    EXTERNAL_DATA_SOURCE_TYPES,
+    GUIDED_AUTH_METHODS,
+    credentialWizardState,
+    dataSourceOptionsFor,
+    effectiveStorageUrl,
+    inferDataSourceType,
+    normalizeDataSourceType,
+    normalizeGuidedAuthMethod,
+    type CredentialWizardOption,
+    type CredentialWizardState,
+    type ExternalDataSourceType,
+    type GuidedAuthMethod,
+} from './sql/credentialWizard';
+export {
     DuplicateColumnError,
     cleanIdentifier,
     escapeIdentifier,

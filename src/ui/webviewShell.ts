@@ -72,14 +72,16 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <header class="app-header">
     <div class="title-row">
-      <h1 id="app-title">SQL File Detection Tool</h1>
+      <div class="title-copy">
+        <h1 id="app-title">SQL File Detection Tool</h1>
+        <p>Preview files &bull; Generate T-SQL &bull; Understand metadata</p>
+      </div>
       <span class="version" id="app-version"></span>
     </div>
     <div class="toolbar" role="toolbar" aria-labelledby="app-title">
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
-      <button type="button" class="btn" data-action="analyzeWorkspaceFolder">Workspace folder</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
       <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
     </div>
@@ -114,7 +116,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <div class="source-actions" role="toolbar" aria-label="Add data source">
         <button type="button" class="btn subtle" data-action="openFileDialog">File</button>
         <button type="button" class="btn subtle" data-action="openFolderDialog">Folder</button>
-        <button type="button" class="btn subtle" data-action="analyzeWorkspaceFolder">Workspace</button>
         <button type="button" class="btn subtle" data-source-tab="azure">HTTPS / Azure</button>
       </div>
       <p class="source" id="source-label"></p>
@@ -216,31 +217,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
         <p class="help">Only https:// URLs that resolve to a public address are fetched. Redirects are re-checked on every hop.</p>
       </div>
     </div>
-  </template>
-
-  <template id="tpl-format-row">
-    <tr><th scope="row"></th><td class="fmt-ext"></td><td class="fmt-support"></td><td class="fmt-notes"></td></tr>
-  </template>
-
-  <template id="tpl-parser-option">
-    <div class="parser-option">
-      <div class="parser-option-head">
-        <label></label>
-        <span class="provenance"></span>
-      </div>
-      <div class="parser-control"></div>
-      <p class="expected"></p>
-      <p class="evidence"></p>
-      <button type="button" class="btn subtle reset-option" hidden>Use expected</button>
-    </div>
-  </template>
-
-  <template id="tpl-readiness">
-    <li class="readiness-item">
-      <span class="readiness-name"></span>
-      <span class="provenance"></span>
-      <span class="readiness-detail"></span>
-    </li>
   </template>
 
 <script nonce="${nonce}" src="${scriptUri}"></script>

@@ -47,11 +47,25 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.deepEqual(state.files, []);
     assert.equal(state.selectedFileId, null);
     assert.equal(state.metadata, null);
-    assert.equal(state.activeTab, 'quick_analyze');
+    assert.equal(state.activeTab, 'preview');
     assert.equal(state.quickAnalyze.selectedStatement, 'openrowset');
+    assert.equal(state.dataSourceType, 'azure_blob');
+    assert.equal(state.authMethod, 'managed_identity');
+    assert.equal(state.credentialSetup.authMethod, 'managed_identity');
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
     assert.deepEqual(state.azure, EMPTY_AZURE_STATE);
     assert.ok(state.platforms.some((entry) => entry.id === 'azure_sql_db'));
+});
+
+test('credential selections stay normalized in the shared snapshot', () => {
+    const state = store().update({
+        platform: 'sql_server_2022',
+        dataSourceType: 's3',
+        authMethod: 'managed_identity',
+    });
+    assert.equal(state.dataSourceType, 's3');
+    assert.equal(state.authMethod, 's3_access_key');
+    assert.equal(state.credentialSetup.authMethod, 's3_access_key');
 });
 
 test('file ids are opaque, unguessable and unrelated to the path', () => {

@@ -15,13 +15,11 @@ project test results, not Microsoft certification.
 
 ### Added
 
-- **Quick Analyze is now the extension's default workflow.** The persistent
-  source/file navigator feeds a selected-file view with analyzed facts, real row
-  preview, provenance-aware parser overrides and reset actions, source-derived
-  external-object readiness, and production-generated SQL. Folder summaries
-  report mixed facts and outliers without sharing one file's settings across the
-  folder. Existing metadata, schema, statement, Azure/URL, Formats, copy/open,
-  and export surfaces remain available.
+- **Credential setup is now a guided, platform-aware workflow.** It constrains
+  storage and authentication choices by SQL platform, generates safe
+  placeholders for SAS and S3 credentials, supports `USER IDENTITY` and managed
+  identity where available, maps Blob/ADLS/OneLake/S3 connector locations, and
+  explains the SQL Server 2025 Azure Arc requirement.
 - **Public certification evidence omits all engine timing data.** JSON no longer
   serializes batch/cell elapsed times, JUnit carries no `time` attributes, and
   Markdown carries no run timestamps. This preserves functional compatibility
@@ -29,6 +27,21 @@ project test results, not Microsoft certification.
 - **The Marketplace-facing README now identifies this as a personal,
   independent project** and explicitly disclaims Microsoft sponsorship,
   endorsement, approval, or certification.
+
+### Changed
+
+- **The full editor tab is now the default extension surface.** Selecting the
+  Activity Bar icon, running **Open**, analyzing a file or folder, or connecting
+  Azure Storage opens or focuses the editor panel instead of keeping the
+  workflow in the narrow sidebar. Set `sqlFileDetectionTool.defaultView` to
+  `sidebar` to retain the previous layout; both surfaces still share one state.
+- **Preview is now the first and default tab.** The previous Quick Analyze,
+  Formats, Best Practices, COPY INTO, JSON, and FOR JSON tabs were removed to
+  keep the workflow focused. JSON guidance remains contextual inside
+  `OPENROWSET` and external-table output.
+- **The native interface now uses the Power Studio visual language** recovered
+  from the original design mockup, while continuing to use VS Code theme
+  variables for dark, light, and high-contrast compatibility.
 
 ### Fixed
 

@@ -77,7 +77,7 @@ export function generateOpenrowset(
             alts.push('BULK INSERT (see BULK INSERT tab)');
         }
         if (supports('json_openjson', targetPlatform)) {
-            alts.push('JSON functions (see JSON Functions tab)');
+            alts.push('OPENJSON after reading the document as text');
         }
         const altText =
             alts.length > 0

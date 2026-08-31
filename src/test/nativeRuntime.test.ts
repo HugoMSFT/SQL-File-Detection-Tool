@@ -265,6 +265,12 @@ test('activation registers the native view and never touches a backend', async (
                     `${command} looks like a backend lifecycle command`,
                 );
             }
+            const open = mock.state.commands.get('sqlFileDetectionTool.open');
+            assert.ok(open, 'the open command is registered');
+            await open();
+            assert.equal(mock.state.panels.length, 1, 'Open defaults to one editor panel');
+            const panel = mock.state.panels[0];
+            assert.match(panel.webview.html, /data-surface="panel"/);
 
             // First render must come from bundled assets only.
             const provider = mock.state.views.get('sqlFileDetectionTool.sidebar') as {
@@ -280,6 +286,11 @@ test('activation registers the native view and never touches a backend', async (
             assert.equal(spawned.length, 0, 'first render spawned a process');
             assert.ok(!/http:\/\//.test(view.webview.html), 'no plaintext http origin in the shell');
             assert.match(view.webview.html, /Content-Security-Policy/);
+            assert.equal(mock.state.panels.length, 1, 'the Activity Bar opens one editor panel');
+            assert.ok(
+                mock.state.executedCommands.includes('workbench.action.closeSidebar'),
+                'the editor panel replaces the primary sidebar',
+            );
 
             // A real analysis, driven the way a user would drive it, still with
             // child_process sabotaged.
@@ -292,7 +303,7 @@ test('activation registers the native view and never touches a backend', async (
             // benchmark reflects real work.
             const deadline = Date.now() + 8000;
             const analysed = (): boolean =>
-                view.webview.posted.some(
+                panel.webview.posted.some(
                     (message) =>
                         (message as { state?: { lastAnalysisMs?: number | null } }).state
                             ?.lastAnalysisMs != null,
@@ -312,7 +323,7 @@ test('activation registers the native view and never touches a backend', async (
                     `first render ${renderMs.toFixed(1)}ms, ` +
                     `first analysis ${analysisMs.toFixed(1)}ms`,
             );
-            const posted = view.webview.posted;
+            const posted = panel.webview.posted;
             assert.ok(posted.length > 0, 'the host answered the webview');
             const serialised = JSON.stringify(posted);
             assert.ok(!/localhost|127\.0\.0\.1|flask/i.test(serialised), 'no backend chatter');

@@ -98,6 +98,13 @@ def _normalise_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in metadata.items():
         if key in VOLATILE_METADATA_KEYS:
             continue
+        if key == 'encoding' and str(value).lower().replace('-', '_') in {
+            'shift_jis',
+            'shiftjis',
+            'sjis',
+        }:
+            normalised[key] = 'cp932'
+            continue
         if key == 'schema' and value:
             normalised[key] = [[str(name), str(dtype)] for name, dtype in value]
             continue
@@ -155,9 +162,9 @@ _INVARIANT_PATTERNS = (
     re.compile(r'\bFIELDQUOTE\s*=\s*\'([^\']*)\'', re.IGNORECASE),
     re.compile(r'\bENCODING\s*=\s*\'([^\']*)\'', re.IGNORECASE),
     re.compile(r'\bDATAFILETYPE\s*=\s*\'([^\']*)\'', re.IGNORECASE),
-    # The credential shape is a security property: managed identity means no
-    # secret and no master key, a SAS means both.
-    re.compile(r'\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE)\'',
+    # The credential shape is a security property: identity-based methods store
+    # no secret, while SAS and S3 access-key methods require one.
+    re.compile(r'\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|USER\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE|S3\s+ACCESS\s+KEY)\'',
                re.IGNORECASE),
     # A live TRUNCATE in a generated document empties a table the user already
     # had. It is only ever correct for a caller-owned schema, so it belongs in

@@ -192,6 +192,13 @@ test('the packaged bundle activates, renders and analyses with no Python, no sub
         assert.ok(view.webview.html.length > 0, 'the shell renders from bundled assets');
         assert.match(view.webview.html, /Content-Security-Policy/);
         assert.ok(!/http:\/\//.test(view.webview.html), 'no plaintext http origin in the shell');
+        assert.equal(mock.state.panels.length, 1, 'the Activity Bar opens one editor panel');
+        assert.ok(
+            mock.state.executedCommands.includes('workbench.action.closeSidebar'),
+            'the editor panel replaces the primary sidebar',
+        );
+        const panel = mock.state.panels[0];
+        assert.match(panel.webview.html, /data-surface="panel"/);
 
         // First analysis of a real file.
         mock.state.activeEditorPath = SAMPLE;
@@ -200,23 +207,23 @@ test('the packaged bundle activates, renders and analyses with no Python, no sub
 
         const firstStart = process.hrtime.bigint();
         await analyze();
-        await waitForAnalysis(view.webview.posted, 0, BUDGET.firstAnalysisMs);
+        await waitForAnalysis(panel.webview.posted, 0, BUDGET.firstAnalysisMs);
         const firstAnalysisMs = Number(process.hrtime.bigint() - firstStart) / 1e6;
 
         // Repeat analysis of the same unchanged file.
-        const repeatFrom = view.webview.posted.length;
+        const repeatFrom = panel.webview.posted.length;
         const repeatStart = process.hrtime.bigint();
         await analyze();
-        await waitForAnalysis(view.webview.posted, repeatFrom, BUDGET.repeatAnalysisMs);
+        await waitForAnalysis(panel.webview.posted, repeatFrom, BUDGET.repeatAnalysisMs);
         const repeatAnalysisMs = Number(process.hrtime.bigint() - repeatStart) / 1e6;
 
         // Memory retention: repeated analysis of one file must not accumulate.
         global.gc?.();
         const heapBefore = process.memoryUsage().heapUsed;
         for (let index = 0; index < 20; index += 1) {
-            const from = view.webview.posted.length;
+            const from = panel.webview.posted.length;
             await analyze();
-            await waitForAnalysis(view.webview.posted, from, BUDGET.repeatAnalysisMs);
+            await waitForAnalysis(panel.webview.posted, from, BUDGET.repeatAnalysisMs);
         }
         global.gc?.();
         const retainedMib = (process.memoryUsage().heapUsed - heapBefore) / (1024 * 1024);

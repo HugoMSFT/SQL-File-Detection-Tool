@@ -297,7 +297,7 @@ def test_create_table_quick_load_routes_json_to_openjson():
         target_platform='sql_server_2022',
     )
 
-    assert 'JSON Functions tab' in sql
+    assert 'OPENROWSET tab' in sql
     assert 'FORMAT =' not in sql
     assert 'FROM OPENROWSET(' not in sql
 
@@ -724,6 +724,83 @@ def test_credential_setup_public_container_needs_no_credential():
     assert 'EXTERNAL DATA SOURCE [TestDS]' in sql
 
 
+def test_credential_setup_fabric_uses_user_identity_without_a_secret():
+    """Fabric SQL Database uses explicit Entra passthrough over ABFSS."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'FabricLake',
+        metadata={'file_type': 'parquet', 'file_name': 'sample.parquet'},
+        target_platform='fabric_sql_db',
+        storage_url=(
+            'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
+            'lakehouse/Files/sample.parquet'
+        ),
+        auth_method='user_identity',
+    )
+    assert "IDENTITY = 'USER IDENTITY'" in sql
+    assert "LOCATION = 'abfss://" in sql
+    assert 'CREDENTIAL = [cred_FabricLake]' in sql
+    assert 'CREATE MASTER KEY' not in sql
+    assert 'SECRET' not in sql
+
+
+def test_credential_setup_sql_server_2022_s3_uses_access_key_placeholders():
+    """S3 access on SQL Server 2022 uses its supported credential shape."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'S3Lake',
+        metadata={'file_type': 'parquet', 'file_name': 'sample.parquet'},
+        target_platform='sql_server_2022',
+        storage_url='s3://bucket/sample.parquet',
+        auth_method='s3_access_key',
+    )
+    assert "IDENTITY = 'S3 ACCESS KEY'" in sql
+    assert "SECRET   = '<access_key_id>:<secret_access_key>'" in sql
+    assert 'CREATE MASTER KEY' in sql
+
+
+def test_managed_identity_requires_sql_server_2025_and_azure_arc():
+    """SQL Server 2022 falls back to SAS; SQL Server 2025 explains Arc."""
+    gen = SQLGenerator()
+    metadata = {'file_type': 'parquet', 'file_name': 'sample.parquet'}
+    sql_2022 = gen.generate_credential_setup(
+        'LakeDS',
+        metadata=metadata,
+        target_platform='sql_server_2022',
+        auth_method='managed_identity',
+    )
+    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql_2022
+
+    sql_2025 = gen.generate_credential_setup(
+        'LakeDS',
+        metadata=metadata,
+        target_platform='sql_server_2025',
+        auth_method='managed_identity',
+    )
+    assert "IDENTITY = 'MANAGED IDENTITY'" in sql_2025
+    assert 'Azure Arc-enabled' in sql_2025
+    assert 'user-assigned' in sql_2025
+
+
+def test_onelake_uses_the_adls_connector_on_azure_sql_database():
+    """OneLake is exposed through ADLS outside Fabric SQL Database."""
+    gen = SQLGenerator()
+    sql = gen.generate_credential_setup(
+        'OneLake',
+        metadata={'file_type': 'parquet', 'file_name': 'sample.parquet'},
+        target_platform='azure_sql_db',
+        storage_url=(
+            'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
+            'lakehouse/Files/sample.parquet'
+        ),
+    )
+    assert (
+        "LOCATION = 'adls://workspace@onelake.dfs.fabric.microsoft.com'"
+        in sql
+    )
+    assert "LOCATION = 'abs://" not in sql
+
+
 def test_credential_name_override_is_propagated():
     """A caller-supplied credential name replaces every derived one."""
     gen = SQLGenerator()
@@ -762,9 +839,10 @@ def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
     assert "TYPE = BLOB_STORAGE" in sql
     assert ("LOCATION = 'https://account.blob.core.windows.net/container'"
             in sql)
-    # Managed identity is now the default, so no SAS secret is emitted.
-    assert "IDENTITY = 'MANAGED IDENTITY'" in sql
-    assert 'SECRET' not in sql
+    # SQL Server 2022 does not support this credential shape, so SAS is used.
+    assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
+    assert "SECRET   = '<SAS_token_without_leading_?>'" in sql
+    assert 'CREATE MASTER KEY' in sql
 
 
 def test_credential_setup_uses_abs_for_blob_storage_on_sql_server_2025():
@@ -841,7 +919,7 @@ def _json_meta():
 
 
 def test_json_functions_openjson():
-    """JSON Functions tab contains OPENJSON with typed WITH clause."""
+    """The compatibility JSON section contains OPENJSON with a typed WITH clause."""
     gen = SQLGenerator()
     sql = gen.generate_json_functions(_json_meta(), 'tbl', target_platform='sql_server_2022')
     assert 'OPENJSON' in sql
@@ -852,14 +930,14 @@ def test_json_functions_openjson():
 
 
 def test_json_functions_validation():
-    """JSON Functions tab contains ISJSON validation."""
+    """The compatibility JSON section contains ISJSON validation."""
     gen = SQLGenerator()
     sql = gen.generate_json_functions(_json_meta(), 'tbl', target_platform='sql_server_2022')
     assert 'ISJSON' in sql
 
 
 def test_json_functions_nested_cross_apply():
-    """JSON Functions tab has CROSS APPLY for nested objects."""
+    """The compatibility JSON section has CROSS APPLY for nested objects."""
     gen = SQLGenerator()
     sql = gen.generate_json_functions(_json_meta(), 'tbl', target_platform='sql_server_2022')
     assert 'CROSS APPLY OPENJSON' in sql
@@ -867,7 +945,7 @@ def test_json_functions_nested_cross_apply():
 
 
 def test_json_functions_json_modify():
-    """JSON Functions tab has JSON_MODIFY example."""
+    """The compatibility JSON section has a JSON_MODIFY example."""
     gen = SQLGenerator()
     sql = gen.generate_json_functions(_json_meta(), 'tbl', target_platform='sql_server_2022')
     assert 'JSON_MODIFY' in sql
@@ -1606,14 +1684,13 @@ def test_complete_ddl_contains_all_sections():
     script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
     for marker in ('PREREQUISITE SETUP', 'CREATE EXTERNAL FILE FORMAT',
                    'CREATE EXTERNAL TABLE', 'CREATE TABLE', 'BULK INSERT',
-                   'OPENROWSET', 'FOR JSON',
-                   'BEST PRACTICES', 'COPY INTO'):
+                   'OPENROWSET'):
         assert marker in script, marker
-    # The JSON parse / DML section is gated to JSON input.
-    assert 'JSON FUNCTIONS' not in script
+    for removed in ('JSON FUNCTIONS', 'FOR JSON', 'BEST PRACTICES', 'COPY INTO'):
+        assert removed not in script
 
 
-def test_complete_ddl_includes_json_functions_for_json_input():
+def test_complete_ddl_keeps_json_help_inside_openrowset():
     gen = SQLGenerator()
     meta = {
         'file_type': 'json', 'file_path': 'orders.json',
@@ -1622,7 +1699,9 @@ def test_complete_ddl_includes_json_functions_for_json_input():
         'encoding': 'utf-8', 'file_size': 1024,
     }
     script = gen.generate_complete_ddl(meta, target_platform='sql_server_2022')
-    assert 'JSON FUNCTIONS' in script
+    assert 'OPENJSON' in script
+    assert 'JSON FUNCTIONS' not in script
+    assert 'FOR JSON' not in script
 
 
 def test_complete_ddl_declares_json_variable_at_most_once_per_batch():

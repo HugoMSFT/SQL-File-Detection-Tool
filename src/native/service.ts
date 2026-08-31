@@ -41,6 +41,7 @@ import {
     resolveTableName,
 } from './sql/generator';
 import { DEFAULT_TARGET_PLATFORM, PLATFORMS, normalizePlatform } from './sql/typeMapping';
+import type { ExternalDataSourceType } from './sql/credentialWizard';
 
 /** Options accepted by every filesystem-touching service call. */
 export interface AnalysisRequest {
@@ -71,6 +72,7 @@ export interface GenerationRequest {
     readonly location?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
+    readonly dataSourceType?: ExternalDataSourceType | string | null;
     readonly formatName?: string | null;
     readonly parserOverrides?: ParserOverrides;
 }
@@ -90,6 +92,7 @@ export interface MultiFileRequest {
     readonly authMethod?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
+    readonly dataSourceType?: ExternalDataSourceType | string | null;
 }
 
 /** Result of analysing a directory that holds a supported table format. */
@@ -199,6 +202,7 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
         });
     }
@@ -217,6 +221,7 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
         });
     }
@@ -237,6 +242,7 @@ export class NativeAnalysisService {
                 authMethod: request.authMethod ?? null,
                 targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
                 storageUrl: request.storageUrl ?? null,
+                dataSourceType: request.dataSourceType ?? null,
             });
             chunks.push(deduplicateSharedPrerequisites(script, seen));
         }
