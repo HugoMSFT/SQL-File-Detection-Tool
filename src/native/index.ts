@@ -34,6 +34,9 @@ export {
     scanDirectory,
     NATIVE_SUPPORT_BY_TYPE,
     SUPPORTED_EXTENSIONS,
+    SQL_SOURCE_EXTENSIONS,
+    isSqlSourceFile,
+    sqlSourceFileType,
 } from './detector';
 export { clampPreviewRows, getPreviewData } from './preview';
 export {

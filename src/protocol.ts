@@ -141,12 +141,14 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setFormatName'; readonly value: string })
     | (Base & {
           readonly type: 'setParserOverride';
+          readonly fileId: string;
           readonly key: keyof ParserOverrides;
           readonly value: string;
       })
     | (Base & { readonly type: 'resetParserOverride'; readonly key: keyof ParserOverrides })
     | (Base & {
           readonly type: 'setColumnOverride';
+          readonly fileId: string;
           readonly column: string;
           readonly sqlType: string;
       })
@@ -199,7 +201,7 @@ export interface FileEntry {
     readonly id: string;
     /** Workspace-relative (or basename) label safe to render. */
     readonly label: string;
-    /** Parent folder label, for disambiguation. May be empty. */
+    /** Safe path beneath the selected root, excluding the file name. */
     readonly folderLabel: string;
     readonly fileType: string;
     readonly sizeBytes: number;
@@ -266,6 +268,7 @@ export interface AppStateSnapshot {
     readonly folderProfile: FolderProfile | null;
     readonly quickAnalyze: QuickAnalyzeState;
     readonly columnOverrides: Readonly<Record<string, string>>;
+    readonly recommendedSqlTypes: Readonly<Record<string, string>>;
     readonly previewRows: number;
     readonly busy: boolean;
     readonly progress: string | null;
@@ -449,6 +452,7 @@ const BUILDERS: Record<string, Builder> = {
         return value === undefined ? undefined : { type: 'setFormatName', value };
     },
     setParserOverride: (source) => {
+        const fileId = text(source, 'fileId', 64);
         const key = member(source, 'key', [
             'format',
             'firstRow',
@@ -459,9 +463,9 @@ const BUILDERS: Record<string, Builder> = {
             'compression',
         ] as const);
         const value = text(source, 'value', 128);
-        return key === undefined || value === undefined
+        return !fileId || key === undefined || value === undefined
             ? undefined
-            : { type: 'setParserOverride', key, value };
+            : { type: 'setParserOverride', fileId, key, value };
     },
     resetParserOverride: (source) => {
         const key = member(source, 'key', [
@@ -476,10 +480,11 @@ const BUILDERS: Record<string, Builder> = {
         return key === undefined ? undefined : { type: 'resetParserOverride', key };
     },
     setColumnOverride: (source) => {
+        const fileId = text(source, 'fileId', 64);
         const column = text(source, 'column', 256);
         const sqlType = text(source, 'sqlType', 128);
-        return column && sqlType !== undefined
-            ? { type: 'setColumnOverride', column, sqlType }
+        return fileId && column && sqlType !== undefined
+            ? { type: 'setColumnOverride', fileId, column, sqlType }
             : undefined;
     },
     setPreviewRows: (source) => {

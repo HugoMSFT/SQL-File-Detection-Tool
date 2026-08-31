@@ -213,8 +213,13 @@ test('missing required fields are refused, not defaulted', () => {
 
 test('clearing an override is expressed as an empty type, which is allowed', () => {
     assert.deepEqual(
-        parseWebviewRequest({ type: 'setColumnOverride', column: 'id', sqlType: '' }),
-        { type: 'setColumnOverride', column: 'id', sqlType: '' },
+        parseWebviewRequest({
+            type: 'setColumnOverride',
+            fileId: 'file-1',
+            column: 'id',
+            sqlType: '',
+        }),
+        { type: 'setColumnOverride', fileId: 'file-1', column: 'id', sqlType: '' },
     );
 });
 
@@ -222,10 +227,11 @@ test('parser override messages are allowlisted and bounded', () => {
     assert.deepEqual(
         parseWebviewRequest({
             type: 'setParserOverride',
+            fileId: 'file-1',
             key: 'fieldDelimiter',
             value: '|',
         }),
-        { type: 'setParserOverride', key: 'fieldDelimiter', value: '|' },
+        { type: 'setParserOverride', fileId: 'file-1', key: 'fieldDelimiter', value: '|' },
     );
     assert.deepEqual(
         parseWebviewRequest({ type: 'resetParserOverride', key: 'codepage' }),
@@ -236,12 +242,22 @@ test('parser override messages are allowlisted and bounded', () => {
         undefined,
     );
     assert.equal(
-        parseWebviewRequest({ type: 'setParserOverride', key: 'encoding', value: 'utf-8' }),
+        parseWebviewRequest({
+            type: 'setParserOverride',
+            fileId: 'file-1',
+            key: 'encoding',
+            value: 'utf-8',
+        }),
         undefined,
         'file encoding is a fact, not an override',
     );
     assert.equal(
-        parseWebviewRequest({ type: 'setParserOverride', key: 'fieldDelimiter', value: 'x'.repeat(129) }),
+        parseWebviewRequest({
+            type: 'setParserOverride',
+            fileId: 'file-1',
+            key: 'fieldDelimiter',
+            value: 'x'.repeat(129),
+        }),
         undefined,
     );
 });

@@ -46,15 +46,10 @@ const OPEN_FILTERS: Record<string, string[]> = {
         'jsonl',
         'ndjson',
         'parquet',
-        'avro',
+        'snappy',
         'orc',
         'rc',
-        'xlsx',
-        'xls',
-        'gz',
-        'zip',
     ],
-    'All files': ['*'],
 };
 
 function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {

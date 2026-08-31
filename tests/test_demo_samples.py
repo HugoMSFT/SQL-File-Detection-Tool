@@ -240,7 +240,7 @@ def test_all_types_parquet_external_table_maps_nanoseconds_to_physical_int64(det
     assert '[c_timestamp_utc] DATETIMEOFFSET(6)' in create_table
     assert '[c_timestamp_ns] BIGINT' in external_table
     assert '[c_timestamp_utc] DATETIME2(6)' in external_table
-    assert 'Mapped: Parquet TIMESTAMP(NANOS) physical INT64' in external_table
+    assert '[c_timestamp_ns] uses BIGINT (Parquet TIMESTAMP(NANOS) physical INT64)' in external_table
 
 
 def test_all_types_parquet_external_table_refuses_nested_columns(detector):

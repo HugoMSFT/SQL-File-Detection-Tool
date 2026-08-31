@@ -138,6 +138,7 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
             ),
         },
         columnOverrides: {},
+        recommendedSqlTypes: {},
         previewRows: DEFAULT_PREVIEW_ROWS,
         busy: false,
         progress: null,
@@ -254,6 +255,7 @@ export class AppStateStore {
             preview: null,
             statements: null,
             columnOverrides: {},
+            recommendedSqlTypes: {},
             parserOverrides: {},
             limitation: null,
             lastAnalysisMs: null,
@@ -279,12 +281,36 @@ export class AppStateStore {
     ): readonly FileEntry[] {
         this.registry.clear();
         const entries: FileEntry[] = [];
+        const roots = new Set(files.map((file) => path.resolve(file.allowedRoot)));
         for (const file of files) {
             const id = crypto.randomBytes(12).toString('hex');
-            const { label, folderLabel } = displayLabel(
+            let { label, folderLabel } = displayLabel(
                 file.absolutePath,
                 this.workspaceFolders,
             );
+            const absolutePath = path.resolve(file.absolutePath);
+            const allowedRoot = path.resolve(file.allowedRoot);
+            const relative = path.relative(allowedRoot, absolutePath);
+            if (
+                relative === ''
+                || (
+                    !relative.startsWith(`..${path.sep}`)
+                    && relative !== '..'
+                    && !path.isAbsolute(relative)
+                )
+            ) {
+                label = path.basename(absolutePath);
+                const relativeFolder =
+                    relative === '' || path.dirname(relative) === '.'
+                        ? ''
+                        : path.dirname(relative).split(path.sep).join('/');
+                folderLabel =
+                    roots.size > 1
+                        ? [path.basename(allowedRoot), relativeFolder]
+                            .filter(Boolean)
+                            .join('/')
+                        : relativeFolder;
+            }
             const entry: FileEntry = {
                 id,
                 label,
@@ -296,8 +322,8 @@ export class AppStateStore {
             };
             this.registry.set(id, {
                 id,
-                absolutePath: path.resolve(file.absolutePath),
-                allowedRoot: path.resolve(file.allowedRoot),
+                absolutePath,
+                allowedRoot,
                 entry,
             });
             entries.push(entry);

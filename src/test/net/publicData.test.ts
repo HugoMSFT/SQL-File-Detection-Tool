@@ -198,6 +198,9 @@ test('a wildcard prefix collapses to the literal directory above it', () => {
 test('supported data extensions are recognised from URLs and names', () => {
     assert.equal(dataExtension('https://a.example/x/data.CSV?sv=2020'), '.csv');
     assert.equal(dataExtension('part-0000.snappy.parquet'), '.parquet');
+    assert.equal(dataExtension('raw/events.dat'), '.dat');
+    assert.equal(dataExtension('table.delta'), null);
+    assert.equal(dataExtension('workbook.xlsx'), null);
     assert.equal(dataExtension('notes.md'), null);
     assert.equal(dataExtension('https://a.example/x/'), null);
 });

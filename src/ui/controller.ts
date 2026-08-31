@@ -25,13 +25,17 @@ import {
     SimpleCancellationTokenSource,
     describeError,
     inferDataSourceType,
+    isSqlSourceFile,
+    mapTypeToSql,
     nativeAnalysisService,
+    NATIVE_SUPPORT_BY_TYPE,
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
     type FileMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
     type ParserOverrides,
+    sqlSourceFileType,
     type StatementKind,
     type TargetPlatform,
 } from '../native';
@@ -52,6 +56,7 @@ import {
 import {
     MAX_PREVIEW_ROWS,
     MIN_PREVIEW_ROWS,
+    isStatementKind,
     parseWebviewRequest,
     type AzureAuthMode,
     type WebviewRequest,
@@ -106,6 +111,18 @@ export function metadataForDisplay(
         ...metadata,
         file_path: folderLabel ? `${folderLabel}/${label}` : label,
     };
+}
+
+/** Platform-neutral SQL type recommendations shown in the schema editor. */
+export function recommendedSqlTypes(
+    metadata: FileMetadata,
+): Readonly<Record<string, string>> {
+    const recommendations: Record<string, string> = {};
+    const lengths = metadata.max_string_lengths ?? {};
+    for (const [column, detectedType] of metadata.schema ?? []) {
+        recommendations[column] = mapTypeToSql(detectedType, lengths[column]);
+    }
+    return recommendations;
 }
 
 export class UiController {
@@ -195,10 +212,26 @@ export class UiController {
                 this.regenerate();
                 return;
             }
-            case 'setTab':
-                this.store.update({ activeTab: request.tab });
+            case 'setTab': {
+                if (isStatementKind(request.tab)) {
+                    const nextState = {
+                        ...this.store.state,
+                        activeTab: request.tab,
+                        quickAnalyze: {
+                            ...this.store.state.quickAnalyze,
+                            selectedStatement: request.tab,
+                        },
+                    };
+                    this.store.update({
+                        activeTab: request.tab,
+                        ...quickAnalyzePatch(nextState, this.rawMetadata, this.folderMetadata),
+                    });
+                } else {
+                    this.store.update({ activeTab: request.tab });
+                }
                 void this.host.setPreference('activeTab', request.tab);
                 return;
+            }
             case 'setPreference':
                 this.store.update({ appearance: request.appearance });
                 void this.host.setPreference('appearance', request.appearance);
@@ -275,6 +308,9 @@ export class UiController {
                 this.regenerate();
                 return;
             case 'setParserOverride': {
+                if (request.fileId !== this.store.state.selectedFileId) {
+                    return;
+                }
                 const value = this.parseParserOverride(request.key, request.value);
                 if (value === undefined) {
                     return;
@@ -297,6 +333,9 @@ export class UiController {
                 return;
             }
             case 'setColumnOverride': {
+                if (request.fileId !== this.store.state.selectedFileId) {
+                    return;
+                }
                 const overrides = { ...this.store.state.columnOverrides };
                 if (request.sqlType.trim() === '') {
                     delete overrides[request.column];
@@ -516,22 +555,41 @@ export class UiController {
         if (sourceKind === 'local') {
             this.sourceReferenceUrl = '';
         }
-        const entries = paths.map((absolute) => ({
-            absolutePath: absolute,
-            // A single chosen file is confined to its own directory, matching
-            // the native core's implied-root rule.
-            allowedRoot: path.dirname(path.resolve(absolute)),
-            fileType: 'unknown',
-            sizeBytes: 0,
-            nativeSupport: 'supported' as const,
-            isDirectory: false,
-        }));
+        const supportedPaths = paths.filter(isSqlSourceFile);
+        const skipped = paths.length - supportedPaths.length;
+        if (supportedPaths.length === 0) {
+            this.rawMetadata = null;
+            this.store.setFiles([]);
+            this.store.clearSelection();
+            this.store.update({
+                error:
+                    'No SQL-readable data file was selected. Use CSV, TSV, DAT, JSON, ' +
+                    'Parquet, ORC, RCFile, Delta, Iceberg, or a folder containing them.',
+            });
+            return;
+        }
+        const entries = supportedPaths.map((absolute) => {
+            const fileType = sqlSourceFileType(absolute) ?? 'unknown';
+            return {
+                absolutePath: absolute,
+                // A chosen file is confined to its own directory, matching the
+                // native core's implied-root rule.
+                allowedRoot: path.dirname(path.resolve(absolute)),
+                fileType,
+                sizeBytes: 0,
+                nativeSupport: NATIVE_SUPPORT_BY_TYPE[fileType],
+                isDirectory: false,
+            };
+        });
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
-        const { label } = displayLabel(paths[0], this.host.workspaceFolders());
+        const { label } = displayLabel(supportedPaths[0], this.host.workspaceFolders());
         const state = this.store.state;
         this.store.update({
-            sourceLabel: label,
+            sourceLabel:
+                supportedPaths.length === 1
+                    ? label
+                    : `${supportedPaths.length} selected files`,
             sourceKind,
             storageUrl: sourceKind === 'local' ? '' : this.store.state.storageUrl,
             authMethod:
@@ -551,6 +609,12 @@ export class UiController {
         if (first) {
             await this.selectFile(first.id);
         }
+        if (skipped > 0) {
+            this.store.update({
+                notice:
+                    `${skipped} unsupported ${skipped === 1 ? 'file was' : 'files were'} skipped.`,
+            });
+        }
     }
 
     private async selectFile(fileId: string): Promise<void> {
@@ -564,6 +628,7 @@ export class UiController {
         this.store.update({
             selectedFileId: fileId,
             parserOverrides: changed ? {} : this.store.state.parserOverrides,
+            columnOverrides: changed ? {} : this.store.state.columnOverrides,
             error: null,
             notice: null,
         });
@@ -668,6 +733,7 @@ export class UiController {
                   );
         this.store.update({
             metadata: display,
+            recommendedSqlTypes: recommendedSqlTypes(metadata),
             limitation: limitationFor(metadata),
             tableName: state.tableName || this.service.resolveTableName(metadata, null),
             dataSource: sourceNames?.dataSource ?? state.dataSource,

@@ -78,9 +78,11 @@ export function buildWebviewHtml(options: ShellOptions): string {
       </div>
       <span class="version" id="app-version"></span>
     </div>
-    <div class="toolbar" role="toolbar" aria-labelledby="app-title">
+    <div class="toolbar" role="toolbar" aria-label="Sources and file actions">
+      <span class="toolbar-title">Sources &amp; files</span>
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
+      <button type="button" class="btn" data-source-tab="azure">HTTPS / Azure</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
       <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
@@ -112,15 +114,12 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <div class="layout">
     <nav class="file-pane" aria-labelledby="file-pane-title">
-      <h2 id="file-pane-title">Sources & files</h2>
-      <div class="source-actions" role="toolbar" aria-label="Add data source">
-        <button type="button" class="btn subtle" data-action="openFileDialog">File</button>
-        <button type="button" class="btn subtle" data-action="openFolderDialog">Folder</button>
-        <button type="button" class="btn subtle" data-source-tab="azure">HTTPS / Azure</button>
+      <div class="explorer-heading">
+        <h2 id="file-pane-title">Explorer</h2>
+        <p class="source" id="source-label"></p>
       </div>
-      <p class="source" id="source-label"></p>
-      <ul class="file-list" id="file-list" role="listbox" aria-labelledby="file-pane-title" tabindex="0"></ul>
-      <p class="empty" id="file-empty">Select a file or folder to begin.</p>
+      <ul class="file-list" id="file-list" role="tree" aria-labelledby="file-pane-title" tabindex="0"></ul>
+      <p class="empty" id="file-empty">Open a SQL-readable file or folder to begin.</p>
     </nav>
 
     <main class="content" id="main" tabindex="-1">
@@ -131,7 +130,8 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <!-- Templates. The script clones these; it never builds markup from strings. -->
   <template id="tpl-file-item">
-    <li class="file-item" role="option">
+    <li class="file-item" role="treeitem">
+      <span class="file-icon" aria-hidden="true"></span>
       <span class="file-name"></span>
       <span class="file-meta"></span>
     </li>

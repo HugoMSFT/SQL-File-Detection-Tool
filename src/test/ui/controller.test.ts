@@ -207,8 +207,10 @@ test('the controller applies and resets parser overrides per selected file', asy
         await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
         await settle();
         assert.equal(snapshot(record).activeTab, 'preview');
+        const fileId = snapshot(record).selectedFileId as string;
         await ui.handle({
             type: 'setParserOverride',
+            fileId,
             key: 'fieldDelimiter',
             value: '|',
         });
@@ -384,6 +386,12 @@ test('analyzing the current file produces metadata, preview and SQL', async () =
         assert.ok(state.selectedFileId);
         assert.equal(state.metadata?.file_type, 'csv');
         assert.ok((state.metadata?.schema?.length ?? 0) > 0);
+        assert.ok(Object.keys(state.recommendedSqlTypes).length > 0);
+        assert.ok(
+            (state.metadata?.schema ?? []).every(
+                ([column]) => Boolean(state.recommendedSqlTypes[column]),
+            ),
+        );
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.ok(state.statements?.create_table.includes('CREATE TABLE'));
         assert.ok(typeof state.lastAnalysisMs === 'number');
@@ -434,6 +442,52 @@ test('choosing a folder lists files and selects the first', async () => {
     } finally {
         await ui.dispose();
         cleanup(record);
+    }
+});
+
+test('folder scans build safe relative paths and skip non-SQL files', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-tree-'));
+    fs.mkdirSync(path.join(root, 'year', 'month'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'top.csv'), 'id,name\n1,top\n');
+    fs.writeFileSync(path.join(root, 'year', 'month', 'nested.csv'), 'id,name\n2,nested\n');
+    fs.writeFileSync(path.join(root, 'script.py'), 'id,name\n3,python\n');
+    fs.writeFileSync(path.join(root, 'workbook.xlsx'), 'id,name\n4,excel\n');
+    fs.writeFileSync(path.join(root, 'table.delta'), 'id,name\n5,not-a-delta-table\n');
+    const record = recorder({ workspaceFolders: [root] });
+    const ui = controller(record);
+    try {
+        await ui.loadDirectory(root);
+        await settle();
+
+        const state = snapshot(record);
+        assert.deepEqual(
+            state.files.map((entry) => entry.label).sort(),
+            ['nested.csv', 'top.csv'],
+        );
+        assert.equal(
+            state.files.find((entry) => entry.label === 'nested.csv')?.folderLabel,
+            'year/month',
+        );
+
+        await ui.loadFiles([path.join(root, 'script.py')]);
+        assert.equal(snapshot(record).files.length, 0);
+        assert.match(snapshot(record).error ?? '', /SQL-readable data file/i);
+
+        await ui.loadFiles([path.join(root, 'table.delta')]);
+        assert.equal(snapshot(record).files.length, 0);
+        assert.match(snapshot(record).error ?? '', /SQL-readable data file/i);
+
+        await ui.loadFiles([
+            path.join(root, 'top.csv'),
+            path.join(root, 'workbook.xlsx'),
+        ]);
+        await settle();
+        assert.equal(snapshot(record).files.length, 1);
+        assert.match(snapshot(record).notice ?? '', /unsupported file was skipped/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+        fs.rmSync(root, { recursive: true, force: true });
     }
 });
 
@@ -517,7 +571,7 @@ for (const [name, fixture] of [
         const record = recorder();
         const ui = controller(record);
         try {
-            await ui.analyzePath(fixture, false);
+            await ui.analyzePath(fixture, true);
             await settle();
             const state = snapshot(record);
             assert.equal(state.error, null);
@@ -619,18 +673,24 @@ test('platform, names and overrides regenerate the SQL and persist preferences',
         assert.equal(record.preferences.get('platform'), 'sql_server_2022');
 
         const column = snapshot(record).metadata?.schema?.[0]?.[0] as string;
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: 'DECIMAL(18,4)' });
+        const fileId = snapshot(record).selectedFileId as string;
+        await ui.handle({
+            type: 'setColumnOverride',
+            fileId,
+            column,
+            sqlType: 'DECIMAL(18,4)',
+        });
         await settle();
         timers.forEach((fire) => fire());
         assert.ok(snapshot(record).statements?.create_table.includes('DECIMAL(18,4)'));
         assert.equal(snapshot(record).columnOverrides[column], 'DECIMAL(18,4)');
 
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: '   ' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: '   ' });
         await settle();
         timers.forEach((fire) => fire());
         assert.equal(snapshot(record).columnOverrides[column], undefined, 'blank clears');
 
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: 'BIGINT' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'BIGINT' });
         await ui.handle({ type: 'clearColumnOverrides' });
         await settle();
         assert.deepEqual(snapshot(record).columnOverrides, {});
@@ -655,6 +715,7 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
             cleared += 1;
         },
     });
+
     try {
         record.activeFile = path.join(FIXTURES, 'sample.csv');
         await ui.handle({ type: 'analyzeCurrentFile' });
@@ -669,6 +730,67 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
         // Only the final scheduled callback is meant to run.
         pending[pending.length - 1]();
         assert.ok(snapshot(record).statements?.create_table.includes('Custo'));
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('file-scoped edits cannot reach a newly selected file', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([
+            path.join(FIXTURES, 'sample.csv'),
+            path.join(FIXTURES, 'employees.csv'),
+        ]);
+        await settle();
+        const firstFileId = snapshot(record).selectedFileId as string;
+        const secondFileId = snapshot(record).files.find(
+            (file) => file.label === 'employees.csv',
+        )?.id as string;
+
+        await ui.handle({ type: 'selectFile', fileId: secondFileId });
+        await settle();
+        const column = snapshot(record).metadata?.schema?.[0]?.[0] as string;
+
+        await ui.handle({
+            type: 'setColumnOverride',
+            fileId: firstFileId,
+            column,
+            sqlType: 'DECIMAL(18,4)',
+        });
+        await ui.handle({
+            type: 'setParserOverride',
+            fileId: firstFileId,
+            key: 'fieldDelimiter',
+            value: '|',
+        });
+
+        assert.deepEqual(snapshot(record).columnOverrides, {});
+        assert.deepEqual(snapshot(record).parserOverrides, {});
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('statement tabs select their own platform documentation', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setTab', tab: 'create_external_table' });
+        assert.equal(snapshot(record).quickAnalyze.selectedStatement, 'create_external_table');
+        assert.deepEqual(
+            snapshot(record).quickAnalyze.documentation.map((link) => link.id),
+            ['create_external_table'],
+        );
+
+        await ui.handle({ type: 'setTab', tab: 'credential_setup' });
+        assert.deepEqual(
+            snapshot(record).quickAnalyze.documentation.map((link) => link.id),
+            ['create_database_scoped_credential', 'create_external_data_source'],
+        );
     } finally {
         await ui.dispose();
         cleanup(record);

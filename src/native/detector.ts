@@ -29,6 +29,7 @@ import { analyzeText } from './analysis/text';
 /** Extension to file-type table, identical to the Python `SUPPORTED_EXTENSIONS`. */
 export const SUPPORTED_EXTENSIONS: Readonly<Record<string, FileType>> = Object.freeze({
     '.txt': 'text',
+    '.dat': 'csv',
     '.csv': 'csv',
     '.tsv': 'csv',
     '.parquet': 'parquet',
@@ -42,6 +43,43 @@ export const SUPPORTED_EXTENSIONS: Readonly<Record<string, FileType>> = Object.f
     '.xlsx': 'excel',
     '.xls': 'excel',
 });
+
+/**
+ * Extensions the VS Code experience may enumerate or open.
+ *
+ * The native library can still analyse Excel when called directly, but Excel is
+ * not a SQL external-file format and is intentionally excluded from the SQL
+ * source explorer. Unknown extensions are never content-sniffed during a scan.
+ */
+export const SQL_SOURCE_EXTENSIONS = Object.freeze([
+    '.txt',
+    '.dat',
+    '.csv',
+    '.tsv',
+    '.parquet',
+    '.snappy',
+    '.json',
+    '.jsonl',
+    '.ndjson',
+    '.orc',
+    '.rc',
+] as const);
+
+const SQL_SOURCE_EXTENSION_SET = new Set<string>(SQL_SOURCE_EXTENSIONS);
+
+/** Return the known SQL-readable file type without opening the file. */
+export function sqlSourceFileType(filePath: string): FileType | undefined {
+    const extension = path.extname(filePath).toLowerCase();
+    if (!SQL_SOURCE_EXTENSION_SET.has(extension)) {
+        return undefined;
+    }
+    return SUPPORTED_EXTENSIONS[extension];
+}
+
+/** True when a path has a SQL-readable extension. Does not touch the file. */
+export function isSqlSourceFile(filePath: string): boolean {
+    return sqlSourceFileType(filePath) !== undefined;
+}
 
 /** How completely the native core handles each recognised family. */
 export const NATIVE_SUPPORT_BY_TYPE: Readonly<Record<FileType, NativeSupport>> = Object.freeze({
@@ -62,8 +100,8 @@ export function listSupportedFormats(): SupportedFormat[] {
     return [
         {
             fileType: 'csv',
-            extensions: ['.csv', '.tsv'],
-            label: 'Delimited text (CSV / TSV / pipe)',
+            extensions: ['.csv', '.tsv', '.dat'],
+            label: 'Delimited text (CSV / TSV / DAT / pipe)',
             support: 'supported',
             notes:
                 'Streaming delimiter, header, encoding, nullability and length ' +
@@ -412,7 +450,7 @@ export async function scanDirectory(
             if (entry.isDirectory) {
                 continue;
             }
-            if ((await detectFileType(entry)) !== 'unknown') {
+            if (sqlSourceFileType(entry.realPath) !== undefined) {
                 results.push(await analyzeFileMetadata(entry, token));
             }
         }

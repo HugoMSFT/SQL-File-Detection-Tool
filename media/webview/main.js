@@ -14,9 +14,9 @@
  * form control `value`, so analysed file content can never become markup. All
  * markup comes from cloning the `<template>` elements in the shell document.
  *
- * The webview holds no state of its own beyond scroll and focus: it renders
- * whatever snapshot the host last sent, which is what keeps the Activity Bar
- * view and the editor panel from ever disagreeing.
+ * Product state always comes from the host snapshot. The renderer keeps only
+ * transient view state such as pending edits, focus, scroll and collapsed
+ * folders, so the Activity Bar view and editor panel cannot disagree on data.
  */
 
 /* eslint-env browser */
@@ -33,8 +33,8 @@
         { id: 'create_table', label: 'CREATE TABLE' },
         { id: 'bulk_insert', label: 'BULK INSERT' },
         { id: 'openrowset', label: 'OPENROWSET' },
+        { id: 'create_external_table', label: 'EXT TABLE' },
         { id: 'external_file_format', label: 'File format' },
-        { id: 'create_external_table', label: 'External table' },
         { id: 'credential_setup', label: 'Credential setup' },
         { id: 'azure', label: 'Azure & URLs', always: true },
     ];
@@ -49,6 +49,7 @@
     /** Values the user is mid-edit, so a state push cannot yank the caret. */
     const pendingEdits = new Map();
     const debounceTimers = new Map();
+    const collapsedFolders = new Set();
 
     // -- helpers -------------------------------------------------------------
 
@@ -95,6 +96,19 @@
         if (timer !== undefined) {
             clearTimeout(timer);
             debounceTimers.delete(key);
+        }
+    }
+
+    function clearFileEdits() {
+        for (const key of Array.from(debounceTimers.keys())) {
+            if (key.startsWith('parser:') || key.startsWith('override:')) {
+                cancelDebounce(key);
+            }
+        }
+        for (const key of Array.from(pendingEdits.keys())) {
+            if (key.startsWith('parser:') || key.startsWith('override:')) {
+                pendingEdits.delete(key);
+            }
         }
     }
 
@@ -148,6 +162,65 @@
         return pendingEdits.has(key) ? pendingEdits.get(key) : fallback;
     }
 
+    function captureFocus() {
+        const active = document.activeElement;
+        if (!active || !active.dataset) {
+            return null;
+        }
+        const identity = {
+            id: active.id || '',
+            edit: active.dataset.edit || '',
+            column: active.dataset.column || '',
+            parserOption: active.dataset.parserOption || '',
+        };
+        if (!identity.id && !identity.edit && !identity.parserOption) {
+            return null;
+        }
+        let start = null;
+        let end = null;
+        let direction = null;
+        if (typeof active.selectionStart === 'number') {
+            start = active.selectionStart;
+            end = active.selectionEnd;
+            direction = active.selectionDirection;
+        }
+        return { identity: identity, start: start, end: end, direction: direction };
+    }
+
+    function restoreFocus(snapshot) {
+        if (!snapshot) {
+            return;
+        }
+        const identity = snapshot.identity;
+        let control = identity.id ? byId(identity.id) : null;
+        if (!control) {
+            const controls = document.querySelectorAll('[data-edit], [data-parser-option]');
+            control = Array.prototype.find.call(controls, function (candidate) {
+                return (
+                    (candidate.dataset.edit || '') === identity.edit
+                    && (candidate.dataset.column || '') === identity.column
+                    && (candidate.dataset.parserOption || '') === identity.parserOption
+                );
+            });
+        }
+        if (!control) {
+            return;
+        }
+        control.focus({ preventScroll: true });
+        if (
+            snapshot.start !== null
+            && snapshot.end !== null
+            && typeof control.setSelectionRange === 'function'
+        ) {
+            const length = typeof control.value === 'string' ? control.value.length : 0;
+            control.setSelectionRange(
+                Math.min(snapshot.start, length),
+                Math.min(snapshot.end, length),
+                snapshot.direction || 'none',
+            );
+        }
+    }
+
     // -- rendering -----------------------------------------------------------
 
     function renderHeader() {
@@ -180,22 +253,28 @@
 
     function renderFiles() {
         const list = byId('file-list');
+        const scrollTop = list.scrollTop;
         clear(list);
         byId('source-label').textContent = state.sourceLabel || '';
         byId('file-empty').hidden = state.files.length > 0;
 
-        state.files.forEach(function (file) {
+        function treeNode() {
+            return { folders: new Map(), files: [] };
+        }
+
+        function renderFile(parent, file) {
             const item = template('tpl-file-item');
             item.dataset.fileId = file.id;
+            if (file.isDirectory) {
+                item.classList.add('table-item');
+                item.querySelector('.file-icon').className = 'table-icon';
+            }
             item.setAttribute(
                 'aria-selected',
                 file.id === state.selectedFileId ? 'true' : 'false',
             );
             item.querySelector('.file-name').textContent = file.label;
             const parts = [];
-            if (file.folderLabel) {
-                parts.push(file.folderLabel);
-            }
             parts.push(file.fileType);
             if (file.sizeBytes > 0) {
                 parts.push(formatBytes(file.sizeBytes));
@@ -204,7 +283,91 @@
                 parts.push(SUPPORT_LABEL[file.nativeSupport] || file.nativeSupport);
             }
             item.querySelector('.file-meta').textContent = parts.join(' · ');
-            list.appendChild(item);
+            parent.appendChild(item);
+        }
+
+        function renderFolder(parent, name, node, folderPath) {
+            const item = element('li', 'tree-folder');
+            item.setAttribute('role', 'treeitem');
+            const expanded = !collapsedFolders.has(folderPath);
+            item.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+            const button = element('button', 'tree-folder-label');
+            button.type = 'button';
+            button.dataset.folderPath = folderPath;
+            button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            button.appendChild(element('span', 'folder-chevron'));
+            button.appendChild(element('span', 'folder-icon'));
+            button.appendChild(element('span', 'folder-name', name));
+            item.appendChild(button);
+
+            const group = element('ul', 'tree-group');
+            group.setAttribute('role', 'group');
+            group.hidden = !expanded;
+            Array.from(node.folders.keys())
+                .sort(function (left, right) {
+                    return left.localeCompare(right);
+                })
+                .forEach(function (childName) {
+                    renderFolder(
+                        group,
+                        childName,
+                        node.folders.get(childName),
+                        folderPath ? folderPath + '/' + childName : childName,
+                    );
+                });
+            node.files
+                .slice()
+                .sort(function (left, right) {
+                    return left.label.localeCompare(right.label);
+                })
+                .forEach(function (file) {
+                    renderFile(group, file);
+                });
+            item.appendChild(group);
+            parent.appendChild(item);
+        }
+
+        const root = treeNode();
+        state.files.forEach(function (file) {
+            let node = root;
+            String(file.folderLabel || '')
+                .split('/')
+                .filter(function (segment) {
+                    return segment && segment !== '.' && segment !== '..';
+                })
+                .forEach(function (segment) {
+                    if (!node.folders.has(segment)) {
+                        node.folders.set(segment, treeNode());
+                    }
+                    node = node.folders.get(segment);
+                });
+            node.files.push(file);
+        });
+
+        Array.from(root.folders.keys())
+            .sort(function (left, right) {
+                return left.localeCompare(right);
+            })
+            .forEach(function (name) {
+                renderFolder(list, name, root.folders.get(name), name);
+            });
+        root.files
+            .slice()
+            .sort(function (left, right) {
+                return left.label.localeCompare(right.label);
+            })
+            .forEach(function (file) {
+                renderFile(list, file);
+            });
+        list.scrollTop = scrollTop;
+    }
+
+    function visibleFileItems() {
+        const list = byId('file-list');
+        return Array.prototype.filter.call(list.querySelectorAll('.file-item'), function (item) {
+            const hiddenGroup = item.closest('.tree-group[hidden]');
+            return !hiddenGroup;
         });
     }
 
@@ -398,7 +561,7 @@
             element(
                 'p',
                 'help',
-                'Override a detected type to force the generated SQL to use it. Leave a box empty to keep the detected type.',
+                'Recommended SQL types are generated from the detected schema. Edit a value to customize the generated SQL.',
             ),
         );
 
@@ -406,7 +569,7 @@
         const table = document.createElement('table');
         const thead = document.createElement('thead');
         const headRow = document.createElement('tr');
-        ['Column', 'Detected type', 'Override'].forEach(function (label) {
+        ['Column', 'Source type', 'SQL Type'].forEach(function (label) {
             const cell = element('th', null, label);
             cell.scope = 'col';
             headRow.appendChild(cell);
@@ -422,10 +585,12 @@
             const input = row.querySelector('.override-input');
             input.dataset.edit = 'override';
             input.dataset.column = field[0];
-            input.setAttribute('aria-label', 'SQL type override for ' + field[0]);
+            input.setAttribute('aria-label', 'SQL type for ' + field[0]);
             input.value = editable(
                 'override:' + field[0],
-                state.columnOverrides[field[0]] || '',
+                state.columnOverrides[field[0]]
+                    || (state.recommendedSqlTypes || {})[field[0]]
+                    || '',
             );
             tbody.appendChild(row);
         });
@@ -433,10 +598,12 @@
         scroll.appendChild(table);
         container.appendChild(scroll);
 
-        const clearButton = element('button', 'btn subtle', 'Clear all overrides');
-        clearButton.type = 'button';
-        clearButton.dataset.action = 'clearColumnOverrides';
-        container.appendChild(clearButton);
+        if (Object.keys(state.columnOverrides || {}).length > 0) {
+            const clearButton = element('button', 'btn subtle', 'Reset SQL types');
+            clearButton.type = 'button';
+            clearButton.dataset.action = 'clearColumnOverrides';
+            container.appendChild(clearButton);
+        }
     }
 
     function renderNamingOptions(container) {
@@ -489,6 +656,7 @@
     function renderStatement(container, kind) {
         renderNamingOptions(container);
         renderLimitation(container);
+        renderDocumentationLinks(container, state.quickAnalyze.documentation);
         renderSqlBlock(container, kind, (state.statements || {})[kind]);
     }
 
@@ -546,7 +714,7 @@
             element(
                 'p',
                 null,
-                'Choose the SQL platform, storage service, and authentication method. The script updates after every choice.',
+                'Create the credential and external data source for your SQL platform.',
             ),
         );
         intro.appendChild(introCopy);
@@ -557,7 +725,7 @@
         const platformStep = wizardStep(
             '1',
             'Target platform',
-            'Only storage and authentication choices supported by this SQL product are offered.',
+            'Choices are filtered for this SQL platform.',
         );
         platformStep.appendChild(
             selectControl(
@@ -612,7 +780,7 @@
         const objectStep = wizardStep(
             '4',
             'Names and location',
-            'Use the suggested object names or replace them with names that match your database standards.',
+            'Edit the generated object names and location.',
         );
         const objectFields = element('div', 'wizard-object-fields');
         objectFields.appendChild(
@@ -673,12 +841,13 @@
             element(
                 'p',
                 'secret-note',
-                'This extension never asks for or stores SAS tokens, access keys, or master-key passwords. Replace placeholders only in a secure SQL editor.',
+                'Secrets stay out of the extension; generated SQL uses placeholders.',
             ),
         );
         container.appendChild(note);
 
         renderLimitation(container);
+        renderDocumentationLinks(container, state.quickAnalyze.documentation);
         renderSqlBlock(
             container,
             'credential_setup',
@@ -788,11 +957,13 @@
         if (!state) {
             return;
         }
+        const focus = captureFocus();
         renderHeader();
         renderStatus();
         renderFiles();
         renderTabs();
         renderPanel();
+        restoreFocus(focus);
     }
 
     // -- events --------------------------------------------------------------
@@ -806,6 +977,19 @@
         const fileItem = target.closest('.file-item');
         if (fileItem && fileItem.dataset.fileId) {
             post({ type: 'selectFile', fileId: fileItem.dataset.fileId });
+            return;
+        }
+
+        const folder = target.closest('[data-folder-path]');
+        if (folder && folder.dataset.folderPath) {
+            const folderPath = folder.dataset.folderPath;
+            if (collapsedFolders.has(folderPath)) {
+                collapsedFolders.delete(folderPath);
+            } else {
+                collapsedFolders.add(folderPath);
+            }
+            renderFiles();
+            byId('file-list').focus({ preventScroll: true });
             return;
         }
 
@@ -923,6 +1107,7 @@
             pendingEdits.delete(key);
             post({
                 type: 'setParserOverride',
+                fileId: state.selectedFileId,
                 key: target.dataset.parserOption,
                 value: target.value,
             });
@@ -957,20 +1142,32 @@
 
         if (target.dataset.parserOption) {
             const parserKey = target.dataset.parserOption;
+            const fileId = state.selectedFileId;
             pendingEdits.set('parser:' + parserKey, value);
             debounce('parser:' + parserKey, function () {
                 pendingEdits.delete('parser:' + parserKey);
-                post({ type: 'setParserOverride', key: parserKey, value: value });
+                post({
+                    type: 'setParserOverride',
+                    fileId: fileId,
+                    key: parserKey,
+                    value: value,
+                });
             }, 250);
             return;
         }
 
         if (edit === 'override') {
             const column = target.dataset.column;
+            const fileId = state.selectedFileId;
             pendingEdits.set('override:' + column, value);
             debounce('override:' + column, function () {
                 pendingEdits.delete('override:' + column);
-                post({ type: 'setColumnOverride', column: column, sqlType: value });
+                post({
+                    type: 'setColumnOverride',
+                    fileId: fileId,
+                    column: column,
+                    sqlType: value,
+                });
             }, 250);
             return;
         }
@@ -1012,7 +1209,7 @@
         if (!list || !list.contains(event.target)) {
             return;
         }
-        const items = Array.prototype.slice.call(list.querySelectorAll('.file-item'));
+        const items = visibleFileItems();
         if (items.length === 0) {
             return;
         }
@@ -1038,6 +1235,9 @@
         const message = event.data;
         if (!message || message.type !== 'state' || !message.state) {
             return;
+        }
+        if (state && state.selectedFileId !== message.state.selectedFileId) {
+            clearFileEdits();
         }
         state = message.state;
         render();

@@ -42,8 +42,25 @@ project test results, not Microsoft certification.
 - **The native interface now uses the Power Studio visual language** recovered
   from the original design mockup, while continuing to use VS Code theme
   variables for dark, light, and high-contrast compatibility.
+- **Sources now use an Explorer-style folder tree.** Folder and subfolder
+  structure is preserved without exposing absolute paths, while source actions
+  live together in the top toolbar.
+- **The Schema tab now shows recommended `SQL Type` values** instead of empty
+  override boxes. Recommendations use the same length-aware mapping as generated
+  SQL and remain editable.
+- **Generated BULK INSERT, EXT TABLE, and credential scripts are more concise.**
+  Detailed guidance moved to platform-specific Microsoft Learn links in each
+  panel, while required platform caveats remain beside the SQL.
+- **EXT TABLE now follows OPENROWSET** in the statement tab order.
 
 ### Fixed
+
+- **Unsupported files are filtered before analysis.** Folder scans and direct
+  selection now ignore Python, Office, archive, and other non-SQL sources instead
+  of opening them for content sniffing. SQL-readable data files and
+  Delta/Iceberg tables remain available; Hudi folders expose Parquet data files.
+- **Credential inputs now retain focus and caret position** when regenerated SQL
+  pushes a new shared-state snapshot into the webview.
 
 - **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`
   is consulted.** `chardet` is a statistical guess, and on some builds it scores

@@ -36,15 +36,15 @@ import {
 export const SUPPORTED_DATA_EXTENSIONS = [
     '.csv',
     '.tsv',
+    '.dat',
     '.json',
     '.jsonl',
     '.ndjson',
     '.parquet',
     '.snappy',
     '.orc',
+    '.rc',
     '.txt',
-    '.xlsx',
-    '.xls',
 ] as const;
 
 /** Storage schemes SQL Server / Azure SQL can virtualise directly. */

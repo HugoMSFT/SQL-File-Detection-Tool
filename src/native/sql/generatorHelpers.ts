@@ -600,21 +600,11 @@ export function masterKeyLines(authMethod: AuthMethod): string[] {
         return [
             '-- 1. Master key: NOT required.',
             ...note.map((line) => `-- ${sqlComment(line)}`),
-            ...(authMethod === 'managed_identity'
-                ? [
-                    '-- Certified live on Azure SQL Database: the database master',
-                    '-- key count stayed 0 before, during and after the credential',
-                    '-- existed, so no master key password has to be invented,',
-                    '-- stored or rotated.',
-                ]
-                : []),
             '',
         ];
     }
     return [
-        '-- 1. Master key (required once per database for this auth method)',
-        '-- Only needed because a SECRET is being stored. Switching to',
-        "-- IDENTITY = 'MANAGED IDENTITY' removes this step entirely.",
+        '-- 1. Master key (required once to protect the credential secret)',
         "IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = '##MS_DatabaseMasterKey##')",
         "    CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<StrongPassword!>';",
         'GO',
@@ -637,27 +627,13 @@ export function credentialDdl(
     const prefix = stepLabel ? ` ${stepLabel} ` : ' ';
     if (authMethod === 'public') {
         return [
-            `--${prefix}Database Scoped Credential: not required.`,
-            '-- The container allows anonymous read access, so the external',
-            '-- data source below is created without a CREDENTIAL.',
+            `--${prefix}Database scoped credential: not required for public access.`,
         ];
     }
     if (authMethod === 'managed_identity') {
         return [
-            `--${prefix}Database Scoped Credential (managed identity)`,
-            '-- PREFERRED: no secret, no SAS token, and no database master key.',
-            '-- Grant the server/instance managed identity the Storage Blob Data',
-            '-- Reader role on the storage account (Storage Blob Data Contributor',
-            '-- if the workload also writes). Certified live on Azure SQL',
-            '-- Database: creating this credential left the database master key',
-            '-- count at 0.',
-            '-- Availability: Azure SQL Database and Azure SQL Managed Instance',
-            '-- have a service identity of their own. SQL Server 2025 can use',
-            '-- managed identity when Azure Arc-enabled and configured with the',
-            '-- selected user-assigned identity; on a SQL Server without Arc this',
-            '-- credential cannot authenticate, and a SAS credential is the route',
-            '-- that works. Managed identity was certified live on Azure SQL',
-            '-- Database only.',
+            `--${prefix}Database scoped credential: managed identity`,
+            '-- Grant the configured identity read access to the storage source.',
             `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
             'WITH',
             "    IDENTITY = 'MANAGED IDENTITY';",
@@ -666,9 +642,7 @@ export function credentialDdl(
     }
     if (authMethod === 'user_identity') {
         return [
-            `--${prefix}Database Scoped Credential (Microsoft Entra passthrough)`,
-            '-- The signed-in database user accesses storage as themselves.',
-            '-- No secret and no database master key are required.',
+            `--${prefix}Database scoped credential: Microsoft Entra passthrough`,
             `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
             'WITH',
             "    IDENTITY = 'USER IDENTITY';",
@@ -677,9 +651,8 @@ export function credentialDdl(
     }
     if (authMethod === 's3_access_key') {
         return [
-            `--${prefix}Database Scoped Credential (S3 access key)`,
-            '-- Requires a database master key (step 1). Keep real access keys',
-            '-- outside this extension and replace the placeholders securely.',
+            `--${prefix}Database scoped credential: S3 access key`,
+            '-- Replace credential placeholders in a secure SQL editor.',
             `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
             'WITH',
             "    IDENTITY = 'S3 ACCESS KEY',",
@@ -689,10 +662,8 @@ export function credentialDdl(
     }
     if (authMethod === 'storage_key') {
         return [
-            `--${prefix}Database Scoped Credential (storage account key)`,
-            "-- Prefer IDENTITY = 'MANAGED IDENTITY' where the platform",
-            '-- supports it; an account key is a long-lived shared secret.',
-            '-- Requires a database master key (step 1).',
+            `--${prefix}Database scoped credential: storage account key`,
+            '-- Replace credential placeholders in a secure SQL editor.',
             `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
             'WITH',
             "    IDENTITY = '<storage_account_name>',",
@@ -701,10 +672,8 @@ export function credentialDdl(
         ];
     }
     return [
-        `--${prefix}Database Scoped Credential (SAS token)`,
-        "-- Prefer IDENTITY = 'MANAGED IDENTITY' where the platform",
-        '-- supports it: it needs no secret and no database master key.',
-        '-- Requires a database master key (step 1).',
+        `--${prefix}Database scoped credential: SAS token`,
+        '-- Replace credential placeholders in a secure SQL editor.',
         `CREATE DATABASE SCOPED CREDENTIAL [${credIdent}]`,
         'WITH',
         "    IDENTITY = 'SHARED ACCESS SIGNATURE',",

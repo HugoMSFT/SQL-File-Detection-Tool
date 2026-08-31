@@ -27,16 +27,18 @@ The walkthrough above, in text:
    full interface opens immediately in an editor tab, rendered natively — no
    Python, no server and no browser tab. There is no install or setup step to
    sit through.
-2. Point it at any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a
-   Delta or Iceberg table directory. The walkthrough analyses
+2. Point it at any supported SQL source - Parquet, ORC, CSV, TSV, DAT, JSON, or
+   a Delta or Iceberg table directory. Hudi folders expose their underlying
+   Parquet data files without interpreting Hudi metadata. The walkthrough analyses
    `demo/parquet/sales.parquet` from this repository.
 3. **Preview** is the first and default tab, showing real rows from the selected
-   file. **Metadata** and **Schema** keep detection details and type overrides
+   file. **Metadata** and **Schema** keep detection details and recommended,
+   editable SQL type mappings
    nearby without crowding the initial experience.
 4. The **Target platform** selector is preset to **Azure SQL Database**. Switch
    to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
    at any time.
-5. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **External table** tabs
+5. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **EXT TABLE** tabs
    hold the generated T-SQL. Azure SQL output for a local file includes an
    explicit "stage the data in Azure Storage first" prerequisite block.
 6. **Credential setup** guides the platform, storage service, authentication,
@@ -76,7 +78,8 @@ Existing scripts, imports and automation continue to work unchanged.
 ## Features
 
 - Detects file formats and extracts schemas without loading whole tabular files.
-- Samples CSV, JSON, and Excel data conservatively for SQL type inference.
+- Samples CSV and JSON conservatively for SQL type inference; the optional
+  Python API also retains bounded Excel analysis.
 - Reads Parquet metadata and bounded record batches.
 - Reads Delta Lake metadata when the optional Delta dependency is installed.
 - Selects current Apache Iceberg schemas and partition specs from table metadata.
@@ -98,12 +101,13 @@ platform requirements before running it in a database.
 
 | Input | Analysis | Extension | Python CLI |
 | --- | --- | --- | --- |
-| CSV and TSV | Delimiter, encoding, sampled schema, logical row count | yes | yes |
+| CSV, TSV, and DAT | Delimiter, encoding, sampled schema, logical row count | yes | yes |
 | JSON, JSONL, and NDJSON | Bounded schema sample, nesting, row count where available | yes | yes |
 | Parquet | Arrow schema, row groups, compression, row count | yes | yes |
 | Delta Lake directories | Delta metadata, or a bounded Parquet schema fallback | yes | yes |
 | Apache Iceberg directories | Current schema, partition spec, snapshot row count | yes | yes |
-| Excel | Bounded worksheet sample | yes | yes |
+| Apache Hudi directories | Underlying Parquet data files; Hudi metadata is not interpreted | yes | yes |
+| Excel | Bounded worksheet sample | no - intentionally excluded from SQL source scans | yes |
 | Text | Encoding and streamed line count | yes | yes |
 | ORC and RCFile | Format recognition and SQL format guidance | recognition only | recognition only |
 
@@ -757,8 +761,8 @@ specific target:
 The **Public dataset URL** button accepts either a direct `https://` data file
 or an Azure Open Datasets page on `learn.microsoft.com`.
 
-- A **direct data URL** (`.csv`, `.tsv`, `.json`, `.jsonl`, `.ndjson`,
-  `.parquet`, `.orc`, `.txt`, `.xlsx`, `.xls`) is streamed into the current
+- A **direct data URL** (`.csv`, `.tsv`, `.dat`, `.json`, `.jsonl`, `.ndjson`,
+  `.parquet`, `.snappy`, `.orc`, `.rc`, `.txt`) is streamed into the current
   session's temporary upload area, analysed and previewed like an upload. The
   original URL is retained for SQL generation.
 - A **catalog page** such as

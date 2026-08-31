@@ -91,7 +91,7 @@ async function collectStates() {
         const view = mock.state.makeView();
         await provider.resolveWebviewView(view, {}, { isCancellationRequested: false });
 
-        const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
+        const analyzeSelected = mock.state.commands.get('sqlFileDetectionTool.analyzeSelected');
         const settle = async (budgetMs) => {
             const deadline = Date.now() + budgetMs;
             const seen = view.webview.posted.length;
@@ -111,17 +111,27 @@ async function collectStates() {
         // Beat 2+: a real analysis of a committed demo fixture, then each tab
         // selected the way the renderer selects it, so the statements in the
         // frames are the statements the shipped generator produces.
-        const sample = path.join(REPO, 'demo', 'parquet', 'sales.parquet');
+        const demo = path.join(REPO, 'demo');
+        const sample = path.join(demo, 'parquet', 'sales.parquet');
         if (!fs.existsSync(sample)) {
             throw new Error(`Missing demo fixture: ${sample}`);
         }
-        mock.state.activeEditorPath = sample;
-        await analyze();
+        await analyzeSelected(mock.module.Uri.file(demo));
+        await settle(8000);
+        const folderState = latestState(view.webview.posted);
+        const sampleEntry = folderState.files.find(
+            (entry) => entry.label === 'sales.parquet' && entry.folderLabel === 'parquet',
+        );
+        if (!sampleEntry) {
+            throw new Error('The demo folder did not expose parquet/sales.parquet.');
+        }
+        await view.receive({ type: 'selectFile', fileId: sampleEntry.id });
         await settle(8000);
 
         for (const tab of [
             'preview',
             'metadata',
+            'schema',
             'credential_setup',
             'create_table',
             'openrowset',
@@ -441,6 +451,70 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } });
     await page.goto(`file://${path.join(work, 'index.html').replace(/\\/g, '/')}`);
 
+    // A delayed schema edit must not survive a file change or post back for the
+    // newly selected file.
+    await page.evaluate((state) => {
+        window.__posted = [];
+        window.__apply(state);
+    }, states.schema);
+    await page.waitForTimeout(80);
+    await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="override"]');
+        input.value = 'DECIMAL(18,4)';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.evaluate(
+        (state) => window.__apply(Object.assign({}, state, {
+            selectedFileId: state.selectedFileId + '-next',
+        })),
+        states.schema,
+    );
+    await page.waitForTimeout(300);
+    const staleEditCleared = await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="override"]');
+        return Boolean(
+            input
+            && input.value !== 'DECIMAL(18,4)'
+            && !window.__posted.some((message) => message.type === 'setColumnOverride'),
+        );
+    });
+    if (!staleEditCleared) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('A pending SQL type edit survived a file selection change.');
+    }
+
+    // The credential form is rebuilt after every host snapshot. Prove the
+    // focused field and caret survive that replacement before recording.
+    await page.evaluate((state) => window.__apply(state), states.credential_setup);
+    await page.waitForTimeout(80);
+    await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="credentialName"]');
+        input.value = 'credential_name';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        input.setSelectionRange(2, 2);
+    });
+    await page.evaluate(
+        (state) => window.__apply(Object.assign({}, state, { notice: 'focus check' })),
+        states.credential_setup,
+    );
+    await page.waitForTimeout(80);
+    const focusRestored = await page.evaluate(() => {
+        const active = document.activeElement;
+        return Boolean(
+            active
+            && active.dataset.edit === 'credentialName'
+            && active.selectionStart === 2
+            && active.selectionEnd === 2,
+        );
+    });
+    if (!focusRestored) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('Credential input focus or caret was lost after a state refresh.');
+    }
+
     const frames = [];
     const frameDir = process.env.SFDT_FRAME_DIR;
     if (frameDir) {
@@ -473,6 +547,13 @@ async function main() {
                     '--activity-bg',
                     theme === 'light' ? '#f8f8f8' : '#181818',
                 );
+                window.scrollTo(0, 0);
+                for (const id of ['webview-root', 'panel']) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.scrollTop = 0;
+                    }
+                }
                 document.getElementById('act-tool').classList.toggle('active', showPanel);
                 document.getElementById('placeholder').style.display = showPanel ? 'none' : 'flex';
                 document.getElementById('webview-root').style.display = showPanel ? '' : 'none';

@@ -148,12 +148,34 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(script, /Configure external storage access/);
     assert.match(script, /setDataSourceType/);
     assert.match(script, /Authentication method/);
-    assert.match(script, /never asks for or stores SAS tokens/);
+    assert.match(script, /Secrets stay out of the extension/);
     assert.match(script, /openDocumentation/);
     assert.match(script, /opens Microsoft Learn externally/);
     assert.match(script, /dataset\.documentation/);
-    assert.match(html, /Sources & files/);
+    assert.match(html, /Sources &amp; files/);
+    assert.match(html, />Explorer</);
     assert.match(html, /HTTPS \/ Azure/);
+    assert.match(script, /label: 'EXT TABLE'/);
+    assert.match(script, /\['Column', 'Source type', 'SQL Type'\]/);
+    assert.match(script, /recommendedSqlTypes/);
+    assert.match(script, /captureFocus/);
+    assert.match(script, /setSelectionRange/);
+    assert.match(script, /tree-folder/);
+    assert.match(
+        script,
+        /id: 'openrowset'[\s\S]*id: 'create_external_table'[\s\S]*id: 'external_file_format'/,
+    );
+    assert.match(
+        script,
+        /renderDocumentationLinks\(container, state\.quickAnalyze\.documentation\)/,
+    );
+
+    const explorer = html.slice(
+        html.indexOf('<nav class="file-pane"'),
+        html.indexOf('<main class="content"'),
+    );
+    assert.ok(!explorer.includes('data-action="openFileDialog"'));
+    assert.ok(!explorer.includes('data-action="openFolderDialog"'));
 });
 
 test('the shell has no trace of the removed server flow', () => {
@@ -182,7 +204,7 @@ test('accessibility landmarks and live regions are present', () => {
     assert.match(html, /role="toolbar"/);
     assert.match(html, /role="tablist"/);
     assert.match(html, /role="tabpanel"/);
-    assert.match(html, /role="listbox"/);
+    assert.match(html, /role="tree"/);
     assert.match(html, /<main class="content" id="main" tabindex="-1">/);
 });
 

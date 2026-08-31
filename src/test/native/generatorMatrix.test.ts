@@ -325,8 +325,8 @@ describe('target platform capabilities', () => {
         assert.match(table, /\[event_utc\]\s+DATETIMEOFFSET\(6\)/);
         assert.match(external, /\[event_ns\]\s+BIGINT/);
         assert.match(external, /\[event_utc\]\s+DATETIME2\(6\)/);
-        assert.match(external, /Mapped: Parquet TIMESTAMP\(NANOS\).*INT64/);
-        assert.match(external, /Mapped: Parquet timezone timestamp.*INT64/);
+        assert.match(external, /\[event_ns\] uses BIGINT.*Parquet TIMESTAMP\(NANOS\).*INT64/);
+        assert.match(external, /\[event_utc\] uses DATETIME2\(6\).*Parquet timezone timestamp.*INT64/);
     });
 });
 

@@ -1044,16 +1044,10 @@ class SQLGenerator:
             data_source_line = (
                 f'    DATA_SOURCE     = \'{bulk_literal}\','
             )
-            prereq_note = (
-                'A BLOB_STORAGE external data source is required; '
-                'FROM is relative to its container'
-            )
             bulk_auth = _resolve_auth_method(auth_method, target_platform)
             bulk_cred_clause = _credential_clause(bulk_cred_ident, bulk_auth)
             prereq_lines = ([
-                f'-- Step 0: Create the BLOB_STORAGE data source used by BULK INSERT.',
-                f'--         This is separate from the abs:// / adls:// data',
-                f'--         virtualization source used by external tables.',
+                f'-- BLOB_STORAGE source for this bulk load',
             ] + _credential_ddl(bulk_cred_ident, bulk_auth, '') + [
                 f'',
                 f'CREATE EXTERNAL DATA SOURCE [{bulk_ident}]',
@@ -1066,9 +1060,7 @@ class SQLGenerator:
                 f'GO',
                 f'',
             ]) if include_prereq else [
-                f'-- Step 0: [{bulk_ident}] (TYPE = BLOB_STORAGE, LOCATION',
-                f'--         \'{_quote_literal(source_root)}\') is created in the',
-                f'--         prerequisite setup section above.',
+                f'-- Uses BLOB_STORAGE source [{bulk_ident}] from the setup section.',
                 f'',
             ]
         elif storage_kind in ('s3', 'onelake', 'other'):
@@ -1082,52 +1074,29 @@ class SQLGenerator:
             from_path = _quote_literal(
                 f'<local_or_UNC_staging_path>/{os.path.basename(str(file_name))}'
             )
-            prereq_note = (
-                f'BULK INSERT cannot read {label}; stage the file locally first'
-            )
             prereq_lines = [
-                f'-- Step 0: BULK INSERT cannot read {_sql_comment(label)}.',
-                f'--         TYPE = BLOB_STORAGE data sources only accept Azure',
-                f'--         Blob Storage https:// endpoints.',
-                f'--         Source: {_sql_comment(str(storage_url))}',
+                f'-- BULK INSERT cannot read {_sql_comment(label)} directly.',
+                f'-- Stage {_sql_comment(str(storage_url))} on a local or UNC path first.',
             ]
             if storage_kind == 's3' and target_platform in S3_BULK_PLATFORMS:
                 prereq_lines += [
-                    '--         Use OPENROWSET with an s3:// data source instead',
-                    '--         (see OPENROWSET tab), or stage the file on a path the',
-                    '--         SQL Server service account can read.',
-                ]
-            else:
-                prereq_lines += [
-                    '--         Stage the file on a local or UNC path the SQL Server',
-                    '--         service account can read, then run the load below.',
+                    '-- OPENROWSET can query the S3 source without staging.',
                 ]
             prereq_lines.append('')
         else:
             from_path = _quote_literal(
                 (file_path_override or _metadata_text(metadata, 'file_path', '')).replace('\\', '/')
             )
-            prereq_note = 'File must be accessible to the SQL Server service account'
 
         lines = [
-            f'-- ====================================================================',
-            f'-- BULK INSERT',
-            f'-- Source    : {_sql_comment(file_name)}',
-            f'-- Encoding  : {_sql_comment(encoding.upper())}  '
-            f'(codepage {_sql_comment(codepage)})',
-            f'-- Delimiter : {_sql_comment(delim_name)}  '
-            f'("{_sql_comment(delim_escaped)}")',
-            f'-- Target   : {_sql_comment(platform_label)}',
-            f'-- Use for   : {_sql_comment(use_for_note)}',
-            f'-- Prereq    : {_sql_comment(prereq_note)}',
-            f'-- ====================================================================',
+            f'-- BULK INSERT: {_sql_comment(file_name)} -> {_sql_comment(platform_label)}',
+            f'-- Encoding {_sql_comment(encoding.upper())} ({_sql_comment(codepage)}); '
+            f'delimiter {_sql_comment(delim_name)} ("{_sql_comment(delim_escaped)}").',
             f'',
         ]
         lines += prereq_lines
         lines += [
-            f'-- Step 1: Create the target table (see CREATE TABLE tab)',
-            f'',
-            f'-- Step 2: Load the data',
+            f'-- Create the target table first.',
             f'BULK INSERT [{schema_name}].[{table_name}]',
             f'FROM \'{from_path}\'',
             f'WITH',
@@ -1137,9 +1106,9 @@ class SQLGenerator:
             lines.append(data_source_line)
         lines += self._csv_reader_options(metadata, trailing_comma=True)
         lines += [
-            f'    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed',
-            f'    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads',
-            f'    BATCHSIZE       = 50000            -- Tune per available memory',
+            f'    TABLOCK,',
+            f'    MAXERRORS       = 0,',
+            f'    BATCHSIZE       = 50000',
             f');',
             f'',
             f'-- Verify row count',
@@ -2070,7 +2039,7 @@ class SQLGenerator:
         file_name = metadata.get('file_name') or os.path.basename(
             _metadata_text(metadata, 'file_path', '')
         )
-        source_location, relative_path = self._external_source_parts(
+        _, relative_path = self._external_source_parts(
             storage_url, file_name, target_platform
         )
         if not location:
@@ -2147,29 +2116,19 @@ class SQLGenerator:
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         header = [
-            f'-- ====================================================================',
             f'-- CREATE EXTERNAL TABLE  ({_sql_comment(platform_label)})',
-            f'-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT',
-            f'-- LOCATION is relative to the external data source:',
-            f'--   {_sql_comment(source_location)}',
+            f'-- Requires [{data_source}] and [{file_format}]; LOCATION is relative to the data source.',
         ]
         for column_name in external_type_overrides:
             header.append(
-                f'-- Mapped: {external_type_mapping_notes[column_name]} column '
-                f'[{_sql_comment(column_name)}] uses '
-                f'{external_type_overrides[column_name]} for external-table '
-                'compatibility.'
+                f'-- [{_sql_comment(column_name)}] uses '
+                f'{external_type_overrides[column_name]} '
+                f'({external_type_mapping_notes[column_name]}).'
             )
         if target_platform == 'fabric_sql_db':
             header.append(
-                '-- Fabric SQL Database data virtualization is in preview and uses'
+                '-- Fabric data virtualization uses Entra passthrough and is in preview.'
             )
-            header.append(
-                '-- Microsoft Entra passthrough over Lakehouse Files.'
-            )
-        header.append(
-            f'-- ===================================================================='
-        )
         sql_parts = header + [
             f'',
             f'CREATE EXTERNAL TABLE [{schema_name}].[{table_name}]',
@@ -2211,19 +2170,8 @@ class SQLGenerator:
         base_name = os.path.basename(str(file_name).replace('\\', '/')) or '<file>'
         label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         return [
-            '-- --------------------------------------------------------------------',
-            f'-- STAGE THE DATA IN AZURE STORAGE FIRST',
-            f'-- {_sql_comment(label)} runs in Azure and cannot read a path on',
-            '-- your workstation or an on-premises file share. The analyzed source',
-            f'-- ({_sql_comment(base_name)}) is a local file, so this script uses',
-            '-- <storage_account>, <container> and <path> placeholders.',
-            '--   1. Upload the file to an Azure Blob Storage or ADLS Gen2 container.',
-            '--   2. Replace the placeholders below with the real account,',
-            '--      container and blob path.',
-            '--   3. Grant the credential (SAS or Managed Identity) read access.',
-            '-- Tip: attach the storage account in the app and analyze the blob',
-            '--      directly to get a script with the real location filled in.',
-            '-- --------------------------------------------------------------------',
+            f'-- {_sql_comment(label)} cannot read local file {_sql_comment(base_name)}.',
+            '-- Upload it to Azure Storage, replace the location placeholders, and grant read access.',
             '',
         ]
 
@@ -2333,14 +2281,8 @@ class SQLGenerator:
 
         if target_platform == 'fabric_sql_db':
             return '\n'.join([
-                f'-- ====================================================================',
-                f'-- PREREQUISITE SETUP  ({_sql_comment(platform_label)})',
-                f'-- Data virtualization on Fabric SQL Database is in PREVIEW.',
-                f'-- Authorisation uses Microsoft Entra passthrough. USER IDENTITY is',
-                f'-- explicit here so the generated external objects are self-describing.',
-                f'-- The caller must have access to the target Fabric Lakehouse.',
-                f'-- https://learn.microsoft.com/fabric/database/sql/data-virtualization',
-                f'-- ====================================================================',
+                f'-- PREREQUISITE SETUP ({_sql_comment(platform_label)})',
+                f'-- OneLake uses ABFSS with USER IDENTITY (preview).',
                 f'',
                 f'-- 1. Master key: NOT required.',
                 f'-- IDENTITY = \'USER IDENTITY\' stores no secret, so there is',
@@ -2348,7 +2290,7 @@ class SQLGenerator:
                 f'',
                 *_credential_ddl(cred_ident, auth_method, '2.'),
                 f'',
-                f'-- 3. External Data Source over the Lakehouse Files area',
+                f'-- 3. External data source',
                 f'CREATE EXTERNAL DATA SOURCE [{data_source}]',
                 f'WITH (',
                 f'    LOCATION = \'{_quote_literal(source_location)}\',',
@@ -2356,30 +2298,18 @@ class SQLGenerator:
                 f');',
                 f'GO',
                 f'',
-                f'-- 4. External File Format (see EXTERNAL FILE FORMAT section)',
-                f'-- Fabric SQL Database supports DELIMITEDTEXT and PARQUET.',
-                f'-- JSON is read indirectly through the CSV reader + OPENJSON.',
-                f'-- Delta tables must be reached through a OneLake shortcut in a',
-                f'-- Lakehouse or Warehouse instead.',
-                f'GO',
+                f'-- Create the external file format from the File format tab.',
             ])
 
         lines = [
-            f'-- ====================================================================',
-            f'-- PREREQUISITE SETUP  ({_sql_comment(platform_label)})',
-            f'-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET',
-            f'-- with a DATA_SOURCE reference.',
-            f'-- ====================================================================',
+            f'-- PREREQUISITE SETUP ({_sql_comment(platform_label)})',
+            f'-- Run once per database and storage source.',
             f'',
         ]
         if not format_supported:
             lines += [
-                f'-- NOTE: {_sql_comment(config.format_type)} has no CREATE EXTERNAL FILE FORMAT on',
-                f'-- {_sql_comment(platform_label)}, so no external table is possible and',
-                f'-- the EXTERNAL FILE FORMAT step below is omitted. The data sources',
-                f'-- are still required: the reads for this format go through',
-                f'-- OPENROWSET(BULK ...) with a DATA_SOURCE, which cannot resolve',
-                f'-- unless the source exists (error 12703 / 46501).',
+                f'-- {_sql_comment(config.format_type)} has no external file format on {_sql_comment(platform_label)}.',
+                f'-- The data source is still required for OPENROWSET.',
                 f'',
             ]
         lines += self._cloud_staging_notice(storage_url, target_platform,
@@ -2392,22 +2322,18 @@ class SQLGenerator:
                 f'-- {_sql_comment(note_line)}'
                 for note_line in _AUTH_NO_MASTER_KEY_NOTE[auth_method]
             ]
-            if auth_method == 'managed_identity':
-                lines += [
-                    f'-- Certified live on Azure SQL Database: the database master',
-                    f'-- key count stayed 0 before, during and after the credential',
-                    f'-- existed, so no master key password has to be invented,',
-                    f'-- stored or rotated.',
-                ]
             lines += [f'']
         else:
             lines += [
-                f'-- 1. Master key (required once per database for this auth method)',
-                f'-- Only needed because a SECRET is being stored. Switching to',
-                f'-- IDENTITY = \'MANAGED IDENTITY\' removes this step entirely.',
+                f'-- 1. Master key (required once to protect the credential secret)',
                 f'IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = \'##MS_DatabaseMasterKey##\')',
                 f'    CREATE MASTER KEY ENCRYPTION BY PASSWORD = \'<StrongPassword!>\';',
                 f'GO',
+                f'',
+            ]
+        if target_platform == 'sql_server_2025' and auth_method == 'managed_identity':
+            lines += [
+                f'-- SQL Server 2025 managed identity requires an Azure Arc-enabled instance and a configured user-assigned identity.',
                 f'',
             ]
 
@@ -2416,10 +2342,7 @@ class SQLGenerator:
             lines += [
                 f'',
                 f'-- 3. External Data Source (external tables / PolyBase)',
-                f'-- SQL Server 2019 uses wasbs:// for Azure Blob Storage or',
-                f'-- abfss:// for ADLS Gen2 (CU11+) and requires TYPE = HADOOP.',
-                f'-- TYPE = BLOB_STORAGE sources cannot back external tables, so',
-                f'-- bulk access gets its own source below.',
+                f'-- SQL Server 2019 PolyBase uses TYPE = HADOOP.',
                 f'CREATE EXTERNAL DATA SOURCE [{data_source}]',
                 f'WITH (',
                 f'    TYPE = HADOOP,',
@@ -2447,15 +2370,11 @@ class SQLGenerator:
         ]
         if target_platform in self.AZURE_SQL_PLATFORMS:
             lines += [
-                f'-- Azure SQL data virtualization requires abs:// (Blob Storage)',
-                f'-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use',
-                f'-- an https:// location here.',
+                f'-- Use abs:// for Blob Storage or adls:// for ADLS Gen2.',
             ]
         else:
             lines += [
-                f'-- SQL Server 2022+ infers the connector from LOCATION.',
-                f'-- Do not specify TYPE. Use abs:// for Azure Blob Storage,',
-                f'-- adls:// for ADLS Gen2, or s3:// for S3-compatible storage.',
+                f'-- SQL Server infers ABS, ADLS, or S3 from LOCATION.',
             ]
         location_line = f'    LOCATION = \'{_quote_literal(source_location)}\''
         cred_clause = _credential_clause(cred_ident, auth_method)
@@ -2501,13 +2420,8 @@ class SQLGenerator:
         )
         bulk_location, _ = _azure_bulk_storage_parts(storage_url, file_name)
         lines = [
-            f'',
             f'-- {step_number}. External Data Source for BULK INSERT / OPENROWSET(BULK)',
-            f'-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,',
-            f'-- which cannot back an external table, so it gets its own name.',
-            f'-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:',
-            f'-- certified live, the single-LOB options work through a',
-            f'-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+            f'-- Bulk access uses a separate BLOB_STORAGE source.',
         ]
         lines += _credential_ddl(bulk_cred_ident, auth_method, '')
         cred_clause = _credential_clause(bulk_cred_ident, auth_method)
@@ -4199,26 +4113,12 @@ def _credential_ddl(cred_ident: str, auth_method: str,
     prefix = f' {step_label} ' if step_label else ' '
     if auth_method == 'public':
         return [
-            f'--{prefix}Database Scoped Credential: not required.',
-            '-- The container allows anonymous read access, so the external',
-            '-- data source below is created without a CREDENTIAL.',
+            f'--{prefix}Database scoped credential: not required for public access.',
         ]
     if auth_method == 'managed_identity':
         return [
-            f'--{prefix}Database Scoped Credential (managed identity)',
-            '-- PREFERRED: no secret, no SAS token, and no database master key.',
-            '-- Grant the server/instance managed identity the Storage Blob Data',
-            '-- Reader role on the storage account (Storage Blob Data Contributor',
-            '-- if the workload also writes). Certified live on Azure SQL',
-            '-- Database: creating this credential left the database master key',
-            '-- count at 0.',
-            '-- Availability: Azure SQL Database and Azure SQL Managed Instance',
-            '-- have a service identity of their own. SQL Server 2025 can use',
-            '-- managed identity when Azure Arc-enabled and configured with the',
-            '-- selected user-assigned identity; on a SQL Server without Arc this',
-            '-- cannot authenticate, and a SAS credential is the route that',
-            '-- works. Managed identity was certified live on Azure SQL Database',
-            '-- only.',
+            f'--{prefix}Database scoped credential: managed identity',
+            '-- Grant the configured identity read access to the storage source.',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = 'MANAGED IDENTITY';",
@@ -4226,9 +4126,7 @@ def _credential_ddl(cred_ident: str, auth_method: str,
         ]
     if auth_method == 'user_identity':
         return [
-            f'--{prefix}Database Scoped Credential (Microsoft Entra passthrough)',
-            '-- The signed-in database user accesses storage as themselves.',
-            '-- No secret and no database master key are required.',
+            f'--{prefix}Database scoped credential: Microsoft Entra passthrough',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = 'USER IDENTITY';",
@@ -4236,9 +4134,8 @@ def _credential_ddl(cred_ident: str, auth_method: str,
         ]
     if auth_method == 's3_access_key':
         return [
-            f'--{prefix}Database Scoped Credential (S3 access key)',
-            '-- Requires a database master key (step 1). Keep real access keys',
-            '-- outside this extension and replace the placeholders securely.',
+            f'--{prefix}Database scoped credential: S3 access key',
+            '-- Replace credential placeholders in a secure SQL editor.',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = 'S3 ACCESS KEY',",
@@ -4247,10 +4144,8 @@ def _credential_ddl(cred_ident: str, auth_method: str,
         ]
     if auth_method == 'storage_key':
         return [
-            f'--{prefix}Database Scoped Credential (storage account key)',
-            '-- Prefer IDENTITY = \'MANAGED IDENTITY\' where the platform',
-            '-- supports it; an account key is a long-lived shared secret.',
-            '-- Requires a database master key (step 1).',
+            f'--{prefix}Database scoped credential: storage account key',
+            '-- Replace credential placeholders in a secure SQL editor.',
             f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
             'WITH',
             "    IDENTITY = '<storage_account_name>',",
@@ -4258,10 +4153,8 @@ def _credential_ddl(cred_ident: str, auth_method: str,
             'GO',
         ]
     return [
-        f'--{prefix}Database Scoped Credential (SAS token)',
-        '-- Prefer IDENTITY = \'MANAGED IDENTITY\' where the platform',
-        '-- supports it: it needs no secret and no database master key.',
-        '-- Requires a database master key (step 1).',
+        f'--{prefix}Database scoped credential: SAS token',
+        '-- Replace credential placeholders in a secure SQL editor.',
         f'CREATE DATABASE SCOPED CREDENTIAL [{cred_ident}]',
         'WITH',
         "    IDENTITY = 'SHARED ACCESS SIGNATURE',",

@@ -120,9 +120,17 @@ h3 {
 
 .toolbar {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+.toolbar-title {
+  margin-right: 2px;
+  font-size: 0.86em;
+  font-weight: 600;
+  opacity: 0.86;
 }
 
 .option-row {
@@ -296,7 +304,7 @@ body.surface-sidebar .content {
   max-width: none;
   min-width: 0;
   min-height: 560px;
-  padding: 12px;
+  padding: 0;
   border-right: 1px solid var(--vscode-panel-border, transparent);
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
 }
@@ -312,28 +320,33 @@ body.surface-sidebar .file-pane {
   padding: 0 12px 12px;
 }
 
+.explorer-heading {
+  padding: 10px 10px 6px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.explorer-heading h2 {
+  margin: 0;
+  font-size: 0.82em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .source {
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
-  margin: 0 0 4px;
+  margin: 3px 0 0;
   overflow-wrap: anywhere;
-}
-
-.source-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 6px;
 }
 
 .file-list {
   list-style: none;
   margin: 0;
-  padding: 0;
-  max-height: 40vh;
+  padding: 4px 0;
+  max-height: calc(100vh - 250px);
+  min-height: 120px;
   overflow-y: auto;
-  border: 1px solid var(--vscode-panel-border, transparent);
-  border-radius: var(--radius);
+  font-size: 0.9em;
 }
 
 .file-list:empty {
@@ -341,10 +354,13 @@ body.surface-sidebar .file-pane {
 }
 
 .file-item {
-  padding: 3px 6px;
+  min-height: 22px;
+  padding: 2px 7px 2px 4px;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
 }
 
 .file-item[aria-selected='true'] {
@@ -357,12 +373,15 @@ body.surface-sidebar .file-pane {
 }
 
 .file-name {
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-meta {
   font-size: 0.82em;
   color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
 }
 
 .file-item[aria-selected='true'] .file-meta {
@@ -373,6 +392,129 @@ body.surface-sidebar .file-pane {
 .empty {
   font-size: 0.88em;
   color: var(--vscode-descriptionForeground);
+  padding: 0 10px;
+}
+
+.tree-group {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 14px;
+}
+
+.tree-folder {
+  list-style: none;
+}
+
+.tree-folder-label {
+  width: 100%;
+  min-height: 22px;
+  padding: 2px 7px 2px 2px;
+  border: 0;
+  display: grid;
+  grid-template-columns: 10px 14px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  color: var(--vscode-foreground);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tree-folder-label:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-chevron {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  opacity: 0.8;
+  transform-origin: 2px 4px;
+}
+
+.tree-folder-label[aria-expanded='true'] .folder-chevron {
+  transform: rotate(90deg);
+}
+
+.folder-icon {
+  position: relative;
+  width: 14px;
+  height: 10px;
+  margin-top: 2px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.82;
+}
+
+.folder-icon::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -1px;
+  width: 7px;
+  height: 3px;
+  border: 1px solid currentColor;
+  border-bottom: 0;
+  border-radius: 1px 1px 0 0;
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.file-icon {
+  position: relative;
+  width: 11px;
+  height: 14px;
+  margin-left: 1px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.65;
+}
+
+.file-icon::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -1px;
+  width: 4px;
+  height: 4px;
+  border-left: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
+.table-icon {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border: 1px solid currentColor;
+  border-radius: 50% / 25%;
+  opacity: 0.72;
+}
+
+.table-icon::before,
+.table-icon::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  width: 13px;
+  height: 4px;
+  border-bottom: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.table-icon::before {
+  top: 2px;
+}
+
+.table-icon::after {
+  top: 6px;
 }
 
 /* ----------------------------------------------------------------- tabs --- */
@@ -561,8 +703,12 @@ thead th {
 
 .wizard-object-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.wizard-object-fields .field {
+  min-width: 0;
 }
 
 .wizard-object-fields .field:last-child {

@@ -1,7 +1,7 @@
 {
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
-  "description": "Analyze CSV, JSON, Parquet, Delta, Iceberg and Excel files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
+  "description": "Analyze SQL-readable CSV, JSON, Parquet, ORC, Delta and Iceberg sources and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
   "version": "2.1.0",
   "publisher": "HugoMSFT",
   "license": "MIT",
@@ -88,20 +88,21 @@
       "explorer/context": [
         {
           "command": "sqlFileDetectionTool.analyzeSelected",
-          "when": "resourceExtname =~ /^\\.(csv|tsv|txt|json|jsonl|ndjson|parquet|orc|avro|xlsx|xls)$/i || explorerResourceIsFolder",
+          "when": "resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i || explorerResourceIsFolder",
           "group": "7_modification"
         }
       ],
       "editor/title/context": [
         {
           "command": "sqlFileDetectionTool.analyzeCurrentFile",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
       ],
       "editor/context": [
         {
           "command": "sqlFileDetectionTool.analyzeCurrentFile",
-          "when": "resourceScheme == file",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
       ],
@@ -171,7 +172,7 @@
           {
             "id": "analyzeFile",
             "title": "Analyze a data file",
-            "description": "Open any CSV, TSV, JSON, NDJSON, Parquet, Excel, Delta or Iceberg file and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
+            "description": "Open any CSV, TSV, DAT, JSON, NDJSON, Parquet, ORC, Delta or Iceberg source and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
             "media": {
               "markdown": "media/walkthrough/analyze.md"
             },
