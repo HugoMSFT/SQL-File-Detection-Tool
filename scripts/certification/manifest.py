@@ -26,6 +26,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from urllib.parse import urlparse
 
 from .batches import Batch, split_batches
 from .evidence import BLOCKED, NOT_EXECUTABLE
@@ -110,6 +111,11 @@ class Staging:
         value = entry.get('shape')
         return str(value) if value else None
 
+    def uses_exact_fixture(self, fixture_key: str) -> bool:
+        """Whether the remote object is the repository fixture byte-for-byte."""
+        entry = self.fixtures.get(fixture_key) or {}
+        return entry.get('exact_fixture') is True
+
     def expectations(self, fixture_key: str) -> Dict[str, Any]:
         entry = self.fixtures.get(fixture_key) or {}
         return {
@@ -138,6 +144,73 @@ def _metadata_for(fixture_path: str) -> Dict[str, Any]:
     from external_file_detection.file_detector import FileDetector  # noqa: WPS433
 
     return FileDetector().analyze_file_metadata(fixture_path)
+
+
+def _exact_public_fixture(
+    fixture_path: str,
+    fixture_relative_path: str,
+    location: str,
+    *,
+    root: str,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Validate a canonical public mirror before trusting local metadata for it."""
+    manifest_path = os.path.join(
+        root, 'scripts', 'certification', 'public-demo-fixtures.json',
+    )
+    with open(manifest_path, 'r', encoding='utf-8') as handle:
+        publication = json.load(handle)
+    if publication.get('publication_status') != 'published_and_anonymously_verified':
+        return None, 'canonical fixture publication is not anonymously verified'
+
+    relative = fixture_relative_path.replace(os.sep, '/')
+    artifacts = publication.get('artifacts') or []
+    if os.path.isdir(fixture_path):
+        prefix = relative.rstrip('/') + '/'
+        selected = [item for item in artifacts if item.get('local_path', '').startswith(prefix)]
+        actual_paths = {
+            os.path.relpath(os.path.join(parent, name), root).replace(os.sep, '/')
+            for parent, _, names in os.walk(fixture_path)
+            for name in names
+        }
+        manifested_paths = {str(item.get('local_path')) for item in selected}
+        if not selected or manifested_paths != actual_paths:
+            return None, 'canonical directory manifest does not exactly cover the local tree'
+        canonical_url = (
+            str(publication['base_url']).rstrip('/')
+            + '/'
+            + relative.removeprefix('demo/').rstrip('/')
+            + '/'
+        )
+    else:
+        selected = [
+            item for item in artifacts if item.get('local_path') == relative
+        ]
+        if len(selected) != 1:
+            return None, 'canonical file is absent or duplicated in the publication manifest'
+        canonical_url = str(selected[0]['url'])
+
+    for item in selected:
+        local_path = os.path.join(root, str(item['local_path']).replace('/', os.sep))
+        with open(local_path, 'rb') as handle:
+            content = handle.read()
+        if len(content) != int(item['bytes']):
+            return None, 'local fixture length differs from the published manifest'
+        if hashlib.sha256(content).hexdigest() != item['sha256']:
+            return None, 'local fixture hash differs from the published manifest'
+
+    parsed = urlparse(canonical_url)
+    path_parts = parsed.path.lstrip('/').split('/', 1)
+    if len(path_parts) != 2:
+        return None, 'canonical fixture URL does not contain container and blob paths'
+    container, blob_path = path_parts
+    canonical_abs = f'abs://{container}@{parsed.netloc}/{blob_path}'
+    if location not in {canonical_url, canonical_abs}:
+        return None, 'staged location is not the canonical URL for this exact fixture'
+
+    return {
+        'url': canonical_url,
+        'artifact_count': len(selected),
+    }, None
 
 
 def _generate(
@@ -565,14 +638,31 @@ def _plan_cell(
     # value NULL, and either a false FAIL or a false PASS. So a remote cell must
     # say which public object it reads, and generate from *that*.
     remote_access = entry.access not in ('none', 'engine_local')
-    shape = resolve_shape(staging.shape_key(entry.fixture)) if remote_access else None
-    if remote_access and shape is None:
+    exact_fixture = remote_access and staging.uses_exact_fixture(entry.fixture)
+    shape = (
+        resolve_shape(staging.shape_key(entry.fixture))
+        if remote_access and not exact_fixture else None
+    )
+    exact_public = None
+    if exact_fixture:
+        exact_public, exact_error = _exact_public_fixture(
+            fixture_path,
+            fixture.path,
+            location,
+            root=root,
+        )
+        if exact_error:
+            planned['plan_verdict'] = NOT_EXECUTABLE
+            planned['unstaged'] = True
+            planned['reason'] = exact_error
+            return planned
+    if remote_access and shape is None and exact_public is None:
         planned['plan_verdict'] = NOT_EXECUTABLE
         planned['unstaged'] = True
         planned['reason'] = (
             f'fixture {entry.fixture!r} is staged at a remote location but '
-            f'declares no public shape; refusing to generate a schema from '
-            f'unrelated local demo bytes'
+            f'declares no public shape or exact verified fixture; '
+            f'refusing to generate a schema from unrelated local demo bytes'
         )
         return planned
     if shape is not None:
@@ -604,6 +694,17 @@ def _plan_cell(
         if entry.fixture not in metadata_cache:
             metadata_cache[entry.fixture] = _metadata_for(fixture_path)
         metadata = dict(metadata_cache[entry.fixture])
+        if exact_public is not None:
+            planned['public_fixture_url'] = exact_public['url']
+            planned['public_fixture_artifacts'] = exact_public['artifact_count']
+            planned['public_fixture_exact'] = True
+            exact_expectations = {
+                key: metadata[key]
+                for key in ('row_count', 'column_count')
+                if metadata.get(key) is not None
+            }
+            exact_expectations.update(staging.expectations(entry.fixture))
+            planned['expectations'] = exact_expectations
 
     # Cell C30 is the negative control: it deliberately keeps the default,
     # file-derived name so the safety gate has something real to refuse.

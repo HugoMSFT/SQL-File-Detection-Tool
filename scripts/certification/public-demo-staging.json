@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "hosts": [
+    "publicsamples.blob.core.windows.net"
+  ],
+  "fixtures": {
+    "csv_scalar": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/csv/sales_scalars.csv",
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/csv/sales_scalars.csv"
+    },
+    "tsv": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/csv/sales_scalars.tsv"
+    },
+    "pipe": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/csv/sales_scalars_pipe.csv"
+    },
+    "utf8": {
+      "exact_fixture": true,
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf8.csv"
+    },
+    "utf8_bom": {
+      "exact_fixture": true,
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf8_bom.csv"
+    },
+    "utf16le_bom": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/unicode/unicode_utf16le_bom.csv",
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf16le_bom.csv"
+    },
+    "utf16le_bom_tsv": {
+      "exact_fixture": true,
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/unicode/unicode_utf16le_bom.tsv"
+    },
+    "cp932": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/unicode/japanese_cp932.csv",
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/unicode/japanese_cp932.csv"
+    },
+    "collation": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/unicode/collation_cases_utf8.csv"
+    },
+    "json_array": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/json/orders_array.json",
+      "blob_storage": "https://publicsamples.blob.core.windows.net/filesamples/json/orders_array.json"
+    },
+    "ndjson": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/json/orders.ndjson"
+    },
+    "parquet_all_types": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/parquet/all_types.parquet"
+    },
+    "parquet_sales": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/parquet/sales.parquet"
+    },
+    "orc": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/orc/all_types.orc"
+    },
+    "excel": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/excel/inventory.xlsx"
+    },
+    "delta": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/tables/events_delta/"
+    },
+    "iceberg": {
+      "exact_fixture": true,
+      "abs": "abs://filesamples@publicsamples.blob.core.windows.net/tables/events_iceberg/"
+    }
+  }
+}

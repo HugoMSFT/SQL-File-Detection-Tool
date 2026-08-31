@@ -38,6 +38,7 @@ const INTENTIONAL_DIFFERENCES: Readonly<Record<string, readonly string[]>> = {
         'nullable_columns',
         'parquet_metadata',
         'compression',
+        'parquet_physical_types',
     ],
     // Python reads ORC through pyarrow. The native core has no portable ORC
     // reader (see docs/native-core.md) and reports an explicit

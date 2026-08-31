@@ -48,9 +48,11 @@ import {
     externalFormatPlatforms,
     FIRST_ROW_FORMAT_PLATFORMS,
     HADOOP_EXTERNAL_SOURCE_PLATFORMS,
+    isStructuralType,
     noExternalFormatGuidance,
     PLATFORM_LABELS,
     DELIMITER_NAMES,
+    mapTypeToSql,
     normalizePlatform,
     supports,
 } from './typeMapping';
@@ -745,7 +747,6 @@ export function generateExternalFileFormat(
             alternative,
         );
     }
-
     const withOptions = [`    FORMAT_TYPE = ${config.format_type}`];
     const trailingNotes: string[] = [];
 
@@ -891,6 +892,19 @@ export function generateExternalTable(
             alternative,
         );
     }
+    const nestedParquetColumns =
+        metadata.file_type === 'parquet' && Array.isArray(metadata.schema)
+            ? metadata.schema
+                .filter(([, detectedType]) => isStructuralType(String(detectedType).toLowerCase()))
+                .map(([columnName]) => columnName)
+            : [];
+    if (nestedParquetColumns.length > 0) {
+        return notSupportedMessage(
+            'CREATE EXTERNAL TABLE (PARQUET with nested columns)',
+            targetPlatform,
+            `Flatten or remove nested columns first: ${nestedParquetColumns.join(', ')}.`,
+        );
+    }
 
     const rawTableName = options.tableName
         ? options.tableName
@@ -910,7 +924,49 @@ export function generateExternalTable(
     const schemaName = escapeIdentifier(options.schemaName ?? 'dbo');
     const dataSource = escapeIdentifier(options.dataSource || 'MyDataSource');
 
-    let columns = generateColumnDefinitions(metadata, { includeNullability: false });
+    const externalTypeOverrides: Record<string, string> = {};
+    const externalTypeMappingNotes: Record<string, string> = {};
+    const physicalTypes = metadata.parquet_physical_types ?? {};
+    if (metadata.file_type === 'parquet' && Array.isArray(metadata.schema)) {
+        for (const [columnName, detectedType] of metadata.schema) {
+            if (
+                !Object.prototype.hasOwnProperty.call(metadata.sql_type_overrides ?? {}, columnName)
+                && String(physicalTypes[columnName]).toUpperCase() === 'INT64'
+                && /^timestamp\[ns(?:,\s*tz=[^\]]+)?\]$/i.test(String(detectedType))
+            ) {
+                externalTypeOverrides[columnName] = 'BIGINT';
+                externalTypeMappingNotes[columnName] =
+                    'Parquet TIMESTAMP(NANOS) physical INT64';
+                continue;
+            }
+            const zonedTimestamp = /^timestamp\[(s|ms|us),\s*tz=[^\]]+\]$/i.exec(
+                String(detectedType),
+            );
+            if (
+                !Object.prototype.hasOwnProperty.call(metadata.sql_type_overrides ?? {}, columnName)
+                && String(physicalTypes[columnName]).toUpperCase() === 'INT64'
+                && zonedTimestamp
+            ) {
+                externalTypeOverrides[columnName] = mapTypeToSql(
+                    `timestamp[${zonedTimestamp[1]}]`,
+                );
+                externalTypeMappingNotes[columnName] =
+                    'Parquet timezone timestamp physical INT64';
+            }
+        }
+    }
+    const externalMetadata: GeneratorMetadata =
+        Object.keys(externalTypeOverrides).length > 0
+            ? {
+                ...metadata,
+                sql_type_overrides: {
+                    ...externalTypeOverrides,
+                    ...(metadata.sql_type_overrides ?? {}),
+                },
+            }
+            : metadata;
+
+    let columns = generateColumnDefinitions(externalMetadata, { includeNullability: false });
     if (columns.length === 0) {
         columns = ['    [data] NVARCHAR(MAX)'];
     }
@@ -935,6 +991,13 @@ export function generateExternalTable(
         '-- LOCATION is relative to the external data source:',
         `--   ${sqlComment(sourceLocation)}`,
     ];
+    for (const columnName of Object.keys(externalTypeOverrides)) {
+        header.push(
+            `-- Mapped: ${externalTypeMappingNotes[columnName]} column ` +
+            `[${sqlComment(columnName)}] uses ${externalTypeOverrides[columnName]} ` +
+            'for external-table compatibility.',
+        );
+    }
     if (targetPlatform === 'fabric_sql_db') {
         header.push('-- Fabric SQL Database data virtualization is in preview and uses');
         header.push('-- Microsoft Entra passthrough over Lakehouse Files.');

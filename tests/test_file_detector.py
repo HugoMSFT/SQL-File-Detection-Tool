@@ -333,6 +333,7 @@ def test_parquet_metadata_analysis(sample_parquet):
     assert 'id' in col_names
     assert 'name' in col_names
     assert 'score' in col_names
+    assert metadata['parquet_physical_types']['id'] == 'INT64'
 
 
 def test_parquet_preview_does_not_load_full_file(sample_parquet):

@@ -205,6 +205,7 @@ export interface ParquetFooter {
     keyValueMetadata: Record<string, string>;
     compression: string | null;
     rowCount: number;
+    physicalTypes: Record<string, string>;
 }
 
 function keyValueToRecord(metadata: FileMetaData): Record<string, string> {
@@ -327,6 +328,11 @@ export async function readParquetFooter(
         keyValueMetadata,
         compression,
         rowCount: Number(metadata.num_rows),
+        physicalTypes: Object.fromEntries(
+            tree.children
+                .filter((child) => typeof child.element.type === 'string')
+                .map((child) => [child.element.name, child.element.type as string]),
+        ),
     };
 }
 
@@ -344,6 +350,7 @@ export async function analyzeParquet(
             compression: footer.compression,
             nullable_columns: footer.nullableColumns,
             encoding: 'binary',
+            parquet_physical_types: footer.physicalTypes,
             parquet_metadata: {
                 created_by: footer.metadata.created_by ?? null,
                 num_row_groups: footer.metadata.row_groups.length,

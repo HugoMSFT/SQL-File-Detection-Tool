@@ -275,11 +275,58 @@ describe('target platform capabilities', () => {
                 storageUrl:
                     'https://acct.blob.core.windows.net/container/folder/events_delta',
             });
+
             assert.ok(
                 /NOT\s+AVAILABLE\s+on/i.test(external),
                 `${platform} must state Delta is unavailable:\n${external}`,
             );
         }
+    });
+
+    it('maps Parquet TIMESTAMP(NANOS) INT64 only for external tables', () => {
+        const metadata: GeneratorMetadata = {
+            ...parquetMetadata(),
+            schema: [
+                ['id', 'int32'],
+                ['event_ns', 'timestamp[ns]'],
+                ['event_utc', 'timestamp[us, tz=UTC]'],
+            ],
+            parquet_physical_types: {
+                id: 'INT32',
+                event_ns: 'INT64',
+                event_utc: 'INT64',
+            },
+        };
+
+        const table = generateCreateTable(metadata, {
+            targetPlatform: 'sql_server_2025',
+        });
+
+        it('refuses nested Parquet external tables instead of emitting scalar mappings', () => {
+            const sql = generateExternalTable({
+                ...parquetMetadata(),
+                schema: [
+                    ['id', 'int32'],
+                    ['items', 'list<element: int32>'],
+                ],
+            }, {
+                targetPlatform: 'sql_server_2025',
+            });
+
+            assert.match(sql, /NOT AVAILABLE/);
+            assert.match(sql, /Flatten or remove nested columns first: items/);
+            assert.doesNotMatch(sql, /CREATE EXTERNAL TABLE \[/);
+        });
+        const external = generateExternalTable(metadata, {
+            targetPlatform: 'sql_server_2025',
+        });
+
+        assert.match(table, /\[event_ns\]\s+DATETIME2\(7\)/);
+        assert.match(table, /\[event_utc\]\s+DATETIMEOFFSET\(6\)/);
+        assert.match(external, /\[event_ns\]\s+BIGINT/);
+        assert.match(external, /\[event_utc\]\s+DATETIME2\(6\)/);
+        assert.match(external, /Mapped: Parquet TIMESTAMP\(NANOS\).*INT64/);
+        assert.match(external, /Mapped: Parquet timezone timestamp.*INT64/);
     });
 });
 

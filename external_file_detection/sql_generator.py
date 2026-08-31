@@ -2044,6 +2044,23 @@ class SQLGenerator:
                 target_platform,
                 alternative,
             )
+        nested_parquet_columns = (
+            [
+                column_name
+                for column_name, detected_type in metadata.get('schema') or []
+                if _is_structural_type(str(detected_type).strip().lower())
+            ]
+            if metadata.get('file_type') == 'parquet'
+            else []
+        )
+        if nested_parquet_columns:
+            return self._not_supported_message(
+                'CREATE EXTERNAL TABLE (PARQUET with nested columns)',
+                target_platform,
+                'Flatten or remove nested columns first: '
+                + ', '.join(nested_parquet_columns)
+                + '.',
+            )
 
         if not table_name:
             base = _metadata_base_name(metadata)
@@ -2064,7 +2081,55 @@ class SQLGenerator:
         file_format = _escape_identifier(file_format)
         data_source = _escape_identifier(data_source or 'MyDataSource')
 
-        columns = self._generate_column_definitions(metadata, include_nullability=False)
+        external_type_overrides = {}
+        external_type_mapping_notes = {}
+        physical_types = metadata.get('parquet_physical_types') or {}
+        explicit_overrides = metadata.get('sql_type_overrides') or {}
+        if metadata.get('file_type') == 'parquet':
+            for column_name, detected_type in metadata.get('schema') or []:
+                if (
+                    column_name not in explicit_overrides
+                    and str(physical_types.get(column_name, '')).upper() == 'INT64'
+                    and re.match(
+                        r'^timestamp\[ns(?:,\s*tz=[^\]]+)?\]$',
+                        str(detected_type),
+                        re.IGNORECASE,
+                    )
+                ):
+                    external_type_overrides[column_name] = 'BIGINT'
+                    external_type_mapping_notes[column_name] = (
+                        'Parquet TIMESTAMP(NANOS) physical INT64'
+                    )
+                    continue
+                zoned_timestamp = re.match(
+                    r'^timestamp\[(s|ms|us),\s*tz=[^\]]+\]$',
+                    str(detected_type),
+                    re.IGNORECASE,
+                )
+                if (
+                    column_name not in explicit_overrides
+                    and str(physical_types.get(column_name, '')).upper() == 'INT64'
+                    and zoned_timestamp
+                ):
+                    external_type_overrides[column_name] = (
+                        self._map_type_to_sql(
+                            f'timestamp[{zoned_timestamp.group(1)}]'
+                        )
+                    )
+                    external_type_mapping_notes[column_name] = (
+                        'Parquet timezone timestamp physical INT64'
+                    )
+        external_metadata = metadata
+        if external_type_overrides:
+            external_metadata = dict(metadata)
+            external_metadata['sql_type_overrides'] = {
+                **external_type_overrides,
+                **explicit_overrides,
+            }
+
+        columns = self._generate_column_definitions(
+            external_metadata, include_nullability=False,
+        )
         if not columns:
             columns = ['    [data] NVARCHAR(MAX)']
 
@@ -2086,6 +2151,13 @@ class SQLGenerator:
             f'-- LOCATION is relative to the external data source:',
             f'--   {_sql_comment(source_location)}',
         ]
+        for column_name in external_type_overrides:
+            header.append(
+                f'-- Mapped: {external_type_mapping_notes[column_name]} column '
+                f'[{_sql_comment(column_name)}] uses '
+                f'{external_type_overrides[column_name]} for external-table '
+                'compatibility.'
+            )
         if target_platform == 'fabric_sql_db':
             header.append(
                 '-- Fabric SQL Database data virtualization is in preview and uses'

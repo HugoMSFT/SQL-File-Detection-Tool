@@ -183,12 +183,28 @@ def cmd_execute(args: argparse.Namespace) -> int:
 
     from . import adapters
 
+    access_token = adapters.take_access_token()
     settings = adapters.ConnectionSettings.from_env(
-        host=args.host, database=args.database, user=args.user, port=args.port
+        host=args.host,
+        database=args.database,
+        user=args.user,
+        port=args.port,
+        require_user=access_token is None,
     )
-    redactor = Redactor(extra_literals=settings.redaction_literals())
-    password = adapters.take_password()
-    factory = adapters.SessionFactory(settings, password)
+    password = adapters.take_password() if access_token is None else None
+    credential = access_token if access_token is not None else password
+    # Seed every connection value before SessionFactory can load a driver or
+    # open a socket. Driver failures have echoed credentials on some builds.
+    redactor = Redactor(
+        extra_literals=(*settings.redaction_literals(), credential)
+    )
+    factory = adapters.SessionFactory(
+        settings,
+        password,
+        access_token=access_token,
+    )
+    access_token = None
+    credential = None
     del password
     try:
         run_session(
@@ -311,6 +327,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 os.environ.get(adapters_env('HOST')),
                 os.environ.get(adapters_env('DATABASE')),
                 os.environ.get(adapters_env('USER')),
+                os.environ.get(adapters_env('ACCESS_TOKEN')),
             ) if value
         ])
         print(

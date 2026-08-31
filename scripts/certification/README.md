@@ -10,26 +10,40 @@ evidence. It exists because the alternative — hand-pasting generated SQL into 
 production server that holds real TPC-H data — is how you drop someone's
 `dbo.orders`.
 
-## Final run
+## Fresh final runs
 
 | | SQL Server 2025 | Azure SQL Database |
 | --- | --- | --- |
-| PASS | 16 | 17 |
+| PASS | 24 | 29 |
 | FAIL | 0 | 0 |
-| NOT_EXECUTABLE | 14 | 12 |
+| NOT_EXECUTABLE | 7 | 6 |
 | BLOCKED (negative control) | 1 | 1 |
-| Accepted verdicts | 24 | 21 |
+| Accepted verdicts | 31 | 36 |
 | Confirmed defects | 0 | 0 |
-| Cleanup statements succeeded | all | 34 / 34 |
+| Cleanup statements succeeded | 48 / 48 | 63 / 63 |
 | Residue after independent recount | 0 | 0 |
 
-The two accepted-verdict counts were computed under different rules and are not
-comparable to each other. The Azure figure is the later, stricter one: a cell
-whose static assertions fail no longer counts as accepted, and a cell that
-generated no SQL at all is recorded as not evaluated instead of passing
-vacuously. Three cells that the earlier rule accepted are excluded by the later
-one. The SQL Server number predates that change. Neither engine produced a
-confirmed defect under either rule, which is the number that matters.
+These runs used the anonymously readable, hash-pinned fixtures declared by
+`public-demo-fixtures.json` and `public-demo-staging.json`. Compared with the
+prior 16/0 VM and 17/0 Azure results, exact fixture publication moved UTF-8 BOM,
+UTF-16, CP932, ORC DDL, Delta, and flat Parquet cases into live execution. The
+expanded Azure run additionally passed tab, pipe, UTF-8 without BOM, collation,
+and UTF-16 TSV cases. The final VM generator run predates those five extra
+matrix rows, so they remain Azure-live and VM-offline rather than being
+retroactively attributed to the VM.
+
+The first exact-fixture VM attempt exposed two real Parquet mapping defects:
+physical `INT64` `TIMESTAMP(NANOS)` cannot back `DATETIME2`, and a Parquet
+timezone timestamp cannot back `DATETIMEOFFSET` in an external table. The
+generator now uses explicit target mappings only for external tables while
+ordinary table DDL retains the richer logical types. A subsequent disposable
+SQL Server 2025 VM run passed 24 cells with no defects. The disposable VM was
+deallocated after the run.
+
+Curated redacted artifacts are stored in
+[`docs/certification-evidence/`](../../docs/certification-evidence/). Raw
+runner output is ignored by Git so a future private endpoint cannot be added
+accidentally.
 
 Cleanup was verified independently after each run, and on both engines the final
 residue is zero. Getting there on Azure SQL Database took three attempts, and the
@@ -54,14 +68,12 @@ kinds. The table inventory now excludes `is_external = 1` and the cleanup planne
 deduplicates by scope, and v9 reports **34 of 34 statements successful with an
 empty residue list**, confirmed against an independent baseline count.
 
-The `NOT_EXECUTABLE` cells are the byte-fidelity ones — the all-types, Unicode,
-Delta, ORC, Excel and Iceberg fixtures. Proving those needs those exact bytes
-readable by the engine itself, and the run had neither writable storage it was
-authorised to create nor permission to change the server's configuration to
-reach a local path. Recording them as not executable is the honest answer;
-claiming coverage from a differently-shaped public file would not be. Each
-engine's single `BLOCKED` cell is the deliberate negative control: a statement
-the gate is meant to refuse, which proves the gate was live throughout.
+The remaining `NOT_EXECUTABLE` cells are explicit capability boundaries:
+engine-local paths unavailable to Azure SQL, nested Parquet external tables,
+Excel, Iceberg external file formats, and JSON external file formats.
+Headerless CSV remains offline-only because the published deterministic corpus
+contains no headerless artifact. Each engine's single `BLOCKED` cell is the
+deliberate negative control, proving the gate was active.
 
 No live run certifies an engine version it did not run against. These numbers
 cover SQL Server 2025 and Azure SQL Database only.
@@ -184,6 +196,16 @@ removed from the process environment as soon as it is read.
 | `SQLFDT_CERT_DATABASE` | Database name |
 | `SQLFDT_CERT_USER` | Login name |
 | `SQLFDT_CERT_PASSWORD` | Password, consumed and cleared immediately |
+| `SQLFDT_CERT_ACCESS_TOKEN` | Optional Entra access token for Azure SQL, consumed and cleared immediately; mutually exclusive with password authentication |
+| `SQLFDT_CERT_TRUST_SERVER_CERTIFICATE` | Explicit `true` only for an encrypted target whose certificate cannot be name-validated, such as a development VM reached by IP |
+
+Access-token authentication always requires full certificate validation and
+rejects `SQLFDT_CERT_TRUST_SERVER_CERTIFICATE=true`. Password authentication
+prefers Microsoft ODBC Driver 18; the `pymssql` fallback is allowed only when
+certificate trust was explicitly requested because it cannot guarantee the same
+CA and hostname validation contract. That flag disables CA and hostname
+validation entirely; use it only for an isolated development VM with a
+self-signed certificate, never for a production endpoint.
 
 Everything written to disk goes through `redaction.py` first. Hosts, user names,
 IP addresses and connection strings are replaced; the maintained public fixture
@@ -225,6 +247,9 @@ python -m certification execute --manifest manifest.json --confirm
 python -m certification matrix
 python -m certification report --evidence certification-evidence.json
 ```
+
+Use `--staging scripts/certification/public-demo-staging.json` for the
+canonical exact-byte public fixture matrix.
 
 `plan` builds a manifest of cells from real generator output. `verify` checks
 that the manifest is internally complete — every hypothesis is covered, every

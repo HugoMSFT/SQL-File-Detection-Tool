@@ -9,9 +9,10 @@ clock, or the network.
 Canonical public copies are mapped in
 [`scripts/certification/public-demo-fixtures.json`](../scripts/certification/public-demo-fixtures.json).
 The mapping preserves every relative path required by Delta and Iceberg. Its
-`publication_status` and anonymous container status are authoritative: local
-fixtures remain the deterministic offline source until every public object has
-been uploaded and hash-verified.
+`publication_status` and anonymous container status are authoritative. All 23
+objects are published at the canonical base and were anonymously downloaded,
+byte-counted, and SHA-256 verified. Local fixtures remain the deterministic
+offline source for tests.
 
 ```bash
 python demo/generate_samples.py            # regenerate everything in place
@@ -20,7 +21,7 @@ python demo/generate_samples.py --output-dir /tmp/demo
 ```
 
 The generator uses only dependencies the project already requires
-(`pandas`, `pyarrow`, `openpyxl`) plus the standard library.
+(`pandas`, `pyarrow`, `openpyxl`, `fastavro`) plus the standard library.
 
 ---
 
@@ -84,6 +85,14 @@ generator produces:
 
 Every column carries a non-null low value, a boundary value, a high value
 and a `NULL`, so nullability and range handling are both visible.
+
+The table above describes ordinary `CREATE TABLE` mappings. For Parquet
+external tables, SQL Server 2025 requires physical `INT64`
+`TIMESTAMP(NANOS)` values to be exposed as `BIGINT` and timezone timestamps
+as `DATETIME2`; generated SQL labels those target-specific translations as
+Mapped. Parquet list, struct, and map fields cannot be represented by SQL
+Server external-table columns, so the generator now returns explicit
+flattening guidance instead of emitting a construct that fails at runtime.
 
 ### Table formats
 

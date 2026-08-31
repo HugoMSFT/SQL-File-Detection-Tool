@@ -31,6 +31,9 @@ from certification.matrix import FIXTURES_BY_KEY
 from conftest import REPO_ROOT
 
 STAGING_PATH = os.path.join(REPO_ROOT, 'scripts', 'certification', 'staging.example.json')
+PUBLIC_DEMO_STAGING_PATH = os.path.join(
+    REPO_ROOT, 'scripts', 'certification', 'public-demo-staging.json',
+)
 
 
 @pytest.fixture()
@@ -203,6 +206,57 @@ def test_a_remote_fixture_without_a_shape_is_not_executable(tmp_path):
         assert cell['plan_verdict'] == 'NOT_EXECUTABLE'
         assert cell['unstaged'] is True
         assert 'declares no public shape' in cell['reason']
+
+
+def test_exact_public_fixtures_use_local_metadata_only_after_hash_validation():
+    manifest = build_manifest(
+        target='vm',
+        identity=RunIdentity('0123abcd'),
+        staging=Staging.load(PUBLIC_DEMO_STAGING_PATH),
+        emit_sql=True,
+    )
+    exact = [
+        cell for cell in manifest['cells']
+        if cell.get('public_fixture_exact')
+    ]
+    assert exact
+    assert all(cell['public_fixture_url'].startswith(
+        'https://publicsamples.blob.core.windows.net/filesamples/'
+    ) for cell in exact)
+    csv = next(cell for cell in exact if cell['cell_id'] == 'C13')
+    assert csv['plan_verdict'] == 'READY'
+    assert csv['expectations'] == {'row_count': 6, 'column_count': 10}
+    assert 'unit_price' in csv['sql_redacted']
+    assert 'sepal_length' not in csv['sql_redacted']
+
+
+def test_exact_public_fixture_rejects_a_noncanonical_location(tmp_path):
+    document = {
+        'version': 1,
+        'hosts': ['publicsamples.blob.core.windows.net'],
+        'fixtures': {
+            'csv_scalar': {
+                'exact_fixture': True,
+                'abs': (
+                    'abs://filesamples@publicsamples.blob.core.windows.net/'
+                    'csv/not-the-manifested-file.csv'
+                ),
+            },
+        },
+    }
+    path = tmp_path / 'staging.json'
+    path.write_text(json.dumps(document), encoding='utf-8')
+    manifest = build_manifest(
+        target='vm',
+        identity=RunIdentity('0123abcd'),
+        staging=Staging.load(str(path)),
+    )
+    remote = next(
+        cell for cell in manifest['cells']
+        if cell['cell_id'] == 'C13'
+    )
+    assert remote['plan_verdict'] == 'NOT_EXECUTABLE'
+    assert 'not the canonical URL' in remote['reason']
 
 
 def test_a_staged_cell_generates_from_the_public_shape_not_the_demo_file():

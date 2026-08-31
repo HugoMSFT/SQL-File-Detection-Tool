@@ -41,6 +41,7 @@ PUBLIC_HOSTS = (
     'azcliprod.blob.core.windows.net',
     'openvmmghtestresults.blob.core.windows.net',
     'openvmmghtestresults.dfs.core.windows.net',
+    'publicsamples.blob.core.windows.net',
 )
 
 #: Placeholder shapes the generator emits on purpose. These are *not* secrets.

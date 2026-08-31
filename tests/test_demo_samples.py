@@ -215,6 +215,45 @@ def test_all_types_parquet_sql_type_mapping(detector):
             EXPECTED_SQL_TYPES[column], (column, arrow_type)
 
 
+def test_all_types_parquet_external_table_maps_nanoseconds_to_physical_int64(detector):
+    metadata = {
+        'file_path': 'temporal.parquet',
+        'file_name': 'temporal.parquet',
+        'file_type': 'parquet',
+        'schema': [
+            ['c_timestamp_ns', 'timestamp[ns]'],
+            ['c_timestamp_utc', 'timestamp[us, tz=UTC]'],
+        ],
+        'parquet_physical_types': {
+            'c_timestamp_ns': 'INT64',
+            'c_timestamp_utc': 'INT64',
+        },
+    }
+    generator = SQLGenerator()
+
+    create_table = generator.generate_create_table(
+        metadata, target_platform='sql_server_2025')
+    external_table = generator.generate_external_table(
+        metadata, target_platform='sql_server_2025')
+
+    assert '[c_timestamp_ns] DATETIME2(7)' in create_table
+    assert '[c_timestamp_utc] DATETIMEOFFSET(6)' in create_table
+    assert '[c_timestamp_ns] BIGINT' in external_table
+    assert '[c_timestamp_utc] DATETIME2(6)' in external_table
+    assert 'Mapped: Parquet TIMESTAMP(NANOS) physical INT64' in external_table
+
+
+def test_all_types_parquet_external_table_refuses_nested_columns(detector):
+    metadata = detector.analyze_file_metadata(
+        os.path.join(DEMO_DIR, 'parquet', 'all_types.parquet'))
+    sql = SQLGenerator().generate_external_table(
+        metadata, target_platform='sql_server_2025')
+
+    assert 'NOT AVAILABLE' in sql
+    assert 'Flatten or remove nested columns first' in sql
+    assert 'CREATE EXTERNAL TABLE [' not in sql
+
+
 def test_all_types_parquet_create_table_is_complete(detector):
     metadata = detector.analyze_file_metadata(
         os.path.join(DEMO_DIR, 'parquet', 'all_types.parquet'))

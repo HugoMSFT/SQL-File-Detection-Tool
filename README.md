@@ -5,6 +5,11 @@ T-SQL loading and external-table guidance. It supports local files, Amazon S3,
 and Azure Blob Storage through a CLI, a local web interface, and a VS Code
 extension.
 
+This is a personal, independent open-source project. It is not sponsored,
+endorsed, certified, or approved by Microsoft. Microsoft, Azure, SQL Server,
+Fabric, and Visual Studio Code are trademarks of Microsoft Corporation; their
+names are used only to identify compatible products and services.
+
 **Azure SQL Database is the default target platform.** Every entry point - CLI,
 web UI, Python API, and VS Code extension - generates Azure SQL Database output
 unless another platform is selected explicitly.
@@ -364,11 +369,12 @@ script does not create one. Choose `sas` only when a managed identity is not
 available; the master key section returns when you do. Grant the identity
 **Storage Blob Data Reader** on the container.
 
-### Certified against live engines
+### Verified by this project against live engines
 
+This is project-run compatibility testing, **not Microsoft certification**.
 Rules marked `live` in `tests/certification/expected-matrix.json` are not
 inferred from documentation. They were run against a live Azure SQL Database
-(12.0.2000.8) and a live SQL Server 2025 instance (17.0.4065.4), and the
+(12.0.2000.8) and a live SQL Server 2025 instance (17.0.1000.7), and the
 findings are recorded there as machine-readable rules. Rules marked `static`
 describe generator behaviour that the suites pin but that no live engine run
 settled. Both test suites read that file, so neither the TypeScript nor the
@@ -384,10 +390,10 @@ What the live runs settled:
   virtualization source with CSV row framing instead. The generator picks the
   source by the shape of the JSON.
 - **ORC**: `CREATE EXTERNAL FILE FORMAT ... FORMAT_TYPE = ORC` is accepted and
-  dropped cleanly by both engines, but no maintained public ORC dataset was
-  available to read, so the data path is **not** certified. The generator says
-  exactly that rather than claiming full support. This is separate from the
-  native reader, which recognises ORC without parsing it.
+  dropped cleanly. The canonical ORC fixture is published, but the production
+  path does not execute ORC row reads, so that data path is **not verified**.
+  This is separate from the native reader, which recognises ORC without parsing
+  it.
 - **RCFile** is rejected outright (error 46506), and there is no JSON external
   file format (error 102) - both as expected.
 - **Excel and Iceberg** never fall through to a `DELIMITEDTEXT` format. They
@@ -396,8 +402,18 @@ What the live runs settled:
   `DATEPART(TZOFFSET)` returns it. A test that reads it back with `CONVERT`
   style 127 will disagree, because style 127 normalises to UTC - use style 121.
 - **UTF-16 `BULK INSERT` with `CODEPAGE = '1200'` preserves content**, so the
-  generator does not force `DATAFILETYPE = 'widechar'`. Exact UTF-16 CSV
-  certification remains open pending a valid staged fixture.
+  generator does not force `DATAFILETYPE = 'widechar'`. Exact UTF-16 CSV and
+  TSV fixtures both passed against the canonical public bytes.
+- **Flat Parquet external tables** pass against the canonical public fixture,
+  while nested list/struct/map fields produce explicit flattening guidance
+  instead of broken scalar columns.
+
+Earlier exact-fixture VM attempts returned SQL Server error 16560 for Parquet
+nanosecond and timezone timestamp columns. Those errors informed
+statement-specific `BIGINT` and `DATETIME2` mappings, respectively. The mapping
+branches are pinned by Python/native parity and focused tests; they are not
+claimed as successful live execution because the nested all-types fixture is
+rejected before an external table is emitted.
 
 The harness that produced this evidence lives in `scripts/certification/` and is
 not part of the published package. See its
@@ -407,17 +423,13 @@ Final run, both engines, no failures:
 
 | | SQL Server 2025 | Azure SQL Database |
 | --- | --- | --- |
-| PASS | 16 | 17 |
+| PASS | 24 | 29 |
 | FAIL | 0 | 0 |
-| NOT_EXECUTABLE | 14 | 12 |
+| NOT_EXECUTABLE | 7 | 6 |
 | BLOCKED (negative control) | 1 | 1 |
-| Accepted verdicts | 24 | 21 |
+| Accepted verdicts | 31 | 36 |
 | Confirmed defects | 0 | 0 |
-
-The two accepted-verdict counts come from different rules and should not be
-compared. The Azure figure is the later, stricter one, which stopped counting a
-cell as accepted when its static assertions fail or when it generated no SQL at
-all. Confirmed defects are zero under either rule.
+| Cleanup statements succeeded | 48 / 48 | 63 / 63 |
 
 Cleanup was verified independently after both runs: zero residual certification
 schemas, objects, credentials, data sources, file formats, databases or agent
@@ -425,14 +437,12 @@ jobs on either engine, and the pre-existing external object counts were
 unchanged. Every individual cleanup statement is recorded with its outcome, and
 in the final runs every one of them succeeded.
 
-`NOT_EXECUTABLE` is honest coverage rather than a failure. Those cells need
-specific bytes staged where the engine itself can read them, and staging them
-would have meant either writable storage the run was not authorised to create or
-a change to the server's own configuration. Neither is something a certification
-run should do to a machine holding real data, so the cells say what they could
-not prove instead of guessing. A `BLOCKED` cell on each engine is the deliberate
-negative control: a statement the safety gate is supposed to refuse, proving the
-gate was live for the whole run.
+`NOT_EXECUTABLE` is honest coverage rather than a failure. Remaining cases are
+engine-local reads unavailable to Azure SQL, nested Parquet external tables,
+and formats without an executable external-file-format construct (Excel,
+Iceberg, and JSON). A `BLOCKED` cell on each engine is the deliberate negative
+control: a statement the safety gate is supposed to refuse, proving the gate was
+live for the whole run.
 
 Export generated output:
 

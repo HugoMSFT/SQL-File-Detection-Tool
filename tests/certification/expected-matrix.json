@@ -100,7 +100,7 @@
       "evidence": "live",
       "engines": ["azure_sql_db", "sql_server_2025"],
       "rule": "whole_document_json_source",
-      "statement": "OPENROWSET with SINGLE_CLOB and DATA_SOURCE against a TYPE = BLOB_STORAGE source succeeded on both engines against https://azcliprod.blob.core.windows.net/cli/vm/aliases.json (relative path vm/aliases.json). ISJSON = 1, JSON_VALUE contentVersion = 1.0.0.0, nested JSON_QUERY bytes = 5280. Azure SQL 228 ms, SQL Server 2025 329 ms.",
+      "statement": "OPENROWSET with SINGLE_CLOB and DATA_SOURCE against a TYPE = BLOB_STORAGE source succeeded on both engines against https://azcliprod.blob.core.windows.net/cli/vm/aliases.json (relative path vm/aliases.json). ISJSON = 1, JSON_VALUE contentVersion = 1.0.0.0, nested JSON_QUERY bytes = 5280.",
       "expect": {
         "data_source_suffix": "_Bulk",
         "data_source_type": "BLOB_STORAGE",

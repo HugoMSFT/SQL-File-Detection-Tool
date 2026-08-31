@@ -6,11 +6,12 @@ uses [semantic versioning](https://semver.org/).
 
 ## [2.1.0]
 
-Generated SQL was certified against live engines - an Azure SQL Database
-(12.0.2000.8) and a SQL Server 2025 instance (17.0.4065.4) - and this release
+Generated SQL was verified by this project against live engines - an Azure SQL Database
+(12.0.2000.8) and a SQL Server 2025 instance (17.0.1000.7) - and this release
 fixes everything the runs found wrong. Both the native TypeScript generator and
-the optional Python generator carry every fix; neither can drift, because both
-test suites now read the same machine-readable evidence file.
+the optional Python generator carry every fix; neither can drift because both
+test suites read the same machine-readable evidence file. These are independent
+project test results, not Microsoft certification.
 
 ### Added
 
@@ -21,6 +22,13 @@ test suites now read the same machine-readable evidence file.
   report mixed facts and outliers without sharing one file's settings across the
   folder. Existing metadata, schema, statement, Azure/URL, Formats, copy/open,
   and export surfaces remain available.
+- **Public certification evidence omits all engine timing data.** JSON no longer
+  serializes batch/cell elapsed times, JUnit carries no `time` attributes, and
+  Markdown carries no run timestamps. This preserves functional compatibility
+  evidence without publishing benchmark-like results.
+- **The Marketplace-facing README now identifies this as a personal,
+  independent project** and explicitly disclaims Microsoft sponsorship,
+  endorsement, approval, or certification.
 
 ### Fixed
 
@@ -371,9 +379,9 @@ test suites now read the same machine-readable evidence file.
 
 - **ORC is documented as "DDL accepted, data path not certified"** rather than
   supported or unsupported. Both engines accept and drop
-  `FORMAT_TYPE = ORC` cleanly, but no maintained public ORC dataset was
-  available to read through it. The native reader still recognises ORC without
-  parsing it, which is a separate limitation.
+  `FORMAT_TYPE = ORC` cleanly. The exact fixture is now public, but the
+  production path does not execute ORC row reads. The native reader still
+  recognises ORC without parsing it, which is a separate limitation.
 - **Storage paths keep their original case**, and the README says why: blob
   paths are case sensitive, and asking for `Yellow/` when the container holds
   `yellow/` fails with error 13807.
@@ -386,30 +394,26 @@ test suites now read the same machine-readable evidence file.
 - The rubber-duck hypothesis that `CODEPAGE = '1200'` was wrong for UTF-16 bulk
   paths was **disproven** live: it preserved content, as did
   `DATAFILETYPE = 'widechar'`. The generator was left alone rather than changed
-  on the strength of the claim. Exact UTF-16 CSV certification is still open,
-  pending a valid staged fixture.
+  on the strength of the claim. Exact UTF-16 CSV and TSV fixtures now pass
+  against the canonical public bytes.
 - Live certification covers the two engine versions that actually ran. No claim
   is made for SQL Server 2019 or 2022, which were not present.
 - The Delta result certifies protocol `minReader = 1` / `minWriter = 2` and the
   `FORMAT_TYPE = DELTA` DDL, not newer Delta features.
-- Final certification runs closed with **no failures on either engine**: SQL
-  Server 2025 at 16 PASS / 0 FAIL / 14 NOT_EXECUTABLE / 1 negative control, and
-  Azure SQL Database at 17 PASS / 0 FAIL / 12 NOT_EXECUTABLE / 1 negative
+- Final project verification runs closed with **no failures on either engine**: SQL
+  Server 2025 at 24 PASS / 0 FAIL / 7 NOT_EXECUTABLE / 1 negative control, and
+  Azure SQL Database at 29 PASS / 0 FAIL / 6 NOT_EXECUTABLE / 1 negative
   control. Zero confirmed defects. Cleanup was independently verified on both
   engines and **residue is zero on both**; on Azure SQL Database every one of the
-  34 cleanup statements is recorded as successful. Reaching that took three
-  attempts, both of which were harness bugs rather than product ones — see "The
-  cleanup gate no longer refuses its own cleanup" and "Each object is dropped
-  exactly once" above. The `NOT_EXECUTABLE` cells are the byte-fidelity fixtures,
-  which need those exact bytes readable by the engine itself; the run had no
-  authorised writable storage and would not change the server's configuration to
-  reach a local path, so they record what could not be proven instead of claiming
-  coverage from a differently-shaped file.
+  63 cleanup statements is recorded as successful. Earlier cleanup hardening
+  took three attempts, all involving harness bugs rather than product ones —
+  see "The cleanup gate no longer refuses its own cleanup" and "Each object is
+  dropped exactly once" above. Remaining `NOT_EXECUTABLE` cells are explicit
+  platform/construct limits rather than missing public bytes.
 - **Excel and Iceberg are pinned by static assertion, not by live execution.**
   Both are settled by the tests that read the generated text — no
-  `DELIMITEDTEXT` format, explicit guidance instead — because neither has a
-  readable path on either engine and neither fixture was staged. Nothing about
-  them was proven by running SQL.
+  `DELIMITEDTEXT` format, explicit guidance instead. Their fixtures are public,
+  but neither has an executable external-file-format construct on these targets.
 - **The live evidence was produced by the Python generator.** The harness imports
   `external_file_detection`, so every statement that reached an engine came from
   the Python implementation. The native TypeScript generator's certification is

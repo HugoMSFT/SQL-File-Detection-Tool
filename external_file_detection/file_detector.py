@@ -580,6 +580,12 @@ class FileDetector:
 
             schema = [(field.name, str(field.type)) for field in arrow_schema]
             nullable_cols = [field.name for field in arrow_schema if field.nullable]
+            physical_types = {
+                column.path: column.physical_type
+                for index in range(len(pf.schema))
+                for column in (pf.schema.column(index),)
+                if '.' not in column.path
+            }
 
             compression = None
             if pq_meta.num_row_groups > 0:
@@ -603,6 +609,7 @@ class FileDetector:
                 'compression': compression,
                 'nullable_columns': nullable_cols,
                 'encoding': 'binary',
+                'parquet_physical_types': physical_types,
                 'parquet_metadata': {
                     'created_by': pq_meta.created_by,
                     'num_row_groups': pq_meta.num_row_groups,

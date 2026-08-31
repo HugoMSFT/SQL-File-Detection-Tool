@@ -45,6 +45,9 @@ venv.bak/
 node_modules/
 out/
 *.vsix
+certification-evidence.json
+certification-evidence.md
+scripts/certification/evidence/
 .vscode-test/
 
 # Testing

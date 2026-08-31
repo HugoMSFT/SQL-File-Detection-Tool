@@ -114,6 +114,8 @@ export interface FileMetadata {
     compression: string | null;
     nullable_columns: string[];
     parquet_metadata: ParquetMetadata | null;
+    /** Top-level Parquet physical storage types keyed by detected column name. */
+    parquet_physical_types?: Record<string, string>;
     delta_metadata: DeltaMetadata | null;
 
     native_support?: NativeSupport;

@@ -97,6 +97,12 @@ def test_expected_errors_are_only_declared_where_they_apply():
             assert 'UNSUPPORTED_EXPECTED' in entry.accepts, entry.cell_id
 
 
+def test_not_executable_acceptance_is_pinned_to_specific_output():
+    for entry in MATRIX:
+        if tuple(entry.accepts) == ('NOT_EXECUTABLE',):
+            assert entry.static_assertions, entry.cell_id
+
+
 # ---------------------------------------------------------------------------
 # Evidence file integrity
 # ---------------------------------------------------------------------------

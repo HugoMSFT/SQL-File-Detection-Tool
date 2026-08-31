@@ -23,6 +23,7 @@ import inspect
 import os
 import re
 import socket
+import struct
 import sys
 import time
 from dataclasses import dataclass, replace
@@ -41,6 +42,24 @@ ENV_PORT = 'SQLFDT_CERT_PORT'
 ENV_DATABASE = 'SQLFDT_CERT_DATABASE'
 ENV_USER = 'SQLFDT_CERT_USER'
 ENV_PASSWORD = 'SQLFDT_CERT_PASSWORD'
+ENV_ACCESS_TOKEN = 'SQLFDT_CERT_ACCESS_TOKEN'
+ENV_TRUST_SERVER_CERTIFICATE = 'SQLFDT_CERT_TRUST_SERVER_CERTIFICATE'
+_UNSAFE_CONNECTION_VALUE = re.compile(r'[;{}\r\n\x00]')
+
+
+def _optional_bool_from_env(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {'1', 'true', 'yes'}:
+        return True
+    if normalized in {'0', 'false', 'no'}:
+        return False
+    raise AdapterUnavailable(
+        f'{name} must be one of true/false, yes/no, or 1/0',
+        permanent=True,
+    )
 
 
 class AdapterUnavailable(RuntimeError):
@@ -92,23 +111,41 @@ class ConnectionSettings:
     trust_server_certificate: bool = False
     login_timeout: int = 30
 
+    def __post_init__(self) -> None:
+        for name, value in (
+            (ENV_HOST, self.host),
+            (ENV_DATABASE, self.database),
+            (ENV_USER, self.user),
+        ):
+            if value and _UNSAFE_CONNECTION_VALUE.search(value):
+                raise AdapterUnavailable(
+                    f'{name} contains a connection-string control character',
+                    permanent=True,
+                )
+
     @classmethod
-    def from_env(cls, **overrides: Any) -> 'ConnectionSettings':
+    def from_env(
+        cls, *, require_user: bool = True, **overrides: Any,
+    ) -> 'ConnectionSettings':
         settings = cls(
             host=overrides.get('host') or os.environ.get(ENV_HOST, ''),
             database=overrides.get('database') or os.environ.get(ENV_DATABASE, ''),
             user=overrides.get('user') or os.environ.get(ENV_USER, ''),
             port=int(overrides.get('port') or os.environ.get(ENV_PORT, '1433')),
+            trust_server_certificate=_optional_bool_from_env(
+                ENV_TRUST_SERVER_CERTIFICATE
+            ),
         )
         missing = [
             name
             for name, value in (
                 (ENV_HOST, settings.host),
                 (ENV_DATABASE, settings.database),
-                (ENV_USER, settings.user),
             )
             if not value
         ]
+        if require_user and not settings.user:
+            missing.append(ENV_USER)
         if missing:
             raise AdapterUnavailable(
                 'missing connection settings; set ' + ', '.join(missing),
@@ -141,6 +178,11 @@ def take_password(*, prompt: bool = True) -> str:
         f'no password supplied; set {ENV_PASSWORD} or pipe it on standard input',
         permanent=True,
     )
+
+
+def take_access_token() -> Optional[str]:
+    """Consume an optional Entra access token from the process environment."""
+    return os.environ.pop(ENV_ACCESS_TOKEN, None)
 
 
 @dataclass
@@ -219,7 +261,7 @@ class Connection:
 
 def available_drivers() -> List[str]:
     found: List[str] = []
-    for name in ('pymssql', 'pyodbc'):
+    for name in ('pyodbc', 'pymssql'):
         try:
             __import__(name)
         except ImportError:
@@ -492,8 +534,9 @@ def _looks_like_transport_failure(exc: BaseException) -> bool:
 
 def connect_with_retry(
     settings: ConnectionSettings,
-    password: str,
+    password: Optional[str] = None,
     *,
+    access_token: Optional[str] = None,
     driver: Optional[str] = None,
     attempts: int = CONNECT_ATTEMPTS,
     backoff: Sequence[float] = CONNECT_BACKOFF_S,
@@ -518,7 +561,12 @@ def connect_with_retry(
     attempt_log: List[str] = []
     for attempt in range(1, max(1, attempts) + 1):
         try:
-            connection = connect(settings, password, driver=driver)
+            connection = connect(
+                settings,
+                password,
+                access_token=access_token,
+                driver=driver,
+            )
             if attempt > 1:
                 attempt_log.append(f'attempt {attempt}: connected')
             return connection, attempt_log
@@ -556,17 +604,31 @@ class SessionFactory:
       argument, never part of ``repr`` and never written to an artifact.
     """
 
-    __slots__ = ('_settings', '_password', '_driver', 'attempts_log')
+    __slots__ = (
+        '_settings', '_password', '_access_token', '_driver', 'attempts_log',
+    )
 
     def __init__(
         self,
         settings: ConnectionSettings,
-        password: str,
+        password: Optional[str] = None,
         *,
+        access_token: Optional[str] = None,
         driver: Optional[str] = None,
     ) -> None:
+        if bool(password) == bool(access_token):
+            raise AdapterUnavailable(
+                'provide exactly one of password or access token',
+                permanent=True,
+            )
+        if access_token is not None and settings.trust_server_certificate:
+            raise AdapterUnavailable(
+                'access-token authentication requires certificate validation',
+                permanent=True,
+            )
         self._settings = settings
         self._password = password
+        self._access_token = access_token
         self._driver = driver
         self.attempts_log: List[str] = []
 
@@ -579,7 +641,7 @@ class SessionFactory:
 
     def connect(self, database: Optional[str] = None) -> Connection:
         """Open a connection, optionally to a different database on the same server."""
-        if self._password is None:
+        if self._password is None and self._access_token is None:
             raise AdapterUnavailable(
                 'this session factory has already been disposed', permanent=True,
             )
@@ -587,7 +649,10 @@ class SessionFactory:
         if database and database != settings.database:
             settings = replace(settings, database=database)
         connection, log = connect_with_retry(
-            settings, self._password, driver=self._driver
+            settings,
+            self._password,
+            access_token=self._access_token,
+            driver=self._driver,
         )
         self.attempts_log.extend(log)
         return connection
@@ -595,11 +660,30 @@ class SessionFactory:
     def dispose(self) -> None:
         """Forget the password. Safe to call more than once."""
         self._password = None
+        self._access_token = None
 
 
-def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str] = None) -> Connection:
+def connect(
+    settings: ConnectionSettings,
+    password: Optional[str] = None,
+    *,
+    access_token: Optional[str] = None,
+    driver: Optional[str] = None,
+) -> Connection:
     """Open an encrypted connection using the first available driver."""
+    if bool(password) == bool(access_token):
+        raise AdapterUnavailable(
+            'provide exactly one of password or access token',
+            permanent=True,
+        )
+    if access_token is not None and settings.trust_server_certificate:
+        raise AdapterUnavailable(
+            'access-token authentication requires certificate validation',
+            permanent=True,
+        )
     candidates = [driver] if driver else available_drivers()
+    if access_token is not None:
+        candidates = [name for name in candidates if name == 'pyodbc']
     if not candidates:
         raise AdapterUnavailable(
             'install pymssql or pyodbc in the runner environment; the harness '
@@ -619,6 +703,12 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
             if name == 'pymssql':
                 import pymssql  # noqa: WPS433
 
+                if not settings.trust_server_certificate:
+                    raise AdapterUnavailable(
+                        'pymssql cannot guarantee CA and hostname validation; '
+                        'install Microsoft ODBC Driver 18 with pyodbc',
+                        permanent=True,
+                    )
                 kwargs = _pymssql_kwargs(pymssql, settings)
                 raw = pymssql.connect(password=password, **kwargs)
                 return Connection(raw, 'pymssql')
@@ -626,6 +716,28 @@ def connect(settings: ConnectionSettings, password: str, *, driver: Optional[str
                 import pyodbc  # noqa: WPS433
 
                 odbc_driver = _first_odbc_driver(pyodbc)
+                if access_token is not None:
+                    token_bytes = access_token.encode('utf-16-le')
+                    token_struct = struct.pack(
+                        f'<I{len(token_bytes)}s',
+                        len(token_bytes),
+                        token_bytes,
+                    )
+                    token_conn_str = (
+                        f'DRIVER={{{odbc_driver}}};'
+                        f'SERVER={settings.host},{settings.port};'
+                        f'DATABASE={settings.database};'
+                        f'Encrypt={"yes" if settings.encrypt else "no"};'
+                        f'TrustServerCertificate='
+                        f'{"yes" if settings.trust_server_certificate else "no"};'
+                        f'Connection Timeout={settings.login_timeout};'
+                    )
+                    raw = pyodbc.connect(
+                        token_conn_str,
+                        attrs_before={1256: token_struct},
+                        autocommit=True,
+                    )
+                    return Connection(raw, 'pyodbc')
                 conn_str = (
                     f'DRIVER={{{odbc_driver}}};'
                     f'SERVER={settings.host},{settings.port};'

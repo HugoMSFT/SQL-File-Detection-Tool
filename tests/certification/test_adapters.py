@@ -14,6 +14,7 @@ stand-in module, so the test states what the harness *would* send.
 """
 
 import os
+import struct
 
 import pytest
 
@@ -22,10 +23,16 @@ from certification.adapters import (
     AdapterUnavailable,
     Connection,
     ConnectionSettings,
+    ENV_ACCESS_TOKEN,
+    ENV_DATABASE,
+    ENV_HOST,
+    ENV_TRUST_SERVER_CERTIFICATE,
+    ENV_USER,
     _error_number,
     _pymssql_kwargs,
     connect,
     is_transient_connect_error,
+    take_access_token,
 )
 
 
@@ -51,6 +58,19 @@ class _FakeRaw:
         pass
 
 
+class _FakePyodbc:
+    def __init__(self):
+        self.calls = []
+
+    @staticmethod
+    def drivers():
+        return ['ODBC Driver 18 for SQL Server']
+
+    def connect(self, connection_string, **kwargs):
+        self.calls.append((connection_string, kwargs))
+        return _FakeRaw()
+
+
 def _settings(**overrides):
     base = dict(
         host='cert.example.invalid',
@@ -60,6 +80,62 @@ def _settings(**overrides):
     )
     base.update(overrides)
     return ConnectionSettings(**base)
+
+
+def test_connection_settings_require_explicit_certificate_trust(monkeypatch):
+    monkeypatch.setenv(ENV_HOST, 'cert.example.invalid')
+    monkeypatch.setenv(ENV_DATABASE, 'certdb')
+    monkeypatch.setenv(ENV_USER, 'certuser')
+    monkeypatch.delenv(ENV_TRUST_SERVER_CERTIFICATE, raising=False)
+
+    assert ConnectionSettings.from_env().trust_server_certificate is False
+
+    monkeypatch.setenv(ENV_TRUST_SERVER_CERTIFICATE, 'true')
+    assert ConnectionSettings.from_env().trust_server_certificate is True
+
+
+def test_connection_settings_reject_invalid_certificate_trust(monkeypatch):
+    monkeypatch.setenv(ENV_HOST, 'cert.example.invalid')
+    monkeypatch.setenv(ENV_DATABASE, 'certdb')
+    monkeypatch.setenv(ENV_USER, 'certuser')
+    monkeypatch.setenv(ENV_TRUST_SERVER_CERTIFICATE, 'sometimes')
+
+    with pytest.raises(AdapterUnavailable, match='must be one of'):
+        ConnectionSettings.from_env()
+
+
+@pytest.mark.parametrize('name,value', [
+    (ENV_HOST, 'server.example;Encrypt=no'),
+    (ENV_DATABASE, 'db}attack'),
+    (ENV_USER, 'user\nattack'),
+])
+def test_connection_settings_reject_connection_string_injection(
+    monkeypatch, name, value,
+):
+    monkeypatch.setenv(ENV_HOST, 'cert.example.invalid')
+    monkeypatch.setenv(ENV_DATABASE, 'certdb')
+    monkeypatch.setenv(ENV_USER, 'certuser')
+    monkeypatch.setenv(name, value)
+
+    with pytest.raises(AdapterUnavailable, match='control character'):
+        ConnectionSettings.from_env()
+
+
+def test_token_auth_does_not_require_a_user(monkeypatch):
+    monkeypatch.setenv(ENV_HOST, 'cert.example.invalid')
+    monkeypatch.setenv(ENV_DATABASE, 'certdb')
+    monkeypatch.delenv(ENV_USER, raising=False)
+
+    settings = ConnectionSettings.from_env(require_user=False)
+
+    assert settings.user == ''
+
+
+def test_access_token_is_consumed_from_the_environment(monkeypatch):
+    monkeypatch.setenv(ENV_ACCESS_TOKEN, 'not-a-real-token')
+
+    assert take_access_token() == 'not-a-real-token'
+    assert ENV_ACCESS_TOKEN not in os.environ
 
 
 # -- encryption --------------------------------------------------------------
@@ -172,7 +248,9 @@ def test_connect_sends_the_password_and_the_encryption_setting_together(monkeypa
     module = _FakePymssql()
     monkeypatch.setitem(__import__('sys').modules, 'pymssql', module)
 
-    connection = connect(_settings(encrypt=True), 'not-a-real-password',
+    connection = connect(
+        _settings(encrypt=True, trust_server_certificate=True),
+        'not-a-real-password',
                          driver='pymssql')
 
     assert isinstance(connection, Connection)
@@ -180,6 +258,44 @@ def test_connect_sends_the_password_and_the_encryption_setting_together(monkeypa
     sent = module.calls[0]
     assert sent['encryption'] == 'require'
     assert sent['password'] == 'not-a-real-password'
+
+
+def test_connect_uses_odbc_access_token_without_uid_or_password(monkeypatch):
+    module = _FakePyodbc()
+    monkeypatch.setitem(__import__('sys').modules, 'pyodbc', module)
+
+    connection = connect(
+        _settings(user=''),
+        access_token='not-a-real-token',
+        driver='pyodbc',
+    )
+
+    assert connection.driver == 'pyodbc'
+    connection_string, kwargs = module.calls[0]
+    assert 'UID=' not in connection_string
+    assert 'PWD=' not in connection_string
+    assert 'not-a-real-token' not in connection_string
+    packed = kwargs['attrs_before'][1256]
+    length = struct.unpack('<I', packed[:4])[0]
+    assert packed[4:4 + length].decode('utf-16-le') == 'not-a-real-token'
+
+
+@pytest.mark.parametrize('password,token', [
+    (None, None),
+    ('not-a-real-password', 'not-a-real-token'),
+])
+def test_connect_requires_exactly_one_credential(password, token):
+    with pytest.raises(AdapterUnavailable, match='exactly one'):
+        connect(_settings(), password, access_token=token, driver='pyodbc')
+
+
+def test_access_token_auth_refuses_unvalidated_server_certificates():
+    with pytest.raises(AdapterUnavailable, match='requires certificate validation'):
+        connect(
+            _settings(trust_server_certificate=True),
+            access_token='not-a-real-token',
+            driver='pyodbc',
+        )
 
 
 def test_connect_failure_never_echoes_the_connection_arguments(monkeypatch):
@@ -193,7 +309,11 @@ def test_connect_failure_never_echoes_the_connection_arguments(monkeypatch):
     monkeypatch.setitem(__import__('sys').modules, 'pymssql', _Exploding())
 
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password', driver='pymssql')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+            driver='pymssql',
+        )
 
     message = str(excinfo.value)
     assert 'not-a-real-password' not in message
@@ -251,7 +371,11 @@ def test_a_driver_that_cannot_encrypt_is_permanent_through_connect(monkeypatch):
     fake.connect = _reflect
     monkeypatch.setitem(__import__('sys').modules, 'pymssql', fake)
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password', driver='pymssql')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+            driver='pymssql',
+        )
     assert is_transient_connect_error(excinfo.value) is False
 
 
@@ -313,7 +437,10 @@ def test_a_transient_driver_and_a_missing_one_stay_retryable(monkeypatch):
     """
     _mixed_candidates(monkeypatch)
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+        )
     assert excinfo.value.permanent is False
     assert is_transient_connect_error(excinfo.value) is True
 
@@ -329,7 +456,10 @@ def test_an_auth_failure_beside_a_missing_driver_stays_permanent(monkeypatch):
     monkeypatch.setitem(modules, 'pymssql', _LoginFailed())
     monkeypatch.setitem(modules, 'pyodbc', _FakePyodbcWithoutADriver())
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+        )
     assert is_transient_connect_error(excinfo.value) is False
 
 
@@ -343,7 +473,10 @@ def test_every_candidate_permanent_stays_permanent(monkeypatch):
     monkeypatch.setitem(modules, 'pymssql', _AlsoNoDriver())
     monkeypatch.setitem(modules, 'pyodbc', _FakePyodbcWithoutADriver())
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+        )
     assert excinfo.value.permanent is True
     assert is_transient_connect_error(excinfo.value) is False
 
@@ -351,7 +484,10 @@ def test_every_candidate_permanent_stays_permanent(monkeypatch):
 def test_the_aggregate_never_repeats_the_drivers_own_message(monkeypatch):
     _mixed_candidates(monkeypatch)
     with pytest.raises(AdapterUnavailable) as excinfo:
-        connect(_settings(), 'not-a-real-password')
+        connect(
+            _settings(trust_server_certificate=True),
+            'not-a-real-password',
+        )
     text = str(excinfo.value)
     assert 'Net-Lib' not in text
     assert "b'" not in text
@@ -366,7 +502,7 @@ def test_a_mixed_failure_is_actually_retried(monkeypatch):
     slept = []
     with pytest.raises(AdapterUnavailable):
         connect_with_retry(
-            _settings(), 'not-a-real-password',
+            _settings(trust_server_certificate=True), 'not-a-real-password',
             attempts=3, backoff=(0.0,), sleep=slept.append,
         )
     assert len(slept) == 2, 'a retryable aggregate must be retried'
@@ -456,7 +592,7 @@ def test_a_failover_on_the_first_attempt_connects_on_the_second(monkeypatch):
     slept = []
 
     connection, log = connect_with_retry(
-        _settings(), 'not-a-real-password',
+        _settings(trust_server_certificate=True), 'not-a-real-password',
         driver='pymssql', backoff=(0.0,), sleep=slept.append,
     )
 
@@ -480,7 +616,7 @@ def test_the_attempt_log_never_carries_the_servers_message(monkeypatch):
     monkeypatch.setitem(__import__('sys').modules, 'pymssql', _AlwaysFailingOver())
     with pytest.raises(AdapterUnavailable) as excinfo:
         connect_with_retry(
-            _settings(), 'not-a-real-password',
+            _settings(trust_server_certificate=True), 'not-a-real-password',
             driver='pymssql', attempts=2, backoff=(0.0,), sleep=lambda _s: None,
         )
 

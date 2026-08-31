@@ -1,9 +1,16 @@
 {
   "version": 1,
   "base_url": "https://publicsamples.blob.core.windows.net/filesamples",
-  "publication_status": "blocked_secure_secret_injection_unavailable",
-  "anonymous_container_status": 404,
+  "publication_status": "published_and_anonymously_verified",
+  "anonymous_container_status": 200,
   "artifact_count": 23,
+  "publication_verification": {
+    "uploaded": 23,
+    "unchanged": 0,
+    "anonymous_exact_bytes_sha256": 23,
+    "anonymous_listed": 23,
+    "verified_at": "2026-08-30T23:40:00Z"
+  },
   "reference_validation": {
     "delta": "complete",
     "iceberg": "complete"

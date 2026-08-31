@@ -10,7 +10,7 @@ audited afterwards has certified nothing, so every cell records:
 * the batch index each result belongs to, because batches are what actually ran;
 * SQLSTATE / error number / redacted message on failure;
 * row and column counts and the assertions that were checked;
-* elapsed time and the cleanup outcome.
+* cleanup outcome.
 
 Three renderings are produced from the same structure: JSON for machines, JUnit
 XML for CI, and Markdown for humans reviewing the pull request.
@@ -88,7 +88,6 @@ class BatchResult:
             'batch_index': self.index,
             'start_line': self.start_line,
             'verdict': self.verdict,
-            'elapsed_ms': round(self.elapsed_ms, 2),
             'row_count': self.row_count,
             'column_count': self.column_count,
             'sqlstate': self.sqlstate,
@@ -213,7 +212,6 @@ class CellResult:
             'placeholders': sorted(set(self.placeholders)),
             'batches': [b.as_dict() for b in self.batches],
             'assertions': [a.as_dict() for a in self.assertions],
-            'elapsed_ms': round(self.elapsed_ms, 2),
             'cleanup': self.cleanup,
             'notes': self.notes,
             'unstaged': self.unstaged,
@@ -271,8 +269,6 @@ class RunEvidence:
             'run_id': self.run_id,
             'target': self.target,
             'platform': self.platform,
-            'started_at': self.started_at,
-            'finished_at': self.finished_at or datetime.now(timezone.utc).isoformat(),
             'engine': self.engine,
             'lifecycle': self.lifecycle,
             'inventory_before': self.inventory_before,
@@ -438,7 +434,6 @@ def write_junit(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
         name=f'sql-file-detection-certification-{evidence.target}',
         tests=str(len(evidence.cells)),
         failures=str(len(evidence.defects)),
-        time=f'{sum(c.elapsed_ms for c in evidence.cells) / 1000:.3f}',
     )
     for cell in evidence.cells:
         case = ET.SubElement(
@@ -446,7 +441,6 @@ def write_junit(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
             'testcase',
             classname=f'{evidence.target}.{cell.hypothesis}',
             name=f'{cell.cell_id} {cell.fixture} {cell.statement_kind} ({cell.access})',
-            time=f'{cell.elapsed_ms / 1000:.3f}',
         )
         if cell.verdict in HARNESS_ONLY_VERDICTS:
             ET.SubElement(
@@ -480,12 +474,16 @@ def write_junit(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
 
 def write_markdown(evidence: RunEvidence, path: str, redactor: Redactor) -> None:
     summary = evidence.summary()
+    engine_version = ' '.join(
+        redactor.redact(
+            str(normalize_value(evidence.engine.get('version', 'unknown')))
+        ).split()
+    )
     lines: List[str] = [
         f'# Certification evidence — {evidence.target} ({evidence.platform})',
         '',
         f'* run id: `{evidence.run_id}`',
-        f'* engine: {redactor.redact(str(normalize_value(evidence.engine.get("version", "unknown"))))}',
-        f'* started: {evidence.started_at}',
+        f'* engine: {engine_version}',
         f'* cleanup verified: **{evidence.cleanup_verified}**'
         + (f' (residue: {len(evidence.residue)})' if evidence.residue else ' (residue: 0)'),
         '',

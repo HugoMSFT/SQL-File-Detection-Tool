@@ -1,0 +1,3366 @@
+{
+  "schema_version": 1,
+  "run_id": "ad1ade11",
+  "target": "azure",
+  "platform": "azure_sql_db",
+  "engine": {
+    "driver": "pyodbc",
+    "version": "Microsoft SQL Azure (RTM) - 12.0.2000.8 \n\tAug 19 2026 12:09:01 \n\tCopyright (C) 2026 Microsoft Corporation\n",
+    "edition": "SQL Azure",
+    "engine_edition": "<probe failed: ProgrammingError>",
+    "product_version": "12.0.2000.8",
+    "product_major": "12",
+    "collation": "SQL_Latin1_General_CP1_CI_AS",
+    "compatibility_level": 170,
+    "updateability": "READ_WRITE",
+    "polybase": "<probe failed: ProgrammingError>",
+    "master_key_count": 0
+  },
+  "lifecycle": {
+    "created_database": false,
+    "dropped_database": false,
+    "schema": "sqlfdt_cert_ad1ade11",
+    "schema_created": true,
+    "connect_attempts": []
+  },
+  "inventory_before": {
+    "external table": [],
+    "table": [],
+    "view": [],
+    "external file format": [
+      "TPCHParquetFormat"
+    ],
+    "external data source": [
+      "TPCHParquetBlob"
+    ],
+    "database scoped credential": [],
+    "schema": [
+      "dbo",
+      "guest",
+      "INFORMATION_SCHEMA",
+      "sys",
+      "rs",
+      "sqlfdt_cert_ad1ade11",
+      "ext",
+      "db_owner",
+      "db_accessadmin",
+      "db_securityadmin",
+      "db_ddladmin",
+      "db_backupoperator",
+      "db_datareader",
+      "db_datawriter",
+      "db_denydatareader",
+      "db_denydatawriter"
+    ]
+  },
+  "inventory_after": {
+    "external table": [],
+    "table": [],
+    "view": [],
+    "external file format": [
+      "TPCHParquetFormat"
+    ],
+    "external data source": [
+      "TPCHParquetBlob"
+    ],
+    "database scoped credential": [],
+    "schema": [
+      "dbo",
+      "guest",
+      "INFORMATION_SCHEMA",
+      "sys",
+      "rs",
+      "ext",
+      "db_owner",
+      "db_accessadmin",
+      "db_securityadmin",
+      "db_ddladmin",
+      "db_backupoperator",
+      "db_datareader",
+      "db_datawriter",
+      "db_denydatareader",
+      "db_denydatawriter"
+    ]
+  },
+  "cleanup_verified": true,
+  "cleanup_statements": [
+    {
+      "statement": "DROP EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c17_ext];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_ext];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c33_ext];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c05_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c06_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c16_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c17_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c20_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c28_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c31_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c33_fmt];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c02_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c02_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c03_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c03_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c04_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c04_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c08_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c08_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c09_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c09_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c10_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c10_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c13_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c13_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c14_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c14_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c17_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c17_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c25_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c25_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c26_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c26_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c27_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c27_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c33_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c33_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c34_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c34_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c35_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c35_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c36_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c36_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c37_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c37_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c38_src];",
+      "ok": true
+    },
+    {
+      "statement": "DROP EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c38_src_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP DATABASE SCOPED CREDENTIAL [sqlfdt_cert_ad1ade11_c26_cred];",
+      "ok": true
+    },
+    {
+      "statement": "DROP DATABASE SCOPED CREDENTIAL [sqlfdt_cert_ad1ade11_c26_cred_Bulk];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c01_csv_scalar];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c02_utf8_bom];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c03_utf16le_bom];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c04_cp932];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c14_csv_scalar];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c19_parquet_all_types];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c24_text];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c36_utf8];",
+      "ok": true
+    },
+    {
+      "statement": "DROP TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c38_utf16le_bom_tsv];",
+      "ok": true
+    },
+    {
+      "statement": "DROP SCHEMA [sqlfdt_cert_ad1ade11];",
+      "ok": true
+    }
+  ],
+  "residue": [],
+  "summary": {
+    "PASS": 29,
+    "FAIL": 0,
+    "EXEC_AFTER_SUBSTITUTION": 0,
+    "NOT_EXECUTABLE": 6,
+    "UNSUPPORTED_EXPECTED": 0,
+    "BLOCKED": 1,
+    "DRY_RUN_ACCEPTED": 0,
+    "ACCEPTED": 36,
+    "NOT_CERTIFIED": 2,
+    "DEFECTS": 0
+  },
+  "cells": [
+    {
+      "cell_id": "C01",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "create_table",
+      "access": "none",
+      "hypothesis": "H1",
+      "intent": "A caller-supplied table and schema name must propagate to every statement so a file called orders.csv can never resolve to dbo.orders.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE TABLE\n-- Source : sales_scalars.csv  (CSV)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nCREATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c01_csv_scalar]\n(\n    [row_id] BIGINT                 NULL,\n    [quantity] FLOAT                  NULL,\n    [unit_price] FLOAT                  NULL,\n    [temperature_c] FLOAT                  NULL,\n    [is_active] NVARCHAR(255)          NULL,\n    [product_name] NVARCHAR(255)          NULL,\n    [notes] NVARCHAR(255)          NULL,\n    [order_date] NVARCHAR(255)          NULL,\n    [order_timestamp] NVARCHAR(255)          NULL,\n    [order_timestamp_utc] NVARCHAR(255)          NULL\n)\n;\n\n-- Sample data (first rows from file):\n-- row_id | quantity | unit_price | temperature_c | is_active | product_name | notes | order_date | ... (2 more)\n-- -------------------------------------------------------------------------------------------------------------\n-- 1 | 12.0 | 19.99 | -3.5 | True | Widget, standard | first order | 2024-01-15 | ...\n-- 2 | -4.0 | 0.0 | 0.0 | False | Gadget \"Pro\" | NULL | 2024-02-29 | ...\n-- 3 | 0.0 | 1234.5678 | 21.25 | True | Ünicode Ünit — ★ | accented name | 2024-03-01 | ...\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: adls://<container>@<storage_account>.dfs.core.windows.net\n-- INSERT INTO [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c01_csv_scalar]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK '<path>/sales_scalars.csv',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c01_src',\n--     FORMAT = 'CSV'\n-- ) AS src;",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "[dbo]",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "no dbo anywhere in generated code"
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "CREATE TABLE \\[sqlfdt_cert_[0-9a-f]{8}\\]\\.",
+          "actual": "CREATE TABLE [sqlfdt_cert_ad1ade11].",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "table",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C02",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "utf8_bom",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H2",
+      "intent": "UTF-8 with a BOM must load with CODEPAGE 65001 and the BOM must not appear in the first column value.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : unicode_utf8_bom.csv\n-- Encoding  : UTF-8-SIG  (codepage 65001)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c02_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c02_utf8_bom]\nFROM 'unicode/unicode_utf8_bom.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c02_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001',  -- UTF-8-SIG\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c02_utf8_bom];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 20,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "row_count",
+          "expected": 20,
+          "actual": 20,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C03",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "utf16le_bom",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H2",
+      "intent": "UTF-16LE bulk loading. The original hypothesis — that CODEPAGE = 1200 is simply wrong and DATAFILETYPE = widechar is required — was DISPROVEN on live SQL Server 2025: a one-column load with CODEPAGE = '1200' preserved fidelity (122 rows, banner text intact) and DATAFILETYPE = 'widechar' preserved it too, with both byte and character terminators. Exact UTF-16 *CSV* certification is BLOCKED pending a staged valid fixture, because the only readable UTF-16 file available on the VM (an archived ERRORLOG) is not valid CSV, so its FORMAT = 'CSV' failure cannot be attributed to encoding.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "BLOCKED"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : unicode_utf16le_bom.csv\n-- Encoding  : UTF-16  (codepage 1200)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c03_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c03_utf16le_bom]\nFROM 'unicode/unicode_utf16le_bom.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c03_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '1200',  -- UTF-16\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c03_utf16le_bom];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 20,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "CODEPAGE\\s*=\\s*'1200'|DATAFILETYPE\\s*=\\s*'widechar'",
+          "actual": "CODEPAGE        = '1200'",
+          "ok": true,
+          "evaluated": true,
+          "detail": "a UTF-16 bulk load must select one of the two proven wide paths"
+        },
+        {
+          "kind": "row_count",
+          "expected": 20,
+          "actual": 20,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "Whole-file UTF-16 reads are a separate, settled case: SINGLE_CLOB fails with error 4806 and SINGLE_NCLOB succeeds. See C25.",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C04",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "cp932",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H2",
+      "intent": "CP932 must map to CODEPAGE 932 and round-trip kana exactly.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : japanese_cp932.csv\n-- Encoding  : CP932  (codepage 932)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c04_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c04_cp932]\nFROM 'unicode/japanese_cp932.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c04_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '932',  -- CP932\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c04_cp932];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 4,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "CODEPAGE\\s+=\\s+'932'",
+          "actual": "CODEPAGE        = '932'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 4,
+          "actual": 4,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C05",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "utf16le_bom",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H2",
+      "intent": "CREATE EXTERNAL FILE FORMAT only accepts ENCODING UTF8 or UTF16; any other detected encoding must degrade to a documented choice rather than emit an invalid keyword.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nCREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c05_fmt]\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        USE_TYPE_DEFAULT = FALSE,\n        ENCODING = 'UTF16',\n        FIRST_ROW = 2\n    )\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "ENCODING = '(?:UTF8|UTF16)'",
+          "actual": "ENCODING = 'UTF16'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external file format",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external file format",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C06",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "cp932",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H2",
+      "intent": "A CP932 file has no external-file-format encoding; the generator must say so instead of emitting ENCODING = CP932.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nCREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c06_fmt]\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        USE_TYPE_DEFAULT = FALSE,\n        FIRST_ROW = 2\n    )\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "ENCODING = 'CP932'",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external file format",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external file format",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C07",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_array",
+      "statement_kind": "json_functions",
+      "access": "engine_local",
+      "hypothesis": "H3",
+      "intent": "OPENJSON over a whole document read from a path the engine can open itself must parse arrays and round-trip non-ASCII text exactly.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "PASS",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "",
+      "sql_redacted": "",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "no engine_local location staged for fixture 'json_array'; the harness will not invent one",
+      "unstaged": true,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": true
+    },
+    {
+      "cell_id": "C08",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_array",
+      "statement_kind": "openrowset",
+      "access": "blob_storage",
+      "hypothesis": "H3",
+      "intent": "Remote whole-document JSON through a TYPE = BLOB_STORAGE bulk source. Live engines accept SINGLE_CLOB with a BLOB_STORAGE DATA_SOURCE, so the generator must use it instead of framing the document through the CSV reader with non-printing terminators.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : orders_array.json  (JSON)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- Whole document -> OPENJSON --------------------------------------\n-- SINGLE_CLOB needs the TYPE = BLOB_STORAGE data source [sqlfdt_cert_ad1ade11_c08_src_Bulk],\n-- not the abs:// virtualization source: the single-LOB options are\n-- rejected by abs:// / adls:// but accepted by https:// BLOB_STORAGE.\n-- BULK is relative to that source root.\nDECLARE @json NVARCHAR(MAX);\nSELECT @json = BulkColumn\nFROM OPENROWSET(\n    BULK 'json/orders_array.json',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c08_src_Bulk',\n    SINGLE_CLOB\n) AS [src];\n\nSELECT * FROM OPENJSON(@json)\nWITH (\n    [customer] NVARCHAR(MAX) '$.customer' AS JSON,\n    [discount] FLOAT '$.discount',\n    [is_paid] BIT '$.is_paid',\n    [items] NVARCHAR(MAX) '$.items' AS JSON,\n    [order_id] INT '$.order_id',\n    [placed_at] NVARCHAR(255) '$.placed_at',\n    [tags] NVARCHAR(MAX) '$.tags' AS JSON,\n    [total] FLOAT '$.total'\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 3,
+          "column_count": 8,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "SINGLE_CLOB",
+          "actual": "SINGLE_CLOB",
+          "ok": true,
+          "evaluated": true,
+          "detail": "BLOB_STORAGE bulk sources do support SINGLE_CLOB + DATA_SOURCE"
+        },
+        {
+          "kind": "row_count",
+          "expected": 3,
+          "actual": 3,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 8,
+          "actual": 8,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 35,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C09",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "ndjson",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H3",
+      "intent": "NDJSON row framing through an abs:// virtualization source. The single-LOB options are rejected by that connector - not by DATA_SOURCE as such, which a TYPE = BLOB_STORAGE source accepts - so row framing is correct here and only here. Live: abs:// row framing returned 729 rows of authoritative NDJSON on both engines.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : orders.ndjson  (JSON)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- NDJSON / JSON Lines: one document per row -----------------------\n-- Row framing needs the abs:// / adls:// virtualization source. The\n-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /\n-- FIELDQUOTE / ROWTERMINATOR with error 5369.\n-- The file is never read whole here: concatenated NDJSON is not one\n-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.\nSELECT TOP (100) [j].*\nFROM OPENROWSET(\n    BULK 'json/orders.ndjson',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c09_src',\n    FORMAT          = 'CSV',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE      = '0x0b',\n    ROWTERMINATOR   = '0x0a'\n) WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line\nCROSS APPLY OPENJSON([src].doc)\nWITH (\n    [customer] NVARCHAR(MAX) '$.customer' AS JSON,\n    [discount] FLOAT '$.discount',\n    [is_paid] BIT '$.is_paid',\n    [items] NVARCHAR(MAX) '$.items' AS JSON,\n    [order_id] INT '$.order_id',\n    [placed_at] NVARCHAR(255) '$.placed_at',\n    [tags] NVARCHAR(MAX) '$.tags' AS JSON,\n    [total] FLOAT '$.total'\n) AS [j];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 3,
+          "column_count": 8,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "SINGLE_CLOB",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "ROWTERMINATOR\\s*=\\s*'0x0a'",
+          "actual": "ROWTERMINATOR   = '0x0a'",
+          "ok": true,
+          "evaluated": true,
+          "detail": "one document per line is what makes NDJSON readable"
+        },
+        {
+          "kind": "row_count",
+          "expected": 3,
+          "actual": 3,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 8,
+          "actual": 8,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "This cell used to point at a whole-document JSON array, which the generator correctly reads with SINGLE_CLOB - so the assertion that SINGLE_CLOB is absent contradicted the live rule the same matrix records. Row framing is an NDJSON property, so it takes the NDJSON fixture.",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 35,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C10",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_array",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H3",
+      "intent": "Source selection by document shape. Given an abs:// URL for a whole JSON document, the generator must still route the read through the TYPE = BLOB_STORAGE companion source, because the abs:// connector rejects the single-LOB options with error 5369 and a whole document cannot be framed per line.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : orders_array.json  (JSON)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- Whole document -> OPENJSON --------------------------------------\n-- SINGLE_CLOB needs the TYPE = BLOB_STORAGE data source [sqlfdt_cert_ad1ade11_c10_src_Bulk],\n-- not the abs:// virtualization source: the single-LOB options are\n-- rejected by abs:// / adls:// but accepted by https:// BLOB_STORAGE.\n-- BULK is relative to that source root.\nDECLARE @json NVARCHAR(MAX);\nSELECT @json = BulkColumn\nFROM OPENROWSET(\n    BULK 'json/orders_array.json',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c10_src_Bulk',\n    SINGLE_CLOB\n) AS [src];\n\nSELECT * FROM OPENJSON(@json)\nWITH (\n    [customer] NVARCHAR(MAX) '$.customer' AS JSON,\n    [discount] FLOAT '$.discount',\n    [is_paid] BIT '$.is_paid',\n    [items] NVARCHAR(MAX) '$.items' AS JSON,\n    [order_id] INT '$.order_id',\n    [placed_at] NVARCHAR(255) '$.placed_at',\n    [tags] NVARCHAR(MAX) '$.tags' AS JSON,\n    [total] FLOAT '$.total'\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 3,
+          "column_count": 8,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "SINGLE_CLOB",
+          "actual": "SINGLE_CLOB",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "DATA_SOURCE\\s*=\\s*'[^']*_Bulk'",
+          "actual": "DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c10_src_Bulk'",
+          "ok": true,
+          "evaluated": true,
+          "detail": "the whole-document read must select the BLOB_STORAGE source"
+        },
+        {
+          "kind": "row_count",
+          "expected": 3,
+          "actual": 3,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 8,
+          "actual": 8,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 35,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C11",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_nested",
+      "statement_kind": "json_functions",
+      "access": "engine_local",
+      "hypothesis": "H3",
+      "intent": "Nested objects and arrays must surface as JSON text, not as a silently flattened scalar.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "PASS",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "",
+      "sql_redacted": "",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "no engine_local location staged for fixture 'json_nested'; the harness will not invent one",
+      "unstaged": true,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": true
+    },
+    {
+      "cell_id": "C12",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_object",
+      "statement_kind": "for_json",
+      "access": "none",
+      "hypothesis": "H3",
+      "intent": "FOR JSON PATH with INCLUDE_NULL_VALUES must preserve explicit nulls.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- FOR JSON PATH  — export SQL rows back to JSON\n-- Target : Azure SQL Database\n-- ====================================================================\n\n-- 1. Basic array output (each row = one JSON object)\nSELECT\n    JSON_QUERY([customer]) AS [customer],\n    [discount] AS [discount],\n    [is_paid] AS [is_paid],\n    JSON_QUERY([items]) AS [items],\n    [order_id] AS [order_id],\n    [placed_at] AS [placed_at],\n    JSON_QUERY([tags]) AS [tags],\n    [total] AS [total]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object]\nFOR JSON PATH;\n\n-- 2. Wrapped in a root element\nSELECT\n    JSON_QUERY([customer]) AS [customer],\n    [discount] AS [discount],\n    [is_paid] AS [is_paid],\n    JSON_QUERY([items]) AS [items],\n    [order_id] AS [order_id],\n    [placed_at] AS [placed_at],\n    JSON_QUERY([tags]) AS [tags],\n    [total] AS [total]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object]\nFOR JSON PATH, ROOT('sqlfdt_cert_ad1ade11_c12_json_object');\n\n-- 3. Include NULL values in output (omitted by default)\nSELECT\n    JSON_QUERY([customer]) AS [customer],\n    [discount] AS [discount],\n    [is_paid] AS [is_paid],\n    JSON_QUERY([items]) AS [items],\n    [order_id] AS [order_id],\n    [placed_at] AS [placed_at],\n    JSON_QUERY([tags]) AS [tags],\n    [total] AS [total]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object]\nFOR JSON PATH, INCLUDE_NULL_VALUES;\n\n-- 4. Single object (without array wrapper)\nSELECT TOP 1\n    JSON_QUERY([customer]) AS [customer],\n    [discount] AS [discount],\n    [is_paid] AS [is_paid],\n    JSON_QUERY([items]) AS [items],\n    [order_id] AS [order_id],\n    [placed_at] AS [placed_at],\n    JSON_QUERY([tags]) AS [tags],\n    [total] AS [total]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object]\nFOR JSON PATH, WITHOUT_ARRAY_WRAPPER;\n\n-- 5. JSON_OBJECT / JSON_ARRAY  (Azure SQL Database)\nSELECT\n    JSON_OBJECT(\n        'customer': [customer],\n        'discount': [discount],\n        'is_paid': [is_paid],\n        'items': [items],\n        'order_id': [order_id],\n        'placed_at': [placed_at]\n    ) AS json_row\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c12_json_object];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 1,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "FOR JSON selects from a table, so the table has to exist. It is created empty on purpose: this cell certifies the shape of the generated projection, and row counts belong to the load cells.",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C13",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H6",
+      "intent": "CSV through abs:// virtualization with FORMAT = CSV.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : sales_scalars.csv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c13_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c13_src_Bulk',\n    SINGLE_CLOB\n) AS [src];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FORMAT\\s*=\\s*'CSV'",
+          "actual": "FORMAT          = 'CSV'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "sql_excludes",
+          "expected": "FORMATFILE",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "a FORMATFILE placeholder is not executable"
+        },
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 10,
+          "actual": 10,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C14",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H6",
+      "intent": "CSV through a BLOB_STORAGE bulk source with BULK INSERT.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : sales_scalars.csv\n-- Encoding  : UTF-8  (codepage 65001)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c14_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c14_csv_scalar]\nFROM 'csv/sales_scalars.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c14_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001',  -- UTF-8\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c14_csv_scalar];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FORMAT\\s*=\\s*'CSV'",
+          "actual": "FORMAT          = 'CSV'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 10,
+          "actual": 10,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C16",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H_FIRSTROW",
+      "intent": "A header row must be skipped by the external file format itself. Without FIRST_ROW the header is converted to the column type and the query fails with error 4864.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nCREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c16_fmt]\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        USE_TYPE_DEFAULT = FALSE,\n        ENCODING = 'UTF8',\n        FIRST_ROW = 2\n    )\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FIRST_ROW = 2",
+          "actual": "FIRST_ROW = 2",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external file format",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "CREATE EXTERNAL FILE FORMAT returns no rows. The first live run asserted a staged row count against it and recorded FAIL for DDL that had in fact succeeded; success here is \"no error, and the format is in sys.external_file_formats\".",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external file format",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C17",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "create_external_table",
+      "access": "abs",
+      "hypothesis": "H_FIRSTROW",
+      "intent": "External table over CSV returns the exact row count with no header row.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL TABLE  (Azure SQL Database)\n-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT\n-- LOCATION is relative to the external data source:\n--   abs://filesamples@publicsamples.blob.core.windows.net\n-- ====================================================================\n\nCREATE EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c17_ext]\n(\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n)\nWITH\n(\n    DATA_SOURCE = [sqlfdt_cert_ad1ade11_c17_src],\n    LOCATION = 'csv/sales_scalars.csv',\n    FILE_FORMAT = [sqlfdt_cert_ad1ade11_c17_fmt]\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 10,
+          "actual": 10,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external table",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "file_format",
+          "statement_kind": "external_file_format",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": "external table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C18",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "parquet_all_types",
+      "statement_kind": "create_external_table",
+      "access": "abs",
+      "hypothesis": "H10",
+      "intent": "A Parquet external table with nested list/struct/map fields must be classified as not executable rather than mapped to scalar text columns.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL TABLE (PARQUET with nested columns)\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Flatten or remove nested columns first: c_list_int32, c_struct, c_map.",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "Flatten or remove nested columns first",
+          "actual": "Flatten or remove nested columns first",
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        },
+        {
+          "kind": "sql_excludes",
+          "expected": "CREATE EXTERNAL TABLE [",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "nested Parquet must not emit an executable external table [checked against guidance comments: no SQL was generated]"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "generator produced no executable batch",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C19",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "parquet_all_types",
+      "statement_kind": "create_table",
+      "access": "none",
+      "hypothesis": "H10",
+      "intent": "Parquet logical types map to SQL types that can hold them.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE TABLE\n-- Source : all_types.parquet  (PARQUET)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nCREATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c19_parquet_all_types]\n(\n    [c_int8] SMALLINT               NULL,\n    [c_int16] SMALLINT               NULL,\n    [c_int32] INT                    NULL,\n    [c_int64] BIGINT                 NULL,\n    [c_uint8] TINYINT                NULL,\n    [c_uint16] INT                    NULL,\n    [c_uint32] BIGINT                 NULL,\n    [c_uint64] DECIMAL(20,0)          NULL,\n    [c_float32] FLOAT                  NULL,\n    [c_float64] FLOAT                  NULL,\n    [c_bool] BIT                    NULL,\n    [c_string] NVARCHAR(255)          NULL,\n    [c_large_string] NVARCHAR(MAX)          NULL,\n    [c_binary] VARBINARY(MAX)         NULL,\n    [c_large_binary] VARBINARY(MAX)         NULL,\n    [c_date32] DATE                   NULL,\n    [c_time32_ms] TIME(3)                NULL,\n    [c_time64_us] TIME(6)                NULL,\n    [c_timestamp_ms] DATETIME2(3)           NULL,\n    [c_timestamp_us] DATETIME2(6)           NULL,\n    [c_timestamp_ns] DATETIME2(7)           NULL,\n    [c_timestamp_utc] DATETIMEOFFSET(6)      NULL,\n    [c_decimal] DECIMAL(18,4)          NULL,\n    [c_list_int32] NVARCHAR(MAX)          NULL,\n    [c_struct] NVARCHAR(MAX)          NULL,\n    [c_map] NVARCHAR(MAX)          NULL\n)\n;\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: adls://<container>@<storage_account>.dfs.core.windows.net\n-- INSERT INTO [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c19_parquet_all_types]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK '<path>/all_types.parquet',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c19_src',\n--     FORMAT = 'PARQUET'\n-- ) AS src;",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "DECIMAL(38,10) NOT NULL",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "inferred decimals must stay nullable unless proven otherwise"
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "table",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C20",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H5",
+      "intent": "USE_TYPE_DEFAULT = TRUE replaces missing values with 0 / empty string and destroys null fidelity. The behaviour-safe default is FALSE.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nCREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c20_fmt]\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        USE_TYPE_DEFAULT = FALSE,\n        ENCODING = 'UTF8',\n        FIRST_ROW = 2\n    )\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "USE_TYPE_DEFAULT = FALSE",
+          "actual": "USE_TYPE_DEFAULT = FALSE",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external file format",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external file format",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C21",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "excel",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H4",
+      "intent": "Excel is a binary workbook. It must never fall through to DELIMITEDTEXT, which would produce a script that runs and returns garbage.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "UNSUPPORTED_EXPECTED",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL FILE FORMAT\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Excel workbooks are a ZIP/OLE container, not a delimited text file. No FORMAT_TYPE describes them. Export the worksheet to CSV or Parquet first, or read the workbook with SSIS, Azure Data Factory, or the ACE OLE DB provider through a linked server.",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "DELIMITEDTEXT",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "not available|not supported|unsupported",
+          "actual": "NOT AVAILABLE",
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "generator produced no executable batch",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C22",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "iceberg",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H4",
+      "intent": "Iceberg has no CREATE EXTERNAL FILE FORMAT type; falling through to DELIMITEDTEXT would misrepresent the table.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "UNSUPPORTED_EXPECTED",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL FILE FORMAT\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Apache Iceberg tables are not a FORMAT_TYPE. Point the external table at the underlying Parquet data files, or query the table through a compute engine that speaks the Iceberg catalog.",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "DELIMITEDTEXT",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "not available|not supported|unsupported",
+          "actual": "NOT AVAILABLE",
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "generator produced no executable batch",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C32",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "json_array",
+      "statement_kind": "external_file_format",
+      "access": "abs",
+      "hypothesis": "H4",
+      "intent": "JSON has no external file format on either engine. The generator must point at OPENROWSET/OPENJSON instead of emitting FORMAT_TYPE = JSON.",
+      "verdict": "NOT_EXECUTABLE",
+      "accepts": [
+        "UNSUPPORTED_EXPECTED",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL FILE FORMAT (JSON)\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Use OPENROWSET with OPENJSON for JSON input.",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "FORMAT_TYPE = JSON",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "OPENJSON|not available|not supported",
+          "actual": "NOT AVAILABLE",
+          "ok": true,
+          "evaluated": true,
+          "detail": " [checked against guidance comments: no SQL was generated]"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "generator produced no executable batch",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C24",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "text",
+      "statement_kind": "create_table",
+      "access": "none",
+      "hypothesis": "H4",
+      "intent": "Unstructured text maps to a single wide column, not to a fabricated delimited schema.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE TABLE\n-- Source : readme_sample.txt  (TEXT)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nCREATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c24_text]\n(\n    [data] NVARCHAR(MAX) NULL\n)\n;\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: adls://<container>@<storage_account>.dfs.core.windows.net\n-- INSERT INTO [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c24_text]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK '<path>/readme_sample.txt',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c24_src',\n--     FORMAT = 'CSV'\n-- ) AS src;",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "catalog_present",
+          "expected": "table",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C25",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "delta",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H10",
+      "intent": "Delta must point at the table folder with a trailing slash, and the result certifies protocol minReader=1 / minWriter=2 only.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : events_delta  (DELTA)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- Delta Lake ------------------------------------------------------\n-- BULK points at the Delta table folder, not a single file.\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'tables/events_delta/',\n    DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c25_src',\n    FORMAT = 'DELTA'\n) AS [result];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 3,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FORMAT\\s*=\\s*'DELTA'",
+          "actual": "FORMAT = 'DELTA'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "BULK\\s+'[^']*/'",
+          "actual": "BULK 'tables/events_delta/'",
+          "ok": true,
+          "evaluated": true,
+          "detail": "Delta location needs a trailing slash"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C26",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "credential_setup",
+      "access": "abs",
+      "hypothesis": "H8",
+      "intent": "Managed identity must be offered for private storage instead of forcing a database master key and a SAS secret into the script.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- PREREQUISITE SETUP  (Azure SQL Database)\n-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET\n-- with a DATA_SOURCE reference.\n-- ====================================================================\n\n-- 1. Master key: NOT required.\n-- IDENTITY = 'MANAGED IDENTITY' stores no secret, so there is\n-- nothing for a database master key to encrypt.\n-- Certified live on Azure SQL Database: the database master\n-- key count stayed 0 before, during and after the credential\n-- existed, so no master key password has to be invented,\n-- stored or rotated.\n\n-- 2. Database Scoped Credential (managed identity)\n-- PREFERRED: no secret, no SAS token, and no database master key.\n-- Grant the server/instance managed identity the Storage Blob Data\n-- Reader role on the storage account (Storage Blob Data Contributor\n-- if the workload also writes). Certified live on Azure SQL\n-- Database: creating this credential left the database master key\n-- count at 0.\n-- Availability: Azure SQL Database and Azure SQL Managed Instance\n-- have a service identity of their own. A SQL Server instance has\n-- one only when it is Azure Arc-enabled with a system-assigned\n-- managed identity; on a SQL Server without Arc this credential\n-- cannot authenticate, and a SAS credential is the route that\n-- works. Managed identity was certified live on Azure SQL Database\n-- only.\nCREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_ad1ade11_c26_cred]\nWITH\n    IDENTITY = 'MANAGED IDENTITY';\nGO\n\n-- 3. External Data Source (data virtualization)\n-- Azure SQL data virtualization requires abs:// (Blob Storage)\n-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use\n-- an https:// location here.\nCREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c26_src]\nWITH (\n    LOCATION = 'abs://filesamples@publicsamples.blob.core.windows.net',\n    CREDENTIAL = [sqlfdt_cert_ad1ade11_c26_cred]\n);\nGO\n\n-- 4. External Data Source for BULK INSERT / OPENROWSET(BULK)\n-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,\n-- which cannot back an external table, so it gets its own name.\n-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:\n-- certified live, the single-LOB options work through a\n-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.\n-- Database Scoped Credential (managed identity)\n-- PREFERRED: no secret, no SAS token, and no database master key.\n-- Grant the server/instance managed identity the Storage Blob Data\n-- Reader role on the storage account (Storage Blob Data Contributor\n-- if the workload also writes). Certified live on Azure SQL\n-- Database: creating this credential left the database master key\n-- count at 0.\n-- Availability: Azure SQL Database and Azure SQL Managed Instance\n-- have a service identity of their own. A SQL Server instance has\n-- one only when it is Azure Arc-enabled with a system-assigned\n-- managed identity; on a SQL Server without Arc this credential\n-- cannot authenticate, and a SAS credential is the route that\n-- works. Managed identity was certified live on Azure SQL Database\n-- only.\nCREATE DATABASE SCOPED CREDENTIAL [sqlfdt_cert_ad1ade11_c26_cred_Bulk]\nWITH\n    IDENTITY = 'MANAGED IDENTITY';\nGO\n\nCREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c26_src_Bulk]\nWITH (\n    TYPE = BLOB_STORAGE,\n    LOCATION = 'https://publicsamples.blob.core.windows.net/filesamples',\n    CREDENTIAL = [sqlfdt_cert_ad1ade11_c26_cred_Bulk]\n);\nGO",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 1,
+          "start_line": 33,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 2,
+          "start_line": 44,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 3,
+          "start_line": 69,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "IDENTITY = 'MANAGED IDENTITY'",
+          "actual": "IDENTITY = 'MANAGED IDENTITY'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external data source",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "The harness never mutates RBAC; this cell certifies the emitted shape and, where a public container is used, that a credential-free data source is offered first. It is the only cell that asks for managed identity: minting a credential for every public fixture would create objects nothing needs.",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external data source",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C27",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "credential_setup",
+      "access": "abs",
+      "hypothesis": "H8",
+      "intent": "A public container needs no credential at all; the generator must say so rather than demand a SAS token.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "NOT_EXECUTABLE"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- PREREQUISITE SETUP  (Azure SQL Database)\n-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET\n-- with a DATA_SOURCE reference.\n-- ====================================================================\n\n-- 1. Master key: NOT required.\n-- The container allows anonymous read access, so no credential\n-- and no database master key are created.\n-- Certified live on Azure SQL Database: the database master\n-- key count stayed 0 before, during and after the credential\n-- existed, so no master key password has to be invented,\n-- stored or rotated.\n\n-- 2. Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\n-- 3. External Data Source (data virtualization)\n-- Azure SQL data virtualization requires abs:// (Blob Storage)\n-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use\n-- an https:// location here.\nCREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c27_src]\nWITH (\n    LOCATION = 'abs://filesamples@publicsamples.blob.core.windows.net'\n);\nGO\n\n-- 4. External Data Source for BULK INSERT / OPENROWSET(BULK)\n-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,\n-- which cannot back an external table, so it gets its own name.\n-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:\n-- certified live, the single-LOB options work through a\n-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.\n-- Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\nCREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c27_src_Bulk]\nWITH (\n    TYPE = BLOB_STORAGE,\n    LOCATION = 'https://publicsamples.blob.core.windows.net/filesamples'\n);\nGO",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 1,
+          "start_line": 28,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_excludes",
+          "expected": "CREATE MASTER KEY",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "a public container needs no database master key"
+        },
+        {
+          "kind": "sql_excludes",
+          "expected": "DATABASE SCOPED CREDENTIAL",
+          "actual": false,
+          "ok": true,
+          "evaluated": true,
+          "detail": "a public container needs no credential"
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external data source",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": "external data source",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C28",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "complete_ddl",
+      "access": "abs",
+      "hypothesis": "H7",
+      "intent": "The complete document must either be runnable as-is or state plainly which placeholders remain. It must also be idempotent enough to rerun.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "EXEC_AFTER_SUBSTITUTION"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- PREREQUISITE SETUP  (Azure SQL Database)\n-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET\n-- with a DATA_SOURCE reference.\n-- ====================================================================\n\n-- 1. Master key: NOT required.\n-- The container allows anonymous read access, so no credential\n-- and no database master key are created.\n-- Certified live on Azure SQL Database: the database master\n-- key count stayed 0 before, during and after the credential\n-- existed, so no master key password has to be invented,\n-- stored or rotated.\n\n-- 2. Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\n-- 3. External Data Source (data virtualization)\n-- Azure SQL data virtualization requires abs:// (Blob Storage)\n-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use\n-- an https:// location here.\nIF NOT EXISTS (SELECT 1 FROM sys.external_data_sources WHERE name = N'sqlfdt_cert_ad1ade11_c28_src')\nBEGIN\n    CREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src]\n    WITH (\n        LOCATION = 'abs://filesamples@publicsamples.blob.core.windows.net'\n    );\nEND\nGO\n\n-- 4. External Data Source for BULK INSERT / OPENROWSET(BULK)\n-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,\n-- which cannot back an external table, so it gets its own name.\n-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:\n-- certified live, the single-LOB options work through a\n-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.\n-- Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\nIF NOT EXISTS (SELECT 1 FROM sys.external_data_sources WHERE name = N'sqlfdt_cert_ad1ade11_c28_src_Bulk')\nBEGIN\n    CREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src_Bulk]\n    WITH (\n        TYPE = BLOB_STORAGE,\n        LOCATION = 'https://publicsamples.blob.core.windows.net/filesamples'\n    );\nEND\nGO\n\n-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nIF NOT EXISTS (SELECT 1 FROM sys.external_file_formats WHERE name = N'sqlfdt_cert_ad1ade11_c28_fmt')\nBEGIN\n    CREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c28_fmt]\n    WITH (\n        FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS (\n            FIELD_TERMINATOR = ',',\n            STRING_DELIMITER = '\"',\n            USE_TYPE_DEFAULT = FALSE,\n            ENCODING = 'UTF8',\n            FIRST_ROW = 2\n        )\n    );\nEND\n\nGO\n\n-- ====================================================================\n-- CREATE EXTERNAL TABLE  (Azure SQL Database)\n-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT\n-- LOCATION is relative to the external data source:\n--   abs://filesamples@publicsamples.blob.core.windows.net\n-- ====================================================================\n\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_ext]', N'U') IS NULL\nBEGIN\n    CREATE EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_ext]\n    (\n        [row_id] BIGINT,\n        [quantity] FLOAT,\n        [unit_price] FLOAT,\n        [temperature_c] FLOAT,\n        [is_active] NVARCHAR(255),\n        [product_name] NVARCHAR(255),\n        [notes] NVARCHAR(255),\n        [order_date] NVARCHAR(255),\n        [order_timestamp] NVARCHAR(255),\n        [order_timestamp_utc] NVARCHAR(255)\n    )\n    WITH\n    (\n        DATA_SOURCE = [sqlfdt_cert_ad1ade11_c28_src],\n        LOCATION = 'csv/sales_scalars.csv',\n        FILE_FORMAT = [sqlfdt_cert_ad1ade11_c28_fmt]\n    );\nEND\n\nGO\n\n-- ====================================================================\n-- CREATE TABLE\n-- Source : sales_scalars.csv  (CSV)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]', N'U') IS NULL\nBEGIN\n    CREATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\n    (\n        [row_id] BIGINT                 NULL,\n        [quantity] FLOAT                  NULL,\n        [unit_price] FLOAT                  NULL,\n        [temperature_c] FLOAT                  NULL,\n        [is_active] NVARCHAR(255)          NULL,\n        [product_name] NVARCHAR(255)          NULL,\n        [notes] NVARCHAR(255)          NULL,\n        [order_date] NVARCHAR(255)          NULL,\n        [order_timestamp] NVARCHAR(255)          NULL,\n        [order_timestamp_utc] NVARCHAR(255)          NULL\n    )\n    ;\nEND\n\n-- Sample data (first rows from file):\n-- row_id | quantity | unit_price | temperature_c | is_active | product_name | notes | order_date | ... (2 more)\n-- -------------------------------------------------------------------------------------------------------------\n-- 1 | 12.0 | 19.99 | -3.5 | True | Widget, standard | first order | 2024-01-15 | ...\n-- 2 | -4.0 | 0.0 | 0.0 | False | Gadget \"Pro\" | NULL | 2024-02-29 | ...\n-- 3 | 0.0 | 1234.5678 | 21.25 | True | Ünicode Ünit — ★ | accented name | 2024-03-01 | ...\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- INSERT INTO [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK 'csv/sales_scalars.csv',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c28_src',\n--     FORMAT = 'CSV'\n-- ) AS src;\n\nGO\n\n-- ====================================================================\n-- RERUN SAFETY\n-- ====================================================================\n-- Every CREATE above is guarded, so re-running this document will not\n-- fail on an object that already exists. Data is the other half: the\n-- load below appends, so a second run inserts the same rows into\n-- [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar] again.\n--\n-- Emptying [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar] first is what makes the row count stable\n-- across runs. It is enabled here because you named this target\n-- explicitly, so it is not a table this tool guessed at. Delete this\n-- batch if you mean to append to what is already there.\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]', N'U') IS NOT NULL\n    TRUNCATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\nGO\n\n-- ====================================================================\n-- BULK INSERT\n-- Source    : sales_scalars.csv\n-- Encoding  : UTF-8  (codepage 65001)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c28_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFROM 'csv/sales_scalars.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001',  -- UTF-8\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- OPENROWSET\n-- Source  : sales_scalars.csv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src_Bulk',\n    SINGLE_CLOB\n) AS [src];\n\nGO\n\n-- ====================================================================\n-- FOR JSON PATH  — export SQL rows back to JSON\n-- Target : Azure SQL Database\n-- ====================================================================\n\n-- 1. Basic array output (each row = one JSON object)\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH;\n\n-- 2. Wrapped in a root element\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, ROOT('sqlfdt_cert_ad1ade11_c28_csv_scalar');\n\n-- 3. Include NULL values in output (omitted by default)\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, INCLUDE_NULL_VALUES;\n\n-- 4. Single object (without array wrapper)\nSELECT TOP 1\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, WITHOUT_ARRAY_WRAPPER;\n\n-- 5. JSON_OBJECT / JSON_ARRAY  (Azure SQL Database)\nSELECT\n    JSON_OBJECT(\n        'row_id': [row_id],\n        'quantity': [quantity],\n        'unit_price': [unit_price],\n        'temperature_c': [temperature_c],\n        'is_active': [is_active],\n        'product_name': [product_name]\n    ) AS json_row\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- BEST PRACTICES  —  sales_scalars.csv\n-- Target   : Azure SQL Database\n-- File type : CSV\n-- File size : 0.0 MB\n-- Row count : 6\n-- Encoding  : UTF-8\n-- ====================================================================\n\n-- RECOMMENDED PATH\n--   Best option   : BULK INSERT for load, then validate in SQL\n--   Fastest path  : BULK INSERT for local or staged CSV/text files\n--   Lowest cost   : OPENROWSET with projection/filtering\n--   Staging       : For small files, direct load is fine, but keep a validation query ready\n\n-- WARNINGS / WATCH-OUTS\n--   Nullable numeric columns detected: row_id, quantity, unit_price, temperature_c. Stage as text if source quality is inconsistent.\n\n-- RECOMMENDED LOADING METHODS for Azure SQL Database:\n--   1. BULK INSERT (high-speed batch loads)\n--   2. OPENROWSET (ad-hoc / exploratory queries)\n--   3. CREATE EXTERNAL TABLE (persistent virtual table)\n--   4. FOR JSON PATH (export to JSON)\n\n-- Detected: comma-delimited, encoding UTF-8\n\n-- 1. TOOL SELECTION\n--    < 1 GB   → BULK INSERT with a BLOB_STORAGE data source\n--    Any size → OPENROWSET over an abs:// or adls:// data source\n--    Repeated loads → CREATE EXTERNAL TABLE (data virtualization)\n\n-- 2. ENCODING\n--    Detected encoding : UTF-8\n--    Always specify CODEPAGE to avoid silent data corruption.\n--    UTF-8 → CODEPAGE = '65001'   |   UTF-16 → CODEPAGE = '1200'\n--    Latin-1 / CP1252 → CODEPAGE = '1252'\n\n-- 3. HEADER ROW\n--    has_header = True → FIRSTROW = 2 (skip header)\n\n-- 4. STAGING PATTERN (recommended)\n--    a. Load raw data into a STAGING table (all columns NVARCHAR).\n--    b. Validate / transform into the final typed table.\n--    c. This avoids cryptic conversion errors on bad rows.\n\n-- 5. PERFORMANCE\n--    Split large files into 256 MB chunks before importing.\n--    Pre-sort by the partition key when possible.\n\n-- 6. ERROR HANDLING\n--    Use MAXERRORS to log bad rows before aborting.\n--    Pair with ERRORFILE to capture rejected rows for inspection.\n\n-- 7. BULK INSERT TEMPLATE\n--    BULK INSERT [dbo].[MyTable]\n--    FROM 'folder/file.csv'\n--    WITH (\n--        DATA_SOURCE = 'MyDataSource_Bulk',  -- TYPE = BLOB_STORAGE\n--        FIRSTROW = 2,\n--        FIELDTERMINATOR = ',',\n--        CODEPAGE = '65001',\n--        TABLOCK\n--    );\n\n-- VALIDATION SQL AFTER LOAD\n-- 1. Row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\n-- 2. Sample rows\nSELECT TOP 10 [row_id], [quantity], [unit_price] FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\n-- 3. Null distribution check\nSELECT SUM(CASE WHEN [row_id] IS NULL THEN 1 ELSE 0 END) AS [row_id_nulls], SUM(CASE WHEN [quantity] IS NULL THEN 1 ELSE 0 END) AS [quantity_nulls], SUM(CASE WHEN [unit_price] IS NULL THEN 1 ELSE 0 END) AS [unit_price_nulls] FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- COPY INTO\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Recommended alternatives:\n-- 1. BULK INSERT for high-speed CSV/text ingestion (see BULK INSERT tab).\n-- 2. OPENROWSET for ad-hoc reads and ELT patterns (see OPENROWSET tab).\n--    Use SELECT INTO or INSERT INTO ... SELECT FROM OPENROWSET for loading.\n-- 3. OPENJSON / JSON_VALUE for JSON ingestion (see JSON Functions tab).\n\nGO\n",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 1,
+          "start_line": 31,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 2,
+          "start_line": 51,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 3,
+          "start_line": 70,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 4,
+          "start_line": 102,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 5,
+          "start_line": 149,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 6,
+          "start_line": 165,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 7,
+          "start_line": 202,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 8,
+          "start_line": 250,
+          "verdict": "PASS",
+          "row_count": 1,
+          "column_count": 1,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 9,
+          "start_line": 329,
+          "verdict": "PASS",
+          "row_count": 1,
+          "column_count": 1,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C29",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "complete_ddl",
+      "access": "abs",
+      "hypothesis": "H7",
+      "intent": "Second execution of the same document: rerun behaviour is part of the contract, not an accident. A rerun that fails is a defect, not a platform limitation, so UNSUPPORTED_EXPECTED is not on the list.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "EXEC_AFTER_SUBSTITUTION"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- PREREQUISITE SETUP  (Azure SQL Database)\n-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET\n-- with a DATA_SOURCE reference.\n-- ====================================================================\n\n-- 1. Master key: NOT required.\n-- The container allows anonymous read access, so no credential\n-- and no database master key are created.\n-- Certified live on Azure SQL Database: the database master\n-- key count stayed 0 before, during and after the credential\n-- existed, so no master key password has to be invented,\n-- stored or rotated.\n\n-- 2. Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\n-- 3. External Data Source (data virtualization)\n-- Azure SQL data virtualization requires abs:// (Blob Storage)\n-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use\n-- an https:// location here.\nIF NOT EXISTS (SELECT 1 FROM sys.external_data_sources WHERE name = N'sqlfdt_cert_ad1ade11_c28_src')\nBEGIN\n    CREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src]\n    WITH (\n        LOCATION = 'abs://filesamples@publicsamples.blob.core.windows.net'\n    );\nEND\nGO\n\n-- 4. External Data Source for BULK INSERT / OPENROWSET(BULK)\n-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,\n-- which cannot back an external table, so it gets its own name.\n-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:\n-- certified live, the single-LOB options work through a\n-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.\n-- Database Scoped Credential: not required.\n-- The container allows anonymous read access, so the external\n-- data source below is created without a CREDENTIAL.\n\nIF NOT EXISTS (SELECT 1 FROM sys.external_data_sources WHERE name = N'sqlfdt_cert_ad1ade11_c28_src_Bulk')\nBEGIN\n    CREATE EXTERNAL DATA SOURCE [sqlfdt_cert_ad1ade11_c28_src_Bulk]\n    WITH (\n        TYPE = BLOB_STORAGE,\n        LOCATION = 'https://publicsamples.blob.core.windows.net/filesamples'\n    );\nEND\nGO\n\n-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nIF NOT EXISTS (SELECT 1 FROM sys.external_file_formats WHERE name = N'sqlfdt_cert_ad1ade11_c28_fmt')\nBEGIN\n    CREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c28_fmt]\n    WITH (\n        FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS (\n            FIELD_TERMINATOR = ',',\n            STRING_DELIMITER = '\"',\n            USE_TYPE_DEFAULT = FALSE,\n            ENCODING = 'UTF8',\n            FIRST_ROW = 2\n        )\n    );\nEND\n\nGO\n\n-- ====================================================================\n-- CREATE EXTERNAL TABLE  (Azure SQL Database)\n-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT\n-- LOCATION is relative to the external data source:\n--   abs://filesamples@publicsamples.blob.core.windows.net\n-- ====================================================================\n\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_ext]', N'U') IS NULL\nBEGIN\n    CREATE EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_ext]\n    (\n        [row_id] BIGINT,\n        [quantity] FLOAT,\n        [unit_price] FLOAT,\n        [temperature_c] FLOAT,\n        [is_active] NVARCHAR(255),\n        [product_name] NVARCHAR(255),\n        [notes] NVARCHAR(255),\n        [order_date] NVARCHAR(255),\n        [order_timestamp] NVARCHAR(255),\n        [order_timestamp_utc] NVARCHAR(255)\n    )\n    WITH\n    (\n        DATA_SOURCE = [sqlfdt_cert_ad1ade11_c28_src],\n        LOCATION = 'csv/sales_scalars.csv',\n        FILE_FORMAT = [sqlfdt_cert_ad1ade11_c28_fmt]\n    );\nEND\n\nGO\n\n-- ====================================================================\n-- CREATE TABLE\n-- Source : sales_scalars.csv  (CSV)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]', N'U') IS NULL\nBEGIN\n    CREATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\n    (\n        [row_id] BIGINT                 NULL,\n        [quantity] FLOAT                  NULL,\n        [unit_price] FLOAT                  NULL,\n        [temperature_c] FLOAT                  NULL,\n        [is_active] NVARCHAR(255)          NULL,\n        [product_name] NVARCHAR(255)          NULL,\n        [notes] NVARCHAR(255)          NULL,\n        [order_date] NVARCHAR(255)          NULL,\n        [order_timestamp] NVARCHAR(255)          NULL,\n        [order_timestamp_utc] NVARCHAR(255)          NULL\n    )\n    ;\nEND\n\n-- Sample data (first rows from file):\n-- row_id | quantity | unit_price | temperature_c | is_active | product_name | notes | order_date | ... (2 more)\n-- -------------------------------------------------------------------------------------------------------------\n-- 1 | 12.0 | 19.99 | -3.5 | True | Widget, standard | first order | 2024-01-15 | ...\n-- 2 | -4.0 | 0.0 | 0.0 | False | Gadget \"Pro\" | NULL | 2024-02-29 | ...\n-- 3 | 0.0 | 1234.5678 | 21.25 | True | Ünicode Ünit — ★ | accented name | 2024-03-01 | ...\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- INSERT INTO [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK 'csv/sales_scalars.csv',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c28_src',\n--     FORMAT = 'CSV'\n-- ) AS src;\n\nGO\n\n-- ====================================================================\n-- RERUN SAFETY\n-- ====================================================================\n-- Every CREATE above is guarded, so re-running this document will not\n-- fail on an object that already exists. Data is the other half: the\n-- load below appends, so a second run inserts the same rows into\n-- [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar] again.\n--\n-- Emptying [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar] first is what makes the row count stable\n-- across runs. It is enabled here because you named this target\n-- explicitly, so it is not a table this tool guessed at. Delete this\n-- batch if you mean to append to what is already there.\nIF OBJECT_ID(N'[sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]', N'U') IS NOT NULL\n    TRUNCATE TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\nGO\n\n-- ====================================================================\n-- BULK INSERT\n-- Source    : sales_scalars.csv\n-- Encoding  : UTF-8  (codepage 65001)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c28_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFROM 'csv/sales_scalars.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001',  -- UTF-8\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- OPENROWSET\n-- Source  : sales_scalars.csv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c28_src_Bulk',\n    SINGLE_CLOB\n) AS [src];\n\nGO\n\n-- ====================================================================\n-- FOR JSON PATH  — export SQL rows back to JSON\n-- Target : Azure SQL Database\n-- ====================================================================\n\n-- 1. Basic array output (each row = one JSON object)\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH;\n\n-- 2. Wrapped in a root element\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, ROOT('sqlfdt_cert_ad1ade11_c28_csv_scalar');\n\n-- 3. Include NULL values in output (omitted by default)\nSELECT\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, INCLUDE_NULL_VALUES;\n\n-- 4. Single object (without array wrapper)\nSELECT TOP 1\n    [row_id] AS [row_id],\n    [quantity] AS [quantity],\n    [unit_price] AS [unit_price],\n    [temperature_c] AS [temperature_c],\n    [is_active] AS [is_active],\n    [product_name] AS [product_name],\n    [notes] AS [notes],\n    [order_date] AS [order_date],\n    [order_timestamp] AS [order_timestamp],\n    [order_timestamp_utc] AS [order_timestamp_utc]\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar]\nFOR JSON PATH, WITHOUT_ARRAY_WRAPPER;\n\n-- 5. JSON_OBJECT / JSON_ARRAY  (Azure SQL Database)\nSELECT\n    JSON_OBJECT(\n        'row_id': [row_id],\n        'quantity': [quantity],\n        'unit_price': [unit_price],\n        'temperature_c': [temperature_c],\n        'is_active': [is_active],\n        'product_name': [product_name]\n    ) AS json_row\nFROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- BEST PRACTICES  —  sales_scalars.csv\n-- Target   : Azure SQL Database\n-- File type : CSV\n-- File size : 0.0 MB\n-- Row count : 6\n-- Encoding  : UTF-8\n-- ====================================================================\n\n-- RECOMMENDED PATH\n--   Best option   : BULK INSERT for load, then validate in SQL\n--   Fastest path  : BULK INSERT for local or staged CSV/text files\n--   Lowest cost   : OPENROWSET with projection/filtering\n--   Staging       : For small files, direct load is fine, but keep a validation query ready\n\n-- WARNINGS / WATCH-OUTS\n--   Nullable numeric columns detected: row_id, quantity, unit_price, temperature_c. Stage as text if source quality is inconsistent.\n\n-- RECOMMENDED LOADING METHODS for Azure SQL Database:\n--   1. BULK INSERT (high-speed batch loads)\n--   2. OPENROWSET (ad-hoc / exploratory queries)\n--   3. CREATE EXTERNAL TABLE (persistent virtual table)\n--   4. FOR JSON PATH (export to JSON)\n\n-- Detected: comma-delimited, encoding UTF-8\n\n-- 1. TOOL SELECTION\n--    < 1 GB   → BULK INSERT with a BLOB_STORAGE data source\n--    Any size → OPENROWSET over an abs:// or adls:// data source\n--    Repeated loads → CREATE EXTERNAL TABLE (data virtualization)\n\n-- 2. ENCODING\n--    Detected encoding : UTF-8\n--    Always specify CODEPAGE to avoid silent data corruption.\n--    UTF-8 → CODEPAGE = '65001'   |   UTF-16 → CODEPAGE = '1200'\n--    Latin-1 / CP1252 → CODEPAGE = '1252'\n\n-- 3. HEADER ROW\n--    has_header = True → FIRSTROW = 2 (skip header)\n\n-- 4. STAGING PATTERN (recommended)\n--    a. Load raw data into a STAGING table (all columns NVARCHAR).\n--    b. Validate / transform into the final typed table.\n--    c. This avoids cryptic conversion errors on bad rows.\n\n-- 5. PERFORMANCE\n--    Split large files into 256 MB chunks before importing.\n--    Pre-sort by the partition key when possible.\n\n-- 6. ERROR HANDLING\n--    Use MAXERRORS to log bad rows before aborting.\n--    Pair with ERRORFILE to capture rejected rows for inspection.\n\n-- 7. BULK INSERT TEMPLATE\n--    BULK INSERT [dbo].[MyTable]\n--    FROM 'folder/file.csv'\n--    WITH (\n--        DATA_SOURCE = 'MyDataSource_Bulk',  -- TYPE = BLOB_STORAGE\n--        FIRSTROW = 2,\n--        FIELDTERMINATOR = ',',\n--        CODEPAGE = '65001',\n--        TABLOCK\n--    );\n\n-- VALIDATION SQL AFTER LOAD\n-- 1. Row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\n-- 2. Sample rows\nSELECT TOP 10 [row_id], [quantity], [unit_price] FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\n-- 3. Null distribution check\nSELECT SUM(CASE WHEN [row_id] IS NULL THEN 1 ELSE 0 END) AS [row_id_nulls], SUM(CASE WHEN [quantity] IS NULL THEN 1 ELSE 0 END) AS [quantity_nulls], SUM(CASE WHEN [unit_price] IS NULL THEN 1 ELSE 0 END) AS [unit_price_nulls] FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c28_csv_scalar];\n\nGO\n\n-- ====================================================================\n-- COPY INTO\n-- NOT AVAILABLE on Azure SQL Database\n-- ====================================================================\n-- Recommended alternatives:\n-- 1. BULK INSERT for high-speed CSV/text ingestion (see BULK INSERT tab).\n-- 2. OPENROWSET for ad-hoc reads and ELT patterns (see OPENROWSET tab).\n--    Use SELECT INTO or INSERT INTO ... SELECT FROM OPENROWSET for loading.\n-- 3. OPENJSON / JSON_VALUE for JSON ingestion (see JSON Functions tab).\n\nGO\n",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 1,
+          "start_line": 31,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 2,
+          "start_line": 51,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 3,
+          "start_line": 70,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 4,
+          "start_line": 102,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 5,
+          "start_line": 149,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 6,
+          "start_line": 165,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 7,
+          "start_line": 202,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 8,
+          "start_line": 250,
+          "verdict": "PASS",
+          "row_count": 1,
+          "column_count": 1,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 9,
+          "start_line": 329,
+          "verdict": "PASS",
+          "row_count": 1,
+          "column_count": 1,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "Names come from C28 on purpose. A rerun that invents fresh names is a first run wearing a rerun label, and would certify nothing.",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C30",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "create_table",
+      "access": "none",
+      "hypothesis": "H1",
+      "intent": "Negative control: the default, file-derived name is generated and the safety gate must refuse to execute it because it is not run-scoped.",
+      "verdict": "BLOCKED",
+      "accepts": [
+        "BLOCKED"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE TABLE\n-- Source : sales_scalars.csv  (CSV)\n-- Target : Azure SQL Database\n-- ====================================================================\n\nCREATE TABLE [dbo].[sales_scalars]\n(\n    [row_id] BIGINT                 NULL,\n    [quantity] FLOAT                  NULL,\n    [unit_price] FLOAT                  NULL,\n    [temperature_c] FLOAT                  NULL,\n    [is_active] NVARCHAR(255)          NULL,\n    [product_name] NVARCHAR(255)          NULL,\n    [notes] NVARCHAR(255)          NULL,\n    [order_date] NVARCHAR(255)          NULL,\n    [order_timestamp] NVARCHAR(255)          NULL,\n    [order_timestamp_utc] NVARCHAR(255)          NULL\n)\n;\n\n-- Sample data (first rows from file):\n-- row_id | quantity | unit_price | temperature_c | is_active | product_name | notes | order_date | ... (2 more)\n-- -------------------------------------------------------------------------------------------------------------\n-- 1 | 12.0 | 19.99 | -3.5 | True | Widget, standard | first order | 2024-01-15 | ...\n-- 2 | -4.0 | 0.0 | 0.0 | False | Gadget \"Pro\" | NULL | 2024-02-29 | ...\n-- 3 | 0.0 | 1234.5678 | 21.25 | True | Ünicode Ünit — ★ | accented name | 2024-03-01 | ...\n\n-- ====================================================================\n-- QUICK LOAD\n-- ====================================================================\n-- Azure SQL data virtualization uses an external data source\n-- whose LOCATION starts with abs:// or adls:// (not https://).\n-- Data source location: adls://<container>@<storage_account>.dfs.core.windows.net\n-- INSERT INTO [dbo].[sales_scalars]\n-- SELECT *\n-- FROM OPENROWSET(\n--     BULK '<path>/sales_scalars.csv',\n--     DATA_SOURCE = 'sqlfdt_cert_ad1ade11_c30_src',\n--     FORMAT = 'CSV'\n-- ) AS src;",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "BLOCKED",
+          "row_count": null,
+          "column_count": null,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": [
+            "FORBIDDEN_SCHEMA_DBO",
+            "FOREIGN_SCHEMA"
+          ]
+        }
+      ],
+      "assertions": [],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C31",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "csv_scalar",
+      "statement_kind": "external_file_format",
+      "access": "none",
+      "hypothesis": "H9",
+      "intent": "Version attribution: the generated script must name the platform it was generated for, so a verdict recorded on one engine is never read as covering a version that was never run. The live run reaches exactly two engines (SQL Server 2025 and Azure SQL Database); every other platform in the generator stays static-only.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "EXEC_AFTER_SUBSTITUTION",
+        "BLOCKED"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- CREATE EXTERNAL FILE FORMAT  (Azure SQL Database)\n-- USE_TYPE_DEFAULT = FALSE keeps missing fields as NULL. TRUE would store 0 for numeric and '' for string columns, which cannot be told apart from real values.\nCREATE EXTERNAL FILE FORMAT [sqlfdt_cert_ad1ade11_c31_fmt]\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        USE_TYPE_DEFAULT = FALSE,\n        ENCODING = 'UTF8',\n        FIRST_ROW = 2\n    )\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_contains",
+          "expected": "CREATE EXTERNAL FILE FORMAT",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C33",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "parquet_sales",
+      "statement_kind": "create_external_table",
+      "access": "abs",
+      "hypothesis": "H10",
+      "intent": "Flat Parquet external tables must return the exact published rows and columns through the production generator.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- CREATE EXTERNAL TABLE  (Azure SQL Database)\n-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT\n-- LOCATION is relative to the external data source:\n--   abs://filesamples@publicsamples.blob.core.windows.net\n-- ====================================================================\n\nCREATE EXTERNAL TABLE [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c33_ext]\n(\n    [order_id] BIGINT,\n    [customer] NVARCHAR(255),\n    [quantity] INT,\n    [amount] FLOAT,\n    [is_paid] BIT,\n    [order_date] DATE\n)\nWITH\n(\n    DATA_SOURCE = [sqlfdt_cert_ad1ade11_c33_src],\n    LOCATION = 'parquet/sales.parquet',\n    FILE_FORMAT = [sqlfdt_cert_ad1ade11_c33_fmt]\n);",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 4,
+          "column_count": 6,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "row_count",
+          "expected": 4,
+          "actual": 4,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        },
+        {
+          "kind": "catalog_present",
+          "expected": "external table",
+          "actual": true,
+          "ok": true,
+          "evaluated": true,
+          "detail": "DDL succeeds when the object is in the catalog, not when it returns rows"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "file_format",
+          "statement_kind": "external_file_format",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": "external table",
+      "not_certified": false
+    },
+    {
+      "cell_id": "C34",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "tsv",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H6",
+      "intent": "Tab-delimited text must retain its detected delimiter in executable OPENROWSET SQL.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : sales_scalars.tsv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.tsv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c34_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = '\\t',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars.tsv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c34_src_Bulk',\n    SINGLE_CLOB\n) AS [src];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FIELDTERMINATOR\\s*=\\s*'\\\\t'",
+          "actual": "FIELDTERMINATOR = '\\t'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 10,
+          "actual": 10,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C35",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "pipe",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H6",
+      "intent": "Pipe-delimited text must retain its detected delimiter in executable OPENROWSET SQL.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : sales_scalars_pipe.csv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars_pipe.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c35_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = '|',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [row_id] BIGINT,\n    [quantity] FLOAT,\n    [unit_price] FLOAT,\n    [temperature_c] FLOAT,\n    [is_active] NVARCHAR(255),\n    [product_name] NVARCHAR(255),\n    [notes] NVARCHAR(255),\n    [order_date] NVARCHAR(255),\n    [order_timestamp] NVARCHAR(255),\n    [order_timestamp_utc] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'csv/sales_scalars_pipe.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c35_src_Bulk',\n    SINGLE_CLOB\n) AS [src];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 6,
+          "column_count": 10,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "FIELDTERMINATOR\\s*=\\s*'\\|'",
+          "actual": "FIELDTERMINATOR = '|'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 6,
+          "actual": 6,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 10,
+          "actual": 10,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C36",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "utf8",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H2",
+      "intent": "UTF-8 without a BOM must execute with CODEPAGE 65001 and preserve the published row and column counts.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : unicode_utf8.csv\n-- Encoding  : UTF-8  (codepage 65001)\n-- Delimiter : comma  (\",\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c36_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c36_utf8]\nFROM 'unicode/unicode_utf8.csv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c36_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001',  -- UTF-8\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c36_utf8];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 20,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "CODEPAGE\\s*=\\s*'65001'",
+          "actual": "CODEPAGE        = '65001'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 20,
+          "actual": 20,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C37",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "collation",
+      "statement_kind": "openrowset",
+      "access": "abs",
+      "hypothesis": "H2",
+      "intent": "The UTF-8 collation sample must execute without conflating file encoding with SQL collation.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- OPENROWSET\n-- Source  : collation_cases_utf8.csv  (CSV)\n-- Target  : Azure SQL Database\n-- Use for : Ad-hoc / exploratory queries without creating a table\n-- ====================================================================\n\n-- Azure SQL data virtualization: BULK is relative to the external\n-- data source, whose LOCATION uses abs:// or adls:// (not https://).\n-- Data source location: abs://filesamples@publicsamples.blob.core.windows.net\n-- See the PREREQUISITE SETUP section for the CREATE EXTERNAL\n-- DATA SOURCE statement that this DATA_SOURCE name refers to.\n\n-- ---- CSV with explicit schema ----------------------------------------\nSELECT TOP (100) *\nFROM OPENROWSET(\n    BULK 'unicode/collation_cases_utf8.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c37_src',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = ',',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '65001'  -- UTF-8\n) WITH (\n    [pair_id] BIGINT,\n    [category] NVARCHAR(255),\n    [left_value] NVARCHAR(255),\n    [right_value] NVARCHAR(255),\n    [differs_under] NVARCHAR(255)\n) AS [result];\n\n-- ---- Whole file as one value (small files) ---------------------------\n-- The single-LOB options need the TYPE = BLOB_STORAGE data source;\n-- the abs:// / adls:// virtualization connectors reject them.\nSELECT BulkColumn AS file_text\nFROM OPENROWSET(\n    BULK 'unicode/collation_cases_utf8.csv',\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c37_src_Bulk',\n    SINGLE_CLOB\n) AS [src];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 14,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "row_count",
+          "expected": 14,
+          "actual": 14,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    },
+    {
+      "cell_id": "C38",
+      "target": "azure",
+      "platform": "azure_sql_db",
+      "fixture": "utf16le_bom_tsv",
+      "statement_kind": "bulk_insert",
+      "access": "blob_storage",
+      "hypothesis": "H2",
+      "intent": "UTF-16LE tab-delimited input must preserve both CODEPAGE 1200 and the detected tab delimiter.",
+      "verdict": "PASS",
+      "accepts": [
+        "PASS",
+        "BLOCKED"
+      ],
+      "accepted": true,
+      "sql_sha256": "[redacted]",
+      "sql_redacted": "-- ====================================================================\n-- BULK INSERT\n-- Source    : unicode_utf16le_bom.tsv\n-- Encoding  : UTF-16  (codepage 1200)\n-- Delimiter : tab  (\"\\t\")\n-- Target   : Azure SQL Database\n-- Use for   : High-speed batch load into Azure SQL Database\n-- Prereq    : A BLOB_STORAGE external data source is required; FROM is relative to its container\n-- ====================================================================\n\n-- Step 0: [sqlfdt_cert_ad1ade11_c38_src_Bulk] (TYPE = BLOB_STORAGE, LOCATION\n--         'https://publicsamples.blob.core.windows.net/filesamples') is created in the\n--         prerequisite setup section above.\n\n-- Step 1: Create the target table (see CREATE TABLE tab)\n\n-- Step 2: Load the data\nBULK INSERT [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c38_utf16le_bom_tsv]\nFROM 'unicode/unicode_utf16le_bom.tsv'\nWITH\n(\n    DATA_SOURCE     = 'sqlfdt_cert_ad1ade11_c38_src_Bulk',\n    FORMAT          = 'CSV',\n    FIRSTROW        = 2,        -- skip the header row\n    FIELDTERMINATOR = '\\t',\n    ROWTERMINATOR   = '0x0a',        -- LF (use '0x0d0a' for CRLF)\n    CODEPAGE        = '1200',  -- UTF-16\n    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed\n    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads\n    BATCHSIZE       = 50000            -- Tune per available memory\n);\n\n-- Verify row count\nSELECT COUNT(*) AS loaded_rows FROM [sqlfdt_cert_ad1ade11].[sqlfdt_cert_ad1ade11_c38_utf16le_bom_tsv];",
+      "substitutions": [],
+      "placeholders": [],
+      "batches": [
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 0,
+          "column_count": 0,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        },
+        {
+          "batch_index": 0,
+          "start_line": 1,
+          "verdict": "PASS",
+          "row_count": 20,
+          "column_count": 5,
+          "sqlstate": null,
+          "error_number": null,
+          "error_message": null,
+          "safety_codes": []
+        }
+      ],
+      "assertions": [
+        {
+          "kind": "sql_matches",
+          "expected": "CODEPAGE\\s*=\\s*'1200'",
+          "actual": "CODEPAGE        = '1200'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "sql_matches",
+          "expected": "FIELDTERMINATOR\\s*=\\s*'\\\\t'",
+          "actual": "FIELDTERMINATOR = '\\t'",
+          "ok": true,
+          "evaluated": true,
+          "detail": ""
+        },
+        {
+          "kind": "row_count",
+          "expected": 20,
+          "actual": 20,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged row count"
+        },
+        {
+          "kind": "column_count",
+          "expected": 5,
+          "actual": 5,
+          "ok": true,
+          "evaluated": true,
+          "detail": "staged column count"
+        }
+      ],
+      "cleanup": "not_required",
+      "notes": "",
+      "unstaged": false,
+      "setup_steps": [
+        {
+          "requirement": "setup",
+          "statement_kind": "credential_setup",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            },
+            {
+              "batch_index": 1,
+              "start_line": 28,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        },
+        {
+          "requirement": "target_table",
+          "statement_kind": "create_table",
+          "ok": true,
+          "batches": [
+            {
+              "batch_index": 0,
+              "start_line": 1,
+              "verdict": "PASS",
+              "row_count": 0,
+              "column_count": 0,
+              "sqlstate": null,
+              "error_number": null,
+              "error_message": null,
+              "safety_codes": []
+            }
+          ]
+        }
+      ],
+      "prerequisite_failed": false,
+      "catalog_object": null,
+      "not_certified": false
+    }
+  ]
+}

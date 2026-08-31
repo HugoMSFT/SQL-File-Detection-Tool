@@ -68,6 +68,7 @@ test('service URLs are built only from validated parts', () => {
     );
     assert.throws(() => serviceUrlFor('BAD NAME'), AzureInputError);
     assert.throws(() => serviceUrlFor('myaccount', 'evil.example/x'), AzureInputError);
+    assert.throws(() => serviceUrlFor('myaccount', 'attacker.example'), AzureInputError);
     assert.throws(() => serviceUrlFor('myaccount', 'a'), AzureInputError);
 });
 
@@ -140,6 +141,8 @@ test('a connection string cannot redirect requests off Azure', () => {
         'AccountName=BAD NAME;AccountKey=k',
         'AccountName=myaccount;AccountKey=k;BlobEndpoint=http://myaccount.blob.core.windows.net',
         'AccountName=myaccount;AccountKey=k;BlobEndpoint=https://evil.example',
+        'AccountName=myaccount;AccountKey=k;EndpointSuffix=attacker.example',
+        'AccountName=myaccount;AccountKey=k;BlobEndpoint=https://otheraccount.blob.core.windows.net',
         'AccountName=myaccount;AccountKey=k;BlobEndpoint=not-a-url',
     ]) {
         assert.throws(() => parseConnectionString(candidate), AzureInputError, candidate);

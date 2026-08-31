@@ -122,6 +122,8 @@ FIXTURES: Tuple[Fixture, ...] = (
     Fixture('utf8_bom', 'demo/unicode/unicode_utf8_bom.csv', 'csv', 'UTF-8 with BOM'),
     Fixture('utf16le_bom', 'demo/unicode/unicode_utf16le_bom.csv', 'csv',
             'UTF-16LE with BOM — the encoding SQL Server bulk paths handle least well'),
+    Fixture('utf16le_bom_tsv', 'demo/unicode/unicode_utf16le_bom.tsv', 'csv',
+            'UTF-16LE with BOM and tab delimiter'),
     Fixture('cp932', 'demo/unicode/japanese_cp932.csv', 'csv',
             'Shift-JIS / CP932 Japanese text'),
     Fixture('collation', 'demo/unicode/collation_cases_utf8.csv', 'csv',
@@ -448,11 +450,19 @@ MATRIX: Tuple[MatrixEntry, ...] = (
     ),
     MatrixEntry(
         'C18', 'parquet_all_types', 'create_external_table', ('vm', 'azure'), 'abs', 'H10',
-        'Parquet external table: decimal scale, timestamp precision and nulls '
-        'must survive.',
+        'A Parquet external table with nested list/struct/map fields must be '
+        'classified as not executable rather than mapped to scalar text columns.',
+        accepts=('NOT_EXECUTABLE',),
         requires=('setup', 'file_format'),
         verification='external_table',
         catalog_object='external table',
+        static_assertions=(
+            A('sql_matches', r'Flatten or remove nested columns first'),
+            A('sql_excludes', 'CREATE EXTERNAL TABLE [',
+              'nested Parquet must not emit an executable external table'),
+        ),
+        notes='SQL Server external tables cannot represent the nested fields in '
+              'the all-types fixture. Flat Parquet execution is verified by C33.',
     ),
     MatrixEntry(
         'C19', 'parquet_all_types', 'create_table', ('vm', 'azure'), 'none', 'H10',
@@ -609,6 +619,62 @@ MATRIX: Tuple[MatrixEntry, ...] = (
             Assertion('sql_contains', 'CREATE EXTERNAL FILE FORMAT'),
         ),
         accepts=('PASS', 'EXEC_AFTER_SUBSTITUTION', 'BLOCKED'),
+    ),
+    MatrixEntry(
+        'C33', 'parquet_sales', 'create_external_table', ('vm', 'azure'), 'abs', 'H10',
+        'Flat Parquet external tables must return the exact published rows and '
+        'columns through the production generator.',
+        requires=('setup', 'file_format'),
+        verification='external_table',
+        catalog_object='external table',
+    ),
+    MatrixEntry(
+        'C34', 'tsv', 'openrowset', ('vm', 'azure'), 'abs', 'H6',
+        'Tab-delimited text must retain its detected delimiter in executable '
+        'OPENROWSET SQL.',
+        requires=('setup',),
+        verification='cell_result',
+        static_assertions=(
+            A('sql_matches', r"FIELDTERMINATOR\s*=\s*'\\t'"),
+        ),
+    ),
+    MatrixEntry(
+        'C35', 'pipe', 'openrowset', ('vm', 'azure'), 'abs', 'H6',
+        'Pipe-delimited text must retain its detected delimiter in executable '
+        'OPENROWSET SQL.',
+        requires=('setup',),
+        verification='cell_result',
+        static_assertions=(
+            A('sql_matches', r"FIELDTERMINATOR\s*=\s*'\|'"),
+        ),
+    ),
+    MatrixEntry(
+        'C36', 'utf8', 'bulk_insert', ('vm', 'azure'), 'blob_storage', 'H2',
+        'UTF-8 without a BOM must execute with CODEPAGE 65001 and preserve the '
+        'published row and column counts.',
+        requires=('setup', 'target_table'),
+        verification='target_table',
+        static_assertions=(A('sql_matches', r"CODEPAGE\s*=\s*'65001'"),),
+    ),
+    MatrixEntry(
+        'C37', 'collation', 'openrowset', ('vm', 'azure'), 'abs', 'H2',
+        'The UTF-8 collation sample must execute without conflating file '
+        'encoding with SQL collation.',
+        requires=('setup',),
+        verification='cell_result',
+    ),
+    MatrixEntry(
+        'C38', 'utf16le_bom_tsv', 'bulk_insert', ('vm', 'azure'),
+        'blob_storage', 'H2',
+        'UTF-16LE tab-delimited input must preserve both CODEPAGE 1200 and the '
+        'detected tab delimiter.',
+        accepts=('PASS', 'BLOCKED'),
+        requires=('setup', 'target_table'),
+        verification='target_table',
+        static_assertions=(
+            A('sql_matches', r"CODEPAGE\s*=\s*'1200'"),
+            A('sql_matches', r"FIELDTERMINATOR\s*=\s*'\\t'"),
+        ),
     ),
 )
 

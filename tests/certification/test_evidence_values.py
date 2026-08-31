@@ -282,6 +282,26 @@ def test_the_junit_document_parses_and_leaks_no_python_byte_repr(tmp_path):
     assert '0xDEAD' in text
 
 
+def test_public_evidence_contains_no_engine_benchmark_timings(tmp_path):
+    evidence = _evidence_with_hostile_values()
+    evidence.cells[0].batches[0].elapsed_ms = 1234.56
+    json_path = tmp_path / 'evidence.json'
+    junit_path = tmp_path / 'evidence.xml'
+    markdown_path = tmp_path / 'evidence.md'
+
+    write_json(evidence, str(json_path), Redactor())
+    write_junit(evidence, str(junit_path), Redactor())
+    write_markdown(evidence, str(markdown_path), Redactor())
+
+    json_text = json_path.read_text(encoding='utf-8')
+    assert 'elapsed_ms' not in json_text
+    assert 'started_at' not in json_text
+    assert 'finished_at' not in json_text
+    junit = ET.parse(str(junit_path))
+    assert all('time' not in element.attrib for element in junit.iter())
+    assert '* started:' not in markdown_path.read_text(encoding='utf-8')
+
+
 def test_the_markdown_document_leaks_no_python_byte_repr(tmp_path):
     path = tmp_path / 'evidence.md'
     write_markdown(_evidence_with_hostile_values(), str(path), Redactor())
@@ -611,4 +631,3 @@ def test_cleanup_statements_reach_the_json(tmp_path):
 
     assert payload['cleanup_statements'][0]['ok'] is True
     assert payload['cleanup_statements'][0]['statement'] == 'DROP SCHEMA [cert_schema];'
-

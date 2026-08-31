@@ -17,6 +17,12 @@ const ACCOUNT_NAME = /^[a-z0-9]{3,24}$/;
 
 const BLOB_HOST = /^([a-z0-9]{3,24})\.(blob|dfs)\.core\.(windows\.net|chinacloudapi\.cn|cloudapi\.de)$/i;
 const GOV_BLOB_HOST = /^([a-z0-9]{3,24})\.(blob|dfs)\.core\.usgovcloudapi\.net$/i;
+const TRUSTED_ENDPOINT_SUFFIXES = new Set([
+    'core.windows.net',
+    'core.usgovcloudapi.net',
+    'core.chinacloudapi.cn',
+    'core.cloudapi.de',
+]);
 
 /** Container names are 3-63 characters, lowercase, no leading/trailing dash. */
 const CONTAINER_NAME = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){1,61}[a-z0-9]$/;
@@ -65,10 +71,11 @@ export function serviceUrlFor(account: string, suffix = 'core.windows.net'): str
     if (!isValidAccountName(account)) {
         throw new AzureInputError('That is not a valid storage account name.');
     }
-    if (!/^[a-z0-9.]{4,64}$/i.test(suffix)) {
-        throw new AzureInputError('That is not a valid storage endpoint suffix.');
+    const normalizedSuffix = String(suffix).toLowerCase();
+    if (!TRUSTED_ENDPOINT_SUFFIXES.has(normalizedSuffix)) {
+        throw new AzureInputError('That is not a trusted Azure Storage endpoint suffix.');
     }
-    return `https://${account}.blob.${suffix}`;
+    return `https://${account}.blob.${normalizedSuffix}`;
 }
 
 /** The account name embedded in an Azure blob endpoint host, or `null`. */
@@ -184,7 +191,10 @@ export function parseConnectionString(candidate: string): ParsedConnectionString
         } catch {
             throw new AzureInputError('That connection string has an unusable BlobEndpoint.');
         }
-        if (endpoint.protocol !== 'https:' || !accountFromHost(endpoint.hostname)) {
+        if (
+            endpoint.protocol !== 'https:'
+            || accountFromHost(endpoint.hostname) !== account
+        ) {
             throw new AzureInputError(
                 'BlobEndpoint must be an https:// Azure Blob Storage endpoint.',
             );
