@@ -687,7 +687,7 @@ thead th {
 
 .storage-source-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--gap);
   align-items: start;
 }
@@ -701,8 +701,7 @@ thead th {
   background: var(--vscode-editor-background);
 }
 
-.storage-source-option h4,
-.storage-browser h4 {
+.storage-source-option h4 {
   margin: 0;
 }
 
@@ -717,34 +716,6 @@ thead th {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
-}
-
-.storage-status {
-  margin: 4px 0 8px;
-  font-size: 0.88em;
-}
-
-.storage-error {
-  position: sticky;
-  z-index: 2;
-  top: 0;
-  padding: 7px 9px;
-  margin: 0 0 var(--gap);
-  border-left: 3px solid var(--vscode-errorForeground);
-  color: var(--vscode-errorForeground);
-  background: var(--vscode-inputValidation-warningBackground, transparent);
-}
-
-.storage-browser {
-  padding: 12px;
-  margin-top: 12px;
-  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
-  border-radius: 7px;
-  background: var(--vscode-editor-background);
-}
-
-.storage-container-grid {
-  margin-top: var(--gap);
 }
 
 .wizard-step {
@@ -1039,84 +1010,6 @@ pre.sql {
   display: none;
 }
 
-/* ------------------------------------------------------- storage browser --- */
-
-.azure-entra {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.azure-tenant-field {
-  flex: 1 1 320px;
-}
-
-.azure-browse {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: var(--gap);
-  align-items: flex-end;
-}
-
-.azure-direct,
-.azure-prefix-field {
-  min-width: 0;
-}
-
-.azure-inline {
-  display: flex;
-  gap: 6px;
-}
-
-.azure-inline input {
-  min-width: 0;
-  flex: 1;
-}
-
-.azure-blobs {
-  list-style: none;
-  margin: 6px 0;
-  padding: 0;
-  max-height: 32vh;
-  overflow-y: auto;
-  border: 1px solid var(--vscode-panel-border, transparent);
-  border-radius: var(--radius);
-}
-
-.azure-blobs:empty {
-  display: none;
-}
-
-.azure-blobs li {
-  padding: 2px 6px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.azure-blobs button {
-  font-family: inherit;
-  font-size: 0.9em;
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--vscode-textLink-foreground);
-  cursor: pointer;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.azure-blobs button:disabled {
-  color: var(--vscode-descriptionForeground);
-  cursor: default;
-}
-
-.blob-size {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.85em;
-  white-space: nowrap;
-}
 
 /* Hide panel-only affordances when rendered in the narrow sidebar. */
 body.surface-panel .panel-only {

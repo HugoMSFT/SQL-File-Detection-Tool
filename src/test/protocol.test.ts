@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    AZURE_AUTH_MODES,
     MAX_PREVIEW_ROWS,
     MAX_TEXT_LENGTH,
     MIN_PREVIEW_ROWS,
@@ -20,7 +19,7 @@ import {
     parseWebviewRequest,
 } from '../protocol';
 import { DOCUMENTATION_IDS } from '../documentation';
-import { EXTERNAL_DATA_SOURCE_TYPES, GUIDED_AUTH_METHODS } from '../native';
+import { GUIDED_AUTH_METHODS } from '../native';
 
 test('a well formed message is accepted and normalised', () => {
     const parsed = parseWebviewRequest({ type: 'setTab', tab: 'preview' });
@@ -33,6 +32,15 @@ test('unknown message types are dropped', () => {
         'exec',
         'spawn',
         'setupBackend',
+        'setDataSourceType',
+        'azureConnect',
+        'azureDisconnect',
+        'azureListSubscriptions',
+        'azureListAccounts',
+        'azureSetAccount',
+        'azureListContainers',
+        'azureListBlobs',
+        'azureAnalyzeBlob',
         'readFile',
         'toString',
         'constructor',
@@ -78,12 +86,9 @@ test('the contract has no way to send a path or a root', () => {
     // probing it with a value that would be a path if one were accepted.
     const attempts = [
         { type: 'selectFile', fileId: 'C:\\Windows\\win.ini' },
-        { type: 'azureAnalyzeBlob', container: 'data', blob: '../../etc/passwd' },
-        { type: 'azureListBlobs', container: 'data', prefix: '../..', continuation: '' },
     ];
-    // A traversal-shaped id simply does not resolve to a registered file, and
-    // the blob helpers reject the traversal at the Azure layer; what matters
-    // here is that no request type carries a filesystem root at all.
+    // A traversal-shaped id simply does not resolve to a registered file. What
+    // matters here is that no request type carries a filesystem root at all.
     for (const attempt of attempts) {
         const parsed = parseWebviewRequest(attempt) as Record<string, unknown> | undefined;
         if (parsed) {
@@ -120,43 +125,6 @@ test('enumerated fields accept only their own members', () => {
         assert.deepEqual(parseWebviewRequest({ type: 'setTab', tab }), { type: 'setTab', tab });
     }
     assert.equal(parseWebviewRequest({ type: 'setTab', tab: 'metadata ' }), undefined);
-    for (const mode of AZURE_AUTH_MODES) {
-        assert.deepEqual(parseWebviewRequest({ type: 'azureConnect', mode }), {
-            type: 'azureConnect',
-            mode,
-        });
-    }
-    assert.deepEqual(
-        parseWebviewRequest({
-            type: 'azureConnect',
-            mode: 'vscode',
-            tenantId: '11111111-2222-3333-4444-555555555555',
-        }),
-        {
-            type: 'azureConnect',
-            mode: 'vscode',
-            tenantId: '11111111-2222-3333-4444-555555555555',
-        },
-    );
-    assert.equal(
-        parseWebviewRequest({ type: 'azureConnect', mode: 'vscode', tenantId: {} }),
-        undefined,
-    );
-    assert.equal(
-        parseWebviewRequest({ type: 'azureConnect', mode: 'managedIdentity' }),
-        undefined,
-        'managed identity is not a desktop auth mode',
-    );
-    for (const value of EXTERNAL_DATA_SOURCE_TYPES) {
-        assert.deepEqual(parseWebviewRequest({ type: 'setDataSourceType', value }), {
-            type: 'setDataSourceType',
-            value,
-        });
-    }
-    assert.equal(
-        parseWebviewRequest({ type: 'setDataSourceType', value: 'unsupported-source' }),
-        undefined,
-    );
     for (const value of [...GUIDED_AUTH_METHODS, 'public'] as const) {
         assert.deepEqual(parseWebviewRequest({ type: 'setAuthMethod', value }), {
             type: 'setAuthMethod',
@@ -223,7 +191,7 @@ test('requestId must look like a correlation id', () => {
 test('missing required fields are refused, not defaulted', () => {
     assert.equal(parseWebviewRequest({ type: 'selectFile' }), undefined);
     assert.equal(parseWebviewRequest({ type: 'setColumnOverride', column: 'a' }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'azureListBlobs', container: 'c' }), undefined);
+    assert.equal(parseWebviewRequest({ type: 'setStorageUrl' }), undefined);
 });
 
 test('clearing an override is expressed as an empty type, which is allowed', () => {

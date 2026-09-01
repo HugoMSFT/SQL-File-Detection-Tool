@@ -7,7 +7,7 @@
  * state of its own.
  *
  * This module is the only place in the native path that imports `vscode`.
- * Everything below it — the controller, the Azure bridge, the HTTP guard, the
+ * Everything below it — the controller, the HTTP guard, and the
  * analysis core — is plain TypeScript reached through {@link UiHost}, which is
  * what lets the tests assert that opening and analysing never starts a process,
  * binds a port or looks for a Python interpreter.
@@ -20,10 +20,6 @@
 import * as vscode from 'vscode';
 
 import { AppStateStore } from './appState';
-import { NativeAzureBridge, type AuthEnvironment } from './azure/connection';
-import { expiryFromJwt, tenantIdFromJwt } from './azureScopes';
-import { redactAzure } from './azure/storageUrl';
-import type { AzureAuthMode } from './protocol';
 import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
 import { buildWebviewHtml, createNonce } from './ui/webviewShell';
@@ -31,9 +27,6 @@ import { redact } from './util';
 
 export const SIDEBAR_VIEW_ID = 'sqlFileDetectionTool.sidebar';
 export const PANEL_VIEW_TYPE = 'sqlFileDetectionTool.panel';
-
-const AUTH_PROVIDER = 'microsoft';
-const DOWNLOAD_DIR = 'downloads';
 
 /** File dialog filters, kept in step with the native reader's formats. */
 const OPEN_FILTERS: Record<string, string[]> = {
@@ -83,7 +76,6 @@ class VsCodeUiHost implements UiHost {
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly output: vscode.OutputChannel,
-        readonly azure: NativeAzureBridge,
         private readonly revealPanel: () => Promise<void>,
     ) {}
 
@@ -208,25 +200,7 @@ class VsCodeUiHost implements UiHost {
     }
 
     log(message: string): void {
-        this.output.appendLine(redactAzure(message));
-    }
-
-    /** A directory inside the extension's own storage, created on demand. */
-    async downloadDirectory(): Promise<string> {
-        const directory = vscode.Uri.joinPath(this.context.globalStorageUri, DOWNLOAD_DIR);
-        await vscode.workspace.fs.createDirectory(directory);
-        return directory.fsPath;
-    }
-
-    async cleanupDownload(absolutePath: string): Promise<void> {
-        try {
-            await vscode.workspace.fs.delete(vscode.Uri.file(absolutePath), {
-                recursive: true,
-                useTrash: false,
-            });
-        } catch {
-            /* a temp file that is already gone is the desired end state */
-        }
+        this.output.appendLine(redact(message));
     }
 
     getPreference<T>(key: string, fallback: T): T {
@@ -244,76 +218,6 @@ class VsCodeUiHost implements UiHost {
     now(): number {
         return Date.now();
     }
-}
-
-/** {@link AuthEnvironment} implemented against the real editor. */
-function createAuthEnvironment(
-    context: vscode.ExtensionContext,
-    output: vscode.OutputChannel,
-): AuthEnvironment {
-    return {
-        async getSession(scopes, request) {
-            const session = await vscode.authentication.getSession(
-                AUTH_PROVIDER,
-                scopes,
-                request.interactive
-                    ? {
-                          createIfNone: {
-                              detail:
-                                  'SQL File Detection Tool needs delegated access to browse Azure Storage.',
-                          },
-                          clearSessionPreference: request.clearSessionPreference,
-                          account: request.account,
-                      }
-                    : { silent: true, account: request.account },
-            );
-            if (!session) {
-                return undefined;
-            }
-            return {
-                accessToken: session.accessToken,
-                expiresOnMs: expiryFromJwt(session.accessToken),
-                tenantId: tenantIdFromJwt(session.accessToken),
-                account: session.account
-                    ? { id: session.account.id, label: session.account.label }
-                    : undefined,
-            };
-        },
-        async prompt(options) {
-            return vscode.window.showInputBox({
-                title: options.title,
-                prompt: options.prompt,
-                password: options.password,
-                placeHolder: options.placeHolder,
-                ignoreFocusOut: true,
-            });
-        },
-        async confirm(message, yes, no) {
-            const answer = await vscode.window.showInformationMessage(
-                `SQL File Detection Tool: ${message}`,
-                { modal: true },
-                yes,
-                no,
-            );
-            return answer === yes;
-        },
-        secrets: {
-            get: (key) => Promise.resolve(context.secrets.get(key)),
-            store: (key, value) => Promise.resolve(context.secrets.store(key, value)),
-            delete: (key) => Promise.resolve(context.secrets.delete(key)),
-        },
-        log(message) {
-            output.appendLine(redactAzure(message));
-        },
-        now: () => Date.now(),
-        setTimer(callback, delayMs) {
-            const handle = setTimeout(callback, delayMs);
-            handle.unref?.();
-            return {
-                cancel: () => clearTimeout(handle),
-            };
-        },
-    };
 }
 
 /** One webview bound to the shared store. */
@@ -345,7 +249,7 @@ class Surface implements vscode.Disposable {
 }
 
 /**
- * Owns the store, the controller, the Azure bridge and both webviews.
+ * Owns the store, the controller, and both webviews.
  *
  * Everything the extension entry point needs is a method here, so `activate`
  * stays a list of command registrations.
@@ -353,8 +257,6 @@ class Surface implements vscode.Disposable {
 export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
     readonly store: AppStateStore;
     readonly controller: UiController;
-    readonly azure: NativeAzureBridge;
-
     private readonly host: VsCodeUiHost;
     private readonly disposables: vscode.Disposable[] = [];
     private viewSubscriptions: vscode.Disposable[] = [];
@@ -371,8 +273,7 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         /** Monotonic activation timestamp, for the first-render measurement. */
         private readonly activatedAtMs: number,
     ) {
-        this.azure = new NativeAzureBridge(createAuthEnvironment(context, output));
-        this.host = new VsCodeUiHost(context, output, this.azure, () => this.openPanel());
+        this.host = new VsCodeUiHost(context, output, () => this.openPanel());
         this.store = new AppStateStore({
             version:
                 (context.extension?.packageJSON as { version?: string } | undefined)?.version ??
@@ -388,45 +289,6 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
                 this.controller.refreshWorkspace();
             }),
         );
-    }
-
-    /** Restore a remembered Azure credential without blocking activation. */
-    restoreAzure(): void {
-        this.store.updateAzure({ busy: true, error: null });
-        void this.azure
-            .restore()
-            .then((info) => {
-                if (info.connected) {
-                    this.store.updateAzure({
-                        busy: false,
-                        connected: true,
-                        mode: info.mode,
-                        identity: info.identity,
-                        account: info.account,
-                        tenantId: info.tenantId,
-                        containers: info.container ? [info.container] : [],
-                        container: info.container,
-                        prefix: info.prefix,
-                        canListSubscriptions: info.canListSubscriptions,
-                    });
-                    if (info.container) {
-                        void this.controller.handle({
-                            type: 'azureListBlobs',
-                            container: info.container,
-                            prefix: info.prefix,
-                            continuation: '',
-                        });
-                    } else if (info.account) {
-                        void this.controller.handle({ type: 'azureListContainers' });
-                    }
-                    return;
-                }
-                this.store.updateAzure({ busy: false });
-            })
-            .catch((error) => {
-                this.host.log(`Could not restore Azure Storage access: ${redactAzure(error)}`);
-                this.store.updateAzure({ busy: false });
-            });
     }
 
     // -- WebviewViewProvider -------------------------------------------------
@@ -566,16 +428,6 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         await this.controller.handle({ type: 'analyzeCurrentFile' });
     }
 
-    async connectAzure(mode: AzureAuthMode = 'vscode'): Promise<void> {
-        await this.openDefault();
-        await this.controller.handle({ type: 'setTab', tab: 'credential_setup' });
-        await this.controller.handle({ type: 'azureConnect', mode });
-    }
-
-    async disconnectAzure(): Promise<void> {
-        await this.controller.handle({ type: 'azureDisconnect' });
-    }
-
     // -- plumbing ------------------------------------------------------------
 
     /**
@@ -609,7 +461,6 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         this.viewSurface?.dispose();
         this.panelSurface?.dispose();
         this.panel?.dispose();
-        this.azure.dispose();
         void this.controller.dispose();
         this.store.dispose();
     }

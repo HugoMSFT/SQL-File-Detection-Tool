@@ -61,8 +61,8 @@ test('the manifest points at the bundle and builds it before publishing', () => 
     assert.match(manifest.scripts.bundle, /scripts\/build\.js/);
 });
 
-test('the extension version is the 2.0 native release', () => {
-    assert.match(manifest.version, /^2\.\d+\.\d+$/);
+test('the extension uses the first Marketplace release version', () => {
+    assert.equal(manifest.version, '1.0.1');
 });
 
 test('activation is scoped to the Activity Bar view, never to startup', () => {
@@ -76,17 +76,14 @@ test('activation is scoped to the Activity Bar view, never to startup', () => {
     assert.deepEqual(manifest.activationEvents, ['onView:sqlFileDetectionTool.sidebar']);
 });
 
-test('runtime dependencies are the five the native core needs', () => {
+test('runtime dependencies are the four the native core needs', () => {
     assert.deepEqual(Object.keys(manifest.dependencies).sort(), [
-        '@azure/storage-blob',
         'chardet',
         'fflate',
         'hyparquet',
         'iconv-lite',
     ]);
-    // Type-only imports create no runtime obligation, so the credential type
-    // package belongs with the build tooling.
-    assert.ok('@azure/core-auth' in manifest.devDependencies);
+    assert.ok(!Object.keys(manifest.devDependencies).some((name) => name.startsWith('@azure/')));
 });
 
 test('.vscodeignore excludes everything and then allows the payload back', () => {
@@ -141,8 +138,6 @@ test('the bundle carries no Python, server or spawn vocabulary', () => {
     for (const [pattern, label] of audit.FORBIDDEN_BUNDLE_STRINGS) {
         assert.ok(!pattern.test(code), `the bundle contains ${label}`);
     }
-    // The loopback rule is the only one the vendored-literal exception applies
-    // to, because `@azure/storage-blob` embeds the Azurite emulator string.
     const [loopback, loopbackLabel] = audit.LOOPBACK_URL;
     assert.ok(
         !loopback.test(audit.scannableBundle(code)),
@@ -187,9 +182,8 @@ test('the bundle inlines its dependencies and externalises only vscode', () => {
 
 test('the bundle stays within a size that loads quickly', () => {
     const bytes = fs.statSync(BUNDLE).size;
-    // Roughly 1.4 MiB today, dominated by the iconv-lite CJK tables and the
-    // Azure Storage client. The ceiling leaves headroom for dependency updates
-    // while still failing loudly if `node_modules` ends up inlined wholesale.
+    // Dominated by the iconv-lite CJK tables. The ceiling leaves headroom for
+    // dependency updates while still failing if node_modules is inlined wholesale.
     assert.ok(
         bytes < 3 * 1024 * 1024,
         `the bundle is ${(bytes / 1024 / 1024).toFixed(2)} MiB`,
@@ -206,14 +200,8 @@ test('the third party notices cover every bundled package', () => {
 
 test('a built VSIX contains no Python, sources, dependencies or secrets', (t) => {
     const dist = path.join(REPO, 'dist');
-    const vsix = fs.existsSync(dist)
-        ? fs
-              .readdirSync(dist)
-              .filter((name) => name.endsWith('.vsix'))
-              .sort()
-              .pop()
-        : undefined;
-    if (!vsix) {
+    const vsix = `sql-file-detection-tool-${manifest.version}.vsix`;
+    if (!fs.existsSync(path.join(dist, vsix))) {
         t.skip('no .vsix in dist; run "npm run package" to audit the real archive');
         return;
     }

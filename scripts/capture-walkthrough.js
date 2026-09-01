@@ -27,9 +27,8 @@
  *    `playwright-core`, then quantised and encoded to a GIF with `gifenc`. No
  *    browser download and no ffmpeg.
  *
- * The Microsoft storage beat uses a synthetic, obviously-fake tenant with no
- * token, SAS, or account key, so the GIF cannot leak a credential. Paths shown
- * are repo-relative demo files.
+ * Storage setup uses non-secret ABS, ADLS, and ABFSS example locations. Paths
+ * shown are repo-relative demo files.
  *
  * Usage: `npm run capture:gif` (requires the optional devDependencies
  * `playwright-core`, `pngjs` and `gifenc`, and an installed Edge or Chrome).
@@ -144,7 +143,7 @@ async function collectStates() {
         await settle(1000);
         await view.receive({
             type: 'setStorageUrl',
-            value: 'https://contosodemo.blob.core.windows.net/datasets/sales.parquet',
+            value: 'abs://datasets@contosodemo.blob.core.windows.net/sales.parquet',
         });
         await settle(4000);
         captured.known_url = latestState(view.webview.posted);
@@ -177,67 +176,28 @@ function buildScenes(states) {
     const clone = (state, extra) =>
         Object.assign(JSON.parse(JSON.stringify(state)), { version }, extra || {});
 
-    // A synthetic, obviously-fake Azure connection. No token, no SAS, no key:
-    // the GIF shows the sign-in surface, never a credential.
-    const azure = Object.assign({}, states.known_url.azure, {
-        connected: true,
-        mode: 'vscode',
-        identity: 'ada@contoso.example',
-        tenantId: '11111111-2222-3333-4444-555555555555',
-        account: 'contosodemo',
-        accounts: ['contosodemo'],
-        containers: ['datasets', 'landing'],
-        container: 'datasets',
-        prefix: '',
-        blobs: [
-            { name: 'sales.parquet', sizeBytes: 131072, supported: true },
-            { name: 'customers.csv', sizeBytes: 20480, supported: true },
-        ],
-        subscriptions: [{ id: '00000000-0000-0000-0000-000000000000', name: 'Contoso Demo' }],
-        canListSubscriptions: true,
-        error: null,
-        busy: false,
-    });
-
     return [
-        { caption: 'activity-bar', state: clone(states.shell), hold: 1400, panel: false },
-        { caption: 'shell', state: clone(states.shell), hold: 1800, panel: true },
-        { caption: 'preview', state: clone(states.preview), hold: 2400, panel: true },
-        { caption: 'metadata', state: clone(states.metadata), hold: 2400, panel: true },
+        { caption: 'activity-bar', state: clone(states.shell), hold: 1200, panel: false },
+        { caption: 'preview', state: clone(states.preview), hold: 2200, panel: true },
         {
             caption: 'credential-setup',
             state: clone(states.credential_setup),
-            hold: 3000,
+            hold: 2400,
             panel: true,
         },
-        { caption: 'known-url', state: clone(states.known_url), hold: 2600, panel: true },
+        { caption: 'known-url', state: clone(states.known_url), hold: 2400, panel: true },
         {
             caption: 'create-table',
             state: clone(states.create_table),
-            hold: 2800,
+            hold: 2400,
             panel: true,
             scroll: 180,
         },
         {
             caption: 'openrowset',
             state: clone(states.openrowset),
-            hold: 2400,
-            panel: true,
-            scroll: 180,
-        },
-        {
-            caption: 'microsoft-storage',
-            state: clone(states.known_url, { azure }),
-            hold: 2800,
-            panel: true,
-            scroll: 760,
-        },
-        {
-            caption: 'light',
-            state: clone(states.create_table),
             hold: 2200,
             panel: true,
-            theme: 'light',
             scroll: 180,
         },
     ];
@@ -537,97 +497,47 @@ async function main() {
         throw new Error('Credential input focus or caret was lost after a state refresh.');
     }
 
-    // Exercise both source paths in the unified storage setup. Controller tests
-    // exercise the matching host half without opening a real account prompt.
+    // Exercise every connector prefix accepted by the URL-only storage setup.
     await page.evaluate((state) => {
         window.__posted = [];
         window.__apply(state);
     }, states.credential_setup);
     await page.waitForTimeout(80);
-    const knownUrlMessage = await page.evaluate(() => {
-        const input = document.querySelector('.storage-url-input');
-        input.value = 'https://contosodemo.blob.core.windows.net/datasets/sales.parquet';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('[data-action="useStorageUrl"]').click();
-        return window.__posted.at(-1);
-    });
+    const storageUrls = [
+        'abs://datasets@contosodemo.blob.core.windows.net/sales.parquet',
+        'adls://datasets@contosodemo.dfs.core.windows.net/sales.parquet',
+        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/sales.parquet',
+    ];
+    const urlMessages = await page.evaluate((urls) => {
+        urls.forEach((url) => {
+            const input = document.querySelector('.storage-url-input');
+            input.value = url;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            document.querySelector('[data-action="useStorageUrl"]').click();
+        });
+        return window.__posted.slice();
+    }, storageUrls);
     if (
-        knownUrlMessage?.type !== 'setStorageUrl'
-        || knownUrlMessage.value
-            !== 'https://contosodemo.blob.core.windows.net/datasets/sales.parquet'
+        urlMessages.length !== storageUrls.length
+        || urlMessages.some((message, index) =>
+            message.type !== 'setStorageUrl' || message.value !== storageUrls[index])
     ) {
         await browser.close();
         fs.rmSync(work, { recursive: true, force: true });
-        throw new Error('The known storage URL was not sent to Credential Setup.');
+        throw new Error('ABS, ADLS, or ABFSS URL submission is not wired.');
     }
-
-    await page.evaluate((state) => {
-        window.__posted = [];
-        window.__apply(state);
-    }, states.credential_setup);
-    await page.waitForTimeout(80);
-    const defaultSignInMessage = await page.evaluate(() => {
-        document.querySelector('[data-azure-connect="vscode"]').click();
-        return window.__posted.at(-1);
+    const signInRemoved = await page.evaluate(() => {
+        const text = document.body.textContent || '';
+        return (
+            !text.includes('Sign in with Microsoft Entra')
+            && !text.includes('Browse Microsoft storage')
+            && !document.querySelector('[data-azure-connect], .azure-tenant, .storage-browser')
+        );
     });
-    if (
-        defaultSignInMessage?.type !== 'azureConnect'
-        || defaultSignInMessage.mode !== 'vscode'
-        || Object.prototype.hasOwnProperty.call(defaultSignInMessage, 'tenantId')
-    ) {
+    if (!signInRemoved) {
         await browser.close();
         fs.rmSync(work, { recursive: true, force: true });
-        throw new Error('Blank Microsoft Entra tenants must be omitted from sign-in.');
-    }
-
-    const signInMessage = await page.evaluate(() => {
-        const tenant = document.querySelector('.azure-tenant');
-        tenant.value = '11111111-2222-3333-4444-555555555555';
-        tenant.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('[data-azure-connect="vscode"]').click();
-        return window.__posted.at(-1);
-    });
-    if (
-        signInMessage?.type !== 'azureConnect'
-        || signInMessage.mode !== 'vscode'
-        || signInMessage.tenantId !== '11111111-2222-3333-4444-555555555555'
-    ) {
-        await browser.close();
-        fs.rmSync(work, { recursive: true, force: true });
-        throw new Error('The Microsoft Entra tenant was not sent to the extension host.');
-    }
-
-    const azureScene = scenes.find((scene) => scene.caption === 'microsoft-storage');
-    await page.evaluate((state) => {
-        window.__posted = [];
-        window.__apply(state);
-    }, azureScene.state);
-    await page.waitForTimeout(80);
-    const directMessages = await page.evaluate(() => {
-        const account = document.querySelector('.azure-account-input');
-        account.value = 'otheraccount';
-        account.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('[data-action="azureUseAccount"]').click();
-
-        const container = document.querySelector('.azure-container-input');
-        container.value = 'landing';
-        container.dispatchEvent(new Event('input', { bubbles: true }));
-        const prefix = document.querySelector('.azure-prefix');
-        prefix.value = 'year=2026/';
-        prefix.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('[data-action="azureUseContainer"]').click();
-        return window.__posted.slice(-2);
-    });
-    if (
-        directMessages[0]?.type !== 'azureSetAccount'
-        || directMessages[0].account !== 'otheraccount'
-        || directMessages[1]?.type !== 'azureListBlobs'
-        || directMessages[1].container !== 'landing'
-        || directMessages[1].prefix !== 'year=2026/'
-    ) {
-        await browser.close();
-        fs.rmSync(work, { recursive: true, force: true });
-        throw new Error('Direct Azure account or container selection is not wired.');
+        throw new Error('Microsoft storage sign-in remains in Credential Setup.');
     }
 
     const frames = [];
@@ -779,16 +689,12 @@ async function main() {
 }
 
 const CAPTIONS = {
-    'activity-bar': 'Select the SQL File Detection Tool icon in the Activity Bar',
-    shell: 'The native editor interface opens immediately — no Python, no server, no setup',
-    preview: 'Preview: real rows read straight from the file',
-    metadata: 'Metadata: detected types, nullability, encoding and collation',
-    'create-table': 'Azure SQL Database is the default target — CREATE TABLE',
-    openrowset: 'OPENROWSET and external-table scripts for the selected platform',
-    'credential-setup': 'Storage setup: use a known URL or browse Microsoft storage',
-    'known-url': 'A known storage URL configures the external data source immediately',
-    'microsoft-storage': 'Microsoft Entra: discover or enter an account, then fetch a supported file',
-    light: 'Follows the VS Code theme',
+    'activity-bar': 'Open SQL File Detection Tool',
+    preview: 'Select a file and preview its rows',
+    'credential-setup': 'Paste the storage URL',
+    'known-url': 'Detect ABS, ADLS, or ABFSS from the URL',
+    'create-table': 'Generate CREATE TABLE',
+    openrowset: 'Generate OPENROWSET and EXT TABLE',
 };
 
 main().catch((error) => {

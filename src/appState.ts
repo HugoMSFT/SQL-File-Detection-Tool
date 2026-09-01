@@ -34,7 +34,6 @@ import {
 } from './quickAnalyze';
 import type {
     AppStateSnapshot,
-    AzureState,
     FileEntry,
     Limitation,
     UiTab,
@@ -53,24 +52,6 @@ export interface RegisteredFile {
     readonly allowedRoot: string;
     readonly entry: FileEntry;
 }
-
-export const EMPTY_AZURE_STATE: AzureState = {
-    connected: false,
-    mode: null,
-    identity: null,
-    account: null,
-    tenantId: null,
-    subscriptions: [],
-    accounts: [],
-    containers: [],
-    container: null,
-    prefix: '',
-    blobs: [],
-    continuation: null,
-    canListSubscriptions: false,
-    error: null,
-    busy: false,
-};
 
 /** Default preview row count. Bounded again on every request. */
 export const DEFAULT_PREVIEW_ROWS = 25;
@@ -144,7 +125,6 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         error: null,
         notice: null,
         limitation: null,
-        azure: EMPTY_AZURE_STATE,
         formats: options.formats ?? [],
         lastAnalysisMs: null,
     };
@@ -237,11 +217,6 @@ export class AppStateStore {
             listener(this.snapshot);
         }
         return this.snapshot;
-    }
-
-    /** Merge a partial Azure state without clobbering unrelated fields. */
-    updateAzure(patch: Partial<AzureState>): AppStateSnapshot {
-        return this.update({ azure: { ...this.snapshot.azure, ...patch } });
     }
 
     /** Clear everything derived from a file, keeping user-entered options. */

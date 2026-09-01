@@ -52,23 +52,17 @@ import {
     type RegisteredFile,
 } from '../appState';
 import {
-    sourceReadiness,
     suggestedObjectNames,
-    type SourceKind,
 } from '../quickAnalyze';
 import {
     MAX_PREVIEW_ROWS,
     MIN_PREVIEW_ROWS,
     isStatementKind,
     parseWebviewRequest,
-    type AzureAuthMode,
     type WebviewRequest,
 } from '../protocol';
 import { resolveDocumentationUrl } from '../documentation';
-import { createSerialQueue } from '../util';
-import { listStorageAccounts, listSubscriptions } from '../azure/arm';
-import { redactAzure } from '../azure/storageUrl';
-import { dataExtension } from '../net/publicData';
+import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
 
 /** Files the extension will analyse in one "Export All" pass. */
@@ -76,9 +70,6 @@ export const MAX_EXPORT_FILES = 100;
 
 /** How long to wait after the last keystroke before regenerating SQL. */
 export const REGENERATE_DEBOUNCE_MS = 180;
-
-/** Blobs / containers fetched per page. Bounded again in the browser. */
-const AZURE_PAGE_SIZE = 50;
 
 export interface ControllerDeps {
     readonly service?: NativeAnalysisService;
@@ -122,15 +113,11 @@ export class UiController {
     private readonly service: NativeAnalysisService;
     private readonly queue = createSerialQueue();
     private tokenSource: SimpleCancellationTokenSource | undefined;
-    private aborter: AbortController | undefined;
     private generation = 0;
     private regenerateHandle: unknown;
-    /** Temp files this controller downloaded, cleaned up on dispose. */
-    private readonly temporaryFiles = new Set<string>();
     /** The untouched metadata, i.e. the copy that still has a real path. */
     private rawMetadata: FileMetadata | null = null;
     private folderMetadata: readonly FileMetadata[] = [];
-    private sourceReferenceUrl = '';
     private disposed = false;
     /** Benchmark instrumentation: only the first analysis is timed in the log. */
     private firstAnalysisLogged = false;
@@ -168,7 +155,7 @@ export class UiController {
             if (error instanceof CancellationError) {
                 return;
             }
-            const message = redactAzure(describeError(error));
+            const message = redact(describeError(error));
             this.host.log(`Request "${request.type}" failed: ${message}`);
             this.store.update({ busy: false, progress: null, error: message });
         }
@@ -260,34 +247,6 @@ export class UiController {
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
-            case 'setDataSourceType': {
-                const dataSourceType = normalizeDataSourceType(
-                    request.value,
-                    this.store.state.platform,
-                );
-                const inferred = inferDataSourceType(this.store.state.storageUrl);
-                const authMethod = normalizeGuidedAuthMethod(
-                    this.store.state.authMethod,
-                    this.store.state.platform,
-                    dataSourceType,
-                );
-                const storageUrl =
-                    inferred && inferred !== dataSourceType
-                        ? ''
-                        : this.store.state.storageUrl;
-                this.store.update({
-                    dataSourceType,
-                    authMethod,
-                    storageUrl,
-                    notice:
-                        storageUrl !== this.store.state.storageUrl
-                            ? 'The storage URL was cleared because it does not match the selected storage service.'
-                            : this.store.state.notice,
-                });
-                this.refreshQuickAnalyze();
-                this.regenerate();
-                return;
-            }
             case 'setCredentialName':
                 this.store.update({ credentialName: request.value });
                 this.refreshQuickAnalyze();
@@ -435,30 +394,6 @@ export class UiController {
             case 'showOrcGuidance':
                 this.showLimitationGuidance();
                 return;
-            case 'azureConnect':
-                return this.queue(() => this.azureConnect(request.mode, request.tenantId));
-            case 'azureDisconnect':
-                return this.queue(() => this.azureDisconnect());
-            case 'azureListSubscriptions':
-                return this.queue(() => this.azureListSubscriptions());
-            case 'azureListAccounts':
-                return this.queue(() => this.azureListAccounts(request.subscriptionId));
-            case 'azureSetAccount':
-                return this.queue(() => this.azureSetAccount(request.account));
-            case 'azureListContainers':
-                return this.queue(() => this.azureListContainers());
-            case 'azureListBlobs':
-                return this.queue(() =>
-                    this.azureListBlobs(
-                        request.container,
-                        request.prefix,
-                        request.continuation,
-                    ),
-                );
-            case 'azureAnalyzeBlob':
-                return this.queue(() =>
-                    this.azureAnalyzeBlob(request.container, request.blob),
-                );
             default: {
                 // Exhaustiveness: adding a request type without a case is a
                 // compile error rather than a silently ignored message.
@@ -474,24 +409,17 @@ export class UiController {
     private begin(): {
         token: SimpleCancellationTokenSource;
         generation: number;
-        signal: AbortSignal;
     } {
         this.cancelActive();
         const token = new SimpleCancellationTokenSource();
-        const aborter = new AbortController();
         this.tokenSource = token;
-        this.aborter = aborter;
         this.generation += 1;
-        return { token, generation: this.generation, signal: aborter.signal };
+        return { token, generation: this.generation };
     }
 
     private cancelActive(): void {
         this.tokenSource?.cancel();
         this.tokenSource = undefined;
-        // Cancelling must stop work in flight, not merely discard its result:
-        // an in-progress blob or public download reads the same signal.
-        this.aborter?.abort();
-        this.aborter = undefined;
     }
 
     /** True when *generation* is still the newest request. */
@@ -540,7 +468,6 @@ export class UiController {
      * folder the user chose can be read even if it is linked into it.
      */
     async loadDirectory(directory: string): Promise<void> {
-        this.sourceReferenceUrl = '';
         this.folderMetadata = [];
         this.rawMetadata = null;
         const state = this.store.state;
@@ -605,11 +532,8 @@ export class UiController {
     }
 
     /** Analyse one or more explicitly chosen files. */
-    async loadFiles(paths: readonly string[], sourceKind: SourceKind = 'local'): Promise<void> {
+    async loadFiles(paths: readonly string[]): Promise<void> {
         this.folderMetadata = [];
-        if (sourceKind === 'local') {
-            this.sourceReferenceUrl = '';
-        }
         const supportedPaths = paths.filter(isSqlSourceFile);
         const skipped = paths.length - supportedPaths.length;
         if (supportedPaths.length === 0) {
@@ -646,10 +570,10 @@ export class UiController {
                 supportedPaths.length === 1
                     ? label
                     : `${supportedPaths.length} selected files`,
-            sourceKind,
-            storageUrl: sourceKind === 'local' ? '' : this.store.state.storageUrl,
+            sourceKind: 'local',
+            storageUrl: '',
             authMethod:
-                sourceKind === 'local' && state.authMethod === 'public'
+                state.authMethod === 'public'
                     ? normalizeGuidedAuthMethod(
                           null,
                           state.platform,
@@ -766,7 +690,7 @@ export class UiController {
         if (error instanceof CancellationError || !this.isCurrent(generation)) {
             return;
         }
-        const message = redactAzure(describeError(error));
+        const message = redact(describeError(error));
         this.host.log(`Analysis failed: ${message}`);
         this.store.update({ busy: false, progress: null, error: message });
     }
@@ -805,27 +729,6 @@ export class UiController {
             this.rawMetadata,
             this.folderMetadata,
         );
-        if (this.sourceReferenceUrl && this.store.state.sourceKind !== 'local') {
-            this.store.update({
-                ...patch,
-                quickAnalyze: {
-                ...patch.quickAnalyze,
-                source: sourceReadiness({
-                    sourceKind: this.store.state.sourceKind,
-                    storageUrl: this.sourceReferenceUrl,
-                    fileName: this.rawMetadata?.file_name ?? '',
-                    fileType: this.rawMetadata?.file_type ?? 'unknown',
-                    dataSource: this.store.state.dataSource,
-                    credentialName: this.store.state.credentialName,
-                    formatName: this.store.state.formatName,
-                    authMethod: this.store.state.authMethod,
-                    platform: this.store.state.platform,
-                    selectedStatement: patch.quickAnalyze.selectedStatement,
-                }),
-                },
-            });
-            return;
-        }
         this.store.update(patch);
     }
 
@@ -1098,252 +1001,6 @@ export class UiController {
         );
     }
 
-    // -- Azure ---------------------------------------------------------------
-
-    private async azureConnect(mode: AzureAuthMode, tenantId?: string): Promise<void> {
-        const previous = this.store.state.azure;
-        this.store.updateAzure({
-            busy: true,
-            error: null,
-        });
-        try {
-            const info = await this.host.azure.connect(mode, tenantId);
-            this.store.updateAzure({
-                busy: false,
-                connected: info.connected,
-                mode: info.mode,
-                identity: info.identity,
-                account: info.account,
-                tenantId: info.tenantId,
-                subscriptions: [],
-                accounts: [],
-                containers: info.container ? [info.container] : [],
-                container: info.container,
-                prefix: info.prefix,
-                blobs: [],
-                continuation: null,
-                canListSubscriptions: info.canListSubscriptions,
-                error: null,
-            });
-            if (info.account && info.container) {
-                await this.azureListBlobs(info.container, info.prefix, '');
-            } else if (info.account) {
-                await this.azureListContainers();
-            } else if (info.canListSubscriptions) {
-                await this.azureListSubscriptions();
-            }
-        } catch (error) {
-            const message = redactAzure(describeError(error));
-            this.host.log(`Azure request failed: ${message}`);
-            this.store.updateAzure({ ...previous, busy: false, error: message });
-        }
-    }
-
-    private async azureDisconnect(): Promise<void> {
-        try {
-            await this.host.azure.disconnect();
-        } finally {
-            this.store.updateAzure({
-                connected: false,
-                mode: null,
-                identity: null,
-                account: null,
-                tenantId: null,
-                subscriptions: [],
-                accounts: [],
-                containers: [],
-                container: null,
-                prefix: '',
-                blobs: [],
-                continuation: null,
-                canListSubscriptions: false,
-                busy: false,
-                error: null,
-            });
-        }
-    }
-
-    private async azureListSubscriptions(): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const token = await this.host.azure.armToken(true);
-            if (!token) {
-                this.store.updateAzure({
-                    busy: false,
-                    canListSubscriptions: false,
-                    error:
-                        'Subscription discovery is unavailable. Enter a storage account name to attach directly.',
-                });
-                return;
-            }
-            const subscriptions = await listSubscriptions(token);
-            this.store.updateAzure({
-                busy: false,
-                subscriptions,
-                canListSubscriptions: true,
-                error:
-                    subscriptions.length === 0
-                        ? 'No subscriptions were found in this directory. Enter the storage account name directly or verify the tenant ID.'
-                        : null,
-            });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListAccounts(subscriptionId: string): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const token = await this.host.azure.armToken();
-            if (!token) {
-                this.store.updateAzure({
-                    busy: false,
-                    error: 'Sign in with Microsoft Entra to list storage accounts.',
-                });
-                return;
-            }
-            const accounts = await listStorageAccounts(token, subscriptionId);
-            this.store.updateAzure({
-                busy: false,
-                accounts,
-                error:
-                    accounts.length === 0
-                        ? 'No storage accounts were found in this subscription. Enter an account name directly if you have data-plane access.'
-                        : null,
-            });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureSetAccount(account: string): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const info = await this.host.azure.useAccount(account);
-            this.store.updateAzure({
-                busy: false,
-                account: info.account,
-                connected: info.connected,
-                mode: info.mode,
-                identity: info.identity,
-                containers: [],
-                container: null,
-                blobs: [],
-                continuation: null,
-            });
-            await this.azureListContainers();
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListContainers(): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({
-                busy: false,
-                error: 'Select a storage account first.',
-            });
-            return;
-        }
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const page = await browser.listContainers({ pageSize: AZURE_PAGE_SIZE });
-            this.store.updateAzure({ busy: false, containers: page.names });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListBlobs(
-        container: string,
-        prefix: string,
-        continuation: string,
-    ): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({ busy: false, error: 'Select a storage account first.' });
-            return;
-        }
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const page = await browser.listBlobs(container, {
-                prefix,
-                continuation: continuation || null,
-                pageSize: AZURE_PAGE_SIZE,
-            });
-            this.store.updateAzure({
-                busy: false,
-                container,
-                prefix,
-                continuation: page.continuation,
-                blobs: page.entries.map((entry) => ({
-                    name: entry.name,
-                    sizeBytes: entry.sizeBytes,
-                    supported: entry.isPrefix || dataExtension(entry.name) !== null,
-                })),
-            });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureAnalyzeBlob(container: string, blob: string): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({ busy: false, error: 'Select a storage account first.' });
-            return;
-        }
-        const { token, generation, signal } = this.begin();
-        this.store.update({ busy: true, progress: `Downloading ${blob}…`, error: null });
-        try {
-            const directory = await this.host.downloadDirectory();
-            const downloaded = await browser.downloadBlob(container, blob, directory, {
-                signal,
-            });
-            this.temporaryFiles.add(downloaded.path);
-            if (!this.isCurrent(generation) || token.token.isCancellationRequested) {
-                await this.host.cleanupDownload(downloaded.path);
-                this.temporaryFiles.delete(downloaded.path);
-                return;
-            }
-            this.sourceReferenceUrl = browser.blobUrl(container, blob);
-            const dataSourceType =
-                inferDataSourceType(this.sourceReferenceUrl)
-                ?? this.store.state.dataSourceType;
-            const authMethod =
-                this.store.state.azure.mode === 'anonymous'
-                    ? 'public'
-                    : this.store.state.azure.mode === 'vscode'
-                        ? normalizeGuidedAuthMethod(
-                            'user_identity',
-                            this.store.state.platform,
-                            dataSourceType,
-                        )
-                        : this.store.state.authMethod;
-            this.store.update({
-                storageUrl: this.sourceReferenceUrl,
-                dataSourceType,
-                authMethod,
-                activeTab: 'preview',
-            });
-            await this.loadFiles([downloaded.path], 'azure');
-            this.store.update({
-                notice:
-                    'Analyzed a local copy. The generated SQL points at the blob URL, not the copy.',
-            });
-        } catch (error) {
-            this.azureFail(error);
-            this.store.update({ busy: false, progress: null });
-        }
-    }
-
-    private azureFail(error: unknown): void {
-        const message = redactAzure(describeError(error));
-        this.host.log(`Azure request failed: ${message}`);
-        this.store.updateAzure({ busy: false, error: message });
-    }
-
     // -- lifecycle -----------------------------------------------------------
 
     /** Re-read workspace folders, e.g. after a folder was added or removed. */
@@ -1371,11 +1028,6 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
-        this.sourceReferenceUrl = '';
-        for (const file of this.temporaryFiles) {
-            await this.host.cleanupDownload(file);
-        }
-        this.temporaryFiles.clear();
     }
 }
 

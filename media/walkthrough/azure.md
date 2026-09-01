@@ -1,12 +1,9 @@
 # Set up external storage
 
-The **Credential setup** tab offers two paths:
+Paste an `abs://`, `adls://`, or `abfss://` location in **Credential setup**.
+The extension detects the storage service from the URL and generates the
+compatible connector, credential, and external data source for the selected SQL
+platform. Azure HTTPS and `s3://` locations remain supported.
 
-1. Paste a known Azure Blob, ADLS, OneLake, or `s3://` location to generate the
-   external data source.
-2. Sign in with a Microsoft Entra work or school account, choose a storage
-   account and container, and fetch a supported file for analysis.
-
-The tenant ID is optional. Subscription discovery is optional too: enter the
-storage account directly when you already know its name. Tokens remain in the
-extension host; query strings are removed from known URLs before SQL is generated.
+Query strings and fragments are removed before SQL is generated. Secret values
+remain placeholders.

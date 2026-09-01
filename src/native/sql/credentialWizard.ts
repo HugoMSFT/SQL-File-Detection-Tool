@@ -82,6 +82,9 @@ export function knownStorageLocation(value: string): KnownStorageLocation {
     if (!KNOWN_STORAGE_SCHEMES.has(parsed.protocol)) {
         throw new Error('Use an Azure Blob, ADLS, OneLake, or s3:// URL.');
     }
+    if (!parsed.hostname) {
+        throw new Error('The storage URL must include an account or bucket host.');
+    }
     if (parsed.password || (
         (parsed.protocol === 'https:' || parsed.protocol.startsWith('s3'))
         && parsed.username
@@ -106,11 +109,20 @@ export function knownStorageLocation(value: string): KnownStorageLocation {
     ) {
         throw new Error('The Azure storage URL must include a container or file system.');
     }
-    if (
-        dataSourceType === 'fabric_onelake'
-        && parsed.pathname.split('/').filter(Boolean).length === 0
-    ) {
-        throw new Error('The OneLake URL must include a workspace item location.');
+    if (dataSourceType === 'fabric_onelake') {
+        const segments = parsed.pathname.split('/').filter(Boolean);
+        const filesIndex = segments.findIndex(
+            (segment) => segment.toLowerCase() === 'files',
+        );
+        const requiredRootSegments = parsed.protocol === 'https:' ? 2 : 1;
+        if (
+            filesIndex < requiredRootSegments
+            || (parsed.protocol !== 'https:' && !parsed.username)
+        ) {
+            throw new Error(
+                'The OneLake URL must include a workspace, item, and Files location.',
+            );
+        }
     }
 
     return { storageUrl, dataSourceType, removedSuffix, hadSasSignature };

@@ -115,33 +115,10 @@ const REQUIRED_PATHS = [
 ];
 
 /**
- * Literals that a vendored dependency legitimately contains, removed before the
- * loopback rule is applied.
- *
- * `@azure/storage-blob` embeds the Azurite emulator connection string — the
- * published, universally known development credential that `UseDevelopmentStorage=true`
- * expands to. It is not a secret and not a loopback client this extension can
- * reach, but it does contain `http://127.0.0.1:10000`, which would otherwise
- * trip the loopback rule below. Excising exactly that literal keeps the rule
- * strict everywhere else instead of weakening the pattern.
- *
- * The pattern is anchored on the literal `devstoreaccount1`, so it cannot match
- * a real storage account, and the tail is length-capped so it can only ever
- * swallow the emulator's own well-known key — never an unrelated credential
- * that happened to be concatenated into a long neighbouring literal. The
- * exception is applied *only* to the loopback rule, so a credential hiding
- * inside that span is still caught by the secret patterns.
- */
-const VENDOR_LITERAL_EXCEPTIONS = [
-    /DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;[^"'`]{0,200}/g,
-];
-
-/**
  * Strings that would betray a re-introduced Python or server runtime.
  *
- * `localhost` is deliberately absent: `src/net/safeHttp.ts` names it to *reject*
- * it, and an SSRF denylist that cannot spell its own denied host is worse than
- * useless. The URL forms below catch an actual loopback client instead.
+ * Authentication and storage-browser symbols are included as release blockers:
+ * Credential setup is URL-only and must not regain an interactive sign-in path.
  */
 const FORBIDDEN_BUNDLE_STRINGS = [
     [/\bflask\b/i, 'Flask'],
@@ -154,6 +131,8 @@ const FORBIDDEN_BUNDLE_STRINGS = [
     [/\/api\/health\b/, 'a backend health endpoint'],
     [/\bsetupBackend|startBackend|stopBackend\b/i, 'a backend lifecycle command'],
     [/\bsimpleBrowser\b/i, 'the Simple Browser'],
+    [/\bvscode\.authentication\b|authentication\.getSession\b/, 'VS Code authentication'],
+    [/\b(?:azureConnect|NativeAzureBridge|connectAzureStorage)\b/, 'storage sign-in code'],
 ];
 
 /**
@@ -184,13 +163,9 @@ const SECRET_PATTERNS = [
 /** Entries whose bytes are text worth scanning for a credential. */
 const TEXT_ENTRY = /\.(js|css|json|md|txt|svg|html|xml|map|vsixmanifest)$/i;
 
-/** Bundle text with the documented vendor exceptions removed. */
+/** Bundle text is scanned without vendor exceptions. */
 function scannableBundle(code) {
-    let scannable = code;
-    for (const pattern of VENDOR_LITERAL_EXCEPTIONS) {
-        scannable = scannable.replace(pattern, '');
-    }
-    return scannable;
+    return code;
 }
 
 /** Hard ceiling for the packaged extension. Exceeding it is a packaging bug. */
@@ -344,7 +319,6 @@ module.exports = {
     FORBIDDEN_BUNDLE_STRINGS,
     LOOPBACK_URL,
     SECRET_PATTERNS,
-    VENDOR_LITERAL_EXCEPTIONS,
 };
 
 if (require.main === module) {

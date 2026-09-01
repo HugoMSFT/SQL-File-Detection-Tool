@@ -13,46 +13,6 @@
  * do any of those things would be through a method declared here.
  */
 
-import type { BlobBrowser } from '../azure/blobBrowser';
-import type { AzureAuthMode } from '../protocol';
-
-/** Non-secret facts about the current Azure connection. */
-export interface AzureConnectionInfo {
-    readonly connected: boolean;
-    readonly mode: AzureAuthMode | null;
-    /** An account label such as an email address. Never a credential. */
-    readonly identity: string | null;
-    readonly account: string | null;
-    /** Entra directory used for delegated tokens. Never a credential. */
-    readonly tenantId: string | null;
-    /** Container/prefix encoded by a scoped SAS or public URL. */
-    readonly container: string | null;
-    readonly prefix: string;
-    readonly canListSubscriptions: boolean;
-}
-
-/**
- * Azure sign-in and account selection.
- *
- * Implementations hold tokens, keys and SAS strings in extension-host memory or
- * `SecretStorage`. Nothing on this interface returns one.
- */
-export interface AzureBridge {
-    readonly info: AzureConnectionInfo;
-    connect(mode: AzureAuthMode, tenantId?: string): Promise<AzureConnectionInfo>;
-    disconnect(): Promise<void>;
-    /** Point the connection at a specific storage account. */
-    useAccount(account: string): Promise<AzureConnectionInfo>;
-    /** The browser for the selected account, or `undefined` when not ready. */
-    browser(): BlobBrowser | undefined;
-    /**
-     * A management-plane token for subscription discovery.
-     *
-     * Optional by design: attaching to a known account works without it.
-     */
-    armToken(interactive?: boolean): Promise<string | undefined>;
-}
-
 export interface OpenDialogOptions {
     readonly folders: boolean;
     readonly many: boolean;
@@ -62,7 +22,6 @@ export interface OpenDialogOptions {
 /** Everything the controller needs that is not pure computation. */
 export interface UiHost {
     readonly version: string;
-    readonly azure: AzureBridge;
 
     /** Absolute paths of the open workspace folders. */
     workspaceFolders(): readonly string[];
@@ -88,11 +47,6 @@ export interface UiHost {
     showError(message: string): void;
     /** Append to the extension's output channel. Callers must pre-redact. */
     log(message: string): void;
-
-    /** A directory the extension owns and may write downloads into. */
-    downloadDirectory(): Promise<string>;
-    /** Remove a previously downloaded temp file. Never throws. */
-    cleanupDownload(absolutePath: string): Promise<void>;
 
     /** Persisted, non-sensitive preferences. */
     getPreference<T>(key: string, fallback: T): T;

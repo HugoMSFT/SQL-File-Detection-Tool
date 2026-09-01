@@ -16,44 +16,13 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![Walkthrough of the native VS Code extension: selecting the SQL File Detection
-Tool icon in the Activity Bar, the Power Studio interface opening immediately in
-an editor tab, a Parquet file analyzed in the Preview tab, the guided external
-storage setup, generated T-SQL, and the Microsoft storage browser.](media/sql-file-detection-tool-walkthrough.gif)
+![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough.gif)
 
-The walkthrough above, in text:
-
-1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
-   full interface opens immediately in an editor tab, rendered natively — no
-   Python, no server and no browser tab. There is no install or setup step to
-   sit through.
-2. Point it at any supported SQL source - Parquet, ORC, CSV, TSV, DAT, JSON, or
-   a Delta or Iceberg table directory. Hudi folders expose their underlying
-   Parquet data files without interpreting Hudi metadata. The walkthrough analyses
-   `data sample/parquet/sales.parquet` from this repository.
-3. **Preview** is the first and default tab, showing real rows from the selected
-   file. **Metadata** and **Schema** keep detection details and recommended,
-   editable SQL type mappings
-   nearby without crowding the initial experience.
-4. The **Target platform** selector is preset to **Azure SQL Database**. Switch
-   to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
-   at any time.
-5. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **EXT TABLE** tabs
-   hold the generated T-SQL. Azure SQL output for a local file includes an
-   explicit "stage the data in Azure Storage first" prerequisite block.
-6. **Credential setup** starts with either a known Azure Blob, ADLS, OneLake, or
-   S3 URL, or Microsoft Entra sign-in for browsing your own storage account. A
-   known URL immediately configures the external data source; browsing fetches
-   the selected file for analysis. Platform, authentication, and object-name
-   choices remain guided and secret values stay as placeholders.
-7. The whole surface follows the active VS Code theme.
-
-Every panel in the recording is the real native webview, driven by the real
-analysis engine: the column types, the row values and the T-SQL are what the
-shipped code produces for that file. The Microsoft storage connection shown is a synthetic
-`contoso.example` identity with no token, SAS or account key. Regenerate the
-recording with `npm run capture:gif` (see
-[`scripts/capture-walkthrough.js`](scripts/capture-walkthrough.js)).
+Open the Activity Bar icon, select a supported file or folder, and Preview opens
+automatically. Use the SQL tabs for generated statements. In Credential setup,
+paste an `abs://`, `adls://`, or `abfss://` URL and the connector is detected
+automatically. The GIF uses the shipped renderer and can be regenerated with
+`npm run capture:gif`.
 
 ## Names and compatibility
 
@@ -85,8 +54,8 @@ Existing scripts, imports and automation continue to work unchanged.
 - Keeps generated SQL aligned with SQL Server, Azure SQL, and Fabric SQL
   Database feature differences.
 - Provides local, S3, and Azure Blob storage handlers.
-- Lets the VS Code extension configure storage from a known URL or browse Azure
-  Blob Storage with a Microsoft Entra work or school account.
+- Lets the VS Code extension infer ABS, ADLS, or ABFSS connector formatting from
+  a provided storage URL.
 - Ships as an installable VS Code extension that runs entirely natively — no
   Python interpreter, virtual environment, server or port.
 
@@ -192,8 +161,8 @@ tab. Nothing outside the `.vsix` is downloaded or executed.
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-2.1.1.vsix
-code --install-extension dist/sql-file-detection-tool-2.1.1.vsix --force
+npm run package     # writes dist/sql-file-detection-tool-1.0.1.vsix
+code --install-extension dist/sql-file-detection-tool-1.0.1.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -485,7 +454,7 @@ Run `sql-file-detection-tool COMMAND --help` for complete command options.
 ## Azure Storage authentication
 
 This section describes the **Python** package (CLI and web application). The VS
-Code extension's known-URL and Microsoft Entra browsing flow is described under
+Code extension's URL-driven storage setup is described under
 [VS Code extension](#vs-code-extension).
 
 The tool attaches to Azure Storage the same way Azure Storage Explorer does.
@@ -497,7 +466,6 @@ silently downgraded to anonymous or shared-key access.
 | Microsoft Entra ID (recommended) | `entra_default` | Reuses an existing Azure CLI, Azure PowerShell or VS Code developer sign-in |
 | Microsoft Entra ID (interactive) | `entra_interactive` | Opens a browser sign-in; the refresh token is cached in the OS-protected store where the platform supports it |
 | Managed identity | `managed_identity` | **The production choice.** Selects `ManagedIdentityCredential` explicitly, optionally user-assigned via `AZURE_CLIENT_ID` |
-| VS Code sign-in | `vscode_token` | The extension brokers a token from VS Code's Microsoft auth provider |
 | Shared access signature | `sas` | A SAS URL or bare SAS token |
 | Connection string | `connection_string` | A full storage connection string |
 | Account key | `account_key` | Least preferred; use only when nothing else is possible |
@@ -543,9 +511,9 @@ sql-file-detection-tool analyze abs://data@acct.blob.core.windows.net/raw \
 - Credential inputs in the web UI are password fields, and the connection status
   shows only a masked hint such as `****3f9c`.
 
-No Microsoft Entra application registration is created. The tool uses VS Code's
-built-in Microsoft authentication provider and the Azure Identity public-client
-developer flows, so there is no client secret anywhere in this project.
+No Microsoft Entra application registration or client secret is created. The
+optional Python application uses Azure Identity developer flows or the explicit
+non-Entra methods above.
 
 ### Azure explorer in the web UI
 
@@ -560,7 +528,7 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension, version **2.1.1**. See
+The repository root is also a VS Code extension, version **1.0.1**. See
 [Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
@@ -585,7 +553,7 @@ slack for a shared CI runner.
 | First analysis of a 5-column CSV | 30 ms | < 8000 ms |
 | Re-analysis of the same file | 4 ms | < 2000 ms |
 | Heap retained after 20 repeat analyses | 3.0 MiB | < 96 MiB |
-| Packaged `.vsix` | 619 KiB (17 files) | < 5 MB |
+| Packaged `.vsix` | 500 KiB (17 files) | < 5 MB |
 
 There is no setup step to measure, because there is no setup step. Activation
 is triggered by the Activity Bar view, a command or a context-menu action -
@@ -599,8 +567,6 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 | `Open in Editor` | Opens or focuses the editor tab explicitly |
 | `Analyze Current File` | Analyzes the active editor's file |
 | `Analyze with SQL File Detection Tool` | Explorer / editor context menu, on the exact target |
-| `Browse Microsoft Storage` | Opens Credential setup and signs in through VS Code |
-| `Disconnect Azure Storage` | Clears every credential, in memory and in secret storage |
 
 ### Editor panel and Activity Bar
 
@@ -608,8 +574,8 @@ Selecting the **SQL File Detection Tool** container opens the complete interface
 in an editor tab and closes the temporary sidebar. **Preview** is the first and
 default tab, with a persistent source/file navigator and real rows from the
 selected file. Metadata, Schema, focused loading-statement tabs, the guided
-credential/data-source setup, known storage URLs, and the Microsoft storage browser
-remain available. Set `sqlFileDetectionTool.defaultView` to `sidebar` to keep the interface in the
+credential/data-source setup, and known storage URLs remain available. Set
+`sqlFileDetectionTool.defaultView` to `sidebar` to keep the interface in the
 Activity Bar instead. There is no loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
 
@@ -650,18 +616,14 @@ File contents and credentials are never persisted there.
 
 ### Guided SQL credential setup
 
-The **Credential setup** tab first asks where the data lives:
+The **Credential setup** tab accepts an `abs://`, `adls://`, or `abfss://`
+location, with Azure HTTPS and `s3://` retained for compatibility. The extension
+validates the location, removes query strings and fragments, infers the storage
+service and connector from the URL, and generates credential/data-source SQL even
+before a file is analyzed.
 
-- Paste a known Azure Blob, ADLS, OneLake, or `s3://` location. The extension
-  validates the location, removes query strings and fragments, infers the storage
-  service, and generates the credential/data-source SQL even before a file is
-  analyzed.
-- Sign in with Microsoft Entra, discover or directly enter a storage account,
-  and choose a supported blob. The extension downloads a temporary local copy
-  for analysis while generated SQL continues to point at the blob.
-
-The target SQL platform, storage service, authentication method, and object names
-then constrain one another:
+The target SQL platform, inferred storage service, authentication method, and
+object names then constrain one another:
 
 | Target | Storage choices | Guided authentication |
 | --- | --- | --- |
@@ -678,20 +640,6 @@ a SAS token, S3 access key, or master-key password. It emits clearly marked
 placeholders for secret-bearing methods so the values can be supplied later in
 a secure SQL editor.
 
-### Microsoft storage in the extension
-
-Microsoft Entra browsing uses a work or school account through
-`vscode.authentication`. Optional tenant pinning prevents the account picker
-from using the wrong directory. Subscription discovery is optional: users who
-already know the storage account name can enter it directly.
-
-Tokens remain in extension-host memory and never reach the renderer or generated
-SQL. Replacing a connection is transactional, so a cancelled or failed sign-in
-does not discard a working browser session. Managed identity is deliberately
-**not** offered as a desktop sign-in because a desktop extension does not have
-one. Credential setup can still generate `MANAGED IDENTITY` T-SQL for database
-platforms that support it.
-
 ### Relationship to the Python CLI
 
 The CLI and the Flask web application documented elsewhere in this README still
@@ -701,7 +649,7 @@ and version 2.0.0 removed the last of the backend-lifecycle code: there is no
 `backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
 module left in the extension sources.
 
-The two distributions version independently. The extension is at 2.1.1; the
+The two distributions version independently. The extension is at 1.0.1; the
 Python distribution keeps its own version line, because nothing about the CLI
 changed when the extension stopped using it.
 
@@ -901,7 +849,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-tool-2.0.0.vsix
+npm run package        # writes dist/sql-file-detection-tool-1.0.1.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 
@@ -935,7 +883,7 @@ npm test                                              # Node suites compare agai
 See [`docs/native-core.md`](docs/native-core.md) for the module layout, the
 service API, the dependency and license choices, the format matrix, and the one
 explicit limitation (ORC), and [`docs/native-ui.md`](docs/native-ui.md) for the
-webview message flow, the CSP, and the Azure and SSRF threat models.
+webview message flow, the CSP, and the storage URL boundary.
 
 ## Project layout
 
@@ -947,14 +895,11 @@ src/                         extension TypeScript sources
 |-- nativeView.ts            WebviewView/Panel provider and UiHost (vscode)
 |-- protocol.ts              webview message contract and validation
 |-- appState.ts              shared state store and opaque file registry
-|-- azureScopes.ts           token scopes and expiry math
 |-- util.ts                  pure helpers (no network, no process)
 |-- ui/                      vscode-free UI layer
 |   |-- controller.ts        all product logic
-|   |-- host.ts              UiHost / AzureBridge seam
+|   |-- host.ts              UiHost seam
 |   `-- webviewShell.ts      HTML shell, CSP, nonce
-|-- azure/                   storage URLs, blob browsing, auth modes
-|-- net/                     SSRF-hardened HTTPS, IP guard, public datasets
 |-- native/                  native analysis + SQL generation core (see docs/)
 |   |-- index.ts             public barrel
 |   |-- service.ts           NativeAnalysisService facade

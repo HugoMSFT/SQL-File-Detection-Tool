@@ -43,7 +43,6 @@ import type {
     SourceKind,
 } from './quickAnalyze';
 import {
-    EXTERNAL_DATA_SOURCE_TYPES,
     GUIDED_AUTH_METHODS,
     type CredentialWizardState,
     type ExternalDataSourceType,
@@ -89,16 +88,6 @@ export const STATEMENT_KINDS: readonly StatementKind[] = [
     'best_practices',
 ];
 
-/** Ways the extension can talk to Azure Storage. */
-export const AZURE_AUTH_MODES = [
-    'vscode',
-    'sas',
-    'connectionString',
-    'anonymous',
-] as const;
-
-export type AzureAuthMode = (typeof AZURE_AUTH_MODES)[number];
-
 // ---------------------------------------------------------------------------
 // Webview -> host
 // ---------------------------------------------------------------------------
@@ -122,10 +111,6 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
-    | (Base & {
-          readonly type: 'setDataSourceType';
-          readonly value: ExternalDataSourceType;
-      })
     | (Base & { readonly type: 'setCredentialName'; readonly value: string })
     | (Base & {
           readonly type: 'setAuthMethod';
@@ -156,30 +141,6 @@ export type WebviewRequest =
     | (Base & { readonly type: 'exportAllSql' })
     | (Base & { readonly type: 'openInEditor' })
     | (Base & { readonly type: 'openDocumentation'; readonly id: DocumentationId })
-    | (Base & {
-          readonly type: 'azureConnect';
-          readonly mode: AzureAuthMode;
-          readonly tenantId?: string;
-      })
-    | (Base & { readonly type: 'azureDisconnect' })
-    | (Base & { readonly type: 'azureListSubscriptions' })
-    | (Base & {
-          readonly type: 'azureListAccounts';
-          readonly subscriptionId: string;
-      })
-    | (Base & { readonly type: 'azureSetAccount'; readonly account: string })
-    | (Base & { readonly type: 'azureListContainers' })
-    | (Base & {
-          readonly type: 'azureListBlobs';
-          readonly container: string;
-          readonly prefix: string;
-          readonly continuation: string;
-      })
-    | (Base & {
-          readonly type: 'azureAnalyzeBlob';
-          readonly container: string;
-          readonly blob: string;
-      })
     | (Base & { readonly type: 'showOrcGuidance' });
 
 export type WebviewRequestType = WebviewRequest['type'];
@@ -201,31 +162,6 @@ export interface FileEntry {
     readonly nativeSupport: NativeSupport;
     /** Set when the entry is a Delta/Iceberg table directory. */
     readonly isDirectory: boolean;
-}
-
-/** Non-secret description of the current Azure connection. */
-export interface AzureState {
-    readonly connected: boolean;
-    readonly mode: AzureAuthMode | null;
-    /** Account label (an email or "SAS token"); never a credential. */
-    readonly identity: string | null;
-    readonly account: string | null;
-    /** Selected Entra directory id. Non-secret and empty outside delegated auth. */
-    readonly tenantId: string | null;
-    readonly subscriptions: ReadonlyArray<{ id: string; name: string }>;
-    readonly accounts: readonly string[];
-    readonly containers: readonly string[];
-    readonly container: string | null;
-    readonly prefix: string;
-    readonly blobs: ReadonlyArray<{
-        name: string;
-        sizeBytes: number | null;
-        supported: boolean;
-    }>;
-    readonly continuation: string | null;
-    readonly canListSubscriptions: boolean;
-    readonly error: string | null;
-    readonly busy: boolean;
 }
 
 /** A limitation the UI must state plainly rather than work around. */
@@ -270,7 +206,6 @@ export interface AppStateSnapshot {
     readonly error: string | null;
     readonly notice: string | null;
     readonly limitation: Limitation | null;
-    readonly azure: AzureState;
     readonly formats: readonly SupportedFormat[];
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
@@ -390,9 +325,6 @@ const BUILDERS: Record<string, Builder> = {
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
-    azureDisconnect: () => ({ type: 'azureDisconnect' }),
-    azureListSubscriptions: () => ({ type: 'azureListSubscriptions' }),
-    azureListContainers: () => ({ type: 'azureListContainers' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
     openDocumentation: (source) => {
         const id = member(source, 'id', DOCUMENTATION_IDS);
@@ -422,10 +354,6 @@ const BUILDERS: Record<string, Builder> = {
     setDataSource: (source) => {
         const value = text(source, 'value', 256);
         return value === undefined ? undefined : { type: 'setDataSource', value };
-    },
-    setDataSourceType: (source) => {
-        const value = member(source, 'value', EXTERNAL_DATA_SOURCE_TYPES);
-        return value === undefined ? undefined : { type: 'setDataSourceType', value };
     },
     setCredentialName: (source) => {
         const value = text(source, 'value', 256);
@@ -494,42 +422,6 @@ const BUILDERS: Record<string, Builder> = {
         return kind === undefined
             ? undefined
             : { type: 'openStatementInEditor', kind };
-    },
-    azureConnect: (source) => {
-        const mode = member(source, 'mode', AZURE_AUTH_MODES);
-        const tenantId = text(source, 'tenantId', 128);
-        if (mode === undefined || ('tenantId' in source && tenantId === undefined)) {
-            return undefined;
-        }
-        const normalizedTenant = tenantId?.trim();
-        return normalizedTenant
-            ? { type: 'azureConnect', mode, tenantId: normalizedTenant }
-            : { type: 'azureConnect', mode };
-    },
-    azureListAccounts: (source) => {
-        const subscriptionId = text(source, 'subscriptionId', 64);
-        return subscriptionId
-            ? { type: 'azureListAccounts', subscriptionId }
-            : undefined;
-    },
-    azureSetAccount: (source) => {
-        const account = text(source, 'account', 64);
-        return account ? { type: 'azureSetAccount', account } : undefined;
-    },
-    azureListBlobs: (source) => {
-        const container = text(source, 'container', 128);
-        const prefix = text(source, 'prefix', 1024);
-        const continuation = text(source, 'continuation', MAX_TEXT_LENGTH);
-        return container && prefix !== undefined && continuation !== undefined
-            ? { type: 'azureListBlobs', container, prefix, continuation }
-            : undefined;
-    },
-    azureAnalyzeBlob: (source) => {
-        const container = text(source, 'container', 128);
-        const blob = text(source, 'blob', 1024);
-        return container && blob
-            ? { type: 'azureAnalyzeBlob', container, blob }
-            : undefined;
     },
 };
 

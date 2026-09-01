@@ -4,6 +4,22 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.1]
+
+First Visual Studio Marketplace release. The `2.1.x` entries below describe
+unpublished development builds.
+
+### Changed
+
+- Credential Setup is now URL-driven: `abs://`, `adls://`, and `abfss://`
+  locations select the matching connector automatically.
+
+### Removed
+
+- Removed Microsoft Entra sign-in, subscription/account/container browsing,
+  remote blob downloads, saved connection state, and the Azure Storage SDK from
+  the VS Code extension.
+
 ## [2.1.2]
 
 ### Fixed

@@ -20,6 +20,8 @@ import { redact } from './util';
 let output: vscode.OutputChannel | undefined;
 let ui: NativeUi | undefined;
 
+const LEGACY_AZURE_SECRET_KEY = 'sqlFileDetection.azure.credential';
+
 async function withErrors(label: string, action: () => Promise<void>): Promise<void> {
     try {
         await action();
@@ -67,9 +69,13 @@ async function resolveTarget(
 export function activate(context: vscode.ExtensionContext): void {
     const activatedAtMs = Date.now();
     output = vscode.window.createOutputChannel('SQL File Detection Tool');
+    void Promise.resolve(context.secrets.delete(LEGACY_AZURE_SECRET_KEY)).catch((error: unknown) => {
+        output?.appendLine(
+            `Could not remove the retired storage credential: ${redact(error)}`,
+        );
+    });
     const native = new NativeUi(context, output, activatedAtMs);
     ui = native;
-    native.restoreAzure();
 
     context.subscriptions.push(
         output,
@@ -99,12 +105,6 @@ export function activate(context: vscode.ExtensionContext): void {
                         await native.analyzePath(target.path, target.isDirectory);
                     }
                 }),
-        ),
-        vscode.commands.registerCommand('sqlFileDetectionTool.connectAzureStorage', () =>
-            withErrors('Azure sign-in failed', () => native.connectAzure('vscode')),
-        ),
-        vscode.commands.registerCommand('sqlFileDetectionTool.disconnectAzureStorage', () =>
-            withErrors('Azure sign-out failed', () => native.disconnectAzure()),
         ),
     );
 

@@ -12,6 +12,7 @@ const versioning = require(path.join(
 )) as {
     assertVersionBump(current: string, previous: string): void;
     compareVersions(left: string, right: string): number;
+    isFirstMarketplaceReset(current: string, previous: string): boolean;
     parseVersion(value: string, label: string): number[];
 };
 
@@ -32,6 +33,16 @@ test('each PR update requires a higher extension version', () => {
     );
     assert.throws(
         () => versioning.assertVersionBump('2.0.9', '2.1.0'),
+        /must advance/,
+    );
+});
+
+test('the first Marketplace release may reset the unpublished preview line once', () => {
+    assert.equal(versioning.isFirstMarketplaceReset('1.0.1', '2.1.2'), true);
+    assert.doesNotThrow(() => versioning.assertVersionBump('1.0.1', '2.1.2'));
+    assert.equal(versioning.isFirstMarketplaceReset('1.0.2', '2.1.2'), false);
+    assert.throws(
+        () => versioning.assertVersionBump('1.0.0', '2.1.2'),
         /must advance/,
     );
 });

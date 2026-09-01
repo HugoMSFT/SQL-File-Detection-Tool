@@ -14,6 +14,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const REPO = path.resolve(__dirname, '..');
+const FIRST_MARKETPLACE_VERSION = '1.0.1';
 
 function parseVersion(value, label) {
     const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value);
@@ -35,12 +36,22 @@ function compareVersions(left, right) {
 }
 
 function assertVersionBump(current, previous) {
-    if (compareVersions(current, previous) <= 0) {
+    if (
+        compareVersions(current, previous) <= 0
+        && !isFirstMarketplaceReset(current, previous)
+    ) {
         throw new Error(
             `Extension version ${current} must advance ${previous}. `
             + 'Run "npm version patch --no-git-tag-version" before pushing.',
         );
     }
+}
+
+function isFirstMarketplaceReset(current, previous) {
+    return (
+        current === FIRST_MARKETPLACE_VERSION
+        && compareVersions(previous, '2.0.0') >= 0
+    );
 }
 
 function readJson(filePath) {
@@ -73,9 +84,12 @@ function main(argv = process.argv.slice(2)) {
 
     const previousVersion = versionAt(comparisonRef);
     assertVersionBump(manifestVersion, previousVersion);
+    const transition = isFirstMarketplaceReset(manifestVersion, previousVersion)
+        ? 'resets the unpublished preview line from'
+        : 'advances';
     console.log(
-        `Extension version ${manifestVersion} advances ${previousVersion} `
-        + `from ${comparisonRef}.`,
+        `Extension version ${manifestVersion} ${transition} ${previousVersion} `
+        + `at ${comparisonRef}.`,
     );
 }
 
@@ -91,5 +105,6 @@ if (require.main === module) {
 module.exports = {
     assertVersionBump,
     compareVersions,
+    isFirstMarketplaceReset,
     parseVersion,
 };

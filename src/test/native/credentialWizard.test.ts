@@ -91,6 +91,18 @@ test('infers source types and uses safe source-specific placeholders', () => {
 });
 
 test('normalizes known storage URLs before they reach generated SQL', () => {
+    const blob = knownStorageLocation(
+        'abs://raw@acct.blob.core.windows.net/orders.parquet',
+    );
+    assert.equal(blob.dataSourceType, 'azure_blob');
+    assert.equal(blob.storageUrl, 'abs://raw@acct.blob.core.windows.net/orders.parquet');
+
+    const lake = knownStorageLocation(
+        'adls://raw@acct.dfs.core.windows.net/orders.parquet',
+    );
+    assert.equal(lake.dataSourceType, 'azure_data_lake');
+    assert.equal(lake.storageUrl, 'adls://raw@acct.dfs.core.windows.net/orders.parquet');
+
     const signed = knownStorageLocation(
         'https://acct.blob.core.windows.net/raw/orders.parquet?sv=1&sig=secret#preview',
     );
@@ -106,6 +118,12 @@ test('normalizes known storage URLs before they reach generated SQL', () => {
     );
     assert.equal(onelake.dataSourceType, 'fabric_onelake');
     assert.equal(onelake.removedSuffix, false);
+    assert.equal(
+        knownStorageLocation(
+            'https://onelake.dfs.fabric.microsoft.com/workspace/lakehouse/Files/orders',
+        ).dataSourceType,
+        'fabric_onelake',
+    );
 
     const s3 = knownStorageLocation('s3://sales-data/year=2026/');
     assert.equal(s3.dataSourceType, 's3');
@@ -124,6 +142,13 @@ test('known storage URLs reject incomplete and unsupported locations', () => {
         'not-a-url',
         'https://example.com/data.csv',
         'https://acct.blob.core.windows.net',
+        'abs:///raw/orders.parquet',
+        'adls:///raw/orders.parquet',
+        'abfss:///workspace/lakehouse/Files/orders.parquet',
+        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/data.parquet',
+        'abfss://onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.parquet',
+        'https://onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.parquet',
+        's3:///sales-data/orders.parquet',
         '******acct.blob.core.windows.net/raw',
         'ftp://example.com/data.csv',
     ]) {

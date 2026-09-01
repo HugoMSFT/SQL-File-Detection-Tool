@@ -2,7 +2,7 @@
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
   "description": "Analyze SQL-readable CSV, JSON, Parquet, ORC, Delta and Iceberg sources and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
-  "version": "2.1.2",
+  "version": "1.0.1",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -62,16 +62,6 @@
       {
         "command": "sqlFileDetectionTool.analyzeCurrentFile",
         "title": "Analyze Current File",
-        "category": "SQL File Detection Tool"
-      },
-      {
-        "command": "sqlFileDetectionTool.connectAzureStorage",
-        "title": "Browse Microsoft Storage",
-        "category": "SQL File Detection Tool"
-      },
-      {
-        "command": "sqlFileDetectionTool.disconnectAzureStorage",
-        "title": "Disconnect Azure Storage",
         "category": "SQL File Detection Tool"
       },
       {
@@ -148,7 +138,7 @@
             "Open the full interface in an editor tab (default)",
             "Keep the full interface in the Activity Bar sidebar"
           ],
-          "markdownDescription": "Where **Open**, analysis commands, Azure connect, and the Activity Bar entry display the interface."
+          "markdownDescription": "Where **Open**, analysis commands, and the Activity Bar entry display the interface."
         }
       }
     },
@@ -189,15 +179,12 @@
             }
           },
           {
-            "id": "connectAzure",
+            "id": "configureStorage",
             "title": "Set up external storage",
-            "description": "Paste a known storage URL to generate the external data source, or use tenant-aware Microsoft Entra sign-in to browse your storage account and analyze a supported blob.\n[Browse Microsoft Storage](command:sqlFileDetectionTool.connectAzureStorage)",
+            "description": "Paste an ABS, ADLS, or ABFSS storage URL. The extension infers the connector and generates the platform-aware credential and external data source.",
             "media": {
               "markdown": "media/walkthrough/azure.md"
-            },
-            "completionEvents": [
-              "onCommand:sqlFileDetectionTool.connectAzureStorage"
-            ]
+            }
           }
         ]
       }
@@ -207,7 +194,7 @@
     "vscode:prepublish": "npm run bundle",
     "bundle": "node scripts/build.js",
     "bundle:dev": "node scripts/build.js --dev",
-    "compile": "tsc -p ./",
+    "compile": "node scripts/clean-output.js && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "typecheck": "tsc -p ./ --noEmit",
     "lint": "eslint src scripts --ext .ts,.js",
@@ -220,7 +207,6 @@
     "capture:gif": "npm run compile && node scripts/capture-walkthrough.js"
   },
   "devDependencies": {
-    "@azure/core-auth": "^1.11.0",
     "@types/node": "^20.11.30",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
@@ -234,7 +220,6 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
-    "@azure/storage-blob": "^12.33.0",
     "chardet": "^2.2.0",
     "fflate": "^0.8.3",
     "hyparquet": "^1.29.2",

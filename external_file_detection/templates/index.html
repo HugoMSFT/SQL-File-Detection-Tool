@@ -2595,7 +2595,6 @@
             managed_identity: [
                 { id: 'client_id', label: 'User-assigned client ID (optional)', type: 'text' }
             ],
-            vscode_token: [],
             sas: [
                 { id: 'sas', label: 'SAS URL or token', type: 'password', required: true }
             ],
@@ -2615,7 +2614,6 @@
             entra_default: 'Reuses your Azure CLI, Azure PowerShell or VS Code developer sign-in.',
             entra_interactive: 'Opens a browser sign-in on this machine and caches the token securely where supported.',
             managed_identity: 'Recommended for production hosts. Uses the managed identity assigned to the machine.',
-            vscode_token: 'Uses the Microsoft account you signed into VS Code with. Sign in from the extension first.',
             sas: 'Attach with a shared access signature. The signature is never shown or logged.',
             connection_string: 'Attach with a full connection string. The key portion is never shown or logged.',
             account_key: 'Least preferred: prefer Microsoft Entra ID with Storage Blob Data Reader.',
@@ -2654,7 +2652,7 @@
         function showAzureExplorer() {
             document.getElementById('azureModal').classList.remove('hidden');
             azApi('/api/azure/status').then(d => {
-                azRenderModes(d.modes || [], d.vscode || {});
+                azRenderModes(d.modes || []);
                 if (d.connection && d.connection.connected) azOnConnected(d.connection);
                 else azShowAuthPanel();
                 if (!d.azure_extras) {
@@ -2673,17 +2671,16 @@
             document.querySelectorAll('#azFields input').forEach(i => { i.value = ''; });
         }
 
-        function azRenderModes(modes, vscode) {
+        function azRenderModes(modes) {
             const sel = document.getElementById('selAzMode');
             if (!sel || sel.options.length) { azModeChanged(); return; }
             modes.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m.id;
                 opt.textContent = m.label;
-                if (m.id === 'vscode_token' && !(vscode && vscode.available)) opt.disabled = true;
                 sel.appendChild(opt);
             });
-            sel.value = (vscode && vscode.available) ? 'vscode_token' : 'entra_default';
+            sel.value = 'entra_default';
             azModeChanged();
         }
 

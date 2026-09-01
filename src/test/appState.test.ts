@@ -15,7 +15,6 @@ import * as path from 'node:path';
 import {
     AppStateStore,
     DEFAULT_PREVIEW_ROWS,
-    EMPTY_AZURE_STATE,
     displayLabel,
     limitationFor,
     supportsPreview,
@@ -54,7 +53,6 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.equal(state.credentialSetup.authMethod, 'managed_identity');
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
-    assert.deepEqual(state.azure, EMPTY_AZURE_STATE);
     assert.ok(state.platforms.some((entry) => entry.id === 'azure_sql_db'));
 });
 
@@ -181,15 +179,6 @@ test('each published snapshot is a fresh frozen object', () => {
     assert.throws(() => {
         (after as { tableName: string }).tableName = 'mutated';
     }, TypeError);
-});
-
-test('azure state merges rather than clobbers', () => {
-    const model = store();
-    model.updateAzure({ connected: true, account: 'myaccount' });
-    model.updateAzure({ container: 'data' });
-    assert.equal(model.state.azure.connected, true);
-    assert.equal(model.state.azure.account, 'myaccount');
-    assert.equal(model.state.azure.container, 'data');
 });
 
 test('clearing the selection keeps user-entered options', () => {

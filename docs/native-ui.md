@@ -15,15 +15,13 @@ TypeScript running in the extension host.
 
 | Module | `vscode` import? | Responsibility |
 | --- | --- | --- |
-| `src/extension.ts` | yes | Activation. Registers six commands and one `WebviewViewProvider`. Nothing else. |
-| `src/nativeView.ts` | yes | The only other module that touches the VS Code API. Implements `UiHost` and `AuthEnvironment` and owns the sidebar and panel surfaces. |
+| `src/extension.ts` | yes | Activation. Registers four commands and one `WebviewViewProvider`. Nothing else. |
+| `src/nativeView.ts` | yes | The only other module that touches the VS Code API. Implements `UiHost` and owns the sidebar and panel surfaces. |
 | `src/ui/controller.ts` | no | All product logic. Receives untrusted messages, drives the native service, mutates the shared store. |
-| `src/ui/host.ts` | no | The `UiHost` / `AzureBridge` seam. Everything the controller needs from the editor, expressed as an interface. |
+| `src/ui/host.ts` | no | The `UiHost` seam. Everything the controller needs from the editor, expressed as an interface. |
 | `src/ui/webviewShell.ts` | no | Builds the HTML shell, the CSP and the nonce. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
-| `src/azure/*` | no | Storage URL parsing, blob browsing, connection and auth state. |
-| `src/net/*` | no | The SSRF-hardened HTTPS client and the public dataset workflow. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
 
 Keeping `vscode` confined to two files is what makes the rest of the extension
@@ -62,25 +60,25 @@ Preview is the initial tab and primary workflow. The left navigator persists
 across tabs, while the main view starts with bounded real rows from the selected
 file. Metadata and Schema separate detected facts from type overrides. Focused
 tabs expose `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, external file format,
-external table, credential setup, and Azure/URL workflows. Quick Analyze,
+external table, and URL-driven credential setup. Quick Analyze,
 Formats, Best Practices, COPY INTO, JSON, and FOR JSON are not navigation tabs.
 JSON guidance is emitted only in the relevant `OPENROWSET` or external-table
 context.
 
-The credential tab is a four-step wizard: target platform, external data source,
-authentication, then object names and location. `credentialWizard.ts` constrains
-every combination before it reaches generation. Fabric SQL Database allows only
-OneLake over ABFSS with `USER IDENTITY`; OneLake on the other supported products
-uses the ADLS connector; SQL Server 2022 S3 uses `S3 ACCESS KEY`; and SQL Server
-2025 managed identity carries its Azure Arc and user-assigned identity caveat.
-The webview receives no SAS token, access key, or master-key password. Generated
-SQL contains placeholders that users replace later in a secure editor.
+The credential tab is a five-step wizard: storage URL, target platform, detected
+external data source, authentication, and object names. `credentialWizard.ts`
+infers ABS, ADLS, or ABFSS from the URL and constrains the remaining choices
+before generation. Fabric SQL Database allows only OneLake over ABFSS with
+`USER IDENTITY`; OneLake on the other supported products uses the ADLS
+connector; SQL Server 2022 S3 uses `S3 ACCESS KEY`; and SQL Server 2025 managed
+identity carries its Azure Arc and user-assigned identity caveat. The webview
+receives no SAS token, access key, or master-key password. Generated SQL contains
+placeholders that users replace later in a secure editor.
 
 Folder scans retain one metadata record per file. Generation and schema
-overrides remain selected-file scoped. For Azure blobs, the controller derives
-sanitized credential, data-source, and file-format names. Anonymous access marks
-the credential as not required. Local files expose direct SQL Server/UNC reads
-where supported and otherwise state that staging is required.
+overrides remain selected-file scoped. Storage URLs configure generated SQL but
+are never fetched. Local files expose direct SQL Server/UNC reads where supported
+and otherwise state that staging is required.
 
 Generated-statement headers and relevant external-object readiness entries show
 platform-aware Microsoft Learn links. The renderer receives only typed
@@ -163,88 +161,27 @@ reference.
 
 ## Storage setup and threat model
 
-Credential setup combines the two storage entry paths:
+Credential setup has one entry path: a storage URL. The host validates and
+normalizes the location, strips query strings and fragments, infers the storage
+type, and generates credential/data-source SQL without fetching the URL.
 
-| Path | Network access | Result |
-| --- | --- | --- |
-| Known Azure Blob, ADLS, OneLake, or `s3://` URL | None | The host validates and normalizes the URL, strips query strings/fragments, infers the storage type, and generates credential/data-source SQL without requiring file metadata. |
-| Browse Microsoft storage | Extension host only | A Microsoft Entra work or school account token from `authentication.getSession` lists subscriptions/accounts/containers and downloads the selected blob to a temporary file for analysis. Generated SQL retains the unsigned blob location. |
+The extension performs no storage authentication, account discovery, container
+listing, or remote download. There is no `vscode.authentication` call, no Azure
+connection state in the renderer model, and no browser command in the manifest
+or message protocol.
 
-Microsoft sign-in adds `VSCODE_TENANT:<id>` when the user supplies a directory
-ID, clears a stale account preference on interactive sign-in, and pins later
-Storage/ARM sessions to the chosen account. Subscription discovery is explicit;
-a known storage account can be attached directly. A failed replacement leaves
-the previous connection intact.
+The URL boundary remains strict:
 
-**Managed identity is not offered.** A desktop extension has no managed
-identity; pretending otherwise would be security theatre. It remains a
-deployment concern for the optional Python CLI and web application, and is
-documented as such.
-
-The threat model:
-
-- **A credential never reaches the renderer.** Not in a state snapshot, not in a
-  blob URL, not in an error. `AzureState` carries non-secret identity, tenant,
-  account, container, and prefix labels, and nothing credential-bearing. A
-  controller test walks every snapshot the Azure suites produce and fails on
-  anything matching a key, a signature or a JWT.
-- **A credential never reaches a log, a setting, a URL, a child process
-  argument, or generated SQL.** `redactAzure()` scrubs bearer tokens, raw JWTs,
-  `AccountKey=`/`SharedAccessSignature=` pairs and SAS query parameters from
-  every string bound for the output channel or a message.
-- **Disconnect means disconnect.** `disconnect()` clears in-memory state *and*
-  deletes any remembered secret. So does `deactivate()`, and so does the
-  discovery that a VS Code session has disappeared.
-- **`blobUrl()` is never signed.** It builds a display/analysis URL from account,
-  container and blob only. Signing happens inside the request path.
-
-Container, blob and prefix names are validated against the Azure naming rules
-*before* any request is made, so a hostile name cannot be smuggled into a URL
-path and reinterpreted.
-
-## Network boundaries
-
-`src/net/safeHttp.ts` implements a deliberately paranoid HTTPS client for the
-"analyse a public dataset URL" workflow. It is stricter than the Python
-`public_data.py` it replaces.
-
-1. **HTTPS only.** No `http:`, no `file:`, no `data:`, no anything else.
-2. **No credentials in the URL.** `user:password@` is rejected outright.
-3. **No local names.** `localhost`, `*.local`, `*.internal`, and the cloud
-   metadata host names are rejected before resolution.
-4. **Default port only.** A non-443 port is refused, so the client cannot be
-   driven as a port scanner against a publicly routable host.
-5. **Every resolved address is classified.** `src/net/ipGuard.ts` rejects
-   loopback, private, link-local, carrier-grade NAT, unique-local, multicast and
-   reserved ranges, including IPv4-mapped and NAT64 forms. Leading-zero octets
-   are rejected outright rather than guessed at, because `0177.0.0.1` is
-   loopback to some resolvers and not to others.
-6. **The guard is installed as the socket's DNS `lookup`.** This is the part
-   that matters. Validating a host name and then handing the name to
-   `https.request` leaves a DNS-rebinding window; validating inside the lookup
-   callback means the address the socket actually connects to is the address
-   that was checked.
-7. **Every redirect hop is revalidated** from scratch, with a hop cap.
-8. **Size is capped twice**: once against `Content-Length` if declared, and again
-   while streaming, so a lying header cannot exhaust memory.
-9. **Timeouts** apply to connection and to the whole response.
-10. **Filenames are sanitised.** `safeFileName()` strips separators, traversal
-   segments, control characters, and Windows reserved device names before
-   anything is written into the bounded extension temp directory.
-11. **The Learn catalog is an allowlist**, not a prefix match.
-12. **A pasted signature never survives.** `storageUrlFor()` strips the query
-    string and fragment, so if a user pastes a SAS-signed blob URL the `sig=`
-    value cannot reach the state envelope, the output channel, or the T-SQL
-    people save and commit. Signed access belongs in a
-    `DATABASE SCOPED CREDENTIAL`.
-
-Generic public hosts are analysed after a bounded download, but the generated
-SQL says plainly that the data must be staged, because a SQL target cannot query
-an arbitrary HTTPS URL. Azure Blob URLs keep their storage semantics.
-
-None of this is tested against the live network. `src/test/net/*` inject a fake
-resolver and a fake transport, which is what lets the suite cover rebinding,
-lying `Content-Length`, redirect chains and metadata endpoints deterministically.
+- `abs://` selects Azure Blob and emits the ABS connector.
+- `adls://` selects Azure Data Lake and emits the ADLS connector.
+- `abfss://` selects OneLake on Fabric and emits ABFSS; supported non-Fabric
+  targets use the documented ADLS mapping.
+- Azure HTTPS and `s3://` locations remain supported for compatibility.
+- Query strings and fragments are removed before state or generated SQL is
+  updated. A `sig` parameter selects SAS generation but the signature itself is
+  discarded.
+- The extension never asks for a token, key, or password. Generated SQL uses
+  placeholders for any secret-bearing authentication method.
 
 ## Cancellation and stale results
 
@@ -252,14 +189,12 @@ Analysis is serialised through `createSerialQueue()`, so two concurrent requests
 keep their own arguments and their own results rather than one being satisfied
 by the other. On top of that:
 
-- `begin()` bumps a monotonic `generation`, cancels the previous
-  `CancellationTokenSource`, and aborts the previous `AbortController`.
+- `begin()` bumps a monotonic `generation` and cancels the previous
+  `CancellationTokenSource`.
 - Every `await` is followed by `isCurrent(generation)`; a superseded task drops
   its result instead of writing it. A slow analysis of file A can therefore never
   overwrite a fast analysis of file B.
-- The token reaches all the way down: into the native service, into the HTTPS
-  client (as an `AbortSignal` on the request *and* a per-chunk check), and into
-  blob downloads.
+- The token reaches all the way down into the native analysis service.
 - Schema and SQL regeneration is debounced, so typing in the table name field
   does not start work on every keystroke.
 
