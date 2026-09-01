@@ -4,6 +4,16 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.2]
+
+### Changed
+
+- Replaced the Marketplace page with a shorter extension-focused description.
+- Regenerated the walkthrough from the current URL-only interface and changed
+  its filename so Marketplace caches the new GIF.
+- Simplified the short description and clarified that ORC and RCFile are
+  recognized but not inspected natively.
+
 ## [1.0.1]
 
 First Visual Studio Marketplace release. The `2.1.x` entries below describe

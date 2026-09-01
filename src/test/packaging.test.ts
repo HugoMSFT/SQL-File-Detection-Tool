@@ -61,8 +61,8 @@ test('the manifest points at the bundle and builds it before publishing', () => 
     assert.match(manifest.scripts.bundle, /scripts\/build\.js/);
 });
 
-test('the extension uses the first Marketplace release version', () => {
-    assert.equal(manifest.version, '1.0.1');
+test('the extension stays on the first Marketplace release line', () => {
+    assert.match(manifest.version, /^1\.0\.\d+$/);
 });
 
 test('activation is scoped to the Activity Bar view, never to startup', () => {
@@ -107,7 +107,12 @@ test('.vscodeignore excludes everything and then allows the payload back', () =>
             `${allowed} is allowed into the package but does not exist`,
         );
     }
-    for (const required of ['!dist/extension.js', '!README.md', '!LICENSE']) {
+    for (const required of [
+        '!dist/extension.js',
+        '!MARKETPLACE.md',
+        '!MARKETPLACE_CHANGELOG.md',
+        '!LICENSE',
+    ]) {
         assert.ok(lines.includes(required), `${required} must be shipped`);
     }
 });

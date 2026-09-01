@@ -3,15 +3,12 @@
 # This file is an allowlist, not a blocklist. Everything in the repository is
 # excluded first, then the extension payload is added back one entry at a time.
 #
-# The reason is the whole point of version 2.0: the extension is native, so the
-# package must be provably free of the Python distribution that shares this
-# repository. A blocklist can only exclude what someone remembered to name, and
-# a new Python module, notebook or fixture added later would silently ship. An
-# allowlist cannot fail that way — a new file has to be named here to be
-# included. `scripts/audit-vsix.js` re-checks the built archive mechanically.
+# The extension is native, so the package must stay free of the optional Python
+# distribution in this repository. New files ship only when explicitly listed.
+# `scripts/audit-vsix.js` re-checks the built archive mechanically.
 #
-# vsce always includes package.json, and README.md / CHANGELOG.md / LICENSE are
-# listed below so the Marketplace page and the license notice are present.
+# vsce always includes package.json. The Marketplace README, changelog, and
+# license are explicitly included below.
 
 **
 
@@ -19,7 +16,7 @@
 
 !media/icon.png
 !media/activity-bar.svg
-!media/sql-file-detection-tool-walkthrough.gif
+!media/sql-file-detection-tool-walkthrough-1.0.2.gif
 !media/webview/main.js
 !media/webview/main.css
 !media/walkthrough/open.md
@@ -27,7 +24,7 @@
 !media/walkthrough/sql.md
 !media/walkthrough/azure.md
 
-!README.md
-!CHANGELOG.md
+!MARKETPLACE.md
+!MARKETPLACE_CHANGELOG.md
 !LICENSE
 !THIRD_PARTY_NOTICES.md

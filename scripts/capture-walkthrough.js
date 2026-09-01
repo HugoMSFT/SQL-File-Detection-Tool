@@ -43,7 +43,7 @@ const path = require('node:path');
 const REPO = path.resolve(__dirname, '..');
 const OUT = path.join(REPO, 'out');
 const MEDIA = path.join(REPO, 'media');
-const TARGET = path.join(MEDIA, 'sql-file-detection-tool-walkthrough.gif');
+const TARGET = path.join(MEDIA, 'sql-file-detection-tool-walkthrough-1.0.2.gif');
 
 const WIDTH = 960;
 const HEIGHT = 540;
