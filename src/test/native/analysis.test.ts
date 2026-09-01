@@ -21,6 +21,8 @@ import {
     detectFileType,
     listSupportedFormats,
 } from '../../native/detector';
+import { generateCreateTable } from '../../native/sql/generator';
+import { generateOpenjsonColumns } from '../../native/sql/generatorHelpers';
 import { clampPreviewRows } from '../../native/preview';
 import { resolveWithinRoot } from '../../native/paths';
 import { NativeAnalysisService } from '../../native/service';
@@ -246,6 +248,102 @@ describe('malformed, truncated and hostile input', () => {
         await write('mixed.ndjson', '{"a":1}\nnot json\n{"a":3}\n');
         const metadata = await analyzeTemp('mixed.ndjson');
         assert.strictEqual(metadata.file_type, 'json');
+    });
+
+    it('infers exact CSV numerics without rounding boundary values', async () => {
+        const overPrecision = '9'.repeat(39);
+        await write(
+            'exact-numerics.csv',
+            'small,big,max_big,decimal,over_big,over_precision,scaled,tiny\n' +
+            '2147483647,2147483648,9223372036854775807,' +
+            `12345678901234.5678,9223372036854775808,${overPrecision},` +
+            '1.2300e2,1e-4\n',
+        );
+        const metadata = await analyzeTemp('exact-numerics.csv');
+        const schema = Object.fromEntries(metadata.schema ?? []);
+
+        assert.strictEqual(schema.small, 'int32');
+        assert.strictEqual(schema.big, 'int64');
+        assert.strictEqual(schema.max_big, 'int64');
+        assert.strictEqual(schema.decimal, 'decimal(18,4)');
+        assert.strictEqual(schema.over_big, 'decimal(19,0)');
+        assert.strictEqual(schema.over_precision, 'decimal(39,0)');
+        assert.strictEqual(schema.scaled, 'decimal(5,2)');
+        assert.strictEqual(schema.tiny, 'decimal(4,4)');
+        assert.strictEqual(metadata.schema_inference, 'full');
+        assert.strictEqual(metadata.sample_rows?.[0]?.[2], '9223372036854775807');
+        assert.strictEqual(metadata.sample_rows?.[0]?.[3], '12345678901234.5678');
+
+        const sql = generateCreateTable(metadata);
+        assert.match(sql, /\[small\]\s+INT\b/);
+        assert.match(sql, /\[big\]\s+BIGINT\b/);
+        assert.match(sql, /\[decimal\]\s+DECIMAL\(18,4\)/);
+        assert.match(sql, /\[over_big\]\s+DECIMAL\(19,0\)/);
+        assert.match(sql, /\[over_precision\]\s+NVARCHAR\(MAX\)/);
+        assert.match(sql, /\[scaled\]\s+DECIMAL\(5,2\)/);
+        assert.match(sql, /\[tiny\]\s+DECIMAL\(4,4\)/);
+    });
+
+    it('aggregates complete CSV type and width evidence after row 1000', async () => {
+        const rows = Array.from({ length: 1000 }, (_, index) => String(index + 1));
+        rows.push('x'.repeat(5000));
+        await write('late-wide-value.csv', `value\n${rows.join('\n')}\n`);
+
+        const metadata = await analyzeTemp('late-wide-value.csv');
+        assert.deepStrictEqual(metadata.schema, [['value', 'object']]);
+        assert.strictEqual(metadata.schema_inference, 'full');
+        assert.strictEqual(metadata.schema_sample_size, 1001);
+        assert.strictEqual(metadata.observed_max_string_lengths?.value, 5000);
+        assert.match(generateCreateTable(metadata), /\[value\]\s+NVARCHAR\(MAX\)/);
+    });
+
+    it('aggregates every row of a complete JSON array before typing it', async () => {
+        const rows = Array.from({ length: 200 }, (_, index) => ({ value: index }));
+        const text = `${JSON.stringify(rows).slice(0, -1)},{"value":"late"}]`;
+        await write('late-json-family.json', text);
+
+        const metadata = await analyzeTemp('late-json-family.json');
+        assert.deepStrictEqual(metadata.schema, [['value', 'str']]);
+        assert.strictEqual(metadata.schema_inference, 'full');
+        assert.strictEqual(metadata.schema_sample_size, 201);
+        assert.strictEqual(metadata.json_typed_projection_safe, false);
+        assert.deepStrictEqual(generateOpenjsonColumns(metadata), []);
+        assert.match(generateCreateTable(metadata), /\[value\]\s+NVARCHAR\(MAX\)/);
+    });
+
+    it('infers JSON integer ranges and preserves unsafe numeric samples', async () => {
+        await write(
+            'json-numerics.json',
+            '[{"small":2147483647,"big":2147483648,' +
+            '"max_big":9223372036854775807,' +
+            '"over_big":9223372036854775808,' +
+            '"decimal":12345678901234.5678}]',
+        );
+        const metadata = await analyzeTemp('json-numerics.json');
+        const schema = Object.fromEntries(metadata.schema ?? []);
+
+        assert.strictEqual(schema.small, 'int32');
+        assert.strictEqual(schema.big, 'int64');
+        assert.strictEqual(schema.max_big, 'int64');
+        assert.strictEqual(schema.over_big, 'decimal(19,0)');
+        assert.strictEqual(schema.decimal, 'decimal(18,4)');
+        assert.strictEqual(
+            metadata.json_sample_values?.max_big,
+            '9223372036854775807',
+        );
+        assert.strictEqual(
+            metadata.json_sample_values?.decimal,
+            '12345678901234.5678',
+        );
+    });
+
+    it('falls back from object/scalar JSON mixtures to schemaless OPENJSON', async () => {
+        await write('mixed-json-shape.json', '[{"value":{"id":1}},{"value":2}]');
+        const metadata = await analyzeTemp('mixed-json-shape.json');
+
+        assert.deepStrictEqual(metadata.schema, [['value', 'str']]);
+        assert.strictEqual(metadata.json_typed_projection_safe, false);
+        assert.deepStrictEqual(generateOpenjsonColumns(metadata), []);
     });
 
     it('refuses a zip bomb disguised as a workbook', async () => {

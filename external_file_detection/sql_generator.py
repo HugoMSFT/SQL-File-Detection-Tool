@@ -414,9 +414,9 @@ class SQLGenerator:
         'half_float':    'REAL',
         'bool':          'BIT',
         'boolean':       'BIT',
-        'object':        'NVARCHAR(255)',
-        'str':           'NVARCHAR(255)',
-        'string':        'NVARCHAR(255)',
+        'object':        'NVARCHAR(MAX)',
+        'str':           'NVARCHAR(MAX)',
+        'string':        'NVARCHAR(MAX)',
         'large_string':  'NVARCHAR(MAX)',
         'datetime64[ns]':'DATETIME2(7)',
         'datetime64[us]':'DATETIME2(6)',
@@ -439,7 +439,7 @@ class SQLGenerator:
         'dict':          'NVARCHAR(MAX)',
         'map':           'NVARCHAR(MAX)',
         'union':         'NVARCHAR(MAX)',
-        'null':          'NVARCHAR(255)',
+        'null':          'NVARCHAR(MAX)',
     }
 
     # Delimiter display names for comments
@@ -1466,17 +1466,17 @@ class SQLGenerator:
                 f'    DATA_SOURCE     = \'{source_name}\',',
             ]
             lines += self._json_row_frame_options()
-            lines += [
-                ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
-                'CROSS APPLY OPENJSON(src.json_doc)',
-                'WITH (',
-            ]
             openjson_cols = self._generate_openjson_columns(metadata, indent=4)
-            lines.append(
-                ',\n'.join(openjson_cols) if openjson_cols
-                else '    [data] NVARCHAR(MAX)'
-            )
-            lines += [') AS j;']
+            lines.append(') WITH (json_doc NVARCHAR(MAX)) AS [src]')
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON(src.json_doc)',
+                    'WITH (',
+                    ',\n'.join(openjson_cols),
+                    ') AS j;',
+                ]
+            else:
+                lines.append('CROSS APPLY OPENJSON(src.json_doc) AS j;')
             return '\n'.join(lines)
 
         # CSV / delimited text
@@ -2098,11 +2098,45 @@ class SQLGenerator:
                 **explicit_overrides,
             }
 
+        external_lob_columns = []
+        for column_name, detected_type in external_metadata.get('schema') or []:
+            sql_type = self._column_sql_type(
+                external_metadata,
+                column_name,
+                detected_type,
+            )
+            if re.fullmatch(
+                r'(?:(?:N?VARCHAR|VARBINARY)\s*\(\s*MAX\s*\)|'
+                r'N?TEXT|IMAGE|XML)',
+                sql_type,
+                re.IGNORECASE,
+            ):
+                external_lob_columns.append((column_name, sql_type))
+        if external_lob_columns:
+            rendered = ', '.join(
+                f'[{column_name}] ({sql_type})'
+                for column_name, sql_type in external_lob_columns
+            )
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
+                target_platform,
+                'External tables cannot declare these inferred LOB columns '
+                f'directly: {rendered}. After validating the complete source '
+                'width, set explicit bounded SQL type overrides (for example '
+                'NVARCHAR(4000) or VARBINARY(8000)).',
+            )
+
         columns = self._generate_column_definitions(
             external_metadata, include_nullability=False,
         )
         if not columns:
-            columns = ['    [data] NVARCHAR(MAX)']
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE '
+                f'({config.format_type} without a bounded schema)',
+                target_platform,
+                'Provide a schema with explicit bounded SQL type overrides '
+                'before execution.',
+            )
 
         with_options = []
         with_options.append(f'    DATA_SOURCE = [{data_source}]')
@@ -2528,7 +2562,7 @@ class SQLGenerator:
 
         # ---- Section 1: read the document, then OPENJSON -----------------
         openjson_cols = self._generate_openjson_columns(metadata, indent=8)
-        openjson_with = ',\n'.join(openjson_cols) if openjson_cols else '        [data] NVARCHAR(MAX)'
+        openjson_with = ',\n'.join(openjson_cols)
 
         if json_bulk_source and json_format == 'ndjson':
             # Every line is its own document. Reading the file whole would hand
@@ -2551,12 +2585,22 @@ class SQLGenerator:
             # returns the whole file as one row, which is not a JSON document
             # here.
             lines += self._json_row_frame_options(row_terminator='0x0a')
+            lines.append(
+                ') WITH (json_doc NVARCHAR(MAX)) AS [src]  '
+                '-- LF: one document per line'
+            )
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON([src].json_doc)',
+                    'WITH (',
+                    openjson_with,
+                    ') AS [j];',
+                ]
+            else:
+                lines.append(
+                    'CROSS APPLY OPENJSON([src].json_doc) AS [j];'
+                )
             lines += [
-                f') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
-                f'CROSS APPLY OPENJSON([src].json_doc)',
-                f'WITH (',
-                openjson_with,
-                f') AS [j];',
                 f'',
                 f'-- The statements below work on one document at a time, so they',
                 f'-- read a single line. Concatenated NDJSON is not one document.',
@@ -2661,14 +2705,21 @@ class SQLGenerator:
                     jv.append(f'    JSON_VALUE(@json, \'{_quote_json_path(col_name)}\') AS [{clean}]')
             lines.append(',\n'.join(jv) + ';' if jv else '    @json;')
         else:
-            lines += [
-                f'-- Parse the JSON array into rows with typed columns',
-                f'SELECT *',
-                f'FROM OPENJSON(@json)',
-                f'WITH (',
-                openjson_with,
-                f');',
-            ]
+            if openjson_cols:
+                lines += [
+                    f'-- Parse the JSON array into rows with typed columns',
+                    f'SELECT *',
+                    f'FROM OPENJSON(@json)',
+                    f'WITH (',
+                    openjson_with,
+                    f');',
+                ]
+            else:
+                lines += [
+                    f'-- The sampled shape is not safe for a typed projection.',
+                    f'SELECT [key], [value], [type]',
+                    f'FROM OPENJSON(@json);',
+                ]
 
         # ---- Section 2: OPENJSON without schema (key/value/type) ---------
         lines += [
@@ -2769,11 +2820,16 @@ class SQLGenerator:
                 f'    FIELDTERMINATOR = \'0x0b\',',
                 f'    FIELDQUOTE      = \'0x0b\'',
                 f') WITH (json_doc NVARCHAR(MAX)) AS src',
-                f'CROSS APPLY OPENJSON(src.json_doc)',
-                f'WITH (',
             ]
-            lines.append(',\n'.join(openjson_cols) if openjson_cols else '    [data] NVARCHAR(MAX)')
-            lines += [f') AS j;']
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON(src.json_doc)',
+                    'WITH (',
+                    ',\n'.join(openjson_cols),
+                    ') AS j;',
+                ]
+            else:
+                lines.append('CROSS APPLY OPENJSON(src.json_doc) AS j;')
         elif is_on_prem:
             lines += [
                 f'',
@@ -2785,7 +2841,7 @@ class SQLGenerator:
             ]
 
         # ---- Section 8: INSERT parsed JSON into table -------------------
-        if schema:
+        if schema and openjson_cols:
             insert_cols = ', '.join(
                 f'[{_escape_identifier(c)}]'
                 for c, _ in schema
@@ -3375,6 +3431,30 @@ class SQLGenerator:
             return 'UTF16'
         return ''
 
+    @staticmethod
+    def _has_incomplete_type_evidence(metadata: Dict[str, Any]) -> bool:
+        return (
+            metadata.get('schema_inference') == 'sampled'
+            and metadata.get('file_type') in {'csv', 'json'}
+        )
+
+    def _column_sql_type(
+        self,
+        metadata: Dict[str, Any],
+        column_name: str,
+        detected_type: Any,
+    ) -> str:
+        overrides = metadata.get('sql_type_overrides') or {}
+        if column_name in overrides:
+            return _safe_sql_type(overrides[column_name])
+        if self._has_incomplete_type_evidence(metadata):
+            return 'NVARCHAR(MAX)'
+        max_lengths = metadata.get('max_string_lengths') or {}
+        return self._map_type_to_sql(
+            detected_type,
+            max_length=max_lengths.get(column_name),
+        )
+
     def _generate_column_definitions(self, metadata: Dict[str, Any],
                                      include_nullability: bool = False,
                                      indent: int = 4) -> List[str]:
@@ -3382,18 +3462,12 @@ class SQLGenerator:
         if not schema:
             return []
         nullable_set = set(metadata.get('nullable_columns') or [])
-        max_lengths = metadata.get('max_string_lengths') or {}
-        sql_type_overrides = metadata.get('sql_type_overrides') or {}
         pad = ' ' * indent
         columns = []
         _validate_unique_column_names(schema)
         for col_name, col_type in schema:
             clean_name = _escape_identifier(col_name)
-            # Use explicit SQL type override if provided by schema editor
-            if col_name in sql_type_overrides:
-                sql_type = _safe_sql_type(sql_type_overrides[col_name])
-            else:
-                sql_type = self._map_type_to_sql(col_type, max_length=max_lengths.get(col_name))
+            sql_type = self._column_sql_type(metadata, col_name, col_type)
             if include_nullability:
                 null_kw = 'NULL' if col_name in nullable_set else 'NOT NULL'
                 columns.append(f'{pad}[{clean_name}] {sql_type:<22} {null_kw}')
@@ -3409,22 +3483,28 @@ class SQLGenerator:
         """
         schema = metadata.get('schema') or []
         nesting = metadata.get('json_nesting') or {}
-        max_lengths = metadata.get('max_string_lengths') or {}
         sql_type_overrides = metadata.get('sql_type_overrides') or {}
         pad = ' ' * indent
         cols: List[str] = []
         _validate_unique_column_names(schema)
+        if (
+            metadata.get('json_typed_projection_safe') is False
+            or (
+                self._has_incomplete_type_evidence(metadata)
+                and any(
+                    column_name not in sql_type_overrides
+                    for column_name, _ in schema
+                )
+            )
+        ):
+            return []
         for col_name, col_type in schema:
             clean = _escape_identifier(col_name)
             kind = nesting.get(col_name, 'scalar')
             if kind in ('object', 'array'):
                 cols.append(f'{pad}[{clean}] NVARCHAR(MAX) \'{_quote_json_path(col_name)}\' AS JSON')
             else:
-                if col_name in sql_type_overrides:
-                    sql_type = _safe_sql_type(sql_type_overrides[col_name])
-                else:
-                    sql_type = self._map_type_to_sql(col_type,
-                                                     max_length=max_lengths.get(col_name))
+                sql_type = self._column_sql_type(metadata, col_name, col_type)
                 cols.append(f'{pad}[{clean}] {sql_type} \'{_quote_json_path(col_name)}\'')
         return cols
 
@@ -3488,6 +3568,9 @@ class SQLGenerator:
     def _map_type_to_sql(self, data_type: str, max_length: int = None) -> str:
         """Map a detected Arrow/pandas/Iceberg type name to a SQL Server type."""
         data_type_lower = str(data_type).strip().lower()
+        variable_string_types = {
+            'object', 'str', 'string', 'large_string', 'null',
+        }
 
         # Container types must be serialised as text before anything else, so a
         # nested type such as ``struct<id: int64>`` can never become BIGINT.
@@ -3505,11 +3588,15 @@ class SQLGenerator:
         # Exact match
         if data_type_lower in self.TYPE_MAPPING:
             sql_type = self.TYPE_MAPPING[data_type_lower]
-            # Override NVARCHAR(255) with a smarter size when string length data exists
-            if sql_type == 'NVARCHAR(255)' and max_length is not None:
+            if (
+                data_type_lower in variable_string_types
+                and max_length is not None
+            ):
                 if max_length > 4000:
                     return 'NVARCHAR(MAX)'
-                elif max_length > 200:
+                if max_length <= 200:
+                    return 'NVARCHAR(255)'
+                if max_length > 200:
                     # Round up to a nice boundary
                     size = ((max_length // 50) + 1) * 50
                     return f'NVARCHAR({min(size, 4000)})'
@@ -3523,12 +3610,14 @@ class SQLGenerator:
         # never resolves through the shorter ``string`` key.
         for key in self._substring_type_keys():
             if key in data_type_lower:
+                if key in variable_string_types:
+                    return self._map_type_to_sql(key, max_length=max_length)
                 return self.TYPE_MAPPING[key]
 
         # decimal / numeric without a parseable precision
         if 'decimal' in data_type_lower or 'numeric' in data_type_lower:
-            return 'DECIMAL(18,4)'
-        return 'NVARCHAR(255)'
+            return 'NVARCHAR(MAX)'
+        return 'NVARCHAR(MAX)'
 
     @classmethod
     def _substring_type_keys(cls) -> Tuple[str, ...]:

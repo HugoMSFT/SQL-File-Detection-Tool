@@ -1,10 +1,10 @@
 /**
  * JSON, NDJSON and JSON-Lines analysis.
  *
- * The shape of a document is decided from a bounded prefix, NDJSON is streamed
- * line by line so only the schema sample is retained, and an oversized JSON
- * array is sampled by decoding values one at a time from a bounded prefix
- * rather than parsing the whole document.
+ * Complete documents and NDJSON streams aggregate field evidence across every
+ * row at constant schema memory. Oversized JSON arrays are sampled by decoding
+ * values one at a time from a bounded prefix rather than parsing the whole
+ * document.
  */
 
 import * as path from 'path';
@@ -28,6 +28,10 @@ import {
     rawDecode,
     type JsonNode,
 } from './jsonValue';
+import {
+    exactNumericSample,
+    NumericColumnAccumulator,
+} from './numeric';
 
 /** An object row: the entries of a JSON object, in document order. */
 type ObjectRow = Array<[string, JsonNode]>;
@@ -45,25 +49,6 @@ function lookup(row: ObjectRow, key: string): JsonNode | undefined {
     return undefined;
 }
 
-/** Python `type(...).__name__` for a scalar JSON value. */
-function scalarTypeName(node: JsonNode | null): string {
-    if (node === null) {
-        return 'str';
-    }
-    switch (node.kind) {
-        case 'bool':
-            return 'bool';
-        case 'int':
-            return 'int';
-        case 'float':
-            return 'float';
-        case 'string':
-            return 'str';
-        default:
-            return 'str';
-    }
-}
-
 /** `_json_safe` applied to a node: containers collapse to their Python `str()`. */
 function jsonSafe(node: JsonNode | null): SampleValue {
     if (node === null || node.kind === 'null') {
@@ -74,7 +59,7 @@ function jsonSafe(node: JsonNode | null): SampleValue {
             return node.value;
         case 'int':
         case 'float':
-            return Number.isFinite(node.value) ? node.value : null;
+            return exactNumericSample(node.raw);
         case 'string':
             return node.value;
         default:
@@ -82,9 +67,133 @@ function jsonSafe(node: JsonNode | null): SampleValue {
     }
 }
 
+type JsonValueFamily = 'boolean' | 'numeric' | 'string' | 'object' | 'array';
+
+interface JsonFieldEvidence {
+    readonly families: Set<JsonValueFamily>;
+    readonly numeric: NumericColumnAccumulator;
+    first: JsonNode | null;
+    maxStringLength: number | null;
+}
+
+class JsonSchemaAccumulator {
+    private readonly keys: string[] = [];
+    private readonly fields = new Map<string, JsonFieldEvidence>();
+    private rowCount = 0;
+
+    public add(row: ObjectRow): void {
+        this.rowCount += 1;
+        for (const [key, value] of row) {
+            let evidence = this.fields.get(key);
+            if (!evidence) {
+                evidence = {
+                    families: new Set<JsonValueFamily>(),
+                    numeric: new NumericColumnAccumulator(),
+                    first: null,
+                    maxStringLength: null,
+                };
+                this.fields.set(key, evidence);
+                this.keys.push(key);
+            }
+            if (value.kind === 'null') {
+                continue;
+            }
+            evidence.first ??= value;
+            switch (value.kind) {
+                case 'bool':
+                    evidence.families.add('boolean');
+                    break;
+                case 'int':
+                case 'float':
+                    evidence.families.add('numeric');
+                    evidence.numeric.add(value.raw);
+                    break;
+                case 'string':
+                    evidence.families.add('string');
+                    evidence.maxStringLength = Math.max(
+                        evidence.maxStringLength ?? 0,
+                        value.value.length,
+                    );
+                    break;
+                case 'object':
+                    evidence.families.add('object');
+                    break;
+                case 'array':
+                    evidence.families.add('array');
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    public build(
+        jsonFormat: 'array' | 'ndjson' | 'object',
+        rowCount: number | null,
+        sampled: boolean,
+    ): Partial<FileMetadata> {
+        const schema: SchemaField[] = [];
+        const nesting: Record<string, JsonNestingKind> = {};
+        const sampleValues: Record<string, SampleValue> = {};
+        const observed: Record<string, number> = {};
+        const maxLengths: Record<string, number> = {};
+        let typedProjectionSafe = !sampled;
+
+        for (const key of this.keys) {
+            const evidence = this.fields.get(key)!;
+            const families = [...evidence.families];
+            if (families.length === 1 && families[0] === 'object') {
+                nesting[key] = 'object';
+                schema.push([key, 'dict']);
+            } else if (families.length === 1 && families[0] === 'array') {
+                nesting[key] = 'array';
+                schema.push([key, 'list']);
+            } else if (families.length === 1 && families[0] === 'boolean') {
+                nesting[key] = 'scalar';
+                schema.push([key, 'bool']);
+            } else if (families.length === 1 && families[0] === 'numeric') {
+                nesting[key] = 'scalar';
+                schema.push([key, evidence.numeric.detectedType() ?? 'str']);
+            } else if (families.length === 1 && families[0] === 'string') {
+                nesting[key] = 'scalar';
+                schema.push([key, 'str']);
+                if (evidence.maxStringLength !== null) {
+                    observed[key] = evidence.maxStringLength;
+                    if (!sampled) {
+                        maxLengths[key] = sizeSampledString(evidence.maxStringLength);
+                    }
+                }
+            } else {
+                nesting[key] = 'scalar';
+                schema.push([key, 'str']);
+                if (families.length > 1) {
+                    typedProjectionSafe = false;
+                }
+            }
+            sampleValues[key] = jsonSafe(evidence.first);
+        }
+
+        return {
+            schema,
+            row_count: rowCount === null && !sampled ? this.rowCount : rowCount,
+            column_count: schema.length,
+            has_header: true,
+            json_format: jsonFormat,
+            json_nesting: nesting,
+            json_sample_values: sampleValues,
+            json_typed_projection_safe: typedProjectionSafe,
+            nullable_columns: this.keys.slice(),
+            nullability_inference: 'conservative',
+            schema_inference: sampled ? 'sampled' : 'full',
+            schema_sample_size: this.rowCount,
+            observed_max_string_lengths: observed,
+            max_string_lengths: maxLengths,
+        };
+    }
+}
+
 /**
- * Build the metadata block shared by every JSON shape, mirroring the Python
- * `_build_json_result` helper one level deep.
+ * Build the metadata block shared by every JSON shape.
  */
 export function buildJsonResult(
     rows: ObjectRow[],
@@ -92,75 +201,11 @@ export function buildJsonResult(
     rowCount: number | null,
     sampled: boolean,
 ): Partial<FileMetadata> {
-    const keys: string[] = [];
-    const seen = new Set<string>();
+    const accumulator = new JsonSchemaAccumulator();
     for (const row of rows) {
-        for (const [key] of row) {
-            if (!seen.has(key)) {
-                seen.add(key);
-                keys.push(key);
-            }
-        }
+        accumulator.add(row);
     }
-
-    const schema: SchemaField[] = [];
-    const nesting: Record<string, JsonNestingKind> = {};
-    const sampleValues: Record<string, SampleValue> = {};
-    const observed: Record<string, number> = {};
-
-    for (const key of keys) {
-        let effective: JsonNode | null = null;
-        for (const row of rows) {
-            const value = lookup(row, key);
-            if (value !== undefined && value.kind !== 'null' && effective === null) {
-                effective = value;
-            }
-        }
-
-        if (effective !== null && effective.kind === 'object') {
-            nesting[key] = 'object';
-            schema.push([key, 'dict']);
-        } else if (effective !== null && effective.kind === 'array') {
-            nesting[key] = 'array';
-            schema.push([key, 'list']);
-        } else {
-            nesting[key] = 'scalar';
-            schema.push([key, scalarTypeName(effective)]);
-            let maxLength: number | null = null;
-            for (const row of rows) {
-                const value = lookup(row, key);
-                if (value !== undefined && value.kind === 'string') {
-                    maxLength = Math.max(maxLength ?? 0, value.value.length);
-                }
-            }
-            if (maxLength !== null) {
-                observed[key] = maxLength;
-            }
-        }
-
-        sampleValues[key] = jsonSafe(effective);
-    }
-
-    const maxLengths: Record<string, number> = {};
-    for (const [key, length] of Object.entries(observed)) {
-        maxLengths[key] = sizeSampledString(length);
-    }
-
-    return {
-        schema,
-        row_count: rowCount === null && !sampled ? rows.length : rowCount,
-        column_count: schema.length,
-        has_header: true,
-        json_format: jsonFormat,
-        json_nesting: nesting,
-        json_sample_values: sampleValues,
-        nullable_columns: keys,
-        nullability_inference: 'conservative',
-        schema_inference: sampled ? 'sampled' : 'full',
-        schema_sample_size: rows.length,
-        observed_max_string_lengths: observed,
-        max_string_lengths: maxLengths,
-    };
+    return accumulator.build(jsonFormat, rowCount, sampled);
 }
 
 /** Read the first non-whitespace character from a bounded prefix. */
@@ -179,14 +224,14 @@ async function firstJsonCharacter(
     return stripped.length > 0 ? stripped[0] : '';
 }
 
-/** Stream an NDJSON candidate, keeping only a bounded schema sample. */
+/** Stream an NDJSON candidate, aggregating its schema at constant memory. */
 async function analyzeNdjsonCandidate(
     filePath: string,
     encoding: string,
     explicitNdjson: boolean,
     token?: CancellationToken,
 ): Promise<Partial<FileMetadata> | null> {
-    const rows: ObjectRow[] = [];
+    const accumulator = new JsonSchemaAccumulator();
     let rowCount = 0;
     let invalidLines = 0;
     let processed = 0;
@@ -219,19 +264,17 @@ async function analyzeNdjsonCandidate(
             return null;
         }
         rowCount += 1;
-        if (rows.length < JSON_SCHEMA_SAMPLE_ROWS) {
-            rows.push(row);
-        }
+        accumulator.add(row);
     }
 
-    if (rows.length === 0) {
+    if (rowCount === 0) {
         return null;
     }
     if (rowCount === 1 && !explicitNdjson) {
-        return buildJsonResult(rows, 'object', 1, false);
+        return accumulator.build('object', 1, false);
     }
 
-    const result = buildJsonResult(rows, 'ndjson', rowCount, rowCount > rows.length);
+    const result = accumulator.build('ndjson', rowCount, false);
     if (invalidLines > 0) {
         result.warning =
             `Skipped ${invalidLines} invalid NDJSON line${invalidLines === 1 ? '' : 's'}.`;
@@ -349,19 +392,26 @@ export async function analyzeJson(
 
     if (document.kind === 'array') {
         const objectRows: ObjectRow[] = [];
-        for (const item of document.items.slice(0, JSON_SCHEMA_SAMPLE_ROWS)) {
+        for (const item of document.items) {
             const row = asObjectRow(item);
             if (row !== null) {
                 objectRows.push(row);
             }
         }
         if (objectRows.length > 0) {
-            return buildJsonResult(
+            const sampled = document.items.length !== objectRows.length;
+            const result = buildJsonResult(
                 objectRows,
                 'array',
                 document.items.length,
-                document.items.length > objectRows.length,
+                sampled,
             );
+            if (sampled) {
+                result.warning =
+                    'The JSON array mixes object rows with other values. Generated SQL ' +
+                    'uses preservation-oriented types until the shape is normalized.';
+            }
+            return result;
         }
         return {};
     }

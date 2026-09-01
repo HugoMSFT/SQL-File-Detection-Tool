@@ -27,9 +27,10 @@ import {
 } from './escaping';
 import {
     COMPRESSION_CODECS,
+    hasIncompleteTypeEvidence,
+    inferredColumnSqlType,
     NO_EXTERNAL_FORMAT_FILE_TYPES,
     PLATFORM_LABELS,
-    mapTypeToSql,
     type ExternalFormatType,
 } from './typeMapping';
 
@@ -38,6 +39,18 @@ import {
  * only ever need to import from the SQL layer.
  */
 export type { GeneratorMetadata };
+
+/** Resolve a column's effective SQL type, with explicit safe overrides first. */
+export function columnSqlType(
+    metadata: GeneratorMetadata,
+    columnName: string,
+    detectedType: unknown,
+): string {
+    const overrides = metadata.sql_type_overrides ?? {};
+    return Object.prototype.hasOwnProperty.call(overrides, columnName)
+        ? safeSqlType(overrides[columnName])
+        : inferredColumnSqlType(metadata, columnName, detectedType);
+}
 
 /** Configuration for `CREATE EXTERNAL FILE FORMAT`. */
 export interface ExternalFileFormatConfig {
@@ -242,8 +255,6 @@ export function generateColumnDefinitions(
     const nullableSet = new Set(
         Array.isArray(metadata.nullable_columns) ? metadata.nullable_columns : [],
     );
-    const maxLengths = metadata.max_string_lengths ?? {};
-    const overrides = metadata.sql_type_overrides ?? {};
     const pad = ' '.repeat(indent);
     const columns: string[] = [];
 
@@ -253,9 +264,7 @@ export function generateColumnDefinitions(
         const cleanName = escapeIdentifier(colName);
         // An explicit SQL type from the schema editor always wins, but is still
         // run through the allowlist so it can never inject arbitrary SQL.
-        const sqlType = Object.prototype.hasOwnProperty.call(overrides, colName)
-            ? safeSqlType(overrides[colName])
-            : mapTypeToSql(colType, maxLengths[colName]);
+        const sqlType = columnSqlType(metadata, colName, colType);
         if (includeNullability) {
             const nullKeyword = nullableSet.has(colName) ? 'NULL' : 'NOT NULL';
             columns.push(`${pad}[${cleanName}] ${padRight(sqlType, 22)} ${nullKeyword}`);
@@ -278,12 +287,22 @@ export function generateOpenjsonColumns(
 ): string[] {
     const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const nesting = metadata.json_nesting ?? {};
-    const maxLengths = metadata.max_string_lengths ?? {};
     const overrides = metadata.sql_type_overrides ?? {};
     const pad = ' '.repeat(indent);
     const cols: string[] = [];
 
     validateUniqueColumnNames(schema);
+    if (
+        metadata.json_typed_projection_safe === false ||
+        (
+            hasIncompleteTypeEvidence(metadata) &&
+            schema.some(([columnName]) =>
+                !Object.prototype.hasOwnProperty.call(overrides, columnName)
+            )
+        )
+    ) {
+        return [];
+    }
 
     for (const [colName, colType] of schema) {
         const clean = escapeIdentifier(colName);
@@ -293,9 +312,7 @@ export function generateOpenjsonColumns(
                 `${pad}[${clean}] NVARCHAR(MAX) '${quoteJsonPath(colName)}' AS JSON`,
             );
         } else {
-            const sqlType = Object.prototype.hasOwnProperty.call(overrides, colName)
-                ? safeSqlType(overrides[colName])
-                : mapTypeToSql(colType, maxLengths[colName]);
+            const sqlType = columnSqlType(metadata, colName, colType);
             cols.push(`${pad}[${clean}] ${sqlType} '${quoteJsonPath(colName)}'`);
         }
     }

@@ -15,6 +15,7 @@
  */
 
 import { NativeAnalysisError } from '../errors';
+import { exactNumericSample } from './numeric';
 
 /** A parsed JSON value with its original numeric flavour retained. */
 export type JsonNode =
@@ -294,8 +295,10 @@ export function pythonRepr(node: JsonNode): string {
             return node.value ? 'True' : 'False';
         case 'int':
             return node.raw.replace(/^\+/, '');
-        case 'float':
-            return pythonFloatRepr(node.value);
+        case 'float': {
+            const exact = exactNumericSample(node.raw);
+            return typeof exact === 'string' ? exact : pythonFloatRepr(exact);
+        }
         case 'string':
             return pythonStringRepr(node.value);
         case 'array':

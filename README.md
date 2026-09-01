@@ -66,8 +66,8 @@ platform requirements before running it in a database.
 
 | Input | Analysis | Extension | Python CLI |
 | --- | --- | --- | --- |
-| CSV, TSV, and DAT | Delimiter, encoding, sampled schema, logical row count | yes | yes |
-| JSON, JSONL, and NDJSON | Bounded schema sample, nesting, row count where available | yes | yes |
+| CSV, TSV, and DAT | Delimiter, encoding, streamed schema evidence, logical row count | yes | yes |
+| JSON, JSONL, and NDJSON | Exact scalar inference, nesting, row count where available | yes | yes |
 | Parquet | Arrow schema, row groups, compression, row count | yes | yes |
 | Delta Lake directories | Delta metadata, or a bounded Parquet schema fallback | yes | yes |
 | Apache Iceberg directories | Current schema, partition spec, snapshot row count | yes | yes |
@@ -822,12 +822,15 @@ containers = azure_auth.list_containers(connection, account_name="myaccount")
 
 - Metadata and encoding caches are thread-safe, signature-based LRU caches.
 - CSV and text row counts stream records instead of retaining file contents.
-- NDJSON retains only a bounded schema sample while counting valid rows.
+- CSV files below 100 MB and NDJSON streams aggregate type and width evidence
+  across every row at constant schema memory.
+- JSON documents below 32 MB are inspected completely.
 - Large JSON arrays use a bounded prefix sample; their row count is reported as
-  unknown rather than guessed.
-- Inferred CSV, JSON, and Excel columns default to nullable because a sample
-  cannot prove future values are required.
-- Sampled string lengths include sizing headroom before SQL types are generated.
+  unknown rather than guessed, and generated types default to `NVARCHAR(MAX)`
+  until explicitly overridden.
+- Inferred CSV, JSON, and Excel columns remain conservatively nullable.
+- Complete string-width observations include sizing headroom; unknown widths use
+  `NVARCHAR(MAX)`.
 - Parquet previews read bounded record batches rather than complete row groups.
 - Iceberg row counts come from the current snapshot summary, not every Parquet
   file in the data directory.

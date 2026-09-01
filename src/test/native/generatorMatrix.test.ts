@@ -50,6 +50,7 @@ function csvMetadata(): GeneratorMetadata {
         row_count: 100,
         column_count: 3,
         nullable_columns: ['note'],
+        max_string_lengths: { note: 100 },
         schema: [
             ['id', 'int64'],
             ['amount', 'float64'],
@@ -104,8 +105,9 @@ function deltaMetadata(): GeneratorMetadata {
         row_count: null,
         column_count: 2,
         nullable_columns: ['event_name'],
+        sql_type_overrides: { event_name: 'NVARCHAR(255)' },
         schema: [
-            ['event_id', 'long'],
+            ['event_id', 'int64'],
             ['event_name', 'string'],
         ],
     };
@@ -356,6 +358,54 @@ describe('type mapping edge cases', () => {
     it('preserves decimal precision and scale', () => {
         const sql = columnsFor([['c', 'decimal128(18, 4)']]);
         assert.ok(/\[c\]\s+DECIMAL\(18,\s*4\)/i.test(sql), sql);
+    });
+
+    it('uses MAX for unknown string width and bounds only trusted lengths', () => {
+        assert.match(columnsFor([['c', 'string']]), /\[c\]\s+NVARCHAR\(MAX\)/);
+        const bounded = generateCreateTable({
+            ...csvMetadata(),
+            schema: [['c', 'object']],
+            max_string_lengths: { c: 375 },
+        });
+        assert.match(bounded, /\[c\]\s+NVARCHAR\(400\)/);
+    });
+
+    it('uses preservation types when CSV or JSON evidence is incomplete', () => {
+        const sampled: GeneratorMetadata = {
+            ...csvMetadata(),
+            schema: [['id', 'int32']],
+            schema_inference: 'sampled',
+        };
+        assert.match(generateCreateTable(sampled), /\[id\]\s+NVARCHAR\(MAX\)/);
+        assert.match(
+            generateCreateTable({
+                ...sampled,
+                sql_type_overrides: { id: 'BIGINT' },
+            }),
+            /\[id\]\s+BIGINT/,
+        );
+    });
+
+    it('requires bounded overrides for external-table LOB columns', () => {
+        const metadata: GeneratorMetadata = {
+            ...parquetMetadata(),
+            schema: [['payload', 'string']],
+        };
+        const blocked = generateExternalTable(metadata, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(blocked, /NOT AVAILABLE/);
+        assert.match(blocked, /explicit bounded SQL type overrides/i);
+        assert.doesNotMatch(blocked, /CREATE EXTERNAL TABLE \[/);
+
+        const overridden = generateExternalTable({
+            ...metadata,
+            sql_type_overrides: { payload: 'NVARCHAR(4000)' },
+        }, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(overridden, /CREATE EXTERNAL TABLE \[/);
+        assert.match(overridden, /\[payload\]\s+NVARCHAR\(4000\)/);
     });
 
     it('handles negative decimal scale without emitting invalid SQL', () => {

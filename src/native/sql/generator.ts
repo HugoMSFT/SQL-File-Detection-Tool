@@ -78,6 +78,7 @@ import {
     credentialIdentifier,
     determineFormatConfig,
     displayFileName,
+    columnSqlType,
     generateColumnDefinitions,
     generateOpenjsonColumns,
     jsonRowFrameOptions,
@@ -930,9 +931,37 @@ export function generateExternalTable(
             }
             : metadata;
 
-    let columns = generateColumnDefinitions(externalMetadata, { includeNullability: false });
+    const externalSchema = Array.isArray(externalMetadata.schema)
+        ? externalMetadata.schema
+        : [];
+    const externalLobColumns = externalSchema
+        .map(([columnName, detectedType]) => ({
+            columnName,
+            sqlType: columnSqlType(externalMetadata, columnName, detectedType),
+        }))
+        .filter(({ sqlType }) =>
+            /^(?:(?:N?VARCHAR|VARBINARY)\s*\(\s*MAX\s*\)|N?TEXT|IMAGE|XML)$/i.test(sqlType)
+        );
+    if (externalLobColumns.length > 0) {
+        const rendered = externalLobColumns
+            .map(({ columnName, sqlType }) => `[${columnName}] (${sqlType})`)
+            .join(', ');
+        return notSupportedMessage(
+            `CREATE EXTERNAL TABLE (${config.format_type} with LOB columns)`,
+            targetPlatform,
+            `External tables cannot declare these inferred LOB columns directly: ${rendered}. ` +
+            'After validating the complete source width, set explicit bounded SQL type ' +
+            'overrides (for example NVARCHAR(4000) or VARBINARY(8000)).',
+        );
+    }
+
+    const columns = generateColumnDefinitions(externalMetadata, { includeNullability: false });
     if (columns.length === 0) {
-        columns = ['    [data] NVARCHAR(MAX)'];
+        return notSupportedMessage(
+            `CREATE EXTERNAL TABLE (${config.format_type} without a bounded schema)`,
+            targetPlatform,
+            'Provide a schema with explicit bounded SQL type overrides before execution.',
+        );
     }
 
     const withOptions = [
@@ -1332,10 +1361,7 @@ export function generateJsonFunctions(
 
     // ---- Section 1: read the document, then OPENJSON ---------------------
     const openjsonCols = generateOpenjsonColumns(metadata, 8);
-    const openjsonWith =
-        openjsonCols.length > 0
-            ? openjsonCols.join(',\n')
-            : '        [data] NVARCHAR(MAX)';
+    const openjsonWith = openjsonCols.join(',\n');
 
     if (jsonBulkSource && jsonFormat === 'ndjson') {
         // Every line is its own document. Reading the file whole would hand
@@ -1359,10 +1385,18 @@ export function generateJsonFunctions(
         lines.push(...jsonRowFrameOptions(4, '0x0a'));
         lines.push(
             ') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
-            'CROSS APPLY OPENJSON([src].json_doc)',
-            'WITH (',
-            openjsonWith,
-            ') AS [j];',
+        );
+        if (openjsonCols.length > 0) {
+            lines.push(
+                'CROSS APPLY OPENJSON([src].json_doc)',
+                'WITH (',
+                openjsonWith,
+                ') AS [j];',
+            );
+        } else {
+            lines.push('CROSS APPLY OPENJSON([src].json_doc) AS [j];');
+        }
+        lines.push(
             '',
             '-- The statements below work on one document at a time, so they',
             '-- read a single line. Concatenated NDJSON is not one document.',
@@ -1461,14 +1495,22 @@ export function generateJsonFunctions(
         }
         lines.push(jv.length > 0 ? `${jv.join(',\n')};` : '    @json;');
     } else {
-        lines.push(
-            '-- Parse the JSON array into rows with typed columns',
-            'SELECT *',
-            'FROM OPENJSON(@json)',
-            'WITH (',
-            openjsonWith,
-            ');',
-        );
+        if (openjsonCols.length > 0) {
+            lines.push(
+                '-- Parse the JSON array into rows with typed columns',
+                'SELECT *',
+                'FROM OPENJSON(@json)',
+                'WITH (',
+                openjsonWith,
+                ');',
+            );
+        } else {
+            lines.push(
+                '-- The sampled shape is not safe for a typed projection.',
+                'SELECT [key], [value], [type]',
+                'FROM OPENJSON(@json);',
+            );
+        }
     }
 
     // ---- Section 2: OPENJSON without schema ------------------------------
@@ -1575,13 +1617,17 @@ export function generateJsonFunctions(
             "    FIELDTERMINATOR = '0x0b',",
             "    FIELDQUOTE      = '0x0b'",
             ') WITH (json_doc NVARCHAR(MAX)) AS src',
-            'CROSS APPLY OPENJSON(src.json_doc)',
-            'WITH (',
         );
-        lines.push(
-            openjsonCols.length > 0 ? openjsonCols.join(',\n') : '    [data] NVARCHAR(MAX)',
-        );
-        lines.push(') AS j;');
+        if (openjsonCols.length > 0) {
+            lines.push(
+                'CROSS APPLY OPENJSON(src.json_doc)',
+                'WITH (',
+                openjsonCols.join(',\n'),
+                ') AS j;',
+            );
+        } else {
+            lines.push('CROSS APPLY OPENJSON(src.json_doc) AS j;');
+        }
     } else if (isOnPrem) {
         lines.push(
             '',
@@ -1593,7 +1639,7 @@ export function generateJsonFunctions(
     }
 
     // ---- Section 8: INSERT parsed JSON into a table ----------------------
-    if (schema.length > 0) {
+    if (schema.length > 0 && openjsonCols.length > 0) {
         const insertCols = schema
             .filter(([c]) => (nesting[c] ?? 'scalar') === 'scalar')
             .map(([c]) => `[${escapeIdentifier(c)}]`)

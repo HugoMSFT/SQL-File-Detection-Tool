@@ -45,12 +45,277 @@ JSON_FULL_PARSE_MAX_BYTES = 32 * 1024 * 1024
 JSON_SAMPLE_MAX_CHARS = 4 * 1024 * 1024
 JSON_SCHEMA_SAMPLE_ROWS = 200
 CACHE_MAX_ENTRIES = 256
+CSV_SCHEMA_SAMPLE_ROWS = 1000
+MAX_SQL_DECIMAL_PRECISION = 38
+_JS_SAFE_INTEGER = 9007199254740991
+_NUMERIC_TOKEN_RE = re.compile(
+    r'^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$'
+)
+_CSV_NA_VALUES = frozenset({
+    '', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN',
+    '-nan', '1.#IND', '1.#QNAN', '<NA>', 'N/A', 'NA', 'NULL', 'NaN',
+    'None', 'n/a', 'nan', 'null',
+})
+_TRUE_LITERALS = frozenset({'True', 'TRUE', 'true'})
+_FALSE_LITERALS = frozenset({'False', 'FALSE', 'false'})
+
+
+class _JsonInt(int):
+    """JSON integer retaining its original token."""
+
+    def __new__(cls, raw: str):
+        value = int.__new__(cls, raw)
+        value.raw = raw
+        return value
+
+    def __repr__(self) -> str:
+        return self.raw
+
+
+class _JsonFloat(float):
+    """JSON float retaining its original token."""
+
+    def __new__(cls, raw: str):
+        value = float.__new__(cls, raw)
+        value.raw = raw
+        return value
+
+    def __repr__(self) -> str:
+        return self.raw
+
+
+def _bounded_exponent(raw: Optional[str]) -> int:
+    if not raw:
+        return 0
+    negative = raw.startswith('-')
+    digits = raw.lstrip('+-').lstrip('0')
+    if not digits:
+        return 0
+    if len(digits) > 3:
+        return -1000 if negative else 1000
+    value = int(digits)
+    return -value if negative else value
+
+
+def _parse_numeric_token(raw: str) -> Optional[Dict[str, Any]]:
+    token = raw.strip()
+    match = _NUMERIC_TOKEN_RE.fullmatch(token)
+    if not match:
+        return None
+    sign = match.group(1) or ''
+    integer_part = match.group(2) or ''
+    fraction_part = (
+        match.group(3)
+        if match.group(3) is not None
+        else (match.group(4) or '')
+    )
+    exponent = _bounded_exponent(match.group(5))
+    combined = integer_part + fraction_part
+    first_non_zero = next(
+        (index for index, char in enumerate(combined) if char != '0'),
+        -1,
+    )
+    decimal_position = len(integer_part) + exponent
+    integer_digits = (
+        max(decimal_position - first_non_zero, 0)
+        if first_non_zero >= 0
+        else 0
+    )
+    scale = max(len(combined) - decimal_position, 0)
+
+    digits = combined.lstrip('0')
+    canonical_scale = len(fraction_part) - exponent
+    if not digits:
+        canonical = (False, '0', 0)
+    else:
+        while digits.endswith('0'):
+            digits = digits[:-1]
+            canonical_scale -= 1
+        canonical = (sign == '-', digits, canonical_scale)
+
+    return {
+        'raw': token,
+        'integer_syntax': '.' not in token and 'e' not in token.lower(),
+        'integer_digits': integer_digits,
+        'scale': scale,
+        'precision': max(1, integer_digits + scale),
+        'canonical': canonical,
+    }
+
+
+def _canonical_integer_value(canonical) -> Optional[int]:
+    negative, digits, scale = canonical
+    if scale > 0 or len(digits) + max(-scale, 0) > MAX_SQL_DECIMAL_PRECISION:
+        return None
+    value = int(digits + ('0' * max(-scale, 0)))
+    return -value if negative else value
+
+
+def _exact_numeric_sample(raw: str):
+    parsed = _parse_numeric_token(raw)
+    if not parsed or parsed['precision'] > MAX_SQL_DECIMAL_PRECISION:
+        return raw
+    if parsed['integer_syntax']:
+        value = int(parsed['raw'])
+        return value if -_JS_SAFE_INTEGER <= value <= _JS_SAFE_INTEGER else raw
+
+    exact_integer = _canonical_integer_value(parsed['canonical'])
+    if exact_integer is not None and not (
+        -_JS_SAFE_INTEGER <= exact_integer <= _JS_SAFE_INTEGER
+    ):
+        return raw
+    value = float(parsed['raw'])
+    if not math.isfinite(value):
+        return raw
+    round_trip = _parse_numeric_token(repr(value))
+    return (
+        value
+        if round_trip and round_trip['canonical'] == parsed['canonical']
+        else raw
+    )
+
+
+class _NumericColumnAccumulator:
+    """Constant-memory aggregate for exact decimal tokens."""
+
+    def __init__(self):
+        self.saw_value = False
+        self.all_integer_syntax = True
+        self.max_integer_digits = 0
+        self.max_scale = 0
+        self.minimum_integer = None
+        self.maximum_integer = None
+        self.integer_range_known = True
+
+    def add(self, raw: str) -> bool:
+        parsed = _parse_numeric_token(raw)
+        if not parsed:
+            return False
+        self.saw_value = True
+        self.all_integer_syntax = (
+            self.all_integer_syntax and parsed['integer_syntax']
+        )
+        self.max_integer_digits = max(
+            self.max_integer_digits,
+            parsed['integer_digits'],
+        )
+        self.max_scale = max(self.max_scale, parsed['scale'])
+        if parsed['integer_syntax']:
+            if parsed['integer_digits'] > 19:
+                self.integer_range_known = False
+            else:
+                value = int(parsed['raw'])
+                self.minimum_integer = (
+                    value
+                    if self.minimum_integer is None
+                    else min(self.minimum_integer, value)
+                )
+                self.maximum_integer = (
+                    value
+                    if self.maximum_integer is None
+                    else max(self.maximum_integer, value)
+                )
+        return True
+
+    def detected_type(self) -> Optional[str]:
+        if not self.saw_value:
+            return None
+        if (
+            self.all_integer_syntax
+            and self.integer_range_known
+            and self.minimum_integer is not None
+            and self.maximum_integer is not None
+        ):
+            if (
+                -2147483648 <= self.minimum_integer
+                and self.maximum_integer <= 2147483647
+            ):
+                return 'int32'
+            if (
+                -9223372036854775808 <= self.minimum_integer
+                and self.maximum_integer <= 9223372036854775807
+            ):
+                return 'int64'
+        precision = max(1, self.max_integer_digits + self.max_scale)
+        return f'decimal({precision},{self.max_scale})'
+
+
+def _is_missing_csv(value: Optional[str]) -> bool:
+    return value is None or value in _CSV_NA_VALUES
+
+
+class _DelimitedColumnAccumulator:
+    def __init__(self):
+        self.saw_value = False
+        self.all_boolean = True
+        self.all_numeric = True
+        self.max_raw_length = 0
+        self.numeric = _NumericColumnAccumulator()
+
+    def add(self, value: Optional[str]) -> None:
+        if _is_missing_csv(value):
+            return
+        self.saw_value = True
+        self.max_raw_length = max(self.max_raw_length, _utf16_length(value))
+        if value not in _TRUE_LITERALS and value not in _FALSE_LITERALS:
+            self.all_boolean = False
+        if not self.numeric.add(value.strip()):
+            self.all_numeric = False
+
+    def finish(self, sample: List[Optional[str]]) -> Dict[str, Any]:
+        if not self.saw_value:
+            return {
+                'dtype': 'object',
+                'values': [None for _ in sample],
+                'observed_max_length': None,
+            }
+        if self.all_boolean:
+            return {
+                'dtype': 'bool',
+                'values': [
+                    None
+                    if _is_missing_csv(value)
+                    else value in _TRUE_LITERALS
+                    for value in sample
+                ],
+                'observed_max_length': None,
+            }
+        if self.all_numeric:
+            dtype = self.numeric.detected_type()
+            if dtype is not None:
+                return {
+                    'dtype': dtype,
+                    'values': [
+                        None
+                        if _is_missing_csv(value)
+                        else _exact_numeric_sample(value.strip())
+                        for value in sample
+                    ],
+                    'observed_max_length': None,
+                }
+        return {
+            'dtype': 'object',
+            'values': [
+                None if _is_missing_csv(value) else value
+                for value in sample
+            ],
+            'observed_max_length': self.max_raw_length,
+        }
+
+
+def _utf16_length(value: str) -> int:
+    """Return SQL NVARCHAR length units, including surrogate pairs."""
+    return len(value.encode('utf-16-le', errors='surrogatepass')) // 2
 
 
 def _json_safe(val: Any) -> Any:
     """Return a JSON-serialisable representation of *val* for sample storage."""
+    if isinstance(val, (_JsonInt, _JsonFloat)):
+        return _exact_numeric_sample(val.raw)
     if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
         return None
+    if isinstance(val, int) and not isinstance(val, bool):
+        return val if -_JS_SAFE_INTEGER <= val <= _JS_SAFE_INTEGER else str(val)
     if isinstance(val, (str, int, float, bool, type(None))):
         return val
     return str(val)
@@ -61,6 +326,130 @@ def _size_sampled_string(observed_length: int) -> int:
     if observed_length <= 0:
         return 0
     return int(math.ceil(observed_length * 1.25))
+
+
+def _json_numeric_raw(value: Any) -> Optional[str]:
+    if isinstance(value, (_JsonInt, _JsonFloat)):
+        return value.raw
+    if isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value)
+    return None
+
+
+class _JsonSchemaAccumulator:
+    """Aggregate JSON field families without retaining every row."""
+
+    def __init__(self):
+        self.keys: List[str] = []
+        self.fields: Dict[str, Dict[str, Any]] = {}
+        self.row_count = 0
+
+    def add(self, row: Dict[str, Any]) -> None:
+        self.row_count += 1
+        for key, value in row.items():
+            if key not in self.fields:
+                self.keys.append(key)
+                self.fields[key] = {
+                    'families': set(),
+                    'numeric': _NumericColumnAccumulator(),
+                    'first': None,
+                    'has_first': False,
+                    'max_string_length': None,
+                }
+            evidence = self.fields[key]
+            if value is None:
+                continue
+            if not evidence['has_first']:
+                evidence['first'] = value
+                evidence['has_first'] = True
+            numeric_raw = _json_numeric_raw(value)
+            if isinstance(value, bool):
+                evidence['families'].add('boolean')
+            elif numeric_raw is not None:
+                evidence['families'].add('numeric')
+                evidence['numeric'].add(numeric_raw)
+            elif isinstance(value, str):
+                evidence['families'].add('string')
+                length = _utf16_length(value)
+                evidence['max_string_length'] = max(
+                    evidence['max_string_length'] or 0,
+                    length,
+                )
+            elif isinstance(value, dict):
+                evidence['families'].add('object')
+            elif isinstance(value, list):
+                evidence['families'].add('array')
+            else:
+                evidence['families'].add('string')
+
+    def build(
+        self,
+        json_format: str,
+        row_count: Optional[int],
+        sampled: bool,
+    ) -> Dict[str, Any]:
+        schema = []
+        nesting = {}
+        sample_values = {}
+        observed_lengths = {}
+        max_lengths = {}
+        typed_projection_safe = not sampled
+
+        for key in self.keys:
+            evidence = self.fields[key]
+            families = evidence['families']
+            if families == {'object'}:
+                nesting[key] = 'object'
+                schema.append((key, 'dict'))
+            elif families == {'array'}:
+                nesting[key] = 'array'
+                schema.append((key, 'list'))
+            elif families == {'boolean'}:
+                nesting[key] = 'scalar'
+                schema.append((key, 'bool'))
+            elif families == {'numeric'}:
+                nesting[key] = 'scalar'
+                schema.append((
+                    key,
+                    evidence['numeric'].detected_type() or 'str',
+                ))
+            elif families == {'string'}:
+                nesting[key] = 'scalar'
+                schema.append((key, 'str'))
+                length = evidence['max_string_length']
+                if length is not None:
+                    observed_lengths[key] = length
+                    if not sampled:
+                        max_lengths[key] = _size_sampled_string(length)
+            else:
+                nesting[key] = 'scalar'
+                schema.append((key, 'str'))
+                if len(families) > 1:
+                    typed_projection_safe = False
+            sample_values[key] = _json_safe(evidence['first'])
+
+        return {
+            'schema': schema,
+            'row_count': (
+                self.row_count
+                if row_count is None and not sampled
+                else row_count
+            ),
+            'column_count': len(schema),
+            'has_header': True,
+            'json_format': json_format,
+            'json_nesting': nesting,
+            'json_sample_values': sample_values,
+            'json_typed_projection_safe': typed_projection_safe,
+            'nullable_columns': list(self.keys),
+            'nullability_inference': 'conservative',
+            'schema_inference': 'sampled' if sampled else 'full',
+            'schema_sample_size': self.row_count,
+            'observed_max_string_lengths': observed_lengths,
+            'max_string_lengths': max_lengths,
+        }
 
 
 class FileDetector:
@@ -468,7 +857,6 @@ class FileDetector:
 
     def _analyze_csv(self, file_path: str, encoding: str = 'utf-8') -> Dict[str, Any]:
         """Analyse CSV / TSV file metadata."""
-        _ensure_pandas()
         result: Dict[str, Any] = {}
         try:
             delimiter = ','
@@ -486,47 +874,99 @@ class FileDetector:
 
             result['delimiter'] = delimiter
             result['has_header'] = has_header
+            file_size = os.path.getsize(file_path)
+            complete_scan = file_size <= LARGE_FILE_THRESHOLD
+            header = None
+            accumulators = []
+            samples = []
+            logical_rows = 0
+            analyzed_rows = 0
 
-            df = pd.read_csv(
+            with open(
                 file_path,
-                nrows=1000,
+                'r',
                 encoding=encoding,
-                sep=delimiter,
-                header=0 if has_header else None,
-                low_memory=False,
-                on_bad_lines='warn',
-            )
-            if not has_header:
-                df.columns = [
-                    f'column_{index + 1}' for index in range(len(df.columns))
-                ]
-            else:
-                df.columns = [str(column) for column in df.columns]
-            result['schema'] = [
-                (str(col), str(dtype)) for col, dtype in df.dtypes.items()
+                errors='replace',
+                newline='',
+            ) as handle:
+                for row in csv.reader(handle, delimiter=delimiter):
+                    logical_rows += 1
+                    if not row:
+                        continue
+                    if header is None:
+                        if has_header:
+                            counts = {}
+                            header = []
+                            for index, cell in enumerate(row):
+                                base = cell if cell else f'Unnamed: {index}'
+                                seen = counts.get(base, 0)
+                                counts[base] = seen + 1
+                                header.append(
+                                    base if seen == 0 else f'{base}.{seen}'
+                                )
+                            accumulators = [
+                                _DelimitedColumnAccumulator()
+                                for _ in header
+                            ]
+                            samples = [[] for _ in header]
+                            continue
+                        header = [
+                            f'column_{index + 1}'
+                            for index in range(len(row))
+                        ]
+                        accumulators = [
+                            _DelimitedColumnAccumulator()
+                            for _ in header
+                        ]
+                        samples = [[] for _ in header]
+
+                    if (
+                        not complete_scan
+                        and analyzed_rows >= CSV_SCHEMA_SAMPLE_ROWS
+                    ):
+                        break
+                    if len(row) > len(header):
+                        continue
+                    for index in range(len(header)):
+                        cell = row[index] if index < len(row) else None
+                        accumulators[index].add(cell)
+                        if analyzed_rows < 3:
+                            samples[index].append(cell)
+                    analyzed_rows += 1
+
+            header = header or []
+            inferences = [
+                accumulator.finish(samples[index])
+                for index, accumulator in enumerate(accumulators)
             ]
-            result['column_count'] = len(df.columns)
-            result['schema_inference'] = 'sampled'
-            result['schema_sample_size'] = len(df)
+            result['schema'] = [
+                (column, inference['dtype'])
+                for column, inference in zip(header, inferences)
+            ]
+            result['column_count'] = len(header)
+            result['schema_inference'] = (
+                'full' if complete_scan else 'sampled'
+            )
+            result['schema_sample_size'] = analyzed_rows
             result['nullability_inference'] = 'conservative'
 
-            # Sample max string lengths for smarter SQL type sizing
             observed_lengths: Dict[str, int] = {}
-            for col in df.columns:
-                if pd.api.types.is_string_dtype(df[col].dtype):
-                    max_len = df[col].dropna().astype(str).str.len().max()
-                    observed_lengths[str(col)] = (
-                        int(max_len) if pd.notna(max_len) else 0
-                    )
+            for column, inference in zip(header, inferences):
+                length = inference['observed_max_length']
+                if length is not None:
+                    observed_lengths[column] = length
             result['observed_max_string_lengths'] = observed_lengths
-            result['max_string_lengths'] = {
-                col: _size_sampled_string(length)
-                for col, length in observed_lengths.items()
-            }
+            result['max_string_lengths'] = (
+                {
+                    col: _size_sampled_string(length)
+                    for col, length in observed_lengths.items()
+                }
+                if complete_scan
+                else {}
+            )
 
             try:
-                file_size = os.path.getsize(file_path)
-                if file_size > LARGE_FILE_THRESHOLD:  # estimate row count for large files
+                if not complete_scan:
                     with open(file_path, 'rb') as f:
                         sample_lines = [f.readline() for _ in range(500)]
                     populated_lines = [line for line in sample_lines if line]
@@ -540,29 +980,32 @@ class FileDetector:
                     )
                     result['row_count_estimated'] = True
                 else:
-                    with open(
-                        file_path,
-                        'r',
-                        encoding=encoding,
-                        errors='replace',
-                        newline='',
-                    ) as f:
-                        logical_rows = sum(
-                            1 for _ in csv.reader(f, delimiter=delimiter)
-                        )
                     result['row_count'] = max(
                         logical_rows - (1 if has_header else 0), 0
                     )
                     result['row_count_estimated'] = False
             except (OSError, UnicodeError, csv.Error):
-                result['row_count'] = len(df)
+                result['row_count'] = analyzed_rows
                 result['row_count_estimated'] = True
 
-            result['nullable_columns'] = [str(col) for col in df.columns]
-
-            # Store sample rows (first 3) for SQL comment generation
-            sample_rows = df.head(3).where(pd.notnull(df.head(3)), None).values.tolist()
-            result['sample_rows'] = [[_json_safe(v) for v in row] for row in sample_rows]
+            result['nullable_columns'] = list(header)
+            sample_rows = []
+            sample_count = max((len(values) for values in samples), default=0)
+            for row_index in range(sample_count):
+                sample_rows.append([
+                    inference['values'][row_index]
+                    if row_index < len(inference['values'])
+                    else None
+                    for inference in inferences
+                ])
+            result['sample_rows'] = sample_rows
+            if not complete_scan:
+                result['warning'] = (
+                    f'Only the first {analyzed_rows:,} rows were inspected for '
+                    'schema inference. Generated SQL uses preservation-oriented '
+                    'types until you set explicit column overrides after '
+                    'validating the full file.'
+                )
         except Exception as e:
             logger.warning("Failed to analyze CSV %s: %s", file_path, e)
             result['error'] = str(e)
@@ -982,8 +1425,8 @@ class FileDetector:
         encoding: str,
         explicit_ndjson: bool,
     ) -> Optional[Dict[str, Any]]:
-        """Stream an NDJSON candidate while retaining only a schema sample."""
-        rows: List[Dict[str, Any]] = []
+        """Stream an NDJSON candidate while aggregating all field evidence."""
+        accumulator = _JsonSchemaAccumulator()
         row_count = 0
         invalid_lines = 0
         with open(
@@ -1002,7 +1445,11 @@ class FileDetector:
                 if not line:
                     continue
                 try:
-                    value = json.loads(line)
+                    value = json.loads(
+                        line,
+                        parse_int=_JsonInt,
+                        parse_float=_JsonFloat,
+                    )
                 except json.JSONDecodeError:
                     invalid_lines += 1
                     if not explicit_ndjson:
@@ -1011,24 +1458,21 @@ class FileDetector:
                 if not isinstance(value, dict):
                     return None
                 row_count += 1
-                if len(rows) < JSON_SCHEMA_SAMPLE_ROWS:
-                    rows.append(value)
+                accumulator.add(value)
 
-        if not rows:
+        if not row_count:
             return None
         if row_count == 1 and not explicit_ndjson:
-            return self._build_json_result(
-                rows,
+            return accumulator.build(
                 json_format='object',
                 row_count=1,
                 sampled=False,
             )
 
-        result = self._build_json_result(
-            rows,
+        result = accumulator.build(
             json_format='ndjson',
             row_count=row_count,
-            sampled=row_count > len(rows),
+            sampled=False,
         )
         if invalid_lines:
             result['warning'] = (
@@ -1053,7 +1497,10 @@ class FileDetector:
         if not text.startswith('['):
             return []
 
-        decoder = json.JSONDecoder()
+        decoder = json.JSONDecoder(
+            parse_int=_JsonInt,
+            parse_float=_JsonFloat,
+        )
         rows: List[Dict[str, Any]] = []
         index = 1
         while len(rows) < max_rows:
@@ -1120,20 +1567,32 @@ class FileDetector:
             with open(
                 file_path, 'r', encoding=encoding, errors='replace'
             ) as handle:
-                data = json.load(handle)
+                data = json.load(
+                    handle,
+                    parse_int=_JsonInt,
+                    parse_float=_JsonFloat,
+                )
 
             if isinstance(data, list):
                 object_rows = [
-                    value for value in data[:JSON_SCHEMA_SAMPLE_ROWS]
+                    value for value in data
                     if isinstance(value, dict)
                 ]
                 if object_rows:
-                    return self._build_json_result(
+                    sampled = len(data) != len(object_rows)
+                    result = self._build_json_result(
                         object_rows,
                         json_format='array',
                         row_count=len(data),
-                        sampled=len(data) > len(object_rows),
+                        sampled=sampled,
                     )
+                    if sampled:
+                        result['warning'] = (
+                            'The JSON array mixes object rows with other values. '
+                            'Generated SQL uses preservation-oriented types until '
+                            'the shape is normalized.'
+                        )
+                    return result
             elif isinstance(data, dict):
                 return self._build_json_result(
                     [data],
@@ -1154,65 +1613,11 @@ class FileDetector:
         row_count: Optional[int] = None,
         sampled: bool = False,
     ) -> Dict[str, Any]:
-        """Build rich JSON metadata from a list of row-dicts.
-
-        Walks one level deep to classify each field as scalar / object / array
-        and records bounded sample values for SQL generation.
-        """
-        all_keys: Dict[str, None] = {}
+        """Build rich JSON metadata by aggregating every supplied row."""
+        accumulator = _JsonSchemaAccumulator()
         for row in rows:
-            for key in row:
-                if key not in all_keys:
-                    all_keys[key] = None
-
-        schema: List[tuple] = []
-        nesting: Dict[str, str] = {}
-        sample_values: Dict[str, Any] = {}
-        observed_lengths: Dict[str, int] = {}
-
-        for key in all_keys:
-            effective_val = None
-            for r in rows:
-                if key in r and r[key] is not None and effective_val is None:
-                    effective_val = r[key]
-
-            if isinstance(effective_val, dict):
-                nesting[key] = 'object'
-                schema.append((key, 'dict'))
-            elif isinstance(effective_val, list):
-                nesting[key] = 'array'
-                schema.append((key, 'list'))
-            else:
-                nesting[key] = 'scalar'
-                schema.append((key, type(effective_val).__name__ if effective_val is not None else 'str'))
-                string_lengths = [
-                    len(value)
-                    for row in rows
-                    if isinstance((value := row.get(key)), str)
-                ]
-                if string_lengths:
-                    observed_lengths[key] = max(string_lengths)
-
-            sample_values[key] = effective_val
-
-        return {
-            'schema': schema,
-            'row_count': len(rows) if row_count is None and not sampled else row_count,
-            'column_count': len(schema),
-            'has_header': True,
-            'json_format': json_format,
-            'json_nesting': nesting,
-            'json_sample_values': {k: _json_safe(v) for k, v in sample_values.items()},
-            'nullable_columns': list(all_keys),
-            'nullability_inference': 'conservative',
-            'schema_inference': 'sampled' if sampled else 'full',
-            'schema_sample_size': len(rows),
-            'observed_max_string_lengths': observed_lengths,
-            'max_string_lengths': {
-                key: _size_sampled_string(length)
-                for key, length in observed_lengths.items()
-            },
-        }
+            accumulator.add(row)
+        return accumulator.build(json_format, row_count, sampled)
 
 
     def _analyze_text(self, file_path: str, encoding: str = 'utf-8') -> Dict[str, Any]:

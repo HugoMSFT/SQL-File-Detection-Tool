@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4
+
+- Preserved exact CSV and JSON numerics, aggregated complete inputs beyond the
+  former sample caps, and used safe fallbacks for mixed or truncated data.
+- Prevented unknown-width strings and unsupported external-table LOB columns
+  from generating truncation-prone SQL.
+
 ## 1.0.3
 
 - Added ETL, Data Engineering, Bulk Loading, Data Virtualization, and PolyBase

@@ -4,6 +4,17 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.4]
+
+### Fixed
+
+- Preserved BIGINT boundaries and exact decimal tokens with lexical CSV/JSON
+  inference, full-row aggregation when inputs are completely inspected, and
+  conservative fallbacks for heterogeneous or truncated samples.
+- Mapped unknown variable-width strings to `NVARCHAR(MAX)` and made external
+  tables request a verified bounded override instead of emitting unsupported
+  LOB columns.
+
 ## [1.0.3]
 
 ### Changed

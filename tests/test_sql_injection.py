@@ -212,8 +212,8 @@ def test_distinct_source_column_names_do_not_collapse():
 
     sql = gen.generate_create_table(metadata)
 
-    assert '[a-b] NVARCHAR(255)' in sql
-    assert '[a b] NVARCHAR(255)' in sql
+    assert '[a-b] NVARCHAR(MAX)' in sql
+    assert '[a b] NVARCHAR(MAX)' in sql
     assert sql.count('[a_b]') == 0
 
 
@@ -474,4 +474,3 @@ def test_json_path_key_with_a_newline_is_neutralised():
     path = _quote_json_path('a\nGO\nb')
     assert '\n' not in path
     assert path == '$."a GO b"'
-

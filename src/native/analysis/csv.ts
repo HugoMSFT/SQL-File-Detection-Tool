@@ -21,8 +21,8 @@ import {
 import { readDecodedChunks, readDecodedPrefix } from '../streams';
 import type { FileMetadata, SampleValue, SchemaField } from '../types';
 import {
+    DelimitedColumnAccumulator,
     DelimitedRowParser,
-    inferColumn,
     sniffDialect,
     toSampleValue,
     type ParsedCell,
@@ -58,7 +58,9 @@ export interface DelimitedAnalysisOptions {
 interface StreamedSample {
     header: string[] | null;
     columns: Array<Array<string | null>>;
+    accumulators: DelimitedColumnAccumulator[];
     sampledRows: number;
+    analyzedRows: number;
     logicalRows: number;
     countedExactly: boolean;
 }
@@ -75,7 +77,9 @@ async function streamSample(
     let header: string[] | null = null;
     let width = 0;
     const columns: Array<Array<string | null>> = [];
+    const accumulators: DelimitedColumnAccumulator[] = [];
     let sampledRows = 0;
+    let analyzedRows = 0;
     let logicalRows = 0;
     let processed = 0;
 
@@ -98,16 +102,14 @@ async function streamSample(
                 width = header.length;
                 for (let i = 0; i < width; i += 1) {
                     columns.push([]);
+                    accumulators.push(new DelimitedColumnAccumulator());
                 }
                 if (hasHeader) {
                     continue;
                 }
             }
-            if (sampledRows >= CSV_SCHEMA_SAMPLE_ROWS) {
-                if (!countRows) {
-                    return true;
-                }
-                continue;
+            if (!countRows && analyzedRows >= CSV_SCHEMA_SAMPLE_ROWS) {
+                return true;
             }
             if (row.length > width) {
                 // `on_bad_lines='warn'` drops rows with too many fields.
@@ -115,9 +117,18 @@ async function streamSample(
             }
             for (let i = 0; i < width; i += 1) {
                 const cell = i < row.length ? row[i] : null;
-                columns[i].push(cell);
+                accumulators[i].add(cell);
+                if (sampledRows < CSV_SCHEMA_SAMPLE_ROWS) {
+                    columns[i].push(cell);
+                }
             }
-            sampledRows += 1;
+            analyzedRows += 1;
+            if (sampledRows < CSV_SCHEMA_SAMPLE_ROWS) {
+                sampledRows += 1;
+            }
+            if (!countRows && analyzedRows >= CSV_SCHEMA_SAMPLE_ROWS) {
+                return true;
+            }
         }
         return false;
     };
@@ -136,7 +147,9 @@ async function streamSample(
     return {
         header,
         columns,
+        accumulators,
         sampledRows,
+        analyzedRows,
         logicalRows,
         countedExactly: countRows && !stopped,
     };
@@ -215,23 +228,33 @@ export async function analyzeDelimited(
     const inferredColumns: ParsedCell[][] = [];
 
     header.forEach((name, index) => {
-        const inference = inferColumn(streamed.columns[index] ?? []);
+        const accumulator =
+            streamed.accumulators[index] ?? new DelimitedColumnAccumulator();
+        const inference = accumulator.finish(streamed.columns[index] ?? []);
         schema.push([name, inference.dtype]);
         inferredColumns.push(inference.values);
         if (inference.observedMaxLength !== null) {
             observed[name] = inference.observedMaxLength;
-            maxLengths[name] = sizeSampledString(inference.observedMaxLength);
+            if (streamed.countedExactly) {
+                maxLengths[name] = sizeSampledString(inference.observedMaxLength);
+            }
         }
     });
 
     result.schema = schema;
     result.column_count = header.length;
-    result.schema_inference = 'sampled';
-    result.schema_sample_size = streamed.sampledRows;
+    result.schema_inference = streamed.countedExactly ? 'full' : 'sampled';
+    result.schema_sample_size = streamed.analyzedRows;
     result.nullability_inference = 'conservative';
     result.observed_max_string_lengths = observed;
     result.max_string_lengths = maxLengths;
     result.nullable_columns = header.slice();
+    if (!streamed.countedExactly) {
+        result.warning =
+            `Only the first ${streamed.analyzedRows.toLocaleString('en-US')} rows were ` +
+            'inspected for schema inference. Generated SQL uses preservation-oriented ' +
+            'types until you set explicit column overrides after validating the full file.';
+    }
 
     const sampleRows: SampleValue[][] = [];
     const rowsToEcho = Math.min(SAMPLE_ROW_COUNT, streamed.sampledRows);

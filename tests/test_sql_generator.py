@@ -163,7 +163,8 @@ def test_external_table_generation():
     metadata = {
         'file_type': 'csv',
         'file_path': 'data sample/csv/sample.csv',
-        'schema': [('id', 'int64'), ('name', 'object'), ('age', 'int64')]
+        'schema': [('id', 'int64'), ('name', 'object'), ('age', 'int64')],
+        'max_string_lengths': {'name': 100},
     }
     
     ddl = generator.generate_external_table(
@@ -191,8 +192,8 @@ def test_type_mapping():
     assert generator._map_type_to_sql('int32') == 'INT'
     assert generator._map_type_to_sql('float64') == 'FLOAT'
     assert generator._map_type_to_sql('bool') == 'BIT'
-    assert generator._map_type_to_sql('object') == 'NVARCHAR(255)'
-    assert generator._map_type_to_sql('unknown_type') == 'NVARCHAR(255)'
+    assert generator._map_type_to_sql('object') == 'NVARCHAR(MAX)'
+    assert generator._map_type_to_sql('unknown_type') == 'NVARCHAR(MAX)'
 
 
 def test_column_name_cleaning():
@@ -610,6 +611,48 @@ def test_nvarchar_sizing_with_max_string_lengths():
     sql = gen.generate_create_table(meta, 'tbl')
     # short_col stays NVARCHAR(255) default; long_col should be NVARCHAR(MAX) (>4000)
     assert 'NVARCHAR(MAX)' in sql
+
+
+def test_unknown_string_width_and_incomplete_samples_preserve_data():
+    """Unknown widths and incomplete CSV evidence must not emit narrow types."""
+    gen = SQLGenerator()
+    assert gen._map_type_to_sql('string') == 'NVARCHAR(MAX)'
+    assert gen._map_type_to_sql('string', max_length=50) == 'NVARCHAR(255)'
+
+    sampled = {
+        'file_type': 'csv',
+        'file_path': 'sample.csv',
+        'schema_inference': 'sampled',
+        'schema': [('id', 'int32')],
+    }
+    assert '[id] NVARCHAR(MAX)' in gen.generate_create_table(sampled, 'sample')
+    sampled['sql_type_overrides'] = {'id': 'BIGINT'}
+    assert '[id] BIGINT' in gen.generate_create_table(sampled, 'sample')
+
+
+def test_external_table_lob_requires_bounded_override():
+    """External tables must not present inferred MAX columns as executable."""
+    gen = SQLGenerator()
+    metadata = {
+        'file_type': 'parquet',
+        'file_path': 'wide.parquet',
+        'file_name': 'wide.parquet',
+        'schema': [('payload', 'string')],
+    }
+    blocked = gen.generate_external_table(
+        metadata,
+        target_platform='azure_sql_db',
+    )
+    assert 'NOT AVAILABLE' in blocked
+    assert 'explicit bounded SQL type overrides' in blocked
+
+    metadata['sql_type_overrides'] = {'payload': 'NVARCHAR(4000)'}
+    allowed = gen.generate_external_table(
+        metadata,
+        target_platform='azure_sql_db',
+    )
+    assert 'CREATE EXTERNAL TABLE [' in allowed
+    assert '[payload] NVARCHAR(4000)' in allowed
 
 
 def test_best_practices_render_tab_delimiter_visibly():

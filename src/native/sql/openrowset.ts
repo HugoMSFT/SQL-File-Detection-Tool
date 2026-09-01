@@ -368,16 +368,18 @@ function openrowsetFabric(
         lines.push(...jsonRowFrameOptions());
         lines.push(
             ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
-            'CROSS APPLY OPENJSON(src.json_doc)',
-            'WITH (',
         );
         const openjsonCols = generateOpenjsonColumns(metadata, 4);
-        lines.push(
-            openjsonCols.length > 0
-                ? openjsonCols.join(',\n')
-                : '    [data] NVARCHAR(MAX)',
-        );
-        lines.push(') AS j;');
+        if (openjsonCols.length > 0) {
+            lines.push(
+                'CROSS APPLY OPENJSON(src.json_doc)',
+                'WITH (',
+                openjsonCols.join(',\n'),
+                ') AS j;',
+            );
+        } else {
+            lines.push('CROSS APPLY OPENJSON(src.json_doc) AS j;');
+        }
         return lines.join('\n');
     }
 

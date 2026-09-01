@@ -16,7 +16,7 @@
  *     `DATETIME2(p)`, using Arrow's unit → precision table.
  */
 
-import type { TargetPlatform } from '../types';
+import type { GeneratorMetadata, TargetPlatform } from '../types';
 
 /**
  * Canonical product-wide default SQL target platform.
@@ -274,9 +274,9 @@ export const TYPE_MAPPING: ReadonlyMap<string, string> = new Map([
     ['half_float', 'REAL'],
     ['bool', 'BIT'],
     ['boolean', 'BIT'],
-    ['object', 'NVARCHAR(255)'],
-    ['str', 'NVARCHAR(255)'],
-    ['string', 'NVARCHAR(255)'],
+    ['object', 'NVARCHAR(MAX)'],
+    ['str', 'NVARCHAR(MAX)'],
+    ['string', 'NVARCHAR(MAX)'],
     ['large_string', 'NVARCHAR(MAX)'],
     ['datetime64[ns]', 'DATETIME2(7)'],
     ['datetime64[us]', 'DATETIME2(6)'],
@@ -299,7 +299,7 @@ export const TYPE_MAPPING: ReadonlyMap<string, string> = new Map([
     ['dict', 'NVARCHAR(MAX)'],
     ['map', 'NVARCHAR(MAX)'],
     ['union', 'NVARCHAR(MAX)'],
-    ['null', 'NVARCHAR(255)'],
+    ['null', 'NVARCHAR(MAX)'],
 ]);
 
 /** TYPE_MAPPING keys ordered longest-first for safe substring matching. */
@@ -317,6 +317,8 @@ const STRUCTURAL_TYPE_NAMES = new Set([
     'struct', 'list', 'large_list', 'fixed_size_list', 'map', 'union',
     'dense_union', 'sparse_union', 'dictionary', 'dict', 'object[]',
 ]);
+
+const VARIABLE_STRING_TYPES = new Set(['object', 'str', 'string', 'large_string', 'null']);
 
 const DECIMAL_TYPE_RE = /^(?:decimal128|decimal256|decimal|numeric)\s*\(\s*(\d+)\s*(?:,\s*(-?\d+)\s*)?\)$/;
 const TIMESTAMP_TYPE_RE = /^(?:timestamp|datetime64)\s*\[\s*(s|ms|us|ns)\s*(?:,\s*(.+?)\s*)?\]$/;
@@ -387,10 +389,16 @@ export function mapTypeToSql(dataType: unknown, maxLength?: number | null): stri
 
     const exact = TYPE_MAPPING.get(lowered);
     if (exact !== undefined) {
-        // Override NVARCHAR(255) with a smarter size when string length data exists.
-        if (exact === 'NVARCHAR(255)' && maxLength !== undefined && maxLength !== null) {
+        if (
+            VARIABLE_STRING_TYPES.has(lowered) &&
+            maxLength !== undefined &&
+            maxLength !== null
+        ) {
             if (maxLength > 4000) {
                 return 'NVARCHAR(MAX)';
+            }
+            if (maxLength <= 200) {
+                return 'NVARCHAR(255)';
             }
             if (maxLength > 200) {
                 const size = (Math.floor(maxLength / 50) + 1) * 50;
@@ -407,12 +415,37 @@ export function mapTypeToSql(dataType: unknown, maxLength?: number | null): stri
 
     for (const key of SUBSTRING_TYPE_KEYS) {
         if (lowered.includes(key)) {
-            return TYPE_MAPPING.get(key)!;
+            return VARIABLE_STRING_TYPES.has(key)
+                ? mapTypeToSql(key, maxLength)
+                : TYPE_MAPPING.get(key)!;
         }
     }
 
     if (lowered.includes('decimal') || lowered.includes('numeric')) {
-        return 'DECIMAL(18,4)';
+        return 'NVARCHAR(MAX)';
     }
-    return 'NVARCHAR(255)';
+    return 'NVARCHAR(MAX)';
+}
+
+/** True when CSV/JSON inference stopped before inspecting the complete input. */
+export function hasIncompleteTypeEvidence(metadata: GeneratorMetadata): boolean {
+    return (
+        metadata.schema_inference === 'sampled' &&
+        (metadata.file_type === 'csv' || metadata.file_type === 'json')
+    );
+}
+
+/**
+ * Map one inferred column, preferring text when later unseen rows could widen
+ * either its scalar family or its range.
+ */
+export function inferredColumnSqlType(
+    metadata: GeneratorMetadata,
+    columnName: string,
+    detectedType: unknown,
+): string {
+    if (hasIncompleteTypeEvidence(metadata)) {
+        return 'NVARCHAR(MAX)';
+    }
+    return mapTypeToSql(detectedType, metadata.max_string_lengths?.[columnName]);
 }

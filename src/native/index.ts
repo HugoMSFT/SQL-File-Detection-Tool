@@ -74,6 +74,8 @@ export {
     PLATFORM_FEATURES,
     PLATFORM_LABELS,
     TYPE_MAPPING,
+    hasIncompleteTypeEvidence,
+    inferredColumnSqlType,
     mapTypeToSql,
     normalizePlatform,
     supports,

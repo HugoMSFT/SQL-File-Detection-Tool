@@ -495,7 +495,11 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
         assert.equal(state.metadata?.file_name, 'sample.parquet');
         assert.equal(state.tableName, 'sample');
         assert.match(state.statements?.create_table ?? '', /\[dbo\]\.\[sample\]/);
-        assert.match(state.statements?.create_external_table ?? '', /\[dbo\]\.\[ext_sample\]/);
+        assert.match(state.statements?.create_external_table ?? '', /NOT AVAILABLE/);
+        assert.match(
+            state.statements?.create_external_table ?? '',
+            /explicit bounded SQL type overrides/i,
+        );
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.equal(record.preferences.get('activeTab'), 'preview');
     } finally {
