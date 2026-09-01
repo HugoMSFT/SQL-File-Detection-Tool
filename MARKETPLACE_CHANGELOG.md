@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Added ETL, Data Engineering, Bulk Loading, Data Virtualization, and PolyBase
+  discovery tags.
+
 ## 1.0.2
 
 - Simplified the Marketplace description.

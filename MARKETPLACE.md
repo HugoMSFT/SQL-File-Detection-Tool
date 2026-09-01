@@ -7,6 +7,9 @@ Preview data files and generate platform-aware T-SQL without leaving VS Code.
 > certified by Microsoft. Microsoft product names are used only to describe
 > compatibility.
 
+**Topics:** ETL · Data Engineering · Bulk Loading · Data Virtualization ·
+PolyBase
+
 ![SQL File Detection Tool workflow](media/sql-file-detection-tool-walkthrough-1.0.2.gif)
 
 ## What it does
