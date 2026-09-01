@@ -11,16 +11,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { NativeAzureBridge, SECRET_KEY, type AuthEnvironment, type AuthToken, type PromptOptions } from '../../azure/connection';
+import {
+    NativeAzureBridge,
+    SECRET_KEY,
+    type AuthEnvironment,
+    type AuthSessionRequest,
+    type AuthToken,
+    type PromptOptions,
+} from '../../azure/connection';
 import type { BlobBrowser, BlobCredential } from '../../azure/blobBrowser';
 import { AzureInputError } from '../../azure/storageUrl';
-import { ARM_SCOPES, STORAGE_SCOPES } from '../../azureScopes';
+import { ARM_SCOPES, STORAGE_SCOPES, VSCODE_TENANT_SCOPE } from '../../azureScopes';
 
 interface Harness {
     readonly secrets: Map<string, string>;
     readonly logs: string[];
     readonly prompts: PromptOptions[];
-    readonly sessionRequests: { scopes: string[]; interactive: boolean }[];
+    readonly sessionRequests: { scopes: string[]; request: AuthSessionRequest }[];
     readonly credentials: BlobCredential[];
     answer: string | undefined;
     confirmAnswer: boolean;
@@ -42,8 +49,17 @@ function harness(overrides: Partial<Harness> = {}): Harness {
         credentials: [],
         answer: undefined,
         confirmAnswer: false,
-        session: { accessToken: 'storage-token', expiresOnMs: 3_600_000, account: 'user@example.com' },
-        armSession: { accessToken: 'arm-token', expiresOnMs: 3_600_000 },
+        session: {
+            accessToken: 'storage-token',
+            expiresOnMs: 3_600_000,
+            tenantId: '11111111-1111-1111-1111-111111111111',
+            account: { id: 'account-1', label: 'user@example.com' },
+        },
+        armSession: {
+            accessToken: 'arm-token',
+            expiresOnMs: 3_600_000,
+            account: { id: 'account-1', label: 'user@example.com' },
+        },
         clock: 0,
         timers: [],
         fireTimer(): void {
@@ -55,8 +71,8 @@ function harness(overrides: Partial<Harness> = {}): Harness {
         ...overrides,
     };
     const environment: AuthEnvironment = {
-        getSession: async (scopes, interactive) => {
-            state.sessionRequests.push({ scopes, interactive });
+        getSession: async (scopes, request) => {
+            state.sessionRequests.push({ scopes, request });
             return scopes === ARM_SCOPES || scopes[0].includes('management')
                 ? state.armSession
                 : state.session;
@@ -112,7 +128,18 @@ test('the VS Code account mode uses a delegated token and never a stored secret'
     assert.equal(info.mode, 'vscode');
     assert.equal(info.identity, 'user@example.com');
     assert.equal(info.canListSubscriptions, true);
-    assert.deepEqual(h.sessionRequests[0], { scopes: STORAGE_SCOPES, interactive: true });
+    assert.deepEqual(h.sessionRequests[0], {
+        scopes: [...STORAGE_SCOPES, `${VSCODE_TENANT_SCOPE}organizations`],
+        request: { interactive: true, clearSessionPreference: true },
+    });
+    assert.deepEqual(h.sessionRequests[1], {
+        scopes: [...ARM_SCOPES, `${VSCODE_TENANT_SCOPE}organizations`],
+        request: {
+            interactive: false,
+            account: { id: 'account-1', label: 'user@example.com' },
+        },
+    });
+    assert.equal(info.tenantId, '11111111-1111-1111-1111-111111111111');
     assert.equal(h.secrets.size, 0, 'a delegated token is never persisted');
     assert.equal(h.prompts.length, 0, 'no free-text prompt is used for the account mode');
     assert.equal(await bridge.armToken(), 'arm-token');
@@ -126,6 +153,60 @@ test('a cancelled sign-in leaves the bridge disconnected', async () => {
     assert.equal(bridge.browser(), undefined);
 });
 
+test('a failed replacement keeps the working connection and remembered credential', async () => {
+    const h = harness({ answer: SAS_URL, confirmAnswer: true });
+    const bridge = new NativeAzureBridge(h.env);
+    await bridge.connect('sas');
+    const previousInfo = bridge.info;
+    const previousBrowser = bridge.browser();
+    const previousSecret = h.secrets.get(SECRET_KEY);
+
+    h.session = undefined;
+    await assert.rejects(bridge.connect('vscode'), AzureInputError);
+
+    assert.deepEqual(bridge.info, previousInfo);
+    assert.equal(bridge.browser(), previousBrowser);
+    assert.equal(h.secrets.get(SECRET_KEY), previousSecret);
+});
+
+test('an explicit tenant is applied to sign-in, refresh, and ARM discovery', async () => {
+    const h = harness();
+    const bridge = new NativeAzureBridge(h.env);
+    const tenant = '22222222-2222-2222-2222-222222222222';
+    const info = await bridge.connect('vscode', tenant);
+
+    assert.equal(info.tenantId, tenant);
+    assert.deepEqual(h.sessionRequests[0].scopes, [
+        ...STORAGE_SCOPES,
+        `${VSCODE_TENANT_SCOPE}${tenant}`,
+    ]);
+    assert.deepEqual(h.sessionRequests[1].scopes, [
+        ...ARM_SCOPES,
+        `${VSCODE_TENANT_SCOPE}${tenant}`,
+    ]);
+});
+
+test('tenant mismatches become actionable and invalid tenant ids never open sign-in', async () => {
+    const h = harness();
+    const bridge = new NativeAzureBridge({
+        ...h.env,
+        getSession: async () => {
+            throw new Error(
+                "AADSTS50020: Selected user account does not exist in tenant 'Microsoft Services'.",
+            );
+        },
+    });
+    await assert.rejects(
+        bridge.connect('vscode'),
+        /Directory \(tenant\) ID that owns the storage account/i,
+    );
+
+    const invalid = harness();
+    const second = new NativeAzureBridge(invalid.env);
+    await assert.rejects(second.connect('vscode', 'not-a-guid'), /must be a GUID/i);
+    assert.equal(invalid.sessionRequests.length, 0);
+});
+
 test('the delegated token is refreshed before it expires', async () => {
     const h = harness();
     const bridge = new NativeAzureBridge(h.env);
@@ -136,12 +217,16 @@ test('the delegated token is refreshed before it expires', async () => {
     assert.ok(scheduled.delayMs > 0 && scheduled.delayMs < 3_600_000, 'refresh runs before expiry');
 
     h.clock = 3_000_000;
-    h.session = { accessToken: 'fresh', expiresOnMs: 7_200_000, account: 'user@example.com' };
+    h.session = {
+        accessToken: 'fresh',
+        expiresOnMs: 7_200_000,
+        account: { id: 'account-1', label: 'user@example.com' },
+    };
     h.fireTimer();
     await new Promise((resolve) => setImmediate(resolve));
 
     assert.ok(
-        h.sessionRequests.some((request) => !request.interactive),
+        h.sessionRequests.some((request) => !request.request.interactive),
         'the refresh must be silent',
     );
     assert.equal(bridge.info.connected, true);
@@ -170,6 +255,8 @@ test('the SAS mode masks the input and keeps the signature out of the state', as
     assert.equal(info.mode, 'sas');
     assert.equal(info.account, 'myaccount');
     assert.equal(info.identity, 'Shared access signature');
+    assert.equal(info.container, 'data');
+    assert.equal(info.prefix, '');
     assert.equal(info.canListSubscriptions, false);
     assert.ok(!JSON.stringify(info).includes('SIGNATURE-VALUE'));
     assert.ok(!h.logs.join('\n').includes('SIGNATURE-VALUE'));
@@ -188,6 +275,7 @@ test('a credential is only stored when the user explicitly opts in', async () =>
     const stored = JSON.parse(h.secrets.get(SECRET_KEY) as string);
     assert.equal(stored.mode, 'sas');
     assert.equal(stored.account, 'myaccount');
+    assert.equal(stored.container, 'data');
 });
 
 test('the connection string mode is masked and stores nothing by default', async () => {
@@ -204,14 +292,18 @@ test('the connection string mode is masked and stores nothing by default', async
     assert.equal(h.secrets.size, 0);
 });
 
-test('anonymous mode takes only an account name and holds no credential', async () => {
-    const h = harness({ answer: 'AzureOpenDataStorage' });
+test('anonymous mode takes a public container URL and holds no credential', async () => {
+    const h = harness({
+        answer: 'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow',
+    });
     const bridge = new NativeAzureBridge(h.env);
     const info = await bridge.connect('anonymous');
 
-    assert.equal(h.prompts[0].password, false, 'an account name is not a secret');
+    assert.equal(h.prompts[0].password, false, 'a public container URL is not a secret');
     assert.equal(info.mode, 'anonymous');
     assert.equal(info.account, 'azureopendatastorage');
+    assert.equal(info.container, 'nyctlc');
+    assert.equal(info.prefix, 'yellow');
     assert.deepEqual(h.credentials.at(-1), { kind: 'anonymous' });
     assert.equal(h.secrets.size, 0);
 });
@@ -220,7 +312,7 @@ test('invalid input in each prompted mode is refused', async () => {
     for (const [mode, answer] of [
         ['sas', 'https://evil.example/data?sig=x'],
         ['connectionString', 'AccountName=myaccount'],
-        ['anonymous', 'NOT A NAME'],
+        ['anonymous', 'https://evil.example/data'],
     ] as const) {
         const h = harness({ answer });
         const bridge = new NativeAzureBridge(h.env);
@@ -354,8 +446,13 @@ test('an ARM token is only offered for the delegated mode and is cached until ex
     assert.equal(h.sessionRequests.length, before, 'a valid ARM token is reused');
 
     h.clock = 3_600_000;
-    h.armSession = { accessToken: 'arm-token-2', expiresOnMs: 7_200_000 };
-    assert.equal(await bridge.armToken(), 'arm-token-2');
+    h.armSession = {
+        accessToken: 'arm-token-2',
+        expiresOnMs: 7_200_000,
+        account: { id: 'account-1', label: 'user@example.com' },
+    };
+    assert.equal(await bridge.armToken(true), 'arm-token-2');
+    assert.equal(h.sessionRequests.at(-1)?.request.interactive, true);
 });
 
 test('subscription listing is simply unavailable when ARM consent is missing', async () => {

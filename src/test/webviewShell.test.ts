@@ -118,7 +118,6 @@ test('the shell ships templates rather than rendered data', () => {
         'tpl-sql',
         'tpl-limitation',
         'tpl-schema-row',
-        'tpl-azure',
     ]) {
         assert.ok(html.includes(`id="${id}"`), `${id} template is missing`);
     }
@@ -132,15 +131,21 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
-        'publicUrlAnalyze',
+        'azureListSubscriptions',
+        'azureUseAccount',
+        'azureUseContainer',
         'azureDisconnect',
+        'useStorageUrl',
+        'clearStorageUrl',
         'showOrcGuidance',
     ]) {
-        assert.ok(html.includes(`data-action="${action}"`), `${action} is not reachable`);
+        assert.ok(
+            html.includes(`data-action="${action}"`) || script.includes(`'${action}'`),
+            `${action} is not reachable`,
+        );
     }
-    for (const mode of ['vscode', 'sas', 'connectionString', 'anonymous']) {
-        assert.ok(html.includes(`data-azure-connect="${mode}"`), `${mode} is not offered`);
-    }
+    assert.match(script, /dataset\.azureConnect = 'vscode'/);
+    assert.doesNotMatch(script, /dataset\.azureConnect = '(?:sas|connectionString|anonymous)'/);
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {
@@ -154,7 +159,7 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(script, /dataset\.documentation/);
     assert.match(html, /Sources &amp; files/);
     assert.match(html, />Explorer</);
-    assert.match(html, /HTTPS \/ Azure/);
+    assert.match(html, /Storage setup/);
     assert.doesNotMatch(html, /Appearance|id="appearance"/);
     assert.doesNotMatch(script, /setPreference|density-compact/);
     assert.match(script, /label: 'EXT TABLE'/);
@@ -163,6 +168,13 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(script, /captureFocus/);
     assert.match(script, /setSelectionRange/);
     assert.match(script, /tree-folder/);
+    assert.match(script, /Use a known URL/);
+    assert.match(script, /Directory \(tenant\) ID \(optional\)/);
+    assert.match(script, /Sign in with Microsoft Entra/);
+    assert.match(script, /Storage account name/);
+    assert.match(script, /Container name/);
+    assert.doesNotMatch(script, />Microsoft account</);
+    assert.doesNotMatch(script, /label: 'Azure & URLs'/);
     assert.match(
         script,
         /id: 'openrowset'[\s\S]*id: 'create_external_table'[\s\S]*id: 'external_file_format'/,
@@ -186,7 +198,7 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     );
     assert.match(
         toolbar,
-        /Browse files[\s\S]*Browse folder[\s\S]*HTTPS \/ Azure/,
+        /Browse files[\s\S]*Browse folder[\s\S]*Storage setup/,
     );
     assert.equal((html.match(/data-action="openFileDialog"/g) ?? []).length, 1);
     assert.equal((html.match(/data-action="openFolderDialog"/g) ?? []).length, 1);

@@ -87,12 +87,14 @@ export {
     dataSourceOptionsFor,
     effectiveStorageUrl,
     inferDataSourceType,
+    knownStorageLocation,
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
     type CredentialWizardOption,
     type CredentialWizardState,
     type ExternalDataSourceType,
     type GuidedAuthMethod,
+    type KnownStorageLocation,
 } from './sql/credentialWizard';
 export {
     DuplicateColumnError,

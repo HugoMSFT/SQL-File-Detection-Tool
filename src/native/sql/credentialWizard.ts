@@ -34,6 +34,88 @@ export interface CredentialWizardState {
     readonly note: string;
 }
 
+export interface KnownStorageLocation {
+    /** Normalized location safe to retain in renderer state and generated SQL. */
+    readonly storageUrl: string;
+    readonly dataSourceType: ExternalDataSourceType;
+    /** True when a secret-bearing query or a fragment was removed. */
+    readonly removedSuffix: boolean;
+    /** True when the removed query contained a SAS signature. */
+    readonly hadSasSignature: boolean;
+}
+
+const KNOWN_STORAGE_SCHEMES = new Set([
+    'https:',
+    'abs:',
+    'wasb:',
+    'wasbs:',
+    'adls:',
+    'abfs:',
+    'abfss:',
+    's3:',
+    's3a:',
+    's3n:',
+]);
+
+/**
+ * Validate a user-known storage location and remove anything that must not
+ * reach generated SQL. This path configures SQL only; it never fetches the URL.
+ */
+export function knownStorageLocation(value: string): KnownStorageLocation {
+    const candidate = String(value ?? '').trim();
+    if (!candidate) {
+        throw new Error('Enter an Azure Blob, ADLS, OneLake, or s3:// location.');
+    }
+    if ([...candidate].some((character) => {
+        const code = character.charCodeAt(0);
+        return code <= 31 || code === 127;
+    })) {
+        throw new Error('The storage URL contains unsupported control characters.');
+    }
+
+    let parsed: URL;
+    try {
+        parsed = new URL(candidate);
+    } catch {
+        throw new Error('Enter a complete storage URL, including its scheme.');
+    }
+    if (!KNOWN_STORAGE_SCHEMES.has(parsed.protocol)) {
+        throw new Error('Use an Azure Blob, ADLS, OneLake, or s3:// URL.');
+    }
+    if (parsed.password || (
+        (parsed.protocol === 'https:' || parsed.protocol.startsWith('s3'))
+        && parsed.username
+    )) {
+        throw new Error('Storage URLs must not contain embedded user credentials.');
+    }
+
+    const hadSasSignature = [...parsed.searchParams.keys()]
+        .some((key) => key.toLowerCase() === 'sig');
+    const removedSuffix = Boolean(parsed.search || parsed.hash);
+    parsed.search = '';
+    parsed.hash = '';
+    const storageUrl = parsed.toString();
+    const dataSourceType = inferDataSourceType(storageUrl);
+    if (!dataSourceType) {
+        throw new Error('That URL is not a supported Azure Blob, ADLS, OneLake, or S3 location.');
+    }
+    if (
+        (dataSourceType === 'azure_blob' || dataSourceType === 'azure_data_lake')
+        && !parsed.username
+        && parsed.pathname.split('/').filter(Boolean).length === 0
+    ) {
+        throw new Error('The Azure storage URL must include a container or file system.');
+    }
+    if (
+        dataSourceType === 'fabric_onelake'
+        && parsed.pathname.split('/').filter(Boolean).length === 0
+    ) {
+        throw new Error('The OneLake URL must include a workspace item location.');
+    }
+
+    return { storageUrl, dataSourceType, removedSuffix, hadSasSignature };
+}
+
 const SOURCE_OPTIONS: Readonly<
     Record<ExternalDataSourceType, CredentialWizardOption<ExternalDataSourceType>>
 > = {

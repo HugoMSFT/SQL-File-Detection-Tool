@@ -668,6 +668,72 @@ thead th {
   gap: var(--gap);
 }
 
+.storage-source-step {
+  margin-bottom: var(--gap);
+}
+
+.storage-source-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+
+.storage-source-option {
+  align-self: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: 7px;
+  background: var(--vscode-editor-background);
+}
+
+.storage-source-option h4,
+.storage-browser h4 {
+  margin: 0;
+}
+
+.source-option-detail {
+  margin: 3px 0 10px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.84em;
+}
+
+.storage-url-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.storage-status {
+  margin: 4px 0 8px;
+  font-size: 0.88em;
+}
+
+.storage-error {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: 7px 9px;
+  margin: 0 0 var(--gap);
+  border-left: 3px solid var(--vscode-errorForeground);
+  color: var(--vscode-errorForeground);
+  background: var(--vscode-inputValidation-warningBackground, transparent);
+}
+
+.storage-browser {
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: 7px;
+  background: var(--vscode-editor-background);
+}
+
+.storage-container-grid {
+  margin-top: var(--gap);
+}
+
 .wizard-step {
   min-width: 0;
   padding: 12px;
@@ -814,7 +880,8 @@ thead th {
 }
 
 @media (max-width: 900px) {
-  .credential-steps {
+  .credential-steps,
+  .storage-source-options {
     grid-template-columns: 1fr;
   }
 }
@@ -959,47 +1026,45 @@ pre.sql {
   display: none;
 }
 
-/* ---------------------------------------------------------------- azure --- */
+/* ------------------------------------------------------- storage browser --- */
 
-.azure-buttons {
+.azure-entra {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 6px;
-  margin-bottom: 6px;
 }
 
-.azure-identity {
-  font-size: 0.9em;
-  margin: 0 0 6px;
-}
-
-.azure-note,
-.azure-error {
-  font-size: 0.85em;
-  color: var(--vscode-descriptionForeground);
-  margin: 4px 0;
-}
-
-.azure-error {
-  color: var(--vscode-errorForeground);
-}
-
-.azure-error:empty {
-  display: none;
+.azure-tenant-field {
+  flex: 1 1 320px;
 }
 
 .azure-browse {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: var(--gap);
   align-items: flex-end;
+}
+
+.azure-direct,
+.azure-prefix-field {
+  min-width: 0;
+}
+
+.azure-inline {
+  display: flex;
+  gap: 6px;
+}
+
+.azure-inline input {
+  min-width: 0;
+  flex: 1;
 }
 
 .azure-blobs {
   list-style: none;
   margin: 6px 0;
   padding: 0;
-  flex-basis: 100%;
   max-height: 32vh;
   overflow-y: auto;
   border: 1px solid var(--vscode-panel-border, transparent);
@@ -1038,10 +1103,6 @@ pre.sql {
   color: var(--vscode-descriptionForeground);
   font-size: 0.85em;
   white-space: nowrap;
-}
-
-.public-url {
-  flex-basis: 100%;
 }
 
 /* Hide panel-only affordances when rendered in the narrow sidebar. */

@@ -71,7 +71,6 @@ export const UI_TABS = [
     'external_file_format',
     'create_external_table',
     'credential_setup',
-    'azure',
 ] as const;
 
 export type UiTab = (typeof UI_TABS)[number];
@@ -157,7 +156,11 @@ export type WebviewRequest =
     | (Base & { readonly type: 'exportAllSql' })
     | (Base & { readonly type: 'openInEditor' })
     | (Base & { readonly type: 'openDocumentation'; readonly id: DocumentationId })
-    | (Base & { readonly type: 'azureConnect'; readonly mode: AzureAuthMode })
+    | (Base & {
+          readonly type: 'azureConnect';
+          readonly mode: AzureAuthMode;
+          readonly tenantId?: string;
+      })
     | (Base & { readonly type: 'azureDisconnect' })
     | (Base & { readonly type: 'azureListSubscriptions' })
     | (Base & {
@@ -177,7 +180,6 @@ export type WebviewRequest =
           readonly container: string;
           readonly blob: string;
       })
-    | (Base & { readonly type: 'publicUrlAnalyze'; readonly url: string })
     | (Base & { readonly type: 'showOrcGuidance' });
 
 export type WebviewRequestType = WebviewRequest['type'];
@@ -208,6 +210,8 @@ export interface AzureState {
     /** Account label (an email or "SAS token"); never a credential. */
     readonly identity: string | null;
     readonly account: string | null;
+    /** Selected Entra directory id. Non-secret and empty outside delegated auth. */
+    readonly tenantId: string | null;
     readonly subscriptions: ReadonlyArray<{ id: string; name: string }>;
     readonly accounts: readonly string[];
     readonly containers: readonly string[];
@@ -493,7 +497,14 @@ const BUILDERS: Record<string, Builder> = {
     },
     azureConnect: (source) => {
         const mode = member(source, 'mode', AZURE_AUTH_MODES);
-        return mode === undefined ? undefined : { type: 'azureConnect', mode };
+        const tenantId = text(source, 'tenantId', 128);
+        if (mode === undefined || ('tenantId' in source && tenantId === undefined)) {
+            return undefined;
+        }
+        const normalizedTenant = tenantId?.trim();
+        return normalizedTenant
+            ? { type: 'azureConnect', mode, tenantId: normalizedTenant }
+            : { type: 'azureConnect', mode };
     },
     azureListAccounts: (source) => {
         const subscriptionId = text(source, 'subscriptionId', 64);
@@ -519,10 +530,6 @@ const BUILDERS: Record<string, Builder> = {
         return container && blob
             ? { type: 'azureAnalyzeBlob', container, blob }
             : undefined;
-    },
-    publicUrlAnalyze: (source) => {
-        const url = text(source, 'url', MAX_URL_LENGTH);
-        return url ? { type: 'publicUrlAnalyze', url } : undefined;
     },
 };
 

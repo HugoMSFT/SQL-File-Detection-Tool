@@ -35,12 +35,19 @@
 
 import type { AzureAuthMode } from '../protocol';
 import type { AzureBridge, AzureConnectionInfo } from '../ui/host';
-import { ARM_SCOPES, STORAGE_SCOPES, expiryFromJwt, refreshDelayMs } from '../azureScopes';
+import {
+    ARM_SCOPES,
+    STORAGE_SCOPES,
+    VSCODE_TENANT_SCOPE,
+    expiryFromJwt,
+    refreshDelayMs,
+} from '../azureScopes';
 import { AzureBlobBrowser, type BlobBrowser, type BlobCredential } from './blobBrowser';
 import {
     AzureInputError,
     isValidAccountName,
     parseConnectionString,
+    parsePublicContainerUrl,
     parseSasUrl,
     redactAzure,
     serviceUrlFor,
@@ -49,10 +56,22 @@ import {
 /** Key under which a remembered credential is stored. */
 export const SECRET_KEY = 'sqlFileDetection.azure.credential';
 
+export interface AuthAccount {
+    readonly id: string;
+    readonly label: string;
+}
+
 export interface AuthToken {
     readonly accessToken: string;
     readonly expiresOnMs: number;
-    readonly account?: string;
+    readonly tenantId?: string;
+    readonly account?: AuthAccount;
+}
+
+export interface AuthSessionRequest {
+    readonly interactive: boolean;
+    readonly account?: AuthAccount;
+    readonly clearSessionPreference?: boolean;
 }
 
 export interface PromptOptions {
@@ -81,7 +100,7 @@ export interface AuthEnvironment {
      * `interactive` distinguishes the sign-in click from the silent refresh;
      * a silent call must resolve `undefined` rather than prompting.
      */
-    getSession(scopes: string[], interactive: boolean): Promise<AuthToken | undefined>;
+    getSession(scopes: string[], request: AuthSessionRequest): Promise<AuthToken | undefined>;
     prompt(options: PromptOptions): Promise<string | undefined>;
     /** A yes/no question. Used only for the explicit "remember this" opt-in. */
     confirm(message: string, yes: string, no: string): Promise<boolean>;
@@ -101,6 +120,8 @@ interface RememberedCredential {
     readonly mode: AzureAuthMode;
     readonly account: string;
     readonly serviceUrl: string;
+    readonly container?: string | null;
+    readonly prefix?: string;
     readonly sasToken?: string;
     readonly accountKey?: string;
 }
@@ -110,8 +131,56 @@ const DISCONNECTED: AzureConnectionInfo = {
     mode: null,
     identity: null,
     account: null,
+    tenantId: null,
+    container: null,
+    prefix: '',
     canListSubscriptions: false,
 };
+
+const TENANT_ID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_TENANT = 'organizations';
+
+function tenantScope(tenantId: string): string {
+    return `${VSCODE_TENANT_SCOPE}${tenantId}`;
+}
+
+function scoped(scopes: readonly string[], tenantId: string): string[] {
+    return [...scopes, tenantScope(tenantId)];
+}
+
+function tenantForRequest(value: string | undefined): {
+    readonly requested: string;
+    readonly display: string | null;
+} {
+    const candidate = String(value ?? '').trim().toLowerCase();
+    if (!candidate) {
+        return { requested: DEFAULT_TENANT, display: null };
+    }
+    if (!TENANT_ID.test(candidate)) {
+        throw new AzureInputError(
+            'Directory (tenant) ID must be a GUID such as 00000000-0000-0000-0000-000000000000.',
+        );
+    }
+    return { requested: candidate, display: candidate };
+}
+
+function mapMicrosoftAuthError(error: unknown): never {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    if (/AADSTS50020|does not exist in tenant/i.test(message)) {
+        throw new AzureInputError(
+            'The selected account is not in that Azure directory. Enter the Directory (tenant) ID that owns the storage account, then use a work or school account from that directory.',
+        );
+    }
+    if (/AADSTS65001|consent/i.test(message)) {
+        throw new AzureInputError(
+            'Microsoft Entra consent was denied. Your administrator may need to allow VS Code to access Azure Resource Manager and Azure Storage.',
+        );
+    }
+    throw error instanceof Error
+        ? error
+        : new AzureInputError('Microsoft Entra sign-in failed.');
+}
 
 export class NativeAzureBridge implements AzureBridge {
     private state: AzureConnectionInfo = DISCONNECTED;
@@ -122,6 +191,8 @@ export class NativeAzureBridge implements AzureBridge {
     private refreshTimer: Timer | undefined;
     private armExpiresOnMs = 0;
     private armAccessToken: string | undefined;
+    private authAccount: AuthAccount | undefined;
+    private scopeTenant = DEFAULT_TENANT;
 
     constructor(private readonly env: AuthEnvironment) {}
 
@@ -175,6 +246,9 @@ export class NativeAzureBridge implements AzureBridge {
                 mode: saved.mode,
                 identity: 'Remembered credential',
                 account: saved.account,
+                tenantId: null,
+                container: saved.container ?? null,
+                prefix: saved.prefix ?? '',
                 canListSubscriptions: false,
             };
             this.env.log(`Restored a remembered Azure credential for ${saved.account}.`);
@@ -184,19 +258,35 @@ export class NativeAzureBridge implements AzureBridge {
         return this.state;
     }
 
-    async connect(mode: AzureAuthMode): Promise<AzureConnectionInfo> {
+    async connect(mode: AzureAuthMode, tenantId?: string): Promise<AzureConnectionInfo> {
+        let connected: AzureConnectionInfo;
         switch (mode) {
             case 'vscode':
-                return this.connectWithVsCodeAccount();
+                connected = await this.connectWithVsCodeAccount(tenantId);
+                break;
             case 'sas':
-                return this.connectWithSas();
+                connected = await this.connectWithSas();
+                break;
             case 'connectionString':
-                return this.connectWithConnectionString();
+                connected = await this.connectWithConnectionString();
+                break;
             case 'anonymous':
-                return this.connectAnonymously();
+                connected = await this.connectAnonymously();
+                break;
             default:
                 throw new AzureInputError('That authentication mode is not supported.');
         }
+        if (mode !== 'vscode') {
+            this.cancelRefresh();
+            this.armAccessToken = undefined;
+            this.armExpiresOnMs = 0;
+            this.authAccount = undefined;
+            this.scopeTenant = DEFAULT_TENANT;
+        }
+        if (mode === 'vscode' || mode === 'anonymous') {
+            await this.env.secrets.delete(SECRET_KEY).catch(() => undefined);
+        }
+        return connected;
     }
 
     async disconnect(): Promise<void> {
@@ -205,6 +295,8 @@ export class NativeAzureBridge implements AzureBridge {
         this.currentBrowser = undefined;
         this.armAccessToken = undefined;
         this.armExpiresOnMs = 0;
+        this.authAccount = undefined;
+        this.scopeTenant = DEFAULT_TENANT;
         this.state = DISCONNECTED;
         // A remembered credential is removed too: "disconnect" has to mean the
         // extension is no longer holding the user's key anywhere.
@@ -239,20 +331,26 @@ export class NativeAzureBridge implements AzureBridge {
         return this.state;
     }
 
-    /**
-     * A management-plane token, when one can be obtained silently.
-     *
-     * Subscription discovery is a convenience. Returning `undefined` simply
-     * hides the picker; attaching to a known account still works.
-     */
-    async armToken(): Promise<string | undefined> {
+    /** A management-plane token for explicit subscription discovery. */
+    async armToken(interactive = false): Promise<string | undefined> {
         if (this.state.mode !== 'vscode') {
             return undefined;
         }
         if (this.armAccessToken && this.env.now() < this.armExpiresOnMs - 60_000) {
             return this.armAccessToken;
         }
-        const session = await this.env.getSession(ARM_SCOPES, false).catch(() => undefined);
+        let session: AuthToken | undefined;
+        try {
+            session = await this.env.getSession(scoped(ARM_SCOPES, this.scopeTenant), {
+                interactive,
+                account: this.authAccount,
+            });
+        } catch (error) {
+            if (interactive) {
+                mapMicrosoftAuthError(error);
+            }
+            return undefined;
+        }
         if (!session) {
             this.armAccessToken = undefined;
             return undefined;
@@ -267,20 +365,38 @@ export class NativeAzureBridge implements AzureBridge {
         this.credential = undefined;
         this.currentBrowser = undefined;
         this.armAccessToken = undefined;
+        this.authAccount = undefined;
         this.state = DISCONNECTED;
     }
 
     // -- modes ---------------------------------------------------------------
 
-    private async connectWithVsCodeAccount(): Promise<AzureConnectionInfo> {
-        const session = await this.env.getSession(STORAGE_SCOPES, true);
-        if (!session) {
-            throw new AzureInputError('Azure sign-in was cancelled.');
+    private async connectWithVsCodeAccount(tenantId?: string): Promise<AzureConnectionInfo> {
+        const tenant = tenantForRequest(tenantId);
+        let session: AuthToken | undefined;
+        try {
+            session = await this.env.getSession(scoped(STORAGE_SCOPES, tenant.requested), {
+                interactive: true,
+                clearSessionPreference: true,
+            });
+            if (!session) {
+                throw new AzureInputError('Azure Storage consent was cancelled.');
+            }
+        } catch (error) {
+            if (error instanceof AzureInputError) {
+                throw error;
+            }
+            mapMicrosoftAuthError(error);
         }
+        this.scopeTenant = tenant.requested;
+        this.authAccount = session.account;
         this.credential = {
             kind: 'token',
             getToken: async () => {
-                const fresh = await this.env.getSession(STORAGE_SCOPES, false);
+                const fresh = await this.env.getSession(
+                    scoped(STORAGE_SCOPES, this.scopeTenant),
+                    { interactive: false, account: this.authAccount },
+                );
                 if (!fresh) {
                     throw new AzureInputError('The Azure session has expired. Connect again.');
                 }
@@ -288,22 +404,25 @@ export class NativeAzureBridge implements AzureBridge {
             },
         };
         this.currentBrowser = undefined;
-        const arm = await this.env.getSession(ARM_SCOPES, false).catch(() => undefined);
-        if (arm) {
-            this.armAccessToken = arm.accessToken;
-            this.armExpiresOnMs = arm.expiresOnMs;
-        }
+        const arm = await this.env.getSession(scoped(ARM_SCOPES, tenant.requested), {
+            interactive: false,
+            account: session.account,
+        }).catch(() => undefined);
+        this.armAccessToken = arm?.accessToken;
+        this.armExpiresOnMs = arm?.expiresOnMs ?? 0;
+        const identity = session.account?.label ?? 'Microsoft Entra account';
         this.state = {
             connected: true,
             mode: 'vscode',
-            identity: session.account ?? 'Microsoft account',
+            identity,
             account: null,
+            tenantId: tenant.display ?? session.tenantId ?? null,
+            container: null,
+            prefix: '',
             canListSubscriptions: Boolean(arm),
         };
         this.scheduleRefresh(session.expiresOnMs);
-        this.env.log(
-            `Connected to Azure Storage as ${session.account ?? 'the signed-in Microsoft account'}.`,
-        );
+        this.env.log(`Connected to Azure Storage as ${identity}.`);
         return this.state;
     }
 
@@ -327,12 +446,17 @@ export class NativeAzureBridge implements AzureBridge {
             mode: 'sas',
             identity: 'Shared access signature',
             account: parsed.account,
+            tenantId: null,
+            container: parsed.container,
+            prefix: parsed.prefix,
             canListSubscriptions: false,
         };
         await this.offerToRemember({
             mode: 'sas',
             account: parsed.account,
             serviceUrl: parsed.serviceUrl,
+            container: parsed.container,
+            prefix: parsed.prefix,
             sasToken: parsed.sasToken,
         });
         this.env.log(`Connected to storage account ${parsed.account} with a SAS.`);
@@ -359,6 +483,9 @@ export class NativeAzureBridge implements AzureBridge {
             mode: 'connectionString',
             identity: 'Connection string',
             account: parsed.account,
+            tenantId: null,
+            container: null,
+            prefix: '',
             canListSubscriptions: false,
         };
         await this.offerToRemember({
@@ -374,29 +501,31 @@ export class NativeAzureBridge implements AzureBridge {
 
     private async connectAnonymously(): Promise<AzureConnectionInfo> {
         const entered = await this.env.prompt({
-            title: 'Public storage account',
-            prompt: 'Storage account name. Only containers with public read access can be listed.',
+            title: 'Public Azure Blob container',
+            prompt: 'Paste the full public container or folder URL. For one file, use the HTTPS URL box instead.',
             password: false,
-            placeHolder: 'azureopendatastorage',
+            placeHolder: 'https://account.blob.core.windows.net/container/folder',
         });
         if (entered === undefined) {
             throw new AzureInputError('Connecting anonymously was cancelled.');
         }
-        const account = entered.trim().toLowerCase();
-        if (!isValidAccountName(account)) {
-            throw new AzureInputError('That is not a valid storage account name.');
-        }
-        this.attach(account, serviceUrlFor(account, this.serviceSuffix), {
+        const parsed = parsePublicContainerUrl(entered);
+        this.attach(parsed.account, parsed.serviceUrl, {
             kind: 'anonymous',
         });
         this.state = {
             connected: true,
             mode: 'anonymous',
-            identity: 'Anonymous public access',
-            account,
+            identity: 'Anonymous public container',
+            account: parsed.account,
+            tenantId: null,
+            container: parsed.container,
+            prefix: parsed.prefix,
             canListSubscriptions: false,
         };
-        this.env.log(`Browsing public containers on ${account} anonymously.`);
+        this.env.log(
+            `Browsing public container ${parsed.container} on ${parsed.account} anonymously.`,
+        );
         return this.state;
     }
 
@@ -461,13 +590,19 @@ export class NativeAzureBridge implements AzureBridge {
             return;
         }
         try {
-            const session = await this.env.getSession(STORAGE_SCOPES, false);
+            const session = await this.env.getSession(
+                scoped(STORAGE_SCOPES, this.scopeTenant),
+                { interactive: false, account: this.authAccount },
+            );
             if (!session) {
                 this.env.log('The Azure session is gone; disconnecting.');
                 await this.disconnect();
                 return;
             }
-            const arm = await this.env.getSession(ARM_SCOPES, false).catch(() => undefined);
+            const arm = await this.env.getSession(
+                scoped(ARM_SCOPES, this.scopeTenant),
+                { interactive: false, account: this.authAccount },
+            ).catch(() => undefined);
             this.armAccessToken = arm?.accessToken;
             this.armExpiresOnMs = arm?.expiresOnMs ?? 0;
             this.state = { ...this.state, canListSubscriptions: Boolean(arm) };

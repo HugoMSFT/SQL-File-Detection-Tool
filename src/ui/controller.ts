@@ -24,8 +24,11 @@ import {
     CancellationError,
     SimpleCancellationTokenSource,
     describeError,
+    effectiveStorageUrl,
+    generateCredentialSetup,
     inferDataSourceType,
     isSqlSourceFile,
+    knownStorageLocation,
     mapTypeToSql,
     nativeAnalysisService,
     NATIVE_SUPPORT_BY_TYPE,
@@ -65,15 +68,7 @@ import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue } from '../util';
 import { listStorageAccounts, listSubscriptions } from '../azure/arm';
 import { redactAzure } from '../azure/storageUrl';
-import type { SafeHttpDeps } from '../net/safeHttp';
-import { SafeHttpError } from '../net/safeHttp';
-import {
-    dataExtension,
-    downloadDataFile,
-    firstSupportedBlob,
-    isAzureStorageUrl,
-    storageUrlFor,
-} from '../net/publicData';
+import { dataExtension } from '../net/publicData';
 import type { UiHost } from './host';
 
 /** Files the extension will analyse in one "Export All" pass. */
@@ -86,8 +81,6 @@ export const REGENERATE_DEBOUNCE_MS = 180;
 const AZURE_PAGE_SIZE = 50;
 
 export interface ControllerDeps {
-    /** Injected so network tests never touch DNS or a socket. */
-    readonly http?: SafeHttpDeps;
     readonly service?: NativeAnalysisService;
     /** Injected so debounce is deterministic under test. */
     readonly setTimeoutImpl?: (fn: () => void, ms: number) => unknown;
@@ -152,6 +145,7 @@ export class UiController {
         this.store.update({
             formats: this.service.listFormats(),
         });
+        this.generateNow();
     }
 
     // -- message entry point -------------------------------------------------
@@ -196,6 +190,7 @@ export class UiController {
                 return;
             case 'setPlatform': {
                 const platform = this.service.normalizePlatform(request.platform);
+                const inferred = inferDataSourceType(this.store.state.storageUrl);
                 const dataSourceType = normalizeDataSourceType(
                     this.store.state.dataSourceType,
                     platform,
@@ -205,7 +200,20 @@ export class UiController {
                     platform,
                     dataSourceType,
                 );
-                this.store.update({ platform, dataSourceType, authMethod });
+                const storageUrl =
+                    inferred && normalizeDataSourceType(inferred, platform) !== inferred
+                        ? ''
+                        : this.store.state.storageUrl;
+                this.store.update({
+                    platform,
+                    dataSourceType,
+                    authMethod,
+                    storageUrl,
+                    notice:
+                        storageUrl !== this.store.state.storageUrl
+                            ? 'The storage URL was cleared because the selected SQL platform does not support that source.'
+                            : this.store.state.notice,
+                });
                 this.refreshQuickAnalyze();
                 void this.host.setPreference('platform', platform);
                 this.regenerate();
@@ -257,12 +265,25 @@ export class UiController {
                     request.value,
                     this.store.state.platform,
                 );
+                const inferred = inferDataSourceType(this.store.state.storageUrl);
                 const authMethod = normalizeGuidedAuthMethod(
                     this.store.state.authMethod,
                     this.store.state.platform,
                     dataSourceType,
                 );
-                this.store.update({ dataSourceType, authMethod });
+                const storageUrl =
+                    inferred && inferred !== dataSourceType
+                        ? ''
+                        : this.store.state.storageUrl;
+                this.store.update({
+                    dataSourceType,
+                    authMethod,
+                    storageUrl,
+                    notice:
+                        storageUrl !== this.store.state.storageUrl
+                            ? 'The storage URL was cleared because it does not match the selected storage service.'
+                            : this.store.state.notice,
+                });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
@@ -288,13 +309,52 @@ export class UiController {
                 this.regenerate();
                 return;
             case 'setStorageUrl': {
-                const inferred = inferDataSourceType(request.value);
-                const dataSourceType = inferred
-                    ? normalizeDataSourceType(inferred, this.store.state.platform)
-                    : this.store.state.dataSourceType;
-                this.store.update({ storageUrl: request.value, dataSourceType });
+                const value = request.value.trim();
+                if (!value) {
+                    this.store.update({
+                        storageUrl: '',
+                        error: null,
+                        notice: 'Known storage URL cleared. Safe placeholders are used instead.',
+                    });
+                    this.refreshQuickAnalyze();
+                    this.generateNow();
+                    return;
+                }
+                const location = knownStorageLocation(value);
+                const dataSourceType = normalizeDataSourceType(
+                    location.dataSourceType,
+                    this.store.state.platform,
+                );
+                if (dataSourceType !== location.dataSourceType) {
+                    this.store.update({
+                        error:
+                            `${this.store.state.credentialSetup.dataSourceOptions
+                                .map((option) => option.label)
+                                .join(', ')} are the supported storage services for the selected SQL platform.`,
+                    });
+                    return;
+                }
+                const requestedAuth = location.hadSasSignature
+                    ? 'sas'
+                    : this.store.state.authMethod === 'public'
+                        ? null
+                        : this.store.state.authMethod;
+                const authMethod = normalizeGuidedAuthMethod(
+                    requestedAuth,
+                    this.store.state.platform,
+                    dataSourceType,
+                );
+                this.store.update({
+                    storageUrl: location.storageUrl,
+                    dataSourceType,
+                    authMethod,
+                    error: null,
+                    notice: location.removedSuffix
+                        ? 'Storage location applied. Query parameters and fragments were removed before SQL generation.'
+                        : 'Storage location applied to Credential Setup.',
+                });
                 this.refreshQuickAnalyze();
-                this.regenerate();
+                this.generateNow();
                 return;
             }
             case 'setFormatName':
@@ -376,7 +436,7 @@ export class UiController {
                 this.showLimitationGuidance();
                 return;
             case 'azureConnect':
-                return this.queue(() => this.azureConnect(request.mode));
+                return this.queue(() => this.azureConnect(request.mode, request.tenantId));
             case 'azureDisconnect':
                 return this.queue(() => this.azureDisconnect());
             case 'azureListSubscriptions':
@@ -399,8 +459,6 @@ export class UiController {
                 return this.queue(() =>
                     this.azureAnalyzeBlob(request.container, request.blob),
                 );
-            case 'publicUrlAnalyze':
-                return this.queue(() => this.analyzePublicUrl(request.url));
             default: {
                 // Exhaustiveness: adding a request type without a case is a
                 // compile error rather than a silently ignored message.
@@ -539,6 +597,7 @@ export class UiController {
                 await this.selectFile(first.id);
             } else {
                 this.store.clearSelection();
+                this.generateNow();
             }
         } catch (error) {
             this.failIfCurrent(generation, error);
@@ -557,6 +616,7 @@ export class UiController {
             this.rawMetadata = null;
             this.store.setFiles([]);
             this.store.clearSelection();
+            this.generateNow();
             this.store.update({
                 error:
                     'No SQL-readable data file was selected. Use CSV, TSV, DAT, JSON, ' +
@@ -705,12 +765,6 @@ export class UiController {
         if (error instanceof CancellationError || !this.isCurrent(generation)) {
             return;
         }
-        // A user-initiated cancel is not a failure, and must not leave an error
-        // banner behind after the work it stopped.
-        if (error instanceof SafeHttpError && error.code === 'cancelled') {
-            this.store.update({ busy: false, progress: null });
-            return;
-        }
         const message = redactAzure(describeError(error));
         this.host.log(`Analysis failed: ${message}`);
         this.store.update({ busy: false, progress: null, error: message });
@@ -827,10 +881,30 @@ export class UiController {
 
     /** Regenerate every statement tab from the current options. Synchronous. */
     generateNow(): void {
-        if (this.disposed || !this.rawMetadata) {
+        if (this.disposed) {
             return;
         }
         const state = this.store.state;
+        if (!this.rawMetadata) {
+            const storageUrl = effectiveStorageUrl(
+                state.platform,
+                state.dataSourceType,
+                state.storageUrl || null,
+                '<file>',
+            );
+            this.store.update({
+                statements: {
+                    credential_setup: generateCredentialSetup({
+                        dataSource: state.dataSource || 'MyDataSource',
+                        credentialName: state.credentialName || null,
+                        authMethod: state.authMethod || null,
+                        targetPlatform: state.platform,
+                        storageUrl,
+                    }),
+                },
+            });
+            return;
+        }
         const statements: GeneratedStatements = this.service.generateStatements({
             metadata: {
                 ...this.rawMetadata,
@@ -1025,26 +1099,42 @@ export class UiController {
 
     // -- Azure ---------------------------------------------------------------
 
-    private async azureConnect(mode: AzureAuthMode): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
+    private async azureConnect(mode: AzureAuthMode, tenantId?: string): Promise<void> {
+        const previous = this.store.state.azure;
+        this.store.updateAzure({
+            busy: true,
+            error: null,
+        });
         try {
-            const info = await this.host.azure.connect(mode);
+            const info = await this.host.azure.connect(mode, tenantId);
             this.store.updateAzure({
                 busy: false,
                 connected: info.connected,
                 mode: info.mode,
                 identity: info.identity,
                 account: info.account,
+                tenantId: info.tenantId,
+                subscriptions: [],
+                accounts: [],
+                containers: info.container ? [info.container] : [],
+                container: info.container,
+                prefix: info.prefix,
+                blobs: [],
+                continuation: null,
                 canListSubscriptions: info.canListSubscriptions,
                 error: null,
             });
-            if (info.account) {
+            if (info.account && info.container) {
+                await this.azureListBlobs(info.container, info.prefix, '');
+            } else if (info.account) {
                 await this.azureListContainers();
             } else if (info.canListSubscriptions) {
                 await this.azureListSubscriptions();
             }
         } catch (error) {
-            this.azureFail(error);
+            const message = redactAzure(describeError(error));
+            this.host.log(`Azure request failed: ${message}`);
+            this.store.updateAzure({ ...previous, busy: false, error: message });
         }
     }
 
@@ -1057,6 +1147,7 @@ export class UiController {
                 mode: null,
                 identity: null,
                 account: null,
+                tenantId: null,
                 subscriptions: [],
                 accounts: [],
                 containers: [],
@@ -1074,7 +1165,7 @@ export class UiController {
     private async azureListSubscriptions(): Promise<void> {
         this.store.updateAzure({ busy: true, error: null });
         try {
-            const token = await this.host.azure.armToken();
+            const token = await this.host.azure.armToken(true);
             if (!token) {
                 this.store.updateAzure({
                     busy: false,
@@ -1085,7 +1176,15 @@ export class UiController {
                 return;
             }
             const subscriptions = await listSubscriptions(token);
-            this.store.updateAzure({ busy: false, subscriptions, canListSubscriptions: true });
+            this.store.updateAzure({
+                busy: false,
+                subscriptions,
+                canListSubscriptions: true,
+                error:
+                    subscriptions.length === 0
+                        ? 'No subscriptions were found in this directory. Enter the storage account name directly or verify the tenant ID.'
+                        : null,
+            });
         } catch (error) {
             this.azureFail(error);
         }
@@ -1098,12 +1197,19 @@ export class UiController {
             if (!token) {
                 this.store.updateAzure({
                     busy: false,
-                    error: 'Sign in with a Microsoft account to list storage accounts.',
+                    error: 'Sign in with Microsoft Entra to list storage accounts.',
                 });
                 return;
             }
             const accounts = await listStorageAccounts(token, subscriptionId);
-            this.store.updateAzure({ busy: false, accounts });
+            this.store.updateAzure({
+                busy: false,
+                accounts,
+                error:
+                    accounts.length === 0
+                        ? 'No storage accounts were found in this subscription. Enter an account name directly if you have data-plane access.'
+                        : null,
+            });
         } catch (error) {
             this.azureFail(error);
         }
@@ -1201,15 +1307,24 @@ export class UiController {
                 return;
             }
             this.sourceReferenceUrl = browser.blobUrl(container, blob);
+            const dataSourceType =
+                inferDataSourceType(this.sourceReferenceUrl)
+                ?? this.store.state.dataSourceType;
+            const authMethod =
+                this.store.state.azure.mode === 'anonymous'
+                    ? 'public'
+                    : this.store.state.azure.mode === 'vscode'
+                        ? normalizeGuidedAuthMethod(
+                            'user_identity',
+                            this.store.state.platform,
+                            dataSourceType,
+                        )
+                        : this.store.state.authMethod;
             this.store.update({
                 storageUrl: this.sourceReferenceUrl,
-                dataSourceType:
-                    inferDataSourceType(this.sourceReferenceUrl)
-                    ?? this.store.state.dataSourceType,
-                authMethod:
-                    this.store.state.azure.mode === 'anonymous'
-                        ? 'public'
-                        : this.store.state.authMethod,
+                dataSourceType,
+                authMethod,
+                activeTab: 'preview',
             });
             await this.loadFiles([downloaded.path], 'azure');
             this.store.update({
@@ -1226,82 +1341,6 @@ export class UiController {
         const message = redactAzure(describeError(error));
         this.host.log(`Azure request failed: ${message}`);
         this.store.updateAzure({ busy: false, error: message });
-    }
-
-    // -- public data ---------------------------------------------------------
-
-    /**
-     * Download and analyse a public HTTPS URL.
-     *
-     * The URL is validated, fetched and stored by
-     * {@link ../net/publicData}, which enforces the SSRF policy. The generated
-     * SQL only points at the URL when SQL can actually read it; otherwise the
-     * user is told to stage the file.
-     */
-    private async analyzePublicUrl(url: string): Promise<void> {
-        const { token, generation, signal } = this.begin();
-        const http: SafeHttpDeps = { ...(this.deps.http ?? {}), signal };
-        this.store.update({ busy: true, progress: 'Resolving URL…', error: null, notice: null });
-        try {
-            let target = url;
-            if (!dataExtension(url) && isAzureStorageUrl(url)) {
-                this.store.update({ progress: 'Listing the public container…' });
-                const candidate = await firstSupportedBlob(url, http);
-                if (!this.isCurrent(generation)) {
-                    return;
-                }
-                if (!candidate) {
-                    this.store.update({
-                        busy: false,
-                        progress: null,
-                        error:
-                            'No supported data file was found under that container prefix.',
-                    });
-                    return;
-                }
-                target = candidate.url;
-            }
-
-            this.store.update({ progress: 'Downloading…' });
-            const directory = await this.host.downloadDirectory();
-            const downloaded = await downloadDataFile(target, directory, http);
-            this.temporaryFiles.add(downloaded.path);
-            if (!this.isCurrent(generation) || token.token.isCancellationRequested) {
-                await this.host.cleanupDownload(downloaded.path);
-                this.temporaryFiles.delete(downloaded.path);
-                return;
-            }
-
-            const queryable = storageUrlFor(target);
-            try {
-                const source = new URL(target);
-                source.search = '';
-                source.hash = '';
-                this.sourceReferenceUrl = source.toString();
-            } catch {
-                this.sourceReferenceUrl = '';
-            }
-            this.store.update({
-                storageUrl: queryable ?? '',
-                dataSourceType:
-                    inferDataSourceType(queryable)
-                    ?? this.store.state.dataSourceType,
-                authMethod: queryable ? 'public' : this.store.state.authMethod,
-            });
-            await this.loadFiles(
-                [downloaded.path],
-                queryable && isAzureStorageUrl(queryable) ? 'azure' : 'public_https',
-            );
-            this.store.update({
-                busy: false,
-                progress: null,
-                notice: queryable
-                    ? 'Analyzed a local copy. The generated SQL reads the storage URL directly.'
-                    : 'SQL cannot read that URL directly. Stage the file in Azure Storage (or a local path SQL can reach) before running the generated script.',
-            });
-        } catch (error) {
-            this.failIfCurrent(generation, error);
-        }
     }
 
     // -- lifecycle -----------------------------------------------------------

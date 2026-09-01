@@ -13,16 +13,14 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Readable } from 'node:stream';
 
 import { AppStateStore } from '../../appState';
 import { UiController, metadataForDisplay } from '../../ui/controller';
 import type { OpenDialogOptions, UiHost } from '../../ui/host';
 import type { AzureBridge, AzureConnectionInfo } from '../../ui/host';
 import type { BlobBrowser } from '../../azure/blobBrowser';
-import type { AppStateSnapshot } from '../../protocol';
+import type { AppStateSnapshot, AzureAuthMode } from '../../protocol';
 import type { StatementKind } from '../../native';
-import type { RawResponse, SafeHttpDeps } from '../../net/safeHttp';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const FIXTURES = path.join(REPO, 'test_data');
@@ -58,24 +56,30 @@ class FakeAzureBridge implements AzureBridge {
         mode: null,
         identity: null,
         account: null,
+        tenantId: null,
+        container: null,
+        prefix: '',
         canListSubscriptions: false,
     };
-    connectCalls: string[] = [];
+    connectCalls: Array<{ mode: AzureAuthMode; tenantId?: string }> = [];
     disconnectCalls = 0;
     connectResult: AzureConnectionInfo | Error | undefined;
     currentBrowser: BlobBrowser | undefined;
     token: string | undefined;
 
-    async connect(mode: string): Promise<AzureConnectionInfo> {
-        this.connectCalls.push(mode);
+    async connect(mode: AzureAuthMode, tenantId?: string): Promise<AzureConnectionInfo> {
+        this.connectCalls.push({ mode, tenantId });
         if (this.connectResult instanceof Error) {
             throw this.connectResult;
         }
         this.info = this.connectResult ?? {
             connected: true,
             mode: 'anonymous',
-            identity: 'Anonymous public access',
+            identity: 'Anonymous public container',
             account: 'myaccount',
+            tenantId: null,
+            container: null,
+            prefix: '',
             canListSubscriptions: false,
         };
         return this.info;
@@ -89,6 +93,9 @@ class FakeAzureBridge implements AzureBridge {
             mode: null,
             identity: null,
             account: null,
+            tenantId: null,
+            container: null,
+            prefix: '',
             canListSubscriptions: false,
         };
     }
@@ -102,7 +109,7 @@ class FakeAzureBridge implements AzureBridge {
         return this.currentBrowser;
     }
 
-    async armToken(): Promise<string | undefined> {
+    async armToken(_interactive = false): Promise<string | undefined> {
         return this.token;
     }
 }
@@ -1109,6 +1116,74 @@ test('credential name, auth method and table name reach the generator', async ()
     }
 });
 
+test('a known URL configures credential SQL without requiring file analysis', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({
+            type: 'setStorageUrl',
+            value:
+                'https://myaccount.blob.core.windows.net/data/orders.parquet' +
+                '?sv=2026&sig=SECRET#details',
+        });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(
+            state.storageUrl,
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        );
+        assert.equal(state.dataSourceType, 'azure_blob');
+        assert.equal(state.authMethod, 'sas');
+        assert.match(state.statements?.credential_setup ?? '', /CREATE EXTERNAL DATA SOURCE/);
+        assert.ok(!JSON.stringify(state).includes('sig=SECRET'));
+        assert.ok(!JSON.stringify(state).includes('?sv=2026'));
+        assert.match(state.notice ?? '', /removed/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('an invalid known URL leaves the previous storage setup intact', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({
+            type: 'setStorageUrl',
+            value: 'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        });
+        await ui.handle({ type: 'setStorageUrl', value: 'https://example.com/orders.parquet' });
+        await settle();
+
+        assert.equal(
+            snapshot(record).storageUrl,
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        );
+        assert.match(snapshot(record).error ?? '', /not a supported/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('changing to an incompatible SQL platform clears the known storage URL', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
+        await ui.handle({ type: 'setStorageUrl', value: 's3://sales-data/year=2026/' });
+        assert.equal(snapshot(record).storageUrl, 's3://sales-data/year=2026/');
+
+        await ui.handle({ type: 'setPlatform', platform: 'azure_sql_db' });
+        assert.equal(snapshot(record).storageUrl, '');
+        assert.match(snapshot(record).notice ?? '', /does not support/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 function fakeBrowser(overrides: Partial<BlobBrowser> = {}): BlobBrowser {
     return {
         account: 'myaccount',
@@ -1140,7 +1215,7 @@ test('connecting lists containers and never exposes a credential', async () => {
         assert.equal(azure.connected, true);
         assert.equal(azure.account, 'myaccount');
         assert.deepEqual(azure.containers, ['data', 'logs']);
-        assert.deepEqual(record.azure.connectCalls, ['anonymous']);
+        assert.deepEqual(record.azure.connectCalls, [{ mode: 'anonymous', tenantId: undefined }]);
         assert.ok(!JSON.stringify(snapshot(record)).toLowerCase().includes('sig='));
         assert.ok(!JSON.stringify(snapshot(record)).includes('AccountKey'));
     } finally {
@@ -1157,12 +1232,86 @@ test('every auth mode is routed through the bridge unchanged', async () => {
             record.azure.currentBrowser = fakeBrowser();
             await ui.handle({ type: 'azureConnect', mode });
             await settle();
-            assert.deepEqual(record.azure.connectCalls, [mode]);
+            assert.deepEqual(record.azure.connectCalls, [{ mode, tenantId: undefined }]);
             assert.equal(snapshot(record).azure.connected, true);
         } finally {
             await ui.dispose();
             cleanup(record);
         }
+    }
+});
+
+test('Microsoft Entra sign-in keeps the requested tenant and supports a direct account', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    const tenantId = '11111111-2222-3333-4444-555555555555';
+    try {
+        record.azure.connectResult = {
+            connected: true,
+            mode: 'vscode',
+            identity: 'user@contoso.example',
+            account: null,
+            tenantId,
+            container: null,
+            prefix: '',
+            canListSubscriptions: false,
+        };
+        record.azure.currentBrowser = fakeBrowser();
+        await ui.handle({ type: 'azureConnect', mode: 'vscode', tenantId });
+        await ui.handle({ type: 'azureSetAccount', account: 'myaccount' });
+        await settle();
+
+        assert.deepEqual(record.azure.connectCalls, [{ mode: 'vscode', tenantId }]);
+        assert.equal(snapshot(record).azure.tenantId, tenantId);
+        assert.equal(snapshot(record).azure.account, 'myaccount');
+        assert.deepEqual(snapshot(record).azure.containers, ['data', 'logs']);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a container-scoped connection browses its prefix without listing the account', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    let containerLists = 0;
+    const blobCalls: Array<{ container: string; prefix: string | undefined }> = [];
+    try {
+        record.azure.connectResult = {
+            connected: true,
+            mode: 'sas',
+            identity: 'Shared access signature',
+            account: 'myaccount',
+            tenantId: null,
+            container: 'data',
+            prefix: 'year=2026/',
+            canListSubscriptions: false,
+        };
+        record.azure.currentBrowser = fakeBrowser({
+            listContainers: async () => {
+                containerLists += 1;
+                return { names: [], continuation: null };
+            },
+            listBlobs: async (container, options) => {
+                blobCalls.push({ container, prefix: options?.prefix });
+                return {
+                    entries: [{ name: 'year=2026/orders.parquet', sizeBytes: 42, isPrefix: false }],
+                    continuation: null,
+                };
+            },
+        });
+
+        await ui.handle({ type: 'azureConnect', mode: 'sas' });
+        await settle();
+
+        assert.equal(containerLists, 0);
+        assert.deepEqual(blobCalls, [{ container: 'data', prefix: 'year=2026/' }]);
+        assert.equal(snapshot(record).azure.container, 'data');
+        assert.equal(snapshot(record).azure.prefix, 'year=2026/');
+        assert.deepEqual(snapshot(record).azure.containers, ['data']);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
     }
 });
 
@@ -1182,6 +1331,41 @@ test('a failed connection is reported redacted and leaves nothing connected', as
         assert.ok(azure.error);
         assert.ok(!azure.error.includes('SECRETSIG'), azure.error);
         assert.ok(!record.logs.join('\n').includes('SECRETSIG'));
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a failed replacement keeps the prior Azure browser state visible', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.azure.currentBrowser = fakeBrowser();
+        record.azure.connectResult = {
+            connected: true,
+            mode: 'vscode',
+            identity: 'user@contoso.example',
+            account: 'myaccount',
+            tenantId: '11111111-2222-3333-4444-555555555555',
+            container: null,
+            prefix: '',
+            canListSubscriptions: false,
+        };
+        await ui.handle({ type: 'azureConnect', mode: 'vscode' });
+        await settle();
+        const before = snapshot(record).azure;
+
+        record.azure.connectResult = new Error('AADSTS50020 replacement failed');
+        await ui.handle({ type: 'azureConnect', mode: 'vscode' });
+        await settle();
+
+        const after = snapshot(record).azure;
+        assert.equal(after.connected, before.connected);
+        assert.equal(after.identity, before.identity);
+        assert.equal(after.account, before.account);
+        assert.deepEqual(after.containers, before.containers);
+        assert.match(after.error ?? '', /AADSTS50020/);
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1251,7 +1435,7 @@ test('subscription discovery degrades gracefully without an ARM token', async ()
 
         await ui.handle({ type: 'azureListAccounts', subscriptionId: 'sub-1' });
         await settle();
-        assert.match(snapshot(record).azure.error ?? '', /Microsoft account/i);
+        assert.match(snapshot(record).azure.error ?? '', /Microsoft Entra/i);
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1297,6 +1481,48 @@ test('analyzing a blob keeps the copy local and the SQL pointed at the URL', asy
     }
 });
 
+test('Microsoft storage selection replaces a stale SAS URL authentication choice', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({
+            type: 'setStorageUrl',
+            value:
+                'https://myaccount.blob.core.windows.net/old/orders.csv' +
+                '?sv=2026&sig=OLD',
+        });
+        assert.equal(snapshot(record).authMethod, 'sas');
+
+        const local = path.join(record.downloadDir, 'a.csv');
+        fs.writeFileSync(local, 'id,name\n1,Ada\n');
+        record.azure.connectResult = {
+            connected: true,
+            mode: 'vscode',
+            identity: 'user@contoso.example',
+            account: 'myaccount',
+            tenantId: '11111111-2222-3333-4444-555555555555',
+            container: null,
+            prefix: '',
+            canListSubscriptions: false,
+        };
+        record.azure.currentBrowser = fakeBrowser({
+            downloadBlob: async () => ({ path: local, bytes: 14 }),
+        });
+        await ui.handle({ type: 'azureConnect', mode: 'vscode' });
+        await ui.handle({ type: 'azureAnalyzeBlob', container: 'data', blob: 'a.csv' });
+        await settle();
+
+        assert.equal(snapshot(record).authMethod, 'user_identity');
+        assert.equal(
+            snapshot(record).storageUrl,
+            'https://myaccount.blob.core.windows.net/data/a.csv',
+        );
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 test('disconnecting clears every trace of the Azure session from the state', async () => {
     const record = recorder();
     const ui = controller(record);
@@ -1321,6 +1547,7 @@ test('disconnecting clears every trace of the Azure session from the state', asy
                 mode: azure.mode,
                 identity: azure.identity,
                 account: azure.account,
+                tenantId: azure.tenantId,
                 container: azure.container,
                 prefix: azure.prefix,
                 continuation: azure.continuation,
@@ -1330,6 +1557,7 @@ test('disconnecting clears every trace of the Azure session from the state', asy
                 mode: null,
                 identity: null,
                 account: null,
+                tenantId: null,
                 container: null,
                 prefix: '',
                 continuation: null,
@@ -1340,135 +1568,6 @@ test('disconnecting clears every trace of the Azure session from the state', asy
         assert.deepEqual(azure.subscriptions, []);
     } finally {
         await ui.dispose();
-        cleanup(record);
-    }
-});
-
-// -- public URL ---------------------------------------------------------------
-
-function httpDeps(body: string, headers: Record<string, string> = {}): SafeHttpDeps {
-    return {
-        resolve: async () => ['93.184.216.34'],
-        request: async () => {
-            const response: RawResponse = {
-                statusCode: 200,
-                headers,
-                body: Readable.from([Buffer.from(body)]),
-                destroy: () => undefined,
-            };
-            return response;
-        },
-    };
-}
-
-test('a public Azure URL is analysed and remains directly queryable', async () => {
-    const record = recorder();
-    const ui = controller(record, {
-        http: httpDeps('id,name\n1,Ada\n2,Grace\n'),
-    });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://azureopendatastorage.blob.core.windows.net/nyctlc/sample.csv',
-        });
-        await settle();
-
-        const state = snapshot(record);
-        assert.equal(state.error, null);
-        assert.equal(
-            state.storageUrl,
-            'https://azureopendatastorage.blob.core.windows.net/nyctlc/sample.csv',
-        );
-        assert.match(state.notice ?? '', /reads the storage URL directly/i);
-        assert.equal(state.metadata?.file_type, 'csv');
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('a generic public host is analysed but the SQL says to stage the file', async () => {
-    const record = recorder();
-    const ui = controller(record, { http: httpDeps('id,name\n1,Ada\n') });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/data/sample.csv',
-        });
-        await settle();
-
-        const state = snapshot(record);
-        assert.equal(state.error, null);
-        assert.equal(state.storageUrl, '', 'a generic host is not a queryable location');
-        assert.match(state.notice ?? '', /Stage the file/i);
-        assert.equal(state.metadata?.file_type, 'csv');
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('a public URL is subject to the SSRF policy', async () => {
-    for (const [url, pattern] of [
-        ['http://example.com/a.csv', /https/i],
-        ['https://127.0.0.1/a.csv', /publicly routable/i],
-        ['https://169.254.169.254/a.csv', /publicly routable/i],
-        ['https://localhost/a.csv', /Local host names/i],
-        ['https://user:pass@example.com/a.csv', /credentials/i],
-        ['https://example.com/setup.exe', /supported data file/i],
-    ] as const) {
-        const record = recorder();
-        const ui = controller(record, {
-            http: {
-                resolve: async () => ['93.184.216.34'],
-                request: async () => assert.fail(`a request was made for ${url}`),
-            },
-        });
-        try {
-            await ui.handle({ type: 'publicUrlAnalyze', url });
-            await settle();
-            assert.match(snapshot(record).error ?? '', pattern, url);
-            assert.equal(snapshot(record).busy, false);
-        } finally {
-            await ui.dispose();
-            cleanup(record);
-        }
-    }
-});
-
-test('a public download that overruns the cap leaves nothing behind', async () => {
-    const record = recorder();
-    const ui = controller(record, {
-        http: httpDeps('x', { 'content-length': '999999999999' }),
-    });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/huge.csv',
-        });
-        await settle();
-        assert.match(snapshot(record).error ?? '', /limit/i);
-        assert.deepEqual(fs.readdirSync(record.downloadDir), []);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('downloaded temp files are cleaned up on dispose', async () => {
-    const record = recorder();
-    const ui = controller(record, { http: httpDeps('id,name\n1,Ada\n') });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/data/sample.csv',
-        });
-        await settle();
-        assert.equal(fs.readdirSync(record.downloadDir).length, 1);
-        await ui.dispose();
-        assert.equal(record.cleaned.length, 1);
-        assert.deepEqual(fs.readdirSync(record.downloadDir), []);
-    } finally {
         cleanup(record);
     }
 });

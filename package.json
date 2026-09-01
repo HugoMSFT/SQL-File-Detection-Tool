@@ -66,7 +66,7 @@
       },
       {
         "command": "sqlFileDetectionTool.connectAzureStorage",
-        "title": "Connect to Azure Storage",
+        "title": "Browse Microsoft Storage",
         "category": "SQL File Detection Tool"
       },
       {
@@ -190,8 +190,8 @@
           },
           {
             "id": "connectAzure",
-            "title": "Attach Azure Storage",
-            "description": "Sign in with your Microsoft account, a SAS URL, a connection string, or browse anonymously, then analyze blobs in place.\n[Connect to Azure Storage](command:sqlFileDetectionTool.connectAzureStorage)",
+            "title": "Set up external storage",
+            "description": "Paste a known storage URL to generate the external data source, or use tenant-aware Microsoft Entra sign-in to browse your storage account and analyze a supported blob.\n[Browse Microsoft Storage](command:sqlFileDetectionTool.connectAzureStorage)",
             "media": {
               "markdown": "media/walkthrough/azure.md"
             },

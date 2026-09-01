@@ -9,7 +9,14 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { ARM_SCOPES, STORAGE_SCOPES, expiryFromJwt, refreshDelayMs } from '../azureScopes';
+import {
+    ARM_SCOPES,
+    STORAGE_SCOPES,
+    VSCODE_TENANT_SCOPE,
+    expiryFromJwt,
+    refreshDelayMs,
+    tenantIdFromJwt,
+} from '../azureScopes';
 
 const manifest = JSON.parse(
     fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'),
@@ -38,9 +45,19 @@ test('expiryFromJwt falls back to an assumed lifetime for opaque tokens', () => 
     assert.ok(expiry <= now + 60 * 60 * 1000);
 });
 
+test('tenantIdFromJwt reads only a GUID tenant claim', () => {
+    const tid = '11111111-2222-3333-4444-555555555555';
+    const payload = Buffer.from(JSON.stringify({ tid })).toString('base64url');
+    assert.equal(tenantIdFromJwt(['header', payload, 'signature'].join('.')), tid);
+    const invalid = Buffer.from(JSON.stringify({ tid: 'organizations' })).toString('base64url');
+    assert.equal(tenantIdFromJwt(['header', invalid, 'signature'].join('.')), undefined);
+    assert.equal(tenantIdFromJwt('opaque-token'), undefined);
+});
+
 test('Azure scopes are the delegated storage and ARM scopes', () => {
     assert.deepEqual(STORAGE_SCOPES, ['https://storage.azure.com/user_impersonation']);
     assert.deepEqual(ARM_SCOPES, ['https://management.azure.com/user_impersonation']);
+    assert.equal(VSCODE_TENANT_SCOPE, 'VSCODE_TENANT:');
 });
 
 test('refreshDelayMs refreshes ahead of expiry and never spins', () => {

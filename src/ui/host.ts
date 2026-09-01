@@ -23,6 +23,11 @@ export interface AzureConnectionInfo {
     /** An account label such as an email address. Never a credential. */
     readonly identity: string | null;
     readonly account: string | null;
+    /** Entra directory used for delegated tokens. Never a credential. */
+    readonly tenantId: string | null;
+    /** Container/prefix encoded by a scoped SAS or public URL. */
+    readonly container: string | null;
+    readonly prefix: string;
     readonly canListSubscriptions: boolean;
 }
 
@@ -34,7 +39,7 @@ export interface AzureConnectionInfo {
  */
 export interface AzureBridge {
     readonly info: AzureConnectionInfo;
-    connect(mode: AzureAuthMode): Promise<AzureConnectionInfo>;
+    connect(mode: AzureAuthMode, tenantId?: string): Promise<AzureConnectionInfo>;
     disconnect(): Promise<void>;
     /** Point the connection at a specific storage account. */
     useAccount(account: string): Promise<AzureConnectionInfo>;
@@ -45,7 +50,7 @@ export interface AzureBridge {
      *
      * Optional by design: attaching to a known account works without it.
      */
-    armToken(): Promise<string | undefined>;
+    armToken(interactive?: boolean): Promise<string | undefined>;
 }
 
 export interface OpenDialogOptions {

@@ -18,6 +18,7 @@ import {
     isValidAccountName,
     isValidContainerName,
     parseConnectionString,
+    parsePublicContainerUrl,
     parseSasUrl,
     redactAzure,
     serviceUrlFor,
@@ -101,6 +102,33 @@ test('a SAS URL is parsed with the signature kept out of the displayable parts',
     assert.ok(!parsed.serviceUrl.includes('sig'), 'the displayable URL carries no signature');
 });
 
+test('a public container URL preserves its account, container and prefix', () => {
+    const parsed = parsePublicContainerUrl(
+        'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow/',
+    );
+    assert.deepEqual(parsed, {
+        account: 'azureopendatastorage',
+        serviceUrl: 'https://azureopendatastorage.blob.core.windows.net',
+        container: 'nyctlc',
+        prefix: 'yellow',
+    });
+});
+
+test('public browsing requires a plain Azure container URL', () => {
+    for (const candidate of [
+        '',
+        'not a url',
+        'http://myaccount.blob.core.windows.net/data',
+        'https://myaccount.blob.core.windows.net',
+        'https://evil.example/data',
+        'https://myaccount.blob.core.windows.net/data?sig=secret',
+        'https://myaccount.blob.core.windows.net/data#fragment',
+        'https://user:password@myaccount.blob.core.windows.net/data',
+    ]) {
+        assert.throws(() => parsePublicContainerUrl(candidate), AzureInputError, candidate);
+    }
+});
+
 test('SAS URLs that are not credentials for Azure are refused', () => {
     for (const candidate of [
         '',
@@ -171,9 +199,9 @@ test('redaction removes every credential shape', () => {
 });
 
 test('auth modes have non-secret human labels', () => {
-    assert.equal(describeAuthMode('vscode'), 'VS Code Microsoft account');
+    assert.equal(describeAuthMode('vscode'), 'Microsoft Entra work or school account');
     assert.equal(describeAuthMode('sas'), 'Shared access signature');
     assert.equal(describeAuthMode('connectionString'), 'Connection string');
-    assert.equal(describeAuthMode('anonymous'), 'Anonymous public access');
+    assert.equal(describeAuthMode('anonymous'), 'Anonymous public container');
     assert.equal(describeAuthMode('managedIdentity'), 'Not connected');
 });

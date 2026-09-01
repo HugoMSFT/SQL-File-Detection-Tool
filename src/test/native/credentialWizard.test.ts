@@ -6,6 +6,7 @@ import {
     dataSourceOptionsFor,
     effectiveStorageUrl,
     inferDataSourceType,
+    knownStorageLocation,
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
 } from '../../native/sql/credentialWizard';
@@ -87,4 +88,45 @@ test('infers source types and uses safe source-specific placeholders', () => {
         effectiveStorageUrl('sql_server_2022', 's3', '', 'data.csv'),
         /^s3:/,
     );
+});
+
+test('normalizes known storage URLs before they reach generated SQL', () => {
+    const signed = knownStorageLocation(
+        'https://acct.blob.core.windows.net/raw/orders.parquet?sv=1&sig=secret#preview',
+    );
+    assert.deepEqual(signed, {
+        storageUrl: 'https://acct.blob.core.windows.net/raw/orders.parquet',
+        dataSourceType: 'azure_blob',
+        removedSuffix: true,
+        hadSasSignature: true,
+    });
+
+    const onelake = knownStorageLocation(
+        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/orders',
+    );
+    assert.equal(onelake.dataSourceType, 'fabric_onelake');
+    assert.equal(onelake.removedSuffix, false);
+
+    const s3 = knownStorageLocation('s3://sales-data/year=2026/');
+    assert.equal(s3.dataSourceType, 's3');
+
+    assert.equal(
+        knownStorageLocation(
+            'https://acct.blob.core.windows.net/raw/orders.parquet?SIG=secret',
+        ).hadSasSignature,
+        true,
+    );
+});
+
+test('known storage URLs reject incomplete and unsupported locations', () => {
+    for (const candidate of [
+        '',
+        'not-a-url',
+        'https://example.com/data.csv',
+        'https://acct.blob.core.windows.net',
+        '******acct.blob.core.windows.net/raw',
+        'ftp://example.com/data.csv',
+    ]) {
+        assert.throws(() => knownStorageLocation(candidate), Error, candidate);
+    }
 });

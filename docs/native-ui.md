@@ -161,16 +161,20 @@ comments from `media/webview/main.js` and then fails the build on `innerHTML`,
 `on*=` attributes in the HTML, any second script tag, or any remote resource
 reference.
 
-## Azure Storage: authentication and threat model
+## Storage setup and threat model
 
-Four authentication modes are offered, and one deliberately is not.
+Credential setup combines the two storage entry paths:
 
-| Mode | Credential | Where it lives | Notes |
-| --- | --- | --- | --- |
-| `vscode` (recommended) | Microsoft account token from `authentication.getSession` | VS Code's own secret store; the token is held in extension-host memory only | Refreshed before expiry. Enables subscription and account discovery via ARM. |
-| `sas` | SAS URL | Extension-host memory, or `SecretStorage` on explicit opt-in | The signature is split from the URL immediately and never rejoined for display. |
-| `connectionString` | Account key | `showInputBox({ password: true })` → extension-host memory, or `SecretStorage` on explicit opt-in | Endpoint pinned from the string; a mismatched endpoint is refused. |
-| `anonymous` | none | — | Public containers only. |
+| Path | Network access | Result |
+| --- | --- | --- |
+| Known Azure Blob, ADLS, OneLake, or `s3://` URL | None | The host validates and normalizes the URL, strips query strings/fragments, infers the storage type, and generates credential/data-source SQL without requiring file metadata. |
+| Browse Microsoft storage | Extension host only | A Microsoft Entra work or school account token from `authentication.getSession` lists subscriptions/accounts/containers and downloads the selected blob to a temporary file for analysis. Generated SQL retains the unsigned blob location. |
+
+Microsoft sign-in adds `VSCODE_TENANT:<id>` when the user supplies a directory
+ID, clears a stale account preference on interactive sign-in, and pins later
+Storage/ARM sessions to the chosen account. Subscription discovery is explicit;
+a known storage account can be attached directly. A failed replacement leaves
+the previous connection intact.
 
 **Managed identity is not offered.** A desktop extension has no managed
 identity; pretending otherwise would be security theatre. It remains a
@@ -180,16 +184,14 @@ documented as such.
 The threat model:
 
 - **A credential never reaches the renderer.** Not in a state snapshot, not in a
-  blob URL, not in an error. `AzureState` carries `identity` (an email address
-  or the literal string `SAS token`) and `account`, and nothing else that could
-  be a secret. A controller test walks every snapshot the Azure suites produce
-  and fails on anything matching a key, a signature or a JWT.
+  blob URL, not in an error. `AzureState` carries non-secret identity, tenant,
+  account, container, and prefix labels, and nothing credential-bearing. A
+  controller test walks every snapshot the Azure suites produce and fails on
+  anything matching a key, a signature or a JWT.
 - **A credential never reaches a log, a setting, a URL, a child process
   argument, or generated SQL.** `redactAzure()` scrubs bearer tokens, raw JWTs,
   `AccountKey=`/`SharedAccessSignature=` pairs and SAS query parameters from
   every string bound for the output channel or a message.
-- **Remembering is opt-in.** The default answer to "remember this?" is no.
-  Nothing is written to `SecretStorage` unless the user explicitly says yes.
 - **Disconnect means disconnect.** `disconnect()` clears in-memory state *and*
   deletes any remembered secret. So does `deactivate()`, and so does the
   discovery that a VS Code session has disappeared.
@@ -200,7 +202,7 @@ Container, blob and prefix names are validated against the Azure naming rules
 *before* any request is made, so a hostile name cannot be smuggled into a URL
 path and reinterpreted.
 
-## Public data and SSRF
+## Network boundaries
 
 `src/net/safeHttp.ts` implements a deliberately paranoid HTTPS client for the
 "analyse a public dataset URL" workflow. It is stricter than the Python

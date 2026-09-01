@@ -112,7 +112,7 @@ test('control characters are refused in free text', () => {
 test('over-long text is refused rather than truncated', () => {
     const long = 'x'.repeat(MAX_TEXT_LENGTH + 1);
     assert.equal(parseWebviewRequest({ type: 'setTableName', value: long }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'publicUrlAnalyze', url: long }), undefined);
+    assert.equal(parseWebviewRequest({ type: 'setStorageUrl', value: long }), undefined);
 });
 
 test('enumerated fields accept only their own members', () => {
@@ -126,6 +126,22 @@ test('enumerated fields accept only their own members', () => {
             mode,
         });
     }
+    assert.deepEqual(
+        parseWebviewRequest({
+            type: 'azureConnect',
+            mode: 'vscode',
+            tenantId: '11111111-2222-3333-4444-555555555555',
+        }),
+        {
+            type: 'azureConnect',
+            mode: 'vscode',
+            tenantId: '11111111-2222-3333-4444-555555555555',
+        },
+    );
+    assert.equal(
+        parseWebviewRequest({ type: 'azureConnect', mode: 'vscode', tenantId: {} }),
+        undefined,
+    );
     assert.equal(
         parseWebviewRequest({ type: 'azureConnect', mode: 'managedIdentity' }),
         undefined,
@@ -208,7 +224,6 @@ test('missing required fields are refused, not defaulted', () => {
     assert.equal(parseWebviewRequest({ type: 'selectFile' }), undefined);
     assert.equal(parseWebviewRequest({ type: 'setColumnOverride', column: 'a' }), undefined);
     assert.equal(parseWebviewRequest({ type: 'azureListBlobs', container: 'c' }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'publicUrlAnalyze', url: '' }), undefined);
 });
 
 test('clearing an override is expressed as an empty type, which is allowed', () => {
@@ -270,7 +285,7 @@ test('fuzzing never throws and never invents a request', () => {
         'selectFile',
         'azureConnect',
         'setPreviewRows',
-        'publicUrlAnalyze',
+        'setStorageUrl',
         '__proto__',
         'toString',
     ];
@@ -301,7 +316,7 @@ test('fuzzing never throws and never invents a request', () => {
         const message: Record<string, unknown> = { type: types[next(types.length)] };
         const fields = ['fileId', 'tab', 'kind', 'rows', 'url', 'value', 'mode', 'column',
             'sqlType', 'container', 'blob', 'prefix', 'continuation', 'account',
-            'subscriptionId', 'appearance', 'platform', 'requestId'];
+            'subscriptionId', 'tenantId', 'appearance', 'platform', 'requestId'];
         const count = next(4);
         for (let field = 0; field < count; field += 1) {
             message[fields[next(fields.length)]] = values[next(values.length)];

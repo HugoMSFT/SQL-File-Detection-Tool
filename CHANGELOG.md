@@ -46,6 +46,10 @@ project test results, not Microsoft certification.
   child level are shown without exposing absolute paths or running an unbounded
   recursive scan, while source actions live together in the top toolbar.
   Filenames use their own row so type and size details no longer truncate them.
+- **Storage and credential setup are one workflow.** Paste a known Azure Blob,
+  ADLS, OneLake, or S3 location to generate the external data source, or sign in
+  with Microsoft Entra to browse a storage account and fetch a file for analysis.
+  Credential SQL is available even before a file is analyzed.
 - **Appearance follows VS Code directly.** The extra Appearance control and
   density modes were removed.
 - **The Schema tab now shows recommended `SQL Type` values** instead of empty
@@ -66,6 +70,16 @@ project test results, not Microsoft certification.
   pushes a new shared-state snapshot into the webview.
 - **Selecting a supported Explorer file now analyzes it immediately** and opens
   Preview so JSON, Parquet, and other results are visible without another action.
+- **Microsoft storage browsing no longer dead-ends after sign-in.** Microsoft Entra access can
+  be pinned to the storage directory, clears stale VS Code account preferences,
+  offers explicit subscription discovery, and accepts a storage account name
+  directly. Tenant mismatch errors now explain the corrective action.
+- **Scoped storage credentials stay in scope.** Container/prefix SAS URLs and
+  public container URLs browse that location directly instead of attempting an
+  account-wide container listing that Azure rejects.
+- **Failed replacement sign-ins preserve the working storage connection.** A
+  cancelled account picker or tenant mismatch no longer discards the current
+  browser session or remembered credential.
 
 - **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`
   is consulted.** `chardet` is a statistical guess, and on some builds it scores

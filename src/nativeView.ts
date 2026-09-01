@@ -20,8 +20,8 @@
 import * as vscode from 'vscode';
 
 import { AppStateStore } from './appState';
-import { NativeAzureBridge, type AuthEnvironment, type AuthToken } from './azure/connection';
-import { expiryFromJwt } from './azureScopes';
+import { NativeAzureBridge, type AuthEnvironment } from './azure/connection';
+import { expiryFromJwt, tenantIdFromJwt } from './azureScopes';
 import { redactAzure } from './azure/storageUrl';
 import type { AzureAuthMode } from './protocol';
 import { UiController } from './ui/controller';
@@ -252,11 +252,20 @@ function createAuthEnvironment(
     output: vscode.OutputChannel,
 ): AuthEnvironment {
     return {
-        async getSession(scopes: string[], interactive: boolean): Promise<AuthToken | undefined> {
+        async getSession(scopes, request) {
             const session = await vscode.authentication.getSession(
                 AUTH_PROVIDER,
                 scopes,
-                interactive ? { createIfNone: true } : { silent: true },
+                request.interactive
+                    ? {
+                          createIfNone: {
+                              detail:
+                                  'SQL File Detection Tool needs delegated access to browse Azure Storage.',
+                          },
+                          clearSessionPreference: request.clearSessionPreference,
+                          account: request.account,
+                      }
+                    : { silent: true, account: request.account },
             );
             if (!session) {
                 return undefined;
@@ -264,7 +273,10 @@ function createAuthEnvironment(
             return {
                 accessToken: session.accessToken,
                 expiresOnMs: expiryFromJwt(session.accessToken),
-                account: session.account?.label,
+                tenantId: tenantIdFromJwt(session.accessToken),
+                account: session.account
+                    ? { id: session.account.id, label: session.account.label }
+                    : undefined,
             };
         },
         async prompt(options) {
@@ -380,20 +392,41 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
 
     /** Restore a remembered Azure credential without blocking activation. */
     restoreAzure(): void {
+        this.store.updateAzure({ busy: true, error: null });
         void this.azure
             .restore()
             .then((info) => {
                 if (info.connected) {
                     this.store.updateAzure({
+                        busy: false,
                         connected: true,
                         mode: info.mode,
                         identity: info.identity,
                         account: info.account,
+                        tenantId: info.tenantId,
+                        containers: info.container ? [info.container] : [],
+                        container: info.container,
+                        prefix: info.prefix,
                         canListSubscriptions: info.canListSubscriptions,
                     });
+                    if (info.container) {
+                        void this.controller.handle({
+                            type: 'azureListBlobs',
+                            container: info.container,
+                            prefix: info.prefix,
+                            continuation: '',
+                        });
+                    } else if (info.account) {
+                        void this.controller.handle({ type: 'azureListContainers' });
+                    }
+                    return;
                 }
+                this.store.updateAzure({ busy: false });
             })
-            .catch(() => undefined);
+            .catch((error) => {
+                this.host.log(`Could not restore Azure Storage access: ${redactAzure(error)}`);
+                this.store.updateAzure({ busy: false });
+            });
     }
 
     // -- WebviewViewProvider -------------------------------------------------
@@ -535,6 +568,7 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
 
     async connectAzure(mode: AzureAuthMode = 'vscode'): Promise<void> {
         await this.openDefault();
+        await this.controller.handle({ type: 'setTab', tab: 'credential_setup' });
         await this.controller.handle({ type: 'azureConnect', mode });
     }
 

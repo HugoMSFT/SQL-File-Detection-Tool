@@ -82,7 +82,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <span class="toolbar-title">Sources &amp; files</span>
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
-      <button type="button" class="btn" data-source-tab="azure">HTTPS / Azure</button>
+      <button type="button" class="btn" data-source-tab="credential_setup">Storage setup</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
       <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
@@ -162,53 +162,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <td class="col-detected"></td>
       <td class="col-override"><input type="text" class="override-input" spellcheck="false" autocomplete="off"></td>
     </tr>
-  </template>
-
-  <template id="tpl-azure">
-    <div class="azure">
-      <div class="azure-auth">
-        <h3>Connect</h3>
-        <p class="azure-identity"></p>
-        <div class="azure-buttons">
-          <button type="button" class="btn primary" data-azure-connect="vscode">Microsoft account</button>
-          <button type="button" class="btn" data-azure-connect="sas">SAS URL</button>
-          <button type="button" class="btn" data-azure-connect="connectionString">Connection string</button>
-          <button type="button" class="btn" data-azure-connect="anonymous">Public (anonymous)</button>
-          <button type="button" class="btn subtle" data-action="azureDisconnect">Disconnect</button>
-        </div>
-        <p class="azure-note">Managed identity applies to server-side deployments of the optional command line package, not to this desktop extension.</p>
-      </div>
-      <div class="azure-browse">
-        <label class="field">
-          <span>Subscription</span>
-          <select class="azure-subscriptions"></select>
-        </label>
-        <label class="field">
-          <span>Storage account</span>
-          <select class="azure-accounts"></select>
-        </label>
-        <label class="field">
-          <span>Container</span>
-          <select class="azure-containers"></select>
-        </label>
-        <label class="field">
-          <span>Prefix</span>
-          <input type="text" class="azure-prefix" spellcheck="false" autocomplete="off">
-        </label>
-        <ul class="azure-blobs" aria-label="Blobs"></ul>
-        <button type="button" class="btn subtle azure-more" hidden>Load more</button>
-        <p class="azure-error" role="alert"></p>
-      </div>
-      <div class="public-url">
-        <h3>Public dataset or HTTPS URL</h3>
-        <label class="field">
-          <span>URL</span>
-          <input type="url" class="public-url-input" spellcheck="false" autocomplete="off" placeholder="https://…">
-        </label>
-        <button type="button" class="btn" data-action="publicUrlAnalyze">Analyze URL</button>
-        <p class="help">Only https:// URLs that resolve to a public address are fetched. Redirects are re-checked on every hop.</p>
-      </div>
-    </div>
   </template>
 
 <script nonce="${nonce}" src="${scriptUri}"></script>

@@ -95,6 +95,58 @@ export interface ParsedSasUrl {
     readonly sasToken: string;
 }
 
+export interface ParsedPublicContainerUrl {
+    readonly account: string;
+    readonly serviceUrl: string;
+    readonly container: string;
+    readonly prefix: string;
+}
+
+/**
+ * Parse a public Azure Blob container or prefix URL.
+ *
+ * Anonymous account-level listing is not supported by Azure Storage, so the
+ * container is required. A file URL is accepted as an exact prefix, although
+ * the separate HTTPS workflow is usually more convenient for one file.
+ */
+export function parsePublicContainerUrl(candidate: string): ParsedPublicContainerUrl {
+    const trimmed = String(candidate ?? '').trim();
+    if (!trimmed) {
+        throw new AzureInputError('A public container URL is required.');
+    }
+    let url: URL;
+    try {
+        url = new URL(trimmed);
+    } catch {
+        throw new AzureInputError('That public container URL could not be parsed.');
+    }
+    if (url.protocol !== 'https:') {
+        throw new AzureInputError('A public container URL must use https://.');
+    }
+    if (url.username || url.password || url.search || url.hash) {
+        throw new AzureInputError(
+            'Use a plain public container URL here. Use SAS URL for a signed address.',
+        );
+    }
+    const account = accountFromHost(url.hostname);
+    if (!account) {
+        throw new AzureInputError(
+            'That host is not an Azure Blob Storage endpoint (account.blob.core.windows.net).',
+        );
+    }
+    const segments = url.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    const container = segments.shift() ?? '';
+    if (!isValidContainerName(container)) {
+        throw new AzureInputError('The URL must include a valid public container name.');
+    }
+    return {
+        account,
+        serviceUrl: `${url.protocol}//${url.host}`,
+        container,
+        prefix: segments.join('/'),
+    };
+}
+
 /**
  * Parse a user-supplied SAS URL.
  *
@@ -238,13 +290,13 @@ export function redactAzure(text: unknown): string {
 export function describeAuthMode(mode: string): string {
     switch (mode) {
         case 'vscode':
-            return 'VS Code Microsoft account';
+            return 'Microsoft Entra work or school account';
         case 'sas':
             return 'Shared access signature';
         case 'connectionString':
             return 'Connection string';
         case 'anonymous':
-            return 'Anonymous public access';
+            return 'Anonymous public container';
         default:
             return 'Not connected';
     }

@@ -59,6 +59,7 @@ export const EMPTY_AZURE_STATE: AzureState = {
     mode: null,
     identity: null,
     account: null,
+    tenantId: null,
     subscriptions: [],
     accounts: [],
     containers: [],
