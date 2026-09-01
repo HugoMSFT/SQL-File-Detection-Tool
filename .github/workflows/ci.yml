@@ -26,7 +26,10 @@ jobs:
           compare_ref="$BASE_REF"
           if [ "$EVENT_ACTION" = "synchronize" ] && [ -n "$PREVIOUS_HEAD" ]; then
             if ! git cat-file -e "${PREVIOUS_HEAD}^{commit}" 2>/dev/null; then
-              git fetch --no-tags --depth=1 origin "$PREVIOUS_HEAD"
+              if ! git fetch --no-tags --depth=1 origin "$PREVIOUS_HEAD"; then
+                echo "::error::Unable to fetch the previous PR head; refusing to weaken the version check."
+                exit 1
+              fi
             fi
             compare_ref="$PREVIOUS_HEAD"
           fi
