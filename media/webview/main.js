@@ -487,6 +487,15 @@
     }
 
     function renderPreview(container) {
+        if (!state.selectedFileId) {
+            const start = element('div', 'start-state');
+            start.appendChild(
+                element('p', 'empty', 'Select a file, folder, or URL to begin.'),
+            );
+            container.appendChild(start);
+            return;
+        }
+
         const preview = state.preview;
         const rowsField = element('label', 'field');
         rowsField.appendChild(element('span', null, 'Preview rows'));

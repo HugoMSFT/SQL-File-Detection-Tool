@@ -4,6 +4,26 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [2.1.1]
+
+### Added
+
+- Added 25,000-row and 250,000-row Parquet samples for larger-file analysis and
+  bounded-preview testing.
+- Pull-request updates now require the extension version to advance by at least
+  one patch.
+
+### Changed
+
+- Consolidated `demo/` and `test_data/` into the format-organized
+  `data sample/` directory and updated all test, generator, certification, and
+  documentation paths.
+
+### Fixed
+
+- The initial Preview page now asks users to select a file, folder, or URL
+  instead of showing file-specific preview controls before a source is selected.
+
 ## [2.1.0]
 
 Generated SQL was verified by this project against live engines - an Azure SQL Database
@@ -510,7 +530,7 @@ It remains supported as optional compatibility tooling.
 - **The walkthrough GIF was recaptured from the native UI.** The previous one
   showed the Flask browser interface that no longer exists. The new recording
   (960x540, 19.5 s, 0.20 MB) is driven by the real controller against
-  `demo/parquet/sales.parquet`, so the column types, row values and generated
+  `data sample/parquet/sales.parquet`, so the column types, row values and generated
   T-SQL in the frames are what the shipped engine produces. The Azure beat uses
   a synthetic `contoso.example` identity with no token, SAS or account key.
 
@@ -538,7 +558,7 @@ It remains supported as optional compatibility tooling.
   activation, first render, warm render, first analysis, repeat analysis and
   retained-heap measurements as regression guards.
 - **`src/test/native/demoMatrix.test.ts`** — turns the supported-format table in
-  the README into an executable claim. Every fixture committed under `demo/` is
+  the README into an executable claim. Every fixture committed under `data sample/` is
   analysed through the shipped service and checked for its detected format,
   recovered column count and whether it was genuinely parsed or only recognised.
   Adding a fixture without adding its row fails the suite.
@@ -751,7 +771,7 @@ It remains supported as optional compatibility tooling.
   and row bounds.
 - Deterministic parity testing against the live Python implementation.
   `scripts/generate_parity_baselines.py` records normalised metadata and
-  semantic statement invariants for the committed `demo/` fixtures into
+  semantic statement invariants for the committed `data sample/` fixtures into
   `tests/native_parity/python_baseline.json` (no absolute paths, no timings),
   and the Node suites compare against it marker for marker. The handful of
   intentional differences are allowlisted individually, with a guard test that

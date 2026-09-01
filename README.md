@@ -30,7 +30,7 @@ The walkthrough above, in text:
 2. Point it at any supported SQL source - Parquet, ORC, CSV, TSV, DAT, JSON, or
    a Delta or Iceberg table directory. Hudi folders expose their underlying
    Parquet data files without interpreting Hudi metadata. The walkthrough analyses
-   `demo/parquet/sales.parquet` from this repository.
+   `data sample/parquet/sales.parquet` from this repository.
 3. **Preview** is the first and default tab, showing real rows from the selected
    file. **Metadata** and **Schema** keep detection details and recommended,
    editable SQL type mappings
@@ -108,9 +108,9 @@ platform requirements before running it in a database.
 | ORC and RCFile | Format recognition and SQL format guidance | recognition only | recognition only |
 
 That table is not a description; it is a test. `src/test/native/demoMatrix.test.ts` walks
-every fixture committed under `demo/`, analyses it through the shipped native
+every fixture committed under `data sample/`, analyses it through the shipped native
 service, and asserts the detected format, the recovered column count, and whether
-the file was genuinely parsed or only recognised. Adding a demo fixture without
+the file was genuinely parsed or only recognised. Adding a sample fixture without
 adding its row fails the suite, so the matrix cannot quietly drift away from what
 the code actually does.
 
@@ -192,8 +192,8 @@ tab. Nothing outside the `.vsix` is downloaded or executed.
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-2.1.0.vsix
-code --install-extension dist/sql-file-detection-tool-2.1.0.vsix --force
+npm run package     # writes dist/sql-file-detection-tool-2.1.1.vsix
+code --install-extension dist/sql-file-detection-tool-2.1.1.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -560,7 +560,7 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension, version **2.1.0**. See
+The repository root is also a VS Code extension, version **2.1.1**. See
 [Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
@@ -701,7 +701,7 @@ and version 2.0.0 removed the last of the backend-lifecycle code: there is no
 `backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
 module left in the extension sources.
 
-The two distributions version independently. The extension is at 2.1.0; the
+The two distributions version independently. The extension is at 2.1.1; the
 Python distribution keeps its own version line, because nothing about the CLI
 changed when the extension stopped using it.
 
@@ -980,23 +980,25 @@ external_file_detection/
 |-- web_gui.py
 |-- web_ui.py
 `-- templates/
-demo/
+data sample/
 |-- README.md
 |-- generate_samples.py
 |-- collation_samples.sql
-`-- csv/ json/ parquet/ orc/ excel/ text/ tables/ unicode/
+`-- csv/ json/ parquet/ performance/ orc/ excel/ text/ tables/ unicode/
 ```
 
-## Demo samples
+## Data samples
 
-`demo/` holds small, deterministic fixtures covering every supported input type
-plus Unicode-encoding and SQL-collation cases. Regenerate them with:
+`data sample/` consolidates the former `demo/` and `test_data/` trees by format.
+It covers every supported input type, Unicode and collation cases, plus 25,000-
+and 250,000-row Parquet files for larger-file testing. Regenerate the canonical
+set with:
 
 ```bash
-python demo/generate_samples.py
+python "data sample/generate_samples.py"
 ```
 
-See [`demo/README.md`](demo/README.md) for the full inventory, the Parquet to
+See [`data sample/README.md`](data%20sample/README.md) for the full inventory, the Parquet to
 SQL type mapping, encoding/codepage notes, and ready-to-run CLI commands per
 platform.
 

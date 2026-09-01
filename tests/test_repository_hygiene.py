@@ -8,7 +8,7 @@ there it advertised a `TRUNCATE TABLE [dbo].[orders]` that the product no longer
 emits.
 
 The generated corpus that *is* meant to be tracked lives in `tests/parity` (byte
-comparisons between the two generators) and `demo/` (hand-written fixtures).
+comparisons between the two generators) and `data sample/` (sample fixtures).
 Anywhere else, a `.sql` file in this repository is scratch.
 """
 
@@ -19,7 +19,7 @@ import unittest
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 #: Directories whose `.sql` files are deliberate artifacts.
-TRACKED_SQL_HOMES = ('demo/', 'tests/parity/', 'docs/')
+TRACKED_SQL_HOMES = ('data sample/', 'tests/parity/', 'docs/')
 
 
 def tracked_files(pattern):
@@ -73,7 +73,10 @@ class ScratchSqlIsNeverTracked(unittest.TestCase):
     def test_deliberate_sql_is_still_tracked(self):
         # A rule that ignored every .sql file everywhere would pass the tests
         # above by deleting the evidence.
-        self.assertTrue(tracked_files('demo/*.sql'), 'the demo SQL fixtures vanished')
+        self.assertTrue(
+            tracked_files('data sample/*.sql'),
+            'the sample SQL fixtures vanished',
+        )
 
 
 @unittest.skipUnless(git_available(), 'not a git checkout')

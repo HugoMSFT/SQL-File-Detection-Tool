@@ -111,40 +111,40 @@ class Fixture:
     engine_local_only: bool = False
 
 
-#: Fixtures come from the repository's own demo corpus so the certification
-#: exercises exactly the bytes the demo and unit tests already describe.
+#: Fixtures come from the repository's own sample corpus so the certification
+#: exercises exactly the bytes the documentation and unit tests already describe.
 FIXTURES: Tuple[Fixture, ...] = (
-    Fixture('csv_scalar', 'demo/csv/sales_scalars.csv', 'csv',
+    Fixture('csv_scalar', 'data sample/csv/sales_scalars.csv', 'csv',
             'CSV with the full scalar type spread'),
-    Fixture('tsv', 'demo/csv/sales_scalars.tsv', 'csv', 'tab-separated variant'),
-    Fixture('pipe', 'demo/csv/sales_scalars_pipe.csv', 'csv', 'pipe-separated variant'),
-    Fixture('utf8', 'demo/unicode/unicode_utf8.csv', 'csv', 'UTF-8 without BOM'),
-    Fixture('utf8_bom', 'demo/unicode/unicode_utf8_bom.csv', 'csv', 'UTF-8 with BOM'),
-    Fixture('utf16le_bom', 'demo/unicode/unicode_utf16le_bom.csv', 'csv',
+    Fixture('tsv', 'data sample/csv/sales_scalars.tsv', 'csv', 'tab-separated variant'),
+    Fixture('pipe', 'data sample/csv/sales_scalars_pipe.csv', 'csv', 'pipe-separated variant'),
+    Fixture('utf8', 'data sample/unicode/unicode_utf8.csv', 'csv', 'UTF-8 without BOM'),
+    Fixture('utf8_bom', 'data sample/unicode/unicode_utf8_bom.csv', 'csv', 'UTF-8 with BOM'),
+    Fixture('utf16le_bom', 'data sample/unicode/unicode_utf16le_bom.csv', 'csv',
             'UTF-16LE with BOM — the encoding SQL Server bulk paths handle least well'),
-    Fixture('utf16le_bom_tsv', 'demo/unicode/unicode_utf16le_bom.tsv', 'csv',
+    Fixture('utf16le_bom_tsv', 'data sample/unicode/unicode_utf16le_bom.tsv', 'csv',
             'UTF-16LE with BOM and tab delimiter'),
-    Fixture('cp932', 'demo/unicode/japanese_cp932.csv', 'csv',
+    Fixture('cp932', 'data sample/unicode/japanese_cp932.csv', 'csv',
             'Shift-JIS / CP932 Japanese text'),
-    Fixture('collation', 'demo/unicode/collation_cases_utf8.csv', 'csv',
+    Fixture('collation', 'data sample/unicode/collation_cases_utf8.csv', 'csv',
             'kana width, accent and case collation cases'),
-    Fixture('json_array', 'demo/json/orders_array.json', 'json', 'JSON array document'),
-    Fixture('json_object', 'demo/json/order_single_object.json', 'json',
+    Fixture('json_array', 'data sample/json/orders_array.json', 'json', 'JSON array document'),
+    Fixture('json_object', 'data sample/json/order_single_object.json', 'json',
             'single JSON object document'),
-    Fixture('ndjson', 'demo/json/orders.ndjson', 'json', 'newline-delimited JSON'),
-    Fixture('json_nested', 'test_data/customers_nested.json', 'json',
+    Fixture('ndjson', 'data sample/json/orders.ndjson', 'json', 'newline-delimited JSON'),
+    Fixture('json_nested', 'data sample/json/customers_nested.json', 'json',
             'nested objects and arrays one level deep'),
-    Fixture('parquet_all_types', 'demo/parquet/all_types.parquet', 'parquet',
+    Fixture('parquet_all_types', 'data sample/parquet/all_types.parquet', 'parquet',
             'every scalar and logical Parquet type the detector maps'),
-    Fixture('parquet_sales', 'demo/parquet/sales.parquet', 'parquet', 'plain Parquet'),
-    Fixture('orc', 'demo/orc/all_types.orc', 'orc',
+    Fixture('parquet_sales', 'data sample/parquet/sales.parquet', 'parquet', 'plain Parquet'),
+    Fixture('orc', 'data sample/orc/all_types.orc', 'orc',
             'ORC — native analysis is explicitly unsupported'),
-    Fixture('excel', 'demo/excel/inventory.xlsx', 'excel',
+    Fixture('excel', 'data sample/excel/inventory.xlsx', 'excel',
             'Excel workbook — a binary format with no external file format'),
-    Fixture('text', 'demo/text/readme_sample.txt', 'text', 'unstructured text'),
-    Fixture('delta', 'demo/tables/events_delta', 'delta',
+    Fixture('text', 'data sample/text/readme_sample.txt', 'text', 'unstructured text'),
+    Fixture('delta', 'data sample/tables/events_delta', 'delta',
             'Delta Lake table, protocol minReader=1 / minWriter=2'),
-    Fixture('iceberg', 'demo/tables/events_iceberg', 'iceberg', 'Apache Iceberg table'),
+    Fixture('iceberg', 'data sample/tables/events_iceberg', 'iceberg', 'Apache Iceberg table'),
 )
 
 FIXTURES_BY_KEY: Dict[str, Fixture] = {f.key: f for f in FIXTURES}

@@ -40,7 +40,7 @@ const FORBIDDEN_PATHS = [
     [/(^|\/)node_modules\//, 'an unbundled dependency tree'],
     [/\.tsx?$/i, 'raw TypeScript'],
     [/\.map$/i, 'a source map'],
-    [/(^|\/)(tests?|test_data|demo|docs|scripts|out)\//i, 'development-only content'],
+    [/(^|\/)(tests?|test_data|demo|data sample|docs|scripts|out)\//i, 'development-only content'],
     [/(^|\/)(tsconfig|\.eslintrc)[^/]*$/i, 'build configuration'],
     [/(^|\/)AGENTS\.md$/i, 'internal agent instructions'],
     [/(^|\/)\.git(\/|attributes$|ignore$)/i, 'Git metadata'],

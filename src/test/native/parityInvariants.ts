@@ -2,7 +2,7 @@
  * Shared helpers for the Python↔TypeScript parity suite.
  *
  * `scripts/generate_parity_baselines.py` records what the current Python
- * implementation produces for the committed `demo/` fixtures. To compare
+ * implementation produces for the committed `data sample/` fixtures. To compare
  * against it we have to reduce native output using *exactly* the same
  * normalisation, including the marker keys, which embed the original Python
  * regular-expression source text.

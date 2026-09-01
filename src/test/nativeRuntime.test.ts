@@ -294,7 +294,12 @@ test('activation registers the native view and never touches a backend', async (
 
             // A real analysis, driven the way a user would drive it, still with
             // child_process sabotaged.
-            mock.state.activeEditorPath = path.join(REPO, 'test_data', 'employees.csv');
+            mock.state.activeEditorPath = path.join(
+                REPO,
+                'data sample',
+                'csv',
+                'employees.csv',
+            );
             const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
             assert.ok(analyze, 'the analyze command is registered');
             const analysisStart = process.hrtime.bigint();

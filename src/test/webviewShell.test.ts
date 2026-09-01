@@ -160,6 +160,11 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(html, /Sources &amp; files/);
     assert.match(html, />Explorer</);
     assert.match(html, /Storage setup/);
+    assert.match(html, /Select a file, folder, or URL to begin\./);
+    assert.match(
+        script,
+        /if \(!state\.selectedFileId\)[\s\S]*Select a file, folder, or URL to begin\.[\s\S]*Preview rows/,
+    );
     assert.doesNotMatch(html, /Appearance|id="appearance"/);
     assert.doesNotMatch(script, /setPreference|density-compact/);
     assert.match(script, /label: 'EXT TABLE'/);

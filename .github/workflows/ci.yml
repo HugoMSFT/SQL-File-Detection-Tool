@@ -8,6 +8,30 @@ permissions:
   contents: read
 
 jobs:
+  extension-version:
+    name: Extension version
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a version bump for this PR update
+        env:
+          EVENT_ACTION: ${{ github.event.action }}
+          PREVIOUS_HEAD: ${{ github.event.before }}
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          compare_ref="$BASE_REF"
+          if [ "$EVENT_ACTION" = "synchronize" ] && [ -n "$PREVIOUS_HEAD" ]; then
+            if ! git cat-file -e "${PREVIOUS_HEAD}^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=1 origin "$PREVIOUS_HEAD"
+            fi
+            compare_ref="$PREVIOUS_HEAD"
+          fi
+          npm run version:check -- "$compare_ref"
+
   test:
     name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

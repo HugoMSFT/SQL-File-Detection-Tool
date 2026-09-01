@@ -111,12 +111,12 @@ async function collectStates() {
         // Beat 2+: a real analysis of a committed demo fixture, then each tab
         // selected the way the renderer selects it, so the statements in the
         // frames are the statements the shipped generator produces.
-        const demo = path.join(REPO, 'demo');
-        const sample = path.join(demo, 'parquet', 'sales.parquet');
+        const samples = path.join(REPO, 'data sample');
+        const sample = path.join(samples, 'parquet', 'sales.parquet');
         if (!fs.existsSync(sample)) {
             throw new Error(`Missing demo fixture: ${sample}`);
         }
-        await analyzeSelected(mock.module.Uri.file(demo));
+        await analyzeSelected(mock.module.Uri.file(samples));
         await settle(8000);
         const folderState = latestState(view.webview.posted);
         const sampleEntry = folderState.files.find(
@@ -457,6 +457,21 @@ async function main() {
     const browser = await chromium.launch({ executablePath: findBrowser() });
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } });
     await page.goto(`file://${path.join(work, 'index.html').replace(/\\/g, '/')}`);
+
+    await page.evaluate((state) => window.__apply(state), states.shell);
+    await page.waitForTimeout(80);
+    const startState = await page.evaluate(() => ({
+        message: document.querySelector('.start-state .empty')?.textContent?.trim(),
+        hasPreviewRows: Boolean(document.querySelector('[data-edit="previewRows"]')),
+    }));
+    if (
+        startState.message !== 'Select a file, folder, or URL to begin.'
+        || startState.hasPreviewRows
+    ) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('The empty Preview did not render the source-selection start state.');
+    }
 
     // A delayed schema edit must not survive a file change or post back for the
     // newly selected file.

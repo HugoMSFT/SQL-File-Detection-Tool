@@ -2,7 +2,7 @@
  "default_target_platform": "azure_sql_db",
  "description": "Normalised Python reference output for the native TypeScript analysis core. Regenerate with python scripts/generate_parity_baselines.py",
  "metadata": {
-  "demo/csv/sales_scalars.csv": {
+  "data sample/csv/sales_scalars.csv": {
    "codepage": "65001",
    "column_count": 10,
    "compression": null,
@@ -128,7 +128,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 6
   },
-  "demo/csv/sales_scalars.tsv": {
+  "data sample/csv/sales_scalars.tsv": {
    "codepage": "65001",
    "column_count": 10,
    "compression": null,
@@ -254,7 +254,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 6
   },
-  "demo/csv/sales_scalars_pipe.csv": {
+  "data sample/csv/sales_scalars_pipe.csv": {
    "codepage": "65001",
    "column_count": 10,
    "compression": null,
@@ -380,7 +380,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 6
   },
-  "demo/excel/inventory.xlsx": {
+  "data sample/excel/inventory.xlsx": {
    "codepage": "ACP",
    "column_count": 6,
    "compression": null,
@@ -466,7 +466,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 4
   },
-  "demo/json/order_single_object.json": {
+  "data sample/json/order_single_object.json": {
    "codepage": "1252",
    "column_count": 8,
    "compression": null,
@@ -554,7 +554,7 @@
    "schema_inference": "full",
    "schema_sample_size": 1
   },
-  "demo/json/orders.ndjson": {
+  "data sample/json/orders.ndjson": {
    "codepage": "65001",
    "column_count": 8,
    "compression": null,
@@ -642,7 +642,7 @@
    "schema_inference": "full",
    "schema_sample_size": 3
   },
-  "demo/json/orders_array.json": {
+  "data sample/json/orders_array.json": {
    "codepage": "65001",
    "column_count": 8,
    "compression": null,
@@ -730,7 +730,7 @@
    "schema_inference": "full",
    "schema_sample_size": 3
   },
-  "demo/orc/all_types.orc": {
+  "data sample/orc/all_types.orc": {
    "codepage": "ACP",
    "column_count": 14,
    "compression": "UNCOMPRESSED",
@@ -818,7 +818,7 @@
     ]
    ]
   },
-  "demo/parquet/all_types.parquet": {
+  "data sample/parquet/all_types.parquet": {
    "codepage": "ACP",
    "column_count": 26,
    "compression": "SNAPPY",
@@ -998,7 +998,7 @@
     ]
    ]
   },
-  "demo/parquet/sales.parquet": {
+  "data sample/parquet/sales.parquet": {
    "codepage": "ACP",
    "column_count": 6,
    "compression": "SNAPPY",
@@ -1061,7 +1061,7 @@
     ]
    ]
   },
-  "demo/tables/events_delta": {
+  "data sample/tables/events_delta": {
    "codepage": "ACP",
    "column_count": 5,
    "compression": "SNAPPY",
@@ -1120,7 +1120,7 @@
    "schema_inference": "underlying_parquet_file",
    "warning": "Delta table support requires: pip install deltalake"
   },
-  "demo/tables/events_iceberg": {
+  "data sample/tables/events_iceberg": {
    "codepage": "ACP",
    "column_count": 6,
    "compression": null,
@@ -1178,7 +1178,7 @@
    ],
    "schema_inference": "iceberg_metadata"
   },
-  "demo/text/readme_sample.txt": {
+  "data sample/text/readme_sample.txt": {
    "codepage": "65001",
    "column_count": null,
    "compression": null,
@@ -1194,7 +1194,7 @@
    "row_count": 10,
    "schema": null
   },
-  "demo/unicode/collation_cases_utf8.csv": {
+  "data sample/unicode/collation_cases_utf8.csv": {
    "codepage": "65001",
    "column_count": 5,
    "compression": null,
@@ -1276,7 +1276,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 14
   },
-  "demo/unicode/japanese_cp932.csv": {
+  "data sample/unicode/japanese_cp932.csv": {
    "codepage": "932",
    "column_count": 4,
    "compression": null,
@@ -1348,7 +1348,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 6
   },
-  "demo/unicode/unicode_utf16le_bom.csv": {
+  "data sample/unicode/unicode_utf16le_bom.csv": {
    "codepage": "1200",
    "column_count": 5,
    "compression": null,
@@ -1430,7 +1430,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 20
   },
-  "demo/unicode/unicode_utf16le_bom.tsv": {
+  "data sample/unicode/unicode_utf16le_bom.tsv": {
    "codepage": "1200",
    "column_count": 5,
    "compression": null,
@@ -1512,7 +1512,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 20
   },
-  "demo/unicode/unicode_utf8.csv": {
+  "data sample/unicode/unicode_utf8.csv": {
    "codepage": "65001",
    "column_count": 5,
    "compression": null,
@@ -1594,7 +1594,7 @@
    "schema_inference": "sampled",
    "schema_sample_size": 20
   },
-  "demo/unicode/unicode_utf8_bom.csv": {
+  "data sample/unicode/unicode_utf8_bom.csv": {
    "codepage": "65001",
    "column_count": 5,
    "compression": null,
@@ -1686,7 +1686,7 @@
   "fabric_sql_db"
  ],
  "statements": {
-  "demo/csv/sales_scalars.csv|azure_sql_db|adls": {
+  "data sample/csv/sales_scalars.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -2230,7 +2230,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -2774,7 +2774,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_db|local": {
+  "data sample/csv/sales_scalars.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -3318,7 +3318,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_db|onelake": {
+  "data sample/csv/sales_scalars.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -3862,7 +3862,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_db|s3": {
+  "data sample/csv/sales_scalars.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -4406,7 +4406,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_mi|adls": {
+  "data sample/csv/sales_scalars.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -4949,7 +4949,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_mi|azure_blob": {
+  "data sample/csv/sales_scalars.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -5492,7 +5492,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_mi|local": {
+  "data sample/csv/sales_scalars.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -6035,7 +6035,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_mi|onelake": {
+  "data sample/csv/sales_scalars.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -6578,7 +6578,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|azure_sql_mi|s3": {
+  "data sample/csv/sales_scalars.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -7121,7 +7121,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|fabric_sql_db|adls": {
+  "data sample/csv/sales_scalars.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -7743,7 +7743,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|fabric_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -8365,7 +8365,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|fabric_sql_db|local": {
+  "data sample/csv/sales_scalars.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -8987,7 +8987,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|fabric_sql_db|onelake": {
+  "data sample/csv/sales_scalars.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -9609,7 +9609,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|fabric_sql_db|s3": {
+  "data sample/csv/sales_scalars.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -10231,7 +10231,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2019|adls": {
+  "data sample/csv/sales_scalars.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -10732,7 +10732,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2019|azure_blob": {
+  "data sample/csv/sales_scalars.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -11233,7 +11233,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2019|local": {
+  "data sample/csv/sales_scalars.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -11653,7 +11653,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -11711,8 +11711,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -11724,7 +11724,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2019|onelake": {
+  "data sample/csv/sales_scalars.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -12167,7 +12167,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2019|s3": {
+  "data sample/csv/sales_scalars.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -12610,7 +12610,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2022|adls": {
+  "data sample/csv/sales_scalars.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -13108,7 +13108,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2022|azure_blob": {
+  "data sample/csv/sales_scalars.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -13606,7 +13606,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2022|local": {
+  "data sample/csv/sales_scalars.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -14025,7 +14025,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -14082,8 +14082,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -14095,7 +14095,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2022|onelake": {
+  "data sample/csv/sales_scalars.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -14581,7 +14581,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2022|s3": {
+  "data sample/csv/sales_scalars.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -15067,7 +15067,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2025|adls": {
+  "data sample/csv/sales_scalars.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -15565,7 +15565,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2025|azure_blob": {
+  "data sample/csv/sales_scalars.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -16063,7 +16063,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2025|local": {
+  "data sample/csv/sales_scalars.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -16482,7 +16482,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -16539,8 +16539,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -16552,7 +16552,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2025|onelake": {
+  "data sample/csv/sales_scalars.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -17038,7 +17038,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.csv|sql_server_2025|s3": {
+  "data sample/csv/sales_scalars.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -17524,7 +17524,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_db|adls": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -18068,7 +18068,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -18612,7 +18612,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_db|local": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -19156,7 +19156,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_db|onelake": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -19700,7 +19700,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_db|s3": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -20244,7 +20244,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_mi|adls": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -20787,7 +20787,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_mi|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -21330,7 +21330,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_mi|local": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -21873,7 +21873,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_mi|onelake": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -22416,7 +22416,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|azure_sql_mi|s3": {
+  "data sample/csv/sales_scalars.tsv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -22959,7 +22959,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|fabric_sql_db|adls": {
+  "data sample/csv/sales_scalars.tsv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -23581,7 +23581,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|fabric_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -24203,7 +24203,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|fabric_sql_db|local": {
+  "data sample/csv/sales_scalars.tsv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -24825,7 +24825,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|fabric_sql_db|onelake": {
+  "data sample/csv/sales_scalars.tsv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -25447,7 +25447,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|fabric_sql_db|s3": {
+  "data sample/csv/sales_scalars.tsv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -26069,7 +26069,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2019|adls": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -26570,7 +26570,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2019|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -27071,7 +27071,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2019|local": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -27491,7 +27491,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -27549,8 +27549,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -27562,7 +27562,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2019|onelake": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -28005,7 +28005,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2019|s3": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -28448,7 +28448,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2022|adls": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -28946,7 +28946,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2022|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -29444,7 +29444,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2022|local": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -29863,7 +29863,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -29920,8 +29920,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -29933,7 +29933,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2022|onelake": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -30419,7 +30419,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2022|s3": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -30905,7 +30905,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2025|adls": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -31403,7 +31403,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2025|azure_blob": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -31901,7 +31901,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2025|local": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -32320,7 +32320,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -32377,8 +32377,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -32390,7 +32390,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2025|onelake": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -32876,7 +32876,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars.tsv|sql_server_2025|s3": {
+  "data sample/csv/sales_scalars.tsv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -33362,7 +33362,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_db|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -33906,7 +33906,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -34450,7 +34450,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_db|local": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -34994,7 +34994,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_db|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -35538,7 +35538,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_db|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -36082,7 +36082,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_mi|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -36625,7 +36625,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_mi|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -37168,7 +37168,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_mi|local": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -37711,7 +37711,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_mi|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -38254,7 +38254,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|azure_sql_mi|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -38797,7 +38797,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|fabric_sql_db|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -39419,7 +39419,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|fabric_sql_db|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -40041,7 +40041,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|fabric_sql_db|local": {
+  "data sample/csv/sales_scalars_pipe.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -40663,7 +40663,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|fabric_sql_db|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -41285,7 +41285,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|fabric_sql_db|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -41907,7 +41907,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2019|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -42408,7 +42408,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2019|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -42909,7 +42909,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2019|local": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -43329,7 +43329,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -43387,8 +43387,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -43400,7 +43400,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2019|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -43843,7 +43843,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2019|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -44286,7 +44286,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2022|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -44784,7 +44784,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2022|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -45282,7 +45282,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2022|local": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -45701,7 +45701,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -45758,8 +45758,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -45771,7 +45771,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2022|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -46257,7 +46257,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2022|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -46743,7 +46743,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2025|adls": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -47241,7 +47241,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2025|azure_blob": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -47739,7 +47739,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2025|local": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -48158,7 +48158,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -48215,8 +48215,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/csv/sales_scalars_pipe.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>|",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -48228,7 +48228,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2025|onelake": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -48714,7 +48714,7 @@
     ]
    }
   },
-  "demo/csv/sales_scalars_pipe.csv|sql_server_2025|s3": {
+  "data sample/csv/sales_scalars_pipe.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -49200,7 +49200,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_db|adls": {
+  "data sample/excel/inventory.xlsx|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -49517,7 +49517,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_db|azure_blob": {
+  "data sample/excel/inventory.xlsx|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -49834,7 +49834,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_db|local": {
+  "data sample/excel/inventory.xlsx|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -50151,7 +50151,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_db|onelake": {
+  "data sample/excel/inventory.xlsx|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -50468,7 +50468,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_db|s3": {
+  "data sample/excel/inventory.xlsx|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -50785,7 +50785,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_mi|adls": {
+  "data sample/excel/inventory.xlsx|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -51102,7 +51102,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_mi|azure_blob": {
+  "data sample/excel/inventory.xlsx|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -51419,7 +51419,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_mi|local": {
+  "data sample/excel/inventory.xlsx|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -51736,7 +51736,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_mi|onelake": {
+  "data sample/excel/inventory.xlsx|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -52053,7 +52053,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|azure_sql_mi|s3": {
+  "data sample/excel/inventory.xlsx|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -52370,7 +52370,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|fabric_sql_db|adls": {
+  "data sample/excel/inventory.xlsx|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -52740,7 +52740,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|fabric_sql_db|azure_blob": {
+  "data sample/excel/inventory.xlsx|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -53110,7 +53110,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|fabric_sql_db|local": {
+  "data sample/excel/inventory.xlsx|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -53480,7 +53480,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|fabric_sql_db|onelake": {
+  "data sample/excel/inventory.xlsx|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -53850,7 +53850,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|fabric_sql_db|s3": {
+  "data sample/excel/inventory.xlsx|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -54220,7 +54220,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2019|adls": {
+  "data sample/excel/inventory.xlsx|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -54512,7 +54512,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2019|azure_blob": {
+  "data sample/excel/inventory.xlsx|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -54804,7 +54804,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2019|local": {
+  "data sample/excel/inventory.xlsx|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -55042,7 +55042,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/excel/inventory.xlsx",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/excel/inventory.xlsx",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -55059,7 +55059,7 @@
     "markers": []
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2019|onelake": {
+  "data sample/excel/inventory.xlsx|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -55300,267 +55300,6 @@
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bDATA_SOURCE\\s*=\\s*\\'([^\\']*)\\'=>MyDataSource",
      "\\bBULK\\s+N?\\'([^\\']*)\\'=>lh/Files/f",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
-     "\\bROWTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
-     "\\bFIELDQUOTE\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
-     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019",
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019."
-    ]
-   },
-   "openrowset": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": [
-     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>PARQUET",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
-    ]
-   }
-  },
-  "demo/excel/inventory.xlsx|sql_server_2019|s3": {
-   "best_practices": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": true,
-    "markers": []
-   },
-   "bulk_insert": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": []
-   },
-   "copy_into": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
-    ]
-   },
-   "create_external_table": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
-    ]
-   },
-   "create_table": {
-    "columns": [
-     [
-      "[sku]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[description]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[on_hand]",
-      "BIGINT"
-     ],
-     [
-      "[unit_cost]",
-      "FLOAT"
-     ],
-     [
-      "[is_discontinued]",
-      "BIT"
-     ],
-     [
-      "[last_counted]",
-      "DATETIME2(7)"
-     ]
-    ],
-    "go_batches": 0,
-    "has_sql": true,
-    "markers": [
-     "\\bCREATE\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[inventory]",
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019."
-    ]
-   },
-   "credential_setup": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
-    ]
-   },
-   "external_file_format": {
-    "columns": [],
-    "go_batches": 0,
-    "has_sql": false,
-    "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
-    ]
-   },
-   "for_json": {
-    "columns": [
-     [
-      "[sku]",
-      "AS"
-     ],
-     [
-      "[description]",
-      "AS"
-     ],
-     [
-      "[on_hand]",
-      "AS"
-     ],
-     [
-      "[unit_cost]",
-      "AS"
-     ],
-     [
-      "[is_discontinued]",
-      "AS"
-     ],
-     [
-      "[last_counted]",
-      "AS"
-     ],
-     [
-      "[sku]",
-      "AS"
-     ],
-     [
-      "[description]",
-      "AS"
-     ],
-     [
-      "[on_hand]",
-      "AS"
-     ],
-     [
-      "[unit_cost]",
-      "AS"
-     ],
-     [
-      "[is_discontinued]",
-      "AS"
-     ],
-     [
-      "[last_counted]",
-      "AS"
-     ],
-     [
-      "[sku]",
-      "AS"
-     ],
-     [
-      "[description]",
-      "AS"
-     ],
-     [
-      "[on_hand]",
-      "AS"
-     ],
-     [
-      "[unit_cost]",
-      "AS"
-     ],
-     [
-      "[is_discontinued]",
-      "AS"
-     ],
-     [
-      "[last_counted]",
-      "AS"
-     ],
-     [
-      "[sku]",
-      "AS"
-     ],
-     [
-      "[description]",
-      "AS"
-     ],
-     [
-      "[on_hand]",
-      "AS"
-     ],
-     [
-      "[unit_cost]",
-      "AS"
-     ],
-     [
-      "[is_discontinued]",
-      "AS"
-     ],
-     [
-      "[last_counted]",
-      "AS"
-     ]
-    ],
-    "go_batches": 0,
-    "has_sql": true,
-    "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
-    ]
-   },
-   "json_functions": {
-    "columns": [
-     [
-      "[sku]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[description]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[on_hand]",
-      "BIGINT"
-     ],
-     [
-      "[unit_cost]",
-      "FLOAT"
-     ],
-     [
-      "[is_discontinued]",
-      "BIT"
-     ],
-     [
-      "[last_counted]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[sku]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[description]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[on_hand]",
-      "BIGINT"
-     ],
-     [
-      "[unit_cost]",
-      "FLOAT"
-     ],
-     [
-      "[is_discontinued]",
-      "BIT"
-     ],
-     [
-      "[last_counted]",
-      "DATETIME2(7)"
-     ]
-    ],
-    "go_batches": 0,
-    "has_sql": true,
-    "markers": [
-     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bDATA_SOURCE\\s*=\\s*\\'([^\\']*)\\'=>MyDataSource",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>folder/file.csv",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
      "\\bROWTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
@@ -55581,7 +55320,268 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2022|adls": {
+  "data sample/excel/inventory.xlsx|sql_server_2019|s3": {
+   "best_practices": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": true,
+    "markers": []
+   },
+   "bulk_insert": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": []
+   },
+   "copy_into": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": [
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+    ]
+   },
+   "create_external_table": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": [
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+    ]
+   },
+   "create_table": {
+    "columns": [
+     [
+      "[sku]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[description]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[on_hand]",
+      "BIGINT"
+     ],
+     [
+      "[unit_cost]",
+      "FLOAT"
+     ],
+     [
+      "[is_discontinued]",
+      "BIT"
+     ],
+     [
+      "[last_counted]",
+      "DATETIME2(7)"
+     ]
+    ],
+    "go_batches": 0,
+    "has_sql": true,
+    "markers": [
+     "\\bCREATE\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[inventory]",
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019."
+    ]
+   },
+   "credential_setup": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": [
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+    ]
+   },
+   "external_file_format": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": [
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+    ]
+   },
+   "for_json": {
+    "columns": [
+     [
+      "[sku]",
+      "AS"
+     ],
+     [
+      "[description]",
+      "AS"
+     ],
+     [
+      "[on_hand]",
+      "AS"
+     ],
+     [
+      "[unit_cost]",
+      "AS"
+     ],
+     [
+      "[is_discontinued]",
+      "AS"
+     ],
+     [
+      "[last_counted]",
+      "AS"
+     ],
+     [
+      "[sku]",
+      "AS"
+     ],
+     [
+      "[description]",
+      "AS"
+     ],
+     [
+      "[on_hand]",
+      "AS"
+     ],
+     [
+      "[unit_cost]",
+      "AS"
+     ],
+     [
+      "[is_discontinued]",
+      "AS"
+     ],
+     [
+      "[last_counted]",
+      "AS"
+     ],
+     [
+      "[sku]",
+      "AS"
+     ],
+     [
+      "[description]",
+      "AS"
+     ],
+     [
+      "[on_hand]",
+      "AS"
+     ],
+     [
+      "[unit_cost]",
+      "AS"
+     ],
+     [
+      "[is_discontinued]",
+      "AS"
+     ],
+     [
+      "[last_counted]",
+      "AS"
+     ],
+     [
+      "[sku]",
+      "AS"
+     ],
+     [
+      "[description]",
+      "AS"
+     ],
+     [
+      "[on_hand]",
+      "AS"
+     ],
+     [
+      "[unit_cost]",
+      "AS"
+     ],
+     [
+      "[is_discontinued]",
+      "AS"
+     ],
+     [
+      "[last_counted]",
+      "AS"
+     ]
+    ],
+    "go_batches": 0,
+    "has_sql": true,
+    "markers": [
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+    ]
+   },
+   "json_functions": {
+    "columns": [
+     [
+      "[sku]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[description]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[on_hand]",
+      "BIGINT"
+     ],
+     [
+      "[unit_cost]",
+      "FLOAT"
+     ],
+     [
+      "[is_discontinued]",
+      "BIT"
+     ],
+     [
+      "[last_counted]",
+      "DATETIME2(7)"
+     ],
+     [
+      "[sku]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[description]",
+      "NVARCHAR(255)"
+     ],
+     [
+      "[on_hand]",
+      "BIGINT"
+     ],
+     [
+      "[unit_cost]",
+      "FLOAT"
+     ],
+     [
+      "[is_discontinued]",
+      "BIT"
+     ],
+     [
+      "[last_counted]",
+      "DATETIME2(7)"
+     ]
+    ],
+    "go_batches": 0,
+    "has_sql": true,
+    "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
+     "\\bDATA_SOURCE\\s*=\\s*\\'([^\\']*)\\'=>MyDataSource",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>folder/file.csv",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
+     "\\bROWTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
+     "\\bFIELDQUOTE\\s*=\\s*\\'([^\\']*)\\'=>0x0b",
+     "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019",
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019."
+    ]
+   },
+   "openrowset": {
+    "columns": [],
+    "go_batches": 0,
+    "has_sql": false,
+    "markers": [
+     "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>PARQUET",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE"
+    ]
+   }
+  },
+  "data sample/excel/inventory.xlsx|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -55868,7 +55868,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2022|azure_blob": {
+  "data sample/excel/inventory.xlsx|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -56155,7 +56155,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2022|local": {
+  "data sample/excel/inventory.xlsx|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -56390,7 +56390,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/excel/inventory.xlsx",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/excel/inventory.xlsx",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -56406,7 +56406,7 @@
     "markers": []
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2022|onelake": {
+  "data sample/excel/inventory.xlsx|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -56692,7 +56692,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2022|s3": {
+  "data sample/excel/inventory.xlsx|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -56978,7 +56978,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2025|adls": {
+  "data sample/excel/inventory.xlsx|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -57265,7 +57265,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2025|azure_blob": {
+  "data sample/excel/inventory.xlsx|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -57552,7 +57552,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2025|local": {
+  "data sample/excel/inventory.xlsx|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -57787,7 +57787,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/excel/inventory.xlsx",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/excel/inventory.xlsx",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -57803,7 +57803,7 @@
     "markers": []
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2025|onelake": {
+  "data sample/excel/inventory.xlsx|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -58089,7 +58089,7 @@
     ]
    }
   },
-  "demo/excel/inventory.xlsx|sql_server_2025|s3": {
+  "data sample/excel/inventory.xlsx|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -58375,7 +58375,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_db|adls": {
+  "data sample/json/order_single_object.json|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -58699,7 +58699,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_db|azure_blob": {
+  "data sample/json/order_single_object.json|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -59023,7 +59023,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_db|local": {
+  "data sample/json/order_single_object.json|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -59347,7 +59347,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_db|onelake": {
+  "data sample/json/order_single_object.json|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -59671,7 +59671,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_db|s3": {
+  "data sample/json/order_single_object.json|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -59995,7 +59995,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_mi|adls": {
+  "data sample/json/order_single_object.json|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -60319,7 +60319,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_mi|azure_blob": {
+  "data sample/json/order_single_object.json|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -60643,7 +60643,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_mi|local": {
+  "data sample/json/order_single_object.json|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -60967,7 +60967,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_mi|onelake": {
+  "data sample/json/order_single_object.json|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -61291,7 +61291,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|azure_sql_mi|s3": {
+  "data sample/json/order_single_object.json|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -61615,7 +61615,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|fabric_sql_db|adls": {
+  "data sample/json/order_single_object.json|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -61947,7 +61947,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|fabric_sql_db|azure_blob": {
+  "data sample/json/order_single_object.json|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -62279,7 +62279,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|fabric_sql_db|local": {
+  "data sample/json/order_single_object.json|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -62611,7 +62611,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|fabric_sql_db|onelake": {
+  "data sample/json/order_single_object.json|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -62943,7 +62943,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|fabric_sql_db|s3": {
+  "data sample/json/order_single_object.json|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -63275,7 +63275,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2019|adls": {
+  "data sample/json/order_single_object.json|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -63539,7 +63539,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2019|azure_blob": {
+  "data sample/json/order_single_object.json|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -63803,7 +63803,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2019|local": {
+  "data sample/json/order_single_object.json|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -64036,7 +64036,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -64085,14 +64085,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2019|onelake": {
+  "data sample/json/order_single_object.json|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -64348,7 +64348,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2019|s3": {
+  "data sample/json/order_single_object.json|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -64604,7 +64604,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2022|adls": {
+  "data sample/json/order_single_object.json|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -64893,7 +64893,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2022|azure_blob": {
+  "data sample/json/order_single_object.json|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -65182,7 +65182,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2022|local": {
+  "data sample/json/order_single_object.json|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -65411,7 +65411,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -65459,14 +65459,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2022|onelake": {
+  "data sample/json/order_single_object.json|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -65717,7 +65717,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2022|s3": {
+  "data sample/json/order_single_object.json|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -65968,7 +65968,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2025|adls": {
+  "data sample/json/order_single_object.json|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -66257,7 +66257,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2025|azure_blob": {
+  "data sample/json/order_single_object.json|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -66546,7 +66546,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2025|local": {
+  "data sample/json/order_single_object.json|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -66775,7 +66775,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -66823,14 +66823,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/order_single_object.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/order_single_object.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2025|onelake": {
+  "data sample/json/order_single_object.json|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -67081,7 +67081,7 @@
     ]
    }
   },
-  "demo/json/order_single_object.json|sql_server_2025|s3": {
+  "data sample/json/order_single_object.json|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -67332,7 +67332,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_db|adls": {
+  "data sample/json/orders.ndjson|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -67730,7 +67730,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_db|azure_blob": {
+  "data sample/json/orders.ndjson|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -68128,7 +68128,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_db|local": {
+  "data sample/json/orders.ndjson|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -68526,7 +68526,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_db|onelake": {
+  "data sample/json/orders.ndjson|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -68924,7 +68924,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_db|s3": {
+  "data sample/json/orders.ndjson|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -69322,7 +69322,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_mi|adls": {
+  "data sample/json/orders.ndjson|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -69720,7 +69720,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_mi|azure_blob": {
+  "data sample/json/orders.ndjson|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -70118,7 +70118,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_mi|local": {
+  "data sample/json/orders.ndjson|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -70516,7 +70516,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_mi|onelake": {
+  "data sample/json/orders.ndjson|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -70914,7 +70914,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|azure_sql_mi|s3": {
+  "data sample/json/orders.ndjson|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -71312,7 +71312,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|fabric_sql_db|adls": {
+  "data sample/json/orders.ndjson|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -71713,7 +71713,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|fabric_sql_db|azure_blob": {
+  "data sample/json/orders.ndjson|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -72114,7 +72114,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|fabric_sql_db|local": {
+  "data sample/json/orders.ndjson|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -72515,7 +72515,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|fabric_sql_db|onelake": {
+  "data sample/json/orders.ndjson|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -72916,7 +72916,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|fabric_sql_db|s3": {
+  "data sample/json/orders.ndjson|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -73317,7 +73317,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2019|adls": {
+  "data sample/json/orders.ndjson|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -73653,7 +73653,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2019|azure_blob": {
+  "data sample/json/orders.ndjson|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -73989,7 +73989,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2019|local": {
+  "data sample/json/orders.ndjson|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -74254,7 +74254,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -74303,14 +74303,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2019|onelake": {
+  "data sample/json/orders.ndjson|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -74635,7 +74635,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2019|s3": {
+  "data sample/json/orders.ndjson|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -74960,7 +74960,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2022|adls": {
+  "data sample/json/orders.ndjson|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -75322,7 +75322,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2022|azure_blob": {
+  "data sample/json/orders.ndjson|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -75684,7 +75684,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2022|local": {
+  "data sample/json/orders.ndjson|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -75945,7 +75945,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -75993,14 +75993,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2022|onelake": {
+  "data sample/json/orders.ndjson|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -76357,7 +76357,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2022|s3": {
+  "data sample/json/orders.ndjson|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -76714,7 +76714,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2025|adls": {
+  "data sample/json/orders.ndjson|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -77076,7 +77076,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2025|azure_blob": {
+  "data sample/json/orders.ndjson|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -77438,7 +77438,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2025|local": {
+  "data sample/json/orders.ndjson|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -77699,7 +77699,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -77747,14 +77747,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders.ndjson",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders.ndjson",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2025|onelake": {
+  "data sample/json/orders.ndjson|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -78111,7 +78111,7 @@
     ]
    }
   },
-  "demo/json/orders.ndjson|sql_server_2025|s3": {
+  "data sample/json/orders.ndjson|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -78468,7 +78468,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_db|adls": {
+  "data sample/json/orders_array.json|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -78824,7 +78824,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_db|azure_blob": {
+  "data sample/json/orders_array.json|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -79180,7 +79180,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_db|local": {
+  "data sample/json/orders_array.json|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -79536,7 +79536,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_db|onelake": {
+  "data sample/json/orders_array.json|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -79892,7 +79892,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_db|s3": {
+  "data sample/json/orders_array.json|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -80248,7 +80248,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_mi|adls": {
+  "data sample/json/orders_array.json|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -80604,7 +80604,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_mi|azure_blob": {
+  "data sample/json/orders_array.json|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -80960,7 +80960,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_mi|local": {
+  "data sample/json/orders_array.json|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -81316,7 +81316,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_mi|onelake": {
+  "data sample/json/orders_array.json|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -81672,7 +81672,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|azure_sql_mi|s3": {
+  "data sample/json/orders_array.json|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -82028,7 +82028,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|fabric_sql_db|adls": {
+  "data sample/json/orders_array.json|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -82392,7 +82392,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|fabric_sql_db|azure_blob": {
+  "data sample/json/orders_array.json|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -82756,7 +82756,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|fabric_sql_db|local": {
+  "data sample/json/orders_array.json|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -83120,7 +83120,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|fabric_sql_db|onelake": {
+  "data sample/json/orders_array.json|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -83484,7 +83484,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|fabric_sql_db|s3": {
+  "data sample/json/orders_array.json|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -83848,7 +83848,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2019|adls": {
+  "data sample/json/orders_array.json|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -84144,7 +84144,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2019|azure_blob": {
+  "data sample/json/orders_array.json|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -84440,7 +84440,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2019|local": {
+  "data sample/json/orders_array.json|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -84705,7 +84705,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -84754,14 +84754,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2019|onelake": {
+  "data sample/json/orders_array.json|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -85049,7 +85049,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2019|s3": {
+  "data sample/json/orders_array.json|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -85337,7 +85337,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2022|adls": {
+  "data sample/json/orders_array.json|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -85658,7 +85658,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2022|azure_blob": {
+  "data sample/json/orders_array.json|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -85979,7 +85979,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2022|local": {
+  "data sample/json/orders_array.json|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -86240,7 +86240,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -86288,14 +86288,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2022|onelake": {
+  "data sample/json/orders_array.json|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -86578,7 +86578,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2022|s3": {
+  "data sample/json/orders_array.json|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -86861,7 +86861,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2025|adls": {
+  "data sample/json/orders_array.json|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -87182,7 +87182,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2025|azure_blob": {
+  "data sample/json/orders_array.json|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -87503,7 +87503,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2025|local": {
+  "data sample/json/orders_array.json|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -87764,7 +87764,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -87812,14 +87812,14 @@
     "has_sql": true,
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>JSON",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/json/orders_array.json",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/json/orders_array.json",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB"
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2025|onelake": {
+  "data sample/json/orders_array.json|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -88102,7 +88102,7 @@
     ]
    }
   },
-  "demo/json/orders_array.json|sql_server_2025|s3": {
+  "data sample/json/orders_array.json|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -88385,7 +88385,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_db|adls": {
+  "data sample/orc/all_types.orc|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -89059,7 +89059,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_db|azure_blob": {
+  "data sample/orc/all_types.orc|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -89733,7 +89733,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_db|local": {
+  "data sample/orc/all_types.orc|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -90407,7 +90407,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_db|onelake": {
+  "data sample/orc/all_types.orc|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -91081,7 +91081,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_db|s3": {
+  "data sample/orc/all_types.orc|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -91755,7 +91755,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_mi|adls": {
+  "data sample/orc/all_types.orc|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -92360,7 +92360,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_mi|azure_blob": {
+  "data sample/orc/all_types.orc|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -92965,7 +92965,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_mi|local": {
+  "data sample/orc/all_types.orc|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -93570,7 +93570,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_mi|onelake": {
+  "data sample/orc/all_types.orc|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -94175,7 +94175,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|azure_sql_mi|s3": {
+  "data sample/orc/all_types.orc|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -94780,7 +94780,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|fabric_sql_db|adls": {
+  "data sample/orc/all_types.orc|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -95502,7 +95502,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|fabric_sql_db|azure_blob": {
+  "data sample/orc/all_types.orc|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -96224,7 +96224,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|fabric_sql_db|local": {
+  "data sample/orc/all_types.orc|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -96946,7 +96946,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|fabric_sql_db|onelake": {
+  "data sample/orc/all_types.orc|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -97668,7 +97668,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|fabric_sql_db|s3": {
+  "data sample/orc/all_types.orc|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -98390,7 +98390,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2019|adls": {
+  "data sample/orc/all_types.orc|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -99009,7 +99009,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2019|azure_blob": {
+  "data sample/orc/all_types.orc|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -99628,7 +99628,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2019|local": {
+  "data sample/orc/all_types.orc|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -100156,7 +100156,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/orc/all_types.orc",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/orc/all_types.orc",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -100173,7 +100173,7 @@
     "markers": []
    }
   },
-  "demo/orc/all_types.orc|sql_server_2019|onelake": {
+  "data sample/orc/all_types.orc|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -100724,7 +100724,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2019|s3": {
+  "data sample/orc/all_types.orc|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -101275,7 +101275,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2022|adls": {
+  "data sample/orc/all_types.orc|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -101818,7 +101818,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2022|azure_blob": {
+  "data sample/orc/all_types.orc|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -102361,7 +102361,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2022|local": {
+  "data sample/orc/all_types.orc|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -102820,7 +102820,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/orc/all_types.orc",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/orc/all_types.orc",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -102836,7 +102836,7 @@
     "markers": []
    }
   },
-  "demo/orc/all_types.orc|sql_server_2022|onelake": {
+  "data sample/orc/all_types.orc|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -103378,7 +103378,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2022|s3": {
+  "data sample/orc/all_types.orc|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -103920,7 +103920,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2025|adls": {
+  "data sample/orc/all_types.orc|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -104531,7 +104531,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2025|azure_blob": {
+  "data sample/orc/all_types.orc|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -105142,7 +105142,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2025|local": {
+  "data sample/orc/all_types.orc|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -105664,7 +105664,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/orc/all_types.orc",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/orc/all_types.orc",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -105680,7 +105680,7 @@
     "markers": []
    }
   },
-  "demo/orc/all_types.orc|sql_server_2025|onelake": {
+  "data sample/orc/all_types.orc|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -106285,7 +106285,7 @@
     ]
    }
   },
-  "demo/orc/all_types.orc|sql_server_2025|s3": {
+  "data sample/orc/all_types.orc|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -106890,7 +106890,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_db|adls": {
+  "data sample/parquet/all_types.parquet|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -107833,7 +107833,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_db|azure_blob": {
+  "data sample/parquet/all_types.parquet|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -108776,7 +108776,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_db|local": {
+  "data sample/parquet/all_types.parquet|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -109719,7 +109719,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_db|onelake": {
+  "data sample/parquet/all_types.parquet|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -110662,7 +110662,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_db|s3": {
+  "data sample/parquet/all_types.parquet|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -111605,7 +111605,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_mi|adls": {
+  "data sample/parquet/all_types.parquet|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -112548,7 +112548,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_mi|azure_blob": {
+  "data sample/parquet/all_types.parquet|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -113491,7 +113491,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_mi|local": {
+  "data sample/parquet/all_types.parquet|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -114434,7 +114434,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_mi|onelake": {
+  "data sample/parquet/all_types.parquet|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -115377,7 +115377,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|azure_sql_mi|s3": {
+  "data sample/parquet/all_types.parquet|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -116320,7 +116320,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|fabric_sql_db|adls": {
+  "data sample/parquet/all_types.parquet|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -117474,7 +117474,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|fabric_sql_db|azure_blob": {
+  "data sample/parquet/all_types.parquet|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -118628,7 +118628,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|fabric_sql_db|local": {
+  "data sample/parquet/all_types.parquet|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -119782,7 +119782,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|fabric_sql_db|onelake": {
+  "data sample/parquet/all_types.parquet|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -120936,7 +120936,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|fabric_sql_db|s3": {
+  "data sample/parquet/all_types.parquet|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -122090,7 +122090,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2019|adls": {
+  "data sample/parquet/all_types.parquet|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -122910,7 +122910,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2019|azure_blob": {
+  "data sample/parquet/all_types.parquet|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -123730,7 +123730,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2019|local": {
+  "data sample/parquet/all_types.parquet|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -124531,7 +124531,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/all_types.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/all_types.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -124551,7 +124551,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2019|onelake": {
+  "data sample/parquet/all_types.parquet|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -125374,7 +125374,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2019|s3": {
+  "data sample/parquet/all_types.parquet|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -126197,7 +126197,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2022|adls": {
+  "data sample/parquet/all_types.parquet|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -127029,7 +127029,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2022|azure_blob": {
+  "data sample/parquet/all_types.parquet|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -127861,7 +127861,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2022|local": {
+  "data sample/parquet/all_types.parquet|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -128669,7 +128669,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/all_types.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/all_types.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -128689,7 +128689,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2022|onelake": {
+  "data sample/parquet/all_types.parquet|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -129519,7 +129519,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2022|s3": {
+  "data sample/parquet/all_types.parquet|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -130349,7 +130349,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2025|adls": {
+  "data sample/parquet/all_types.parquet|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -131181,7 +131181,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2025|azure_blob": {
+  "data sample/parquet/all_types.parquet|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -132013,7 +132013,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2025|local": {
+  "data sample/parquet/all_types.parquet|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -132821,7 +132821,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/all_types.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/all_types.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -132841,7 +132841,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2025|onelake": {
+  "data sample/parquet/all_types.parquet|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -133671,7 +133671,7 @@
     ]
    }
   },
-  "demo/parquet/all_types.parquet|sql_server_2025|s3": {
+  "data sample/parquet/all_types.parquet|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -134501,7 +134501,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_db|adls": {
+  "data sample/parquet/sales.parquet|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -134831,7 +134831,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_db|azure_blob": {
+  "data sample/parquet/sales.parquet|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -135161,7 +135161,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_db|local": {
+  "data sample/parquet/sales.parquet|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -135491,7 +135491,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_db|onelake": {
+  "data sample/parquet/sales.parquet|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -135821,7 +135821,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_db|s3": {
+  "data sample/parquet/sales.parquet|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -136151,7 +136151,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_mi|adls": {
+  "data sample/parquet/sales.parquet|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -136481,7 +136481,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_mi|azure_blob": {
+  "data sample/parquet/sales.parquet|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -136811,7 +136811,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_mi|local": {
+  "data sample/parquet/sales.parquet|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -137141,7 +137141,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_mi|onelake": {
+  "data sample/parquet/sales.parquet|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -137471,7 +137471,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|azure_sql_mi|s3": {
+  "data sample/parquet/sales.parquet|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -137801,7 +137801,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|fabric_sql_db|adls": {
+  "data sample/parquet/sales.parquet|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -138182,7 +138182,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|fabric_sql_db|azure_blob": {
+  "data sample/parquet/sales.parquet|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -138563,7 +138563,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|fabric_sql_db|local": {
+  "data sample/parquet/sales.parquet|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -138944,7 +138944,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|fabric_sql_db|onelake": {
+  "data sample/parquet/sales.parquet|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -139325,7 +139325,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|fabric_sql_db|s3": {
+  "data sample/parquet/sales.parquet|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -139706,7 +139706,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2019|adls": {
+  "data sample/parquet/sales.parquet|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -139966,7 +139966,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2019|azure_blob": {
+  "data sample/parquet/sales.parquet|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -140226,7 +140226,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2019|local": {
+  "data sample/parquet/sales.parquet|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -140467,7 +140467,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/sales.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/sales.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -140487,7 +140487,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2019|onelake": {
+  "data sample/parquet/sales.parquet|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -140750,7 +140750,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2019|s3": {
+  "data sample/parquet/sales.parquet|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -141013,7 +141013,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2022|adls": {
+  "data sample/parquet/sales.parquet|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -141312,7 +141312,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2022|azure_blob": {
+  "data sample/parquet/sales.parquet|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -141611,7 +141611,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2022|local": {
+  "data sample/parquet/sales.parquet|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -141886,7 +141886,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/sales.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/sales.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -141906,7 +141906,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2022|onelake": {
+  "data sample/parquet/sales.parquet|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -142203,7 +142203,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2022|s3": {
+  "data sample/parquet/sales.parquet|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -142500,7 +142500,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2025|adls": {
+  "data sample/parquet/sales.parquet|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -142799,7 +142799,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2025|azure_blob": {
+  "data sample/parquet/sales.parquet|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -143098,7 +143098,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2025|local": {
+  "data sample/parquet/sales.parquet|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -143373,7 +143373,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/parquet/sales.parquet",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/parquet/sales.parquet",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -143393,7 +143393,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2025|onelake": {
+  "data sample/parquet/sales.parquet|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -143690,7 +143690,7 @@
     ]
    }
   },
-  "demo/parquet/sales.parquet|sql_server_2025|s3": {
+  "data sample/parquet/sales.parquet|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -143987,7 +143987,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_db|adls": {
+  "data sample/tables/events_delta|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -144279,7 +144279,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_db|azure_blob": {
+  "data sample/tables/events_delta|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -144571,7 +144571,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_db|local": {
+  "data sample/tables/events_delta|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -144863,7 +144863,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_db|onelake": {
+  "data sample/tables/events_delta|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -145155,7 +145155,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_db|s3": {
+  "data sample/tables/events_delta|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -145447,7 +145447,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|azure_sql_mi|adls": {
+  "data sample/tables/events_delta|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -145699,7 +145699,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|azure_sql_mi|azure_blob": {
+  "data sample/tables/events_delta|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -145951,7 +145951,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|azure_sql_mi|local": {
+  "data sample/tables/events_delta|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -146203,7 +146203,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|azure_sql_mi|onelake": {
+  "data sample/tables/events_delta|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -146455,7 +146455,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|azure_sql_mi|s3": {
+  "data sample/tables/events_delta|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -146707,7 +146707,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|fabric_sql_db|adls": {
+  "data sample/tables/events_delta|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -146962,7 +146962,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|fabric_sql_db|azure_blob": {
+  "data sample/tables/events_delta|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -147217,7 +147217,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|fabric_sql_db|local": {
+  "data sample/tables/events_delta|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -147472,7 +147472,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|fabric_sql_db|onelake": {
+  "data sample/tables/events_delta|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -147727,7 +147727,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|fabric_sql_db|s3": {
+  "data sample/tables/events_delta|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -147982,7 +147982,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_delta|sql_server_2019|adls": {
+  "data sample/tables/events_delta|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -148216,7 +148216,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2019|azure_blob": {
+  "data sample/tables/events_delta|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -148450,7 +148450,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2019|local": {
+  "data sample/tables/events_delta|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -148665,7 +148665,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_delta",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_delta",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -148685,7 +148685,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2019|onelake": {
+  "data sample/tables/events_delta|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -148922,7 +148922,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2019|s3": {
+  "data sample/tables/events_delta|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -149159,7 +149159,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2022|adls": {
+  "data sample/tables/events_delta|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -149427,7 +149427,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2022|azure_blob": {
+  "data sample/tables/events_delta|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -149695,7 +149695,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2022|local": {
+  "data sample/tables/events_delta|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -149939,7 +149939,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_delta",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_delta",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -149959,7 +149959,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2022|onelake": {
+  "data sample/tables/events_delta|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -150225,7 +150225,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2022|s3": {
+  "data sample/tables/events_delta|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -150491,7 +150491,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2025|adls": {
+  "data sample/tables/events_delta|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -150759,7 +150759,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2025|azure_blob": {
+  "data sample/tables/events_delta|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -151027,7 +151027,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2025|local": {
+  "data sample/tables/events_delta|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -151271,7 +151271,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_delta",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_delta",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -151291,7 +151291,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2025|onelake": {
+  "data sample/tables/events_delta|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -151557,7 +151557,7 @@
     ]
    }
   },
-  "demo/tables/events_delta|sql_server_2025|s3": {
+  "data sample/tables/events_delta|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -151823,7 +151823,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_db|adls": {
+  "data sample/tables/events_iceberg|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -152140,7 +152140,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_db|azure_blob": {
+  "data sample/tables/events_iceberg|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -152457,7 +152457,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_db|local": {
+  "data sample/tables/events_iceberg|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -152774,7 +152774,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_db|onelake": {
+  "data sample/tables/events_iceberg|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -153091,7 +153091,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_db|s3": {
+  "data sample/tables/events_iceberg|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -153408,7 +153408,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_mi|adls": {
+  "data sample/tables/events_iceberg|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -153725,7 +153725,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_mi|azure_blob": {
+  "data sample/tables/events_iceberg|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -154042,7 +154042,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_mi|local": {
+  "data sample/tables/events_iceberg|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -154359,7 +154359,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_mi|onelake": {
+  "data sample/tables/events_iceberg|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -154676,7 +154676,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|azure_sql_mi|s3": {
+  "data sample/tables/events_iceberg|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -154993,7 +154993,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|fabric_sql_db|adls": {
+  "data sample/tables/events_iceberg|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -155363,7 +155363,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|fabric_sql_db|azure_blob": {
+  "data sample/tables/events_iceberg|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -155733,7 +155733,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|fabric_sql_db|local": {
+  "data sample/tables/events_iceberg|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -156103,7 +156103,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|fabric_sql_db|onelake": {
+  "data sample/tables/events_iceberg|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -156473,7 +156473,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|fabric_sql_db|s3": {
+  "data sample/tables/events_iceberg|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -156843,7 +156843,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2019|adls": {
+  "data sample/tables/events_iceberg|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -157135,7 +157135,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2019|azure_blob": {
+  "data sample/tables/events_iceberg|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -157427,7 +157427,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2019|local": {
+  "data sample/tables/events_iceberg|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -157665,7 +157665,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_iceberg",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_iceberg",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -157682,7 +157682,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_iceberg|sql_server_2019|onelake": {
+  "data sample/tables/events_iceberg|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -157943,7 +157943,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2019|s3": {
+  "data sample/tables/events_iceberg|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -158204,7 +158204,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2022|adls": {
+  "data sample/tables/events_iceberg|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -158491,7 +158491,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2022|azure_blob": {
+  "data sample/tables/events_iceberg|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -158778,7 +158778,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2022|local": {
+  "data sample/tables/events_iceberg|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -159013,7 +159013,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_iceberg",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_iceberg",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -159029,7 +159029,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_iceberg|sql_server_2022|onelake": {
+  "data sample/tables/events_iceberg|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -159315,7 +159315,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2022|s3": {
+  "data sample/tables/events_iceberg|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -159601,7 +159601,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2025|adls": {
+  "data sample/tables/events_iceberg|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -159888,7 +159888,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2025|azure_blob": {
+  "data sample/tables/events_iceberg|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -160175,7 +160175,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2025|local": {
+  "data sample/tables/events_iceberg|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -160410,7 +160410,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/tables/events_iceberg",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/tables/events_iceberg",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -160426,7 +160426,7 @@
     "markers": []
    }
   },
-  "demo/tables/events_iceberg|sql_server_2025|onelake": {
+  "data sample/tables/events_iceberg|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -160712,7 +160712,7 @@
     ]
    }
   },
-  "demo/tables/events_iceberg|sql_server_2025|s3": {
+  "data sample/tables/events_iceberg|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -160998,7 +160998,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_db|adls": {
+  "data sample/text/readme_sample.txt|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161148,7 +161148,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_db|azure_blob": {
+  "data sample/text/readme_sample.txt|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161298,7 +161298,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_db|local": {
+  "data sample/text/readme_sample.txt|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161448,7 +161448,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_db|onelake": {
+  "data sample/text/readme_sample.txt|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161598,7 +161598,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_db|s3": {
+  "data sample/text/readme_sample.txt|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161748,7 +161748,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_mi|adls": {
+  "data sample/text/readme_sample.txt|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -161898,7 +161898,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_mi|azure_blob": {
+  "data sample/text/readme_sample.txt|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162048,7 +162048,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_mi|local": {
+  "data sample/text/readme_sample.txt|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162198,7 +162198,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_mi|onelake": {
+  "data sample/text/readme_sample.txt|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162348,7 +162348,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|azure_sql_mi|s3": {
+  "data sample/text/readme_sample.txt|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162498,7 +162498,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|fabric_sql_db|adls": {
+  "data sample/text/readme_sample.txt|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162654,7 +162654,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|fabric_sql_db|azure_blob": {
+  "data sample/text/readme_sample.txt|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162810,7 +162810,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|fabric_sql_db|local": {
+  "data sample/text/readme_sample.txt|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -162966,7 +162966,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|fabric_sql_db|onelake": {
+  "data sample/text/readme_sample.txt|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163122,7 +163122,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|fabric_sql_db|s3": {
+  "data sample/text/readme_sample.txt|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163278,7 +163278,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2019|adls": {
+  "data sample/text/readme_sample.txt|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163423,7 +163423,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2019|azure_blob": {
+  "data sample/text/readme_sample.txt|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163568,7 +163568,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2019|local": {
+  "data sample/text/readme_sample.txt|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163669,7 +163669,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -163690,8 +163690,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
@@ -163703,7 +163703,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2019|onelake": {
+  "data sample/text/readme_sample.txt|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163826,7 +163826,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2019|s3": {
+  "data sample/text/readme_sample.txt|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -163949,7 +163949,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2022|adls": {
+  "data sample/text/readme_sample.txt|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164091,7 +164091,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2022|azure_blob": {
+  "data sample/text/readme_sample.txt|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164233,7 +164233,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2022|local": {
+  "data sample/text/readme_sample.txt|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164332,7 +164332,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -164353,8 +164353,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
@@ -164366,7 +164366,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2022|onelake": {
+  "data sample/text/readme_sample.txt|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164496,7 +164496,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2022|s3": {
+  "data sample/text/readme_sample.txt|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164626,7 +164626,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2025|adls": {
+  "data sample/text/readme_sample.txt|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164768,7 +164768,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2025|azure_blob": {
+  "data sample/text/readme_sample.txt|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -164910,7 +164910,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2025|local": {
+  "data sample/text/readme_sample.txt|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -165009,7 +165009,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -165030,8 +165030,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/text/readme_sample.txt",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>1",
@@ -165043,7 +165043,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2025|onelake": {
+  "data sample/text/readme_sample.txt|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -165173,7 +165173,7 @@
     ]
    }
   },
-  "demo/text/readme_sample.txt|sql_server_2025|s3": {
+  "data sample/text/readme_sample.txt|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -165303,7 +165303,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_db|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -165647,7 +165647,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_db|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -165991,7 +165991,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_db|local": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -166335,7 +166335,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_db|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -166679,7 +166679,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_db|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -167023,7 +167023,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_mi|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -167366,7 +167366,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -167709,7 +167709,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_mi|local": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -168052,7 +168052,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_mi|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -168395,7 +168395,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|azure_sql_mi|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -168738,7 +168738,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|fabric_sql_db|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -169120,7 +169120,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -169502,7 +169502,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|fabric_sql_db|local": {
+  "data sample/unicode/collation_cases_utf8.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -169884,7 +169884,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|fabric_sql_db|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -170266,7 +170266,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|fabric_sql_db|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -170648,7 +170648,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2019|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -170969,7 +170969,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2019|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -171290,7 +171290,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2019|local": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -171550,7 +171550,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -171588,8 +171588,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -171601,7 +171601,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2019|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -171884,7 +171884,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2019|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -172167,7 +172167,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2022|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -172485,7 +172485,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2022|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -172803,7 +172803,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2022|local": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -173062,7 +173062,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -173099,8 +173099,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -173112,7 +173112,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2022|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -173418,7 +173418,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2022|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -173724,7 +173724,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2025|adls": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -174042,7 +174042,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2025|azure_blob": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -174360,7 +174360,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2025|local": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -174619,7 +174619,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -174656,8 +174656,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/collation_cases_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -174669,7 +174669,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2025|onelake": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -174975,7 +174975,7 @@
     ]
    }
   },
-  "demo/unicode/collation_cases_utf8.csv|sql_server_2025|s3": {
+  "data sample/unicode/collation_cases_utf8.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -175281,7 +175281,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_db|adls": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -175584,7 +175584,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_db|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -175887,7 +175887,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_db|local": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -176190,7 +176190,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_db|onelake": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -176493,7 +176493,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_db|s3": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -176796,7 +176796,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_mi|adls": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -177098,7 +177098,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -177400,7 +177400,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_mi|local": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -177702,7 +177702,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_mi|onelake": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -178004,7 +178004,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|azure_sql_mi|s3": {
+  "data sample/unicode/japanese_cp932.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -178306,7 +178306,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|fabric_sql_db|adls": {
+  "data sample/unicode/japanese_cp932.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -178639,7 +178639,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -178972,7 +178972,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|fabric_sql_db|local": {
+  "data sample/unicode/japanese_cp932.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -179305,7 +179305,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|fabric_sql_db|onelake": {
+  "data sample/unicode/japanese_cp932.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -179638,7 +179638,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|fabric_sql_db|s3": {
+  "data sample/unicode/japanese_cp932.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -179971,7 +179971,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2019|adls": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -180255,7 +180255,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2019|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -180539,7 +180539,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2019|local": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -180766,7 +180766,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -180800,8 +180800,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -180813,7 +180813,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2019|onelake": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -181063,7 +181063,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2019|s3": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -181313,7 +181313,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2022|adls": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -181594,7 +181594,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2022|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -181875,7 +181875,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2022|local": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -182101,7 +182101,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -182134,8 +182134,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -182147,7 +182147,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2022|onelake": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -182416,7 +182416,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2022|s3": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -182685,7 +182685,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2025|adls": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -182966,7 +182966,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2025|azure_blob": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -183247,7 +183247,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2025|local": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -183473,7 +183473,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -183506,8 +183506,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/japanese_cp932.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>932",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -183519,7 +183519,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2025|onelake": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -183788,7 +183788,7 @@
     ]
    }
   },
-  "demo/unicode/japanese_cp932.csv|sql_server_2025|s3": {
+  "data sample/unicode/japanese_cp932.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -184057,7 +184057,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_db|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -184401,7 +184401,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -184745,7 +184745,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_db|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -185089,7 +185089,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_db|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -185433,7 +185433,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_db|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -185777,7 +185777,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_mi|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -186120,7 +186120,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -186463,7 +186463,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_mi|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -186806,7 +186806,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_mi|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -187149,7 +187149,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|azure_sql_mi|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -187492,7 +187492,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|fabric_sql_db|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -187874,7 +187874,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -188256,7 +188256,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|fabric_sql_db|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -188638,7 +188638,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|fabric_sql_db|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -189020,7 +189020,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|fabric_sql_db|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -189402,7 +189402,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2019|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -189723,7 +189723,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2019|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -190044,7 +190044,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2019|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -190304,7 +190304,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -190342,8 +190342,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -190355,7 +190355,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2019|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -190638,7 +190638,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2019|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -190921,7 +190921,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2022|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -191239,7 +191239,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2022|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -191557,7 +191557,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2022|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -191816,7 +191816,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -191853,8 +191853,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -191866,7 +191866,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2022|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -192172,7 +192172,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2022|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -192478,7 +192478,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2025|adls": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -192796,7 +192796,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2025|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -193114,7 +193114,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2025|local": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -193373,7 +193373,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -193410,8 +193410,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -193423,7 +193423,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2025|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -193729,7 +193729,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.csv|sql_server_2025|s3": {
+  "data sample/unicode/unicode_utf16le_bom.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -194035,7 +194035,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_db|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -194379,7 +194379,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -194723,7 +194723,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_db|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -195067,7 +195067,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_db|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -195411,7 +195411,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_db|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -195755,7 +195755,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -196098,7 +196098,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -196441,7 +196441,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -196784,7 +196784,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -197127,7 +197127,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -197470,7 +197470,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -197852,7 +197852,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -198234,7 +198234,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -198616,7 +198616,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -198998,7 +198998,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -199380,7 +199380,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2019|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -199701,7 +199701,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2019|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -200022,7 +200022,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2019|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -200282,7 +200282,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -200320,8 +200320,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -200333,7 +200333,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2019|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -200616,7 +200616,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2019|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -200899,7 +200899,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2022|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -201217,7 +201217,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2022|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -201535,7 +201535,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2022|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -201794,7 +201794,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -201831,8 +201831,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -201844,7 +201844,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2022|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -202150,7 +202150,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2022|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -202456,7 +202456,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2025|adls": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -202774,7 +202774,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2025|azure_blob": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -203092,7 +203092,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2025|local": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -203351,7 +203351,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -203388,8 +203388,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf16le_bom.tsv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>1200",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>\\t",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -203401,7 +203401,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2025|onelake": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -203707,7 +203707,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf16le_bom.tsv|sql_server_2025|s3": {
+  "data sample/unicode/unicode_utf16le_bom.tsv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -204013,7 +204013,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_db|adls": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -204357,7 +204357,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -204701,7 +204701,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_db|local": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -205045,7 +205045,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_db|onelake": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -205389,7 +205389,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_db|s3": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -205733,7 +205733,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_mi|adls": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -206076,7 +206076,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -206419,7 +206419,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_mi|local": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -206762,7 +206762,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_mi|onelake": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -207105,7 +207105,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|azure_sql_mi|s3": {
+  "data sample/unicode/unicode_utf8.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -207448,7 +207448,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|fabric_sql_db|adls": {
+  "data sample/unicode/unicode_utf8.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -207830,7 +207830,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -208212,7 +208212,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|fabric_sql_db|local": {
+  "data sample/unicode/unicode_utf8.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -208594,7 +208594,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|fabric_sql_db|onelake": {
+  "data sample/unicode/unicode_utf8.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -208976,7 +208976,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|fabric_sql_db|s3": {
+  "data sample/unicode/unicode_utf8.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -209358,7 +209358,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2019|adls": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -209679,7 +209679,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2019|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -210000,7 +210000,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2019|local": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -210260,7 +210260,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -210298,8 +210298,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -210311,7 +210311,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2019|onelake": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -210594,7 +210594,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2019|s3": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -210877,7 +210877,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2022|adls": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -211195,7 +211195,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2022|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -211513,7 +211513,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2022|local": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -211772,7 +211772,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -211809,8 +211809,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -211822,7 +211822,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2022|onelake": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -212128,7 +212128,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2022|s3": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -212434,7 +212434,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2025|adls": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -212752,7 +212752,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2025|azure_blob": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -213070,7 +213070,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2025|local": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -213329,7 +213329,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -213366,8 +213366,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -213379,7 +213379,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2025|onelake": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -213685,7 +213685,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8.csv|sql_server_2025|s3": {
+  "data sample/unicode/unicode_utf8.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -213991,7 +213991,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_db|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -214335,7 +214335,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -214679,7 +214679,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_db|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -215023,7 +215023,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_db|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -215367,7 +215367,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_db|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -215711,7 +215711,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_mi|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_mi|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -216054,7 +216054,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_mi|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_mi|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -216397,7 +216397,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_mi|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_mi|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -216740,7 +216740,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_mi|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_mi|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -217083,7 +217083,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|azure_sql_mi|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|azure_sql_mi|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -217426,7 +217426,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|fabric_sql_db|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|fabric_sql_db|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -217808,7 +217808,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|fabric_sql_db|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|fabric_sql_db|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -218190,7 +218190,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|fabric_sql_db|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|fabric_sql_db|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -218572,7 +218572,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|fabric_sql_db|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|fabric_sql_db|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -218954,7 +218954,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|fabric_sql_db|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|fabric_sql_db|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -219336,7 +219336,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2019|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2019|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -219657,7 +219657,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2019|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2019|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -219978,7 +219978,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2019|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2019|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -220238,7 +220238,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -220276,8 +220276,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -220289,7 +220289,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2019|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2019|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -220572,7 +220572,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2019|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2019|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -220855,7 +220855,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2022|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2022|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -221173,7 +221173,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2022|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2022|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -221491,7 +221491,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2022|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2022|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -221750,7 +221750,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -221787,8 +221787,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -221800,7 +221800,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2022|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2022|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -222106,7 +222106,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2022|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2022|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -222412,7 +222412,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2025|adls": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2025|adls": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -222730,7 +222730,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2025|azure_blob": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2025|azure_blob": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -223048,7 +223048,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2025|local": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2025|local": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -223307,7 +223307,7 @@
     "go_batches": 0,
     "has_sql": true,
     "markers": [
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_CLOB",
      "\\b(SINGLE_CLOB|SINGLE_NCLOB|SINGLE_BLOB)\\b=>SINGLE_NCLOB",
@@ -223344,8 +223344,8 @@
     "markers": [
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
      "\\bFORMAT\\s*=\\s*\\'([^\\']*)\\'=>CSV",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
-     "\\bBULK\\s+N?\\'([^\\']*)\\'=>demo/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
+     "\\bBULK\\s+N?\\'([^\\']*)\\'=>data sample/unicode/unicode_utf8_bom.csv",
      "\\bCODEPAGE\\s*=\\s*\\'([^\\']*)\\'=>65001",
      "\\bFIELDTERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
      "\\bFIRSTROW\\s*=\\s*(\\d+)=>2",
@@ -223357,7 +223357,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2025|onelake": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2025|onelake": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,
@@ -223663,7 +223663,7 @@
     ]
    }
   },
-  "demo/unicode/unicode_utf8_bom.csv|sql_server_2025|s3": {
+  "data sample/unicode/unicode_utf8_bom.csv|sql_server_2025|s3": {
    "best_practices": {
     "columns": [],
     "go_batches": 0,

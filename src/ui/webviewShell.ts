@@ -111,7 +111,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
         <p class="source" id="source-label"></p>
       </div>
       <ul class="file-list" id="file-list" role="tree" aria-labelledby="file-pane-title" tabindex="0"></ul>
-      <p class="empty" id="file-empty">Open a SQL-readable file or folder to begin.</p>
+      <p class="empty" id="file-empty">Select a file, folder, or URL to begin.</p>
     </nav>
 
     <main class="content" id="main" tabindex="-1">

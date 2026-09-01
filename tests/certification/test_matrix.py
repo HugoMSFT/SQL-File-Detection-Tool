@@ -345,7 +345,7 @@ def test_placeholder_script_never_implies_it_is_runnable(rules):
 
     expect = rules['R17']['expect']
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata, target_platform='azure_sql_db'
@@ -364,7 +364,7 @@ def test_staged_cloud_script_has_no_placeholders_and_no_staging_notice():
     from external_file_detection.file_detector import FileDetector
 
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata,
@@ -382,7 +382,7 @@ def test_blob_paths_keep_their_case(rules):
 
     assert rules['R14']['expect']['paths_are_case_sensitive'] is True
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata,

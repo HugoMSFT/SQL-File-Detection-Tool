@@ -31,8 +31,8 @@ import {
  * separately in `generatorMatrix.test.ts` instead of against the baseline.
  */
 const DIVERGENT_FIXTURES: ReadonlySet<string> = new Set([
-    'demo/tables/events_delta',
-    'demo/orc/all_types.orc',
+    'data sample/tables/events_delta',
+    'data sample/orc/all_types.orc',
 ]);
 
 const baseline = loadBaseline();

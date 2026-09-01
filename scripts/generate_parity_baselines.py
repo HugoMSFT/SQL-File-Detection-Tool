@@ -5,7 +5,7 @@ The native core in ``src/native`` is a from-scratch TypeScript port of
 :mod:`external_file_detection.file_detector` and
 :mod:`external_file_detection.sql_generator`. To prove the port, this script
 records what the *current Python implementation* produces for the committed
-``demo/`` fixtures and writes it to a JSON baseline that the Node test suite
+``data sample/`` fixtures and writes it to a JSON baseline that the Node test suite
 compares against.
 
 The baseline is deliberately normalised so it is reproducible on any machine:
@@ -44,25 +44,25 @@ BASELINE_PATH = os.path.join(
 
 #: Fixtures covered by the parity matrix, relative to the repository root.
 FIXTURES: List[str] = [
-    'demo/csv/sales_scalars.csv',
-    'demo/csv/sales_scalars.tsv',
-    'demo/csv/sales_scalars_pipe.csv',
-    'demo/json/orders_array.json',
-    'demo/json/orders.ndjson',
-    'demo/json/order_single_object.json',
-    'demo/parquet/all_types.parquet',
-    'demo/parquet/sales.parquet',
-    'demo/excel/inventory.xlsx',
-    'demo/orc/all_types.orc',
-    'demo/text/readme_sample.txt',
-    'demo/unicode/unicode_utf8.csv',
-    'demo/unicode/unicode_utf8_bom.csv',
-    'demo/unicode/unicode_utf16le_bom.csv',
-    'demo/unicode/unicode_utf16le_bom.tsv',
-    'demo/unicode/japanese_cp932.csv',
-    'demo/unicode/collation_cases_utf8.csv',
-    'demo/tables/events_delta',
-    'demo/tables/events_iceberg',
+    'data sample/csv/sales_scalars.csv',
+    'data sample/csv/sales_scalars.tsv',
+    'data sample/csv/sales_scalars_pipe.csv',
+    'data sample/json/orders_array.json',
+    'data sample/json/orders.ndjson',
+    'data sample/json/order_single_object.json',
+    'data sample/parquet/all_types.parquet',
+    'data sample/parquet/sales.parquet',
+    'data sample/excel/inventory.xlsx',
+    'data sample/orc/all_types.orc',
+    'data sample/text/readme_sample.txt',
+    'data sample/unicode/unicode_utf8.csv',
+    'data sample/unicode/unicode_utf8_bom.csv',
+    'data sample/unicode/unicode_utf16le_bom.csv',
+    'data sample/unicode/unicode_utf16le_bom.tsv',
+    'data sample/unicode/japanese_cp932.csv',
+    'data sample/unicode/collation_cases_utf8.csv',
+    'data sample/tables/events_delta',
+    'data sample/tables/events_iceberg',
 ]
 
 #: Storage URLs exercised by the generator matrix.

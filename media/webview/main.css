@@ -405,6 +405,19 @@ body.surface-sidebar .file-pane {
   padding: 0 10px;
 }
 
+.start-state {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.start-state .empty {
+  margin: 0;
+  font-size: 1em;
+}
+
 .tree-group {
   list-style: none;
   margin: 0;

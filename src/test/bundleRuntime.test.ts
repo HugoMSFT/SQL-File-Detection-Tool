@@ -29,7 +29,7 @@ import { createMockVscode } from './mocks/vscode';
 
 const REPO = path.resolve(__dirname, '..', '..');
 const BUNDLE = path.join(REPO, 'dist', 'extension.js');
-const SAMPLE = path.join(REPO, 'test_data', 'employees.csv');
+const SAMPLE = path.join(REPO, 'data sample', 'csv', 'employees.csv');
 
 /**
  * Budgets are ceilings for a shared runner, not targets. The targets are an

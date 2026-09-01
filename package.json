@@ -2,7 +2,7 @@
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
   "description": "Analyze SQL-readable CSV, JSON, Parquet, ORC, Delta and Iceberg sources and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -214,6 +214,7 @@
     "icon": "node scripts/generate-icon.js",
     "notices": "node scripts/generate-notices.js",
     "test": "npm run compile && npm run bundle && node scripts/run-tests.js",
+    "version:check": "node scripts/check-extension-version.js",
     "package": "node scripts/ensure-dist.js && vsce package --out dist",
     "audit:vsix": "node scripts/audit-vsix.js",
     "capture:gif": "npm run compile && node scripts/capture-walkthrough.js"

@@ -23,8 +23,9 @@ import type { AppStateSnapshot, AzureAuthMode } from '../../protocol';
 import type { StatementKind } from '../../native';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
-const FIXTURES = path.join(REPO, 'test_data');
-const DEMO = path.join(REPO, 'demo');
+const SAMPLES = path.join(REPO, 'data sample');
+const FIXTURES = path.join(SAMPLES, 'csv');
+const DEMO = SAMPLES;
 
 interface Recorder {
     host: UiHost;
@@ -550,7 +551,7 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
     try {
         await ui.loadFiles([
             path.join(FIXTURES, 'sample.csv'),
-            path.join(FIXTURES, 'sample.parquet'),
+            path.join(SAMPLES, 'parquet', 'sample.parquet'),
         ]);
         await settle();
         await ui.handle({ type: 'setTab', tab: 'metadata' });
@@ -580,9 +581,9 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
 for (const [name, fixture, fileType] of [
     ['CSV', path.join(FIXTURES, 'employees.csv'), 'csv'],
     ['TSV', path.join(FIXTURES, 'web_access_logs.tsv'), 'csv'],
-    ['JSON', path.join(FIXTURES, 'sample.json'), 'json'],
-    ['JSON Lines', path.join(FIXTURES, 'events.jsonl'), 'json'],
-    ['Parquet', path.join(FIXTURES, 'sample.parquet'), 'parquet'],
+    ['JSON', path.join(SAMPLES, 'json', 'sample.json'), 'json'],
+    ['JSON Lines', path.join(SAMPLES, 'json', 'events.jsonl'), 'json'],
+    ['Parquet', path.join(SAMPLES, 'parquet', 'sample.parquet'), 'parquet'],
 ] as const) {
     test(`${name} is analysed natively and generates SQL`, async () => {
         const record = recorder();
@@ -603,9 +604,32 @@ for (const [name, fixture, fileType] of [
     });
 }
 
+test('a large Parquet file keeps the default preview bounded', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.activeFile = path.join(
+            SAMPLES,
+            'performance',
+            'events_250k.parquet',
+        );
+        await ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(state.error, null);
+        assert.equal(state.metadata?.row_count, 250_000);
+        assert.equal(state.preview?.rows.length, 25);
+        assert.equal(state.preview?.truncated, true);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 for (const [name, fixture] of [
-    ['Delta', path.join(FIXTURES, 'delta_table')],
-    ['Iceberg', path.join(FIXTURES, 'iceberg_table')],
+    ['Delta', path.join(SAMPLES, 'tables', 'delta_table')],
+    ['Iceberg', path.join(SAMPLES, 'tables', 'iceberg_table')],
 ] as const) {
     test(`${name} directories are analysed through the native service`, async () => {
         const record = recorder();
@@ -625,7 +649,7 @@ for (const [name, fixture] of [
 }
 
 test('a Unicode CSV keeps its characters through analysis and generation', async () => {
-    const unicode = path.join(DEMO, 'collation_cases_utf8.csv');
+    const unicode = path.join(DEMO, 'unicode', 'collation_cases_utf8.csv');
     if (!fs.existsSync(unicode)) {
         return;
     }
@@ -650,7 +674,7 @@ test('a Unicode CSV keeps its characters through analysis and generation', async
 });
 
 test('ORC reports its limitation and never reaches for Python', async () => {
-    const orc = path.join(DEMO, 'all_types.orc');
+    const orc = path.join(DEMO, 'orc', 'all_types.orc');
     if (!fs.existsSync(orc)) {
         return;
     }
@@ -1517,6 +1541,114 @@ test('Microsoft storage selection replaces a stale SAS URL authentication choice
             snapshot(record).storageUrl,
             'https://myaccount.blob.core.windows.net/data/a.csv',
         );
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('the complete source workflow stays coherent across local, URL, and Entra paths', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    const large = path.join(SAMPLES, 'performance', 'events_250k.parquet');
+    const downloaded = path.join(record.downloadDir, 'events_250k.parquet');
+    const publicAccount = 'azureopendatastorage';
+    const publicContainer = 'nyctlc';
+    const publicBlob =
+        'yellow/puYear=2018/puMonth=6/'
+        + 'part-00000-tid-8898858832658823408-a1de80bd-eed3-4d11-b9d4-'
+        + 'fa74bfbd47bc-426339-119.c000.snappy.parquet';
+    const publicUrl =
+        `https://${publicAccount}.blob.core.windows.net/${publicContainer}/${publicBlob}`;
+    fs.copyFileSync(large, downloaded);
+
+    try {
+        assert.equal(snapshot(record).activeTab, 'preview');
+        assert.equal(snapshot(record).selectedFileId, null);
+        assert.equal(snapshot(record).preview, null);
+
+        await ui.loadFiles([large]);
+        await settle();
+        assert.equal(snapshot(record).metadata?.row_count, 250_000);
+        assert.equal(snapshot(record).preview?.rows.length, 25);
+
+        await ui.handle({
+            type: 'setStorageUrl',
+            value: `${publicUrl}?sv=2026&sig=NEVER_EXPOSE`,
+        });
+        await settle();
+        assert.equal(snapshot(record).authMethod, 'sas');
+        assert.match(
+            snapshot(record).statements?.credential_setup ?? '',
+            /CREATE EXTERNAL DATA SOURCE/,
+        );
+        assert.ok(!JSON.stringify(snapshot(record)).includes('NEVER_EXPOSE'));
+
+        const tenantId = '11111111-2222-3333-4444-555555555555';
+        record.azure.connectResult = {
+            connected: true,
+            mode: 'vscode',
+            identity: 'user@contoso.example',
+            account: null,
+            tenantId,
+            container: null,
+            prefix: '',
+            canListSubscriptions: false,
+        };
+        record.azure.currentBrowser = fakeBrowser({
+            account: publicAccount,
+            listContainers: async () => ({
+                names: [publicContainer],
+                continuation: null,
+            }),
+            downloadBlob: async () => ({
+                path: downloaded,
+                bytes: fs.statSync(downloaded).size,
+            }),
+            blobUrl: (container: string, blob: string) =>
+                `https://${publicAccount}.blob.core.windows.net/${container}/${blob}`,
+        });
+
+        await ui.handle({ type: 'azureConnect', mode: 'vscode', tenantId });
+        await ui.handle({ type: 'azureSetAccount', account: publicAccount });
+        await ui.handle({
+            type: 'azureListBlobs',
+            container: publicContainer,
+            prefix: '',
+            continuation: '',
+        });
+        await ui.handle({
+            type: 'azureAnalyzeBlob',
+            container: publicContainer,
+            blob: publicBlob,
+        });
+        await settle();
+
+        let state = snapshot(record);
+        assert.equal(state.error, null);
+        assert.equal(state.activeTab, 'preview');
+        assert.equal(state.sourceKind, 'azure');
+        assert.equal(state.authMethod, 'user_identity');
+        assert.equal(state.azure.tenantId, tenantId);
+        assert.equal(state.azure.account, publicAccount);
+        assert.equal(state.azure.container, publicContainer);
+        assert.equal(state.metadata?.row_count, 250_000);
+        assert.equal(state.preview?.rows.length, 25);
+        assert.equal(state.storageUrl, publicUrl);
+
+        await ui.handle({ type: 'setPlatform', platform: 'fabric_sql_db' });
+        await ui.handle({
+            type: 'setStorageUrl',
+            value:
+                'https://onelake.dfs.fabric.microsoft.com/workspace/'
+                + 'lakehouse.Lakehouse/Files/events_250k.parquet',
+        });
+        await settle();
+
+        state = snapshot(record);
+        assert.equal(state.dataSourceType, 'fabric_onelake');
+        assert.match(state.statements?.credential_setup ?? '', /abfss:\/\//i);
+        assert.ok(!JSON.stringify(state).includes('NEVER_EXPOSE'));
     } finally {
         await ui.dispose();
         cleanup(record);

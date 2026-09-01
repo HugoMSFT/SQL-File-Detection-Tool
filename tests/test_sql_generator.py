@@ -162,7 +162,7 @@ def test_external_table_generation():
     
     metadata = {
         'file_type': 'csv',
-        'file_path': 'test_data/sample.csv',
+        'file_path': 'data sample/csv/sample.csv',
         'schema': [('id', 'int64'), ('name', 'object'), ('age', 'int64')]
     }
     

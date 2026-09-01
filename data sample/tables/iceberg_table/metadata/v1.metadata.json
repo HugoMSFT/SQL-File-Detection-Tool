@@ -1,7 +1,7 @@
 {
   "format-version": 2,
   "table-uuid": "sample-iceberg-table",
-  "location": "C:/GitHub/ExternalFileDetection/test_data/iceberg_table",
+  "location": "data sample/tables/iceberg_table",
   "last-sequence-number": 1,
   "last-updated-ms": 1760000000000,
   "last-column-id": 4,

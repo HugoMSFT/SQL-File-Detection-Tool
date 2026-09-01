@@ -5,22 +5,26 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
-root = Path('test_data')
-root.mkdir(exist_ok=True)
+root = Path(__file__).resolve().parents[1] / 'data sample'
+csv_root = root / 'csv'
+json_root = root / 'json'
+tables_root = root / 'tables'
+for directory in (csv_root, json_root, tables_root):
+    directory.mkdir(parents=True, exist_ok=True)
 
 employees = pd.DataFrame([
     {"employee_id": 1001, "first_name": "Alice", "last_name": "Ng", "department": "Engineering", "title": "Senior Engineer", "salary": 132500.75, "hire_date": "2021-03-15", "is_active": True, "office": "Seattle", "country": "USA"},
     {"employee_id": 1002, "first_name": "Bob", "last_name": "Patel", "department": "Finance", "title": "Analyst", "salary": 91500.00, "hire_date": "2022-09-01", "is_active": True, "office": "London", "country": "UK"},
     {"employee_id": 1003, "first_name": "Carla", "last_name": "Meyer", "department": "Sales", "title": "Account Manager", "salary": 105300.50, "hire_date": "2020-11-20", "is_active": False, "office": "Berlin", "country": "DE"},
 ])
-employees.to_csv(root / 'employees_wide.csv', index=False)
+employees.to_csv(csv_root / 'employees_wide.csv', index=False)
 
 orders = pd.DataFrame([
     {"order_id": "SO-001", "customer_id": 501, "region": "NA", "channel": "online", "item_count": 3, "subtotal": 89.90, "tax": 7.19, "shipping": 4.99, "total": 102.08, "order_ts": "2026-01-10T09:15:00Z"},
     {"order_id": "SO-002", "customer_id": 777, "region": "EU", "channel": "partner", "item_count": 1, "subtotal": 349.00, "tax": 69.80, "shipping": 0.00, "total": 418.80, "order_ts": "2026-01-11T14:42:00Z"},
     {"order_id": "SO-003", "customer_id": 321, "region": "APAC", "channel": "retail", "item_count": 2, "subtotal": 149.00, "tax": 11.92, "shipping": 6.50, "total": 167.42, "order_ts": "2026-01-12T18:05:00Z"},
 ])
-orders.to_csv(root / 'sales_orders.csv', index=False)
+orders.to_csv(csv_root / 'sales_orders.csv', index=False)
 
 customers = [
     {
@@ -40,16 +44,22 @@ customers = [
         "active": True,
     },
 ]
-(root / 'customers_nested.json').write_text(json.dumps(customers, indent=2), encoding='utf-8')
+(json_root / 'customers_nested.json').write_text(
+    json.dumps(customers, indent=2),
+    encoding='utf-8',
+)
 
 jsonl_rows = [
     {"event_id": 1, "event_type": "login", "user_id": "u-100", "success": True, "ts": "2026-03-01T08:20:00Z"},
     {"event_id": 2, "event_type": "purchase", "user_id": "u-100", "success": True, "amount": 49.99, "ts": "2026-03-01T08:25:14Z"},
     {"event_id": 3, "event_type": "logout", "user_id": "u-100", "success": True, "ts": "2026-03-01T08:30:01Z"},
 ]
-(root / 'events.jsonl').write_text("\n".join(json.dumps(r) for r in jsonl_rows) + "\n", encoding='utf-8')
+(json_root / 'events.jsonl').write_text(
+    "\n".join(json.dumps(r) for r in jsonl_rows) + "\n",
+    encoding='utf-8',
+)
 
-delta_root = root / 'delta_table'
+delta_root = tables_root / 'delta_table'
 (delta_root / '_delta_log').mkdir(parents=True, exist_ok=True)
 (delta_root / 'data').mkdir(parents=True, exist_ok=True)
 
@@ -91,7 +101,7 @@ delta_log = {
     encoding='utf-8'
 )
 
-iceberg_root = root / 'iceberg_table'
+iceberg_root = tables_root / 'iceberg_table'
 (iceberg_root / 'metadata').mkdir(parents=True, exist_ok=True)
 (iceberg_root / 'data').mkdir(parents=True, exist_ok=True)
 
@@ -106,7 +116,7 @@ pq.write_table(pa.Table.from_pandas(iceberg_df), iceberg_data_file, compression=
 iceberg_metadata = {
     "format-version": 2,
     "table-uuid": "sample-iceberg-table",
-    "location": str(iceberg_root.resolve()).replace('\\', '/'),
+    "location": "data sample/tables/iceberg_table",
     "last-sequence-number": 1,
     "last-updated-ms": 1760000000000,
     "last-column-id": 4,
@@ -133,20 +143,4 @@ iceberg_metadata = {
 }
 (iceberg_root / 'metadata' / 'v1.metadata.json').write_text(json.dumps(iceberg_metadata, indent=2), encoding='utf-8')
 
-(root / 'README.md').write_text(
-    '# test_data samples\n\n'
-    'This folder contains local demo datasets for the External File Detection tool.\n\n'
-    '## Files\n'
-    '- sample.csv, sample.json, sample.parquet, sample.txt\n'
-    '- employees_wide.csv (wider CSV schema)\n'
-    '- sales_orders.csv (numeric/date-heavy CSV)\n'
-    '- customers_nested.json (nested JSON array)\n'
-    '- events.jsonl (NDJSON / JSON Lines)\n\n'
-    '## Table-style folders\n'
-    '- delta_table/: Delta-style layout with _delta_log and parquet data file\n'
-    '- iceberg_table/: Iceberg-style layout with metadata and parquet data file\n\n'
-    'Note: The Delta and Iceberg folders are sample layouts for testing tooling and metadata handling.\n',
-    encoding='utf-8'
-)
-
-print('Created extended sample datasets in test_data/')
+print(f'Created additional sample datasets in {root}')
