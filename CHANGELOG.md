@@ -4,6 +4,13 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.3]
+
+### Changed
+
+- Added ETL, Data Engineering, Bulk Loading, Data Virtualization, and PolyBase
+  as Marketplace search tags and visible listing topics.
+
 ## [1.0.2]
 
 ### Changed

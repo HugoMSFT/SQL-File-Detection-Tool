@@ -15,6 +15,7 @@ const manifest = JSON.parse(
     name: string;
     publisher: string;
     main: string;
+    keywords: string[];
     contributes: {
         commands: Array<{ command: string; title: string; category?: string }>;
         configuration: { properties: Record<string, { default?: unknown; enum?: string[] }> };
@@ -104,4 +105,13 @@ test('the manifest metadata is Marketplace-ready', () => {
     assert.equal(manifest.publisher, 'HugoMSFT');
     assert.equal(manifest.name, 'sql-file-detection-tool');
     assert.equal(manifest.main, './dist/extension.js');
+    for (const keyword of [
+        'etl',
+        'data engineering',
+        'bulk loading',
+        'data virtualization',
+        'polybase',
+    ]) {
+        assert.ok(manifest.keywords.includes(keyword), `${keyword} keyword is missing`);
+    }
 });
