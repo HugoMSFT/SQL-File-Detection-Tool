@@ -4,6 +4,16 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.5]
+
+### Fixed
+
+- Kept scientific-notation fields as text for direct file loading and preserved
+  exact numeric or unexpected late values in the native and Python preview APIs.
+- Bounded NDJSON schema growth, aligned Python's CSV field limit with the
+  native 4 MiB guard, and made oversized or non-ASCII numeric tokens fall back
+  to text without expensive integer conversion.
+
 ## [1.0.4]
 
 ### Fixed

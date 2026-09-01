@@ -15,6 +15,7 @@ import {
     CANCELLATION_POLL_INTERVAL,
     CSV_SAMPLE_SIZE,
     JSON_FULL_PARSE_MAX_BYTES,
+    JSON_SCHEMA_MAX_COLUMNS,
     JSON_SAMPLE_MAX_CHARS,
     JSON_SCHEMA_SAMPLE_ROWS,
     MAX_NDJSON_LINE_BYTES,
@@ -80,12 +81,17 @@ class JsonSchemaAccumulator {
     private readonly keys: string[] = [];
     private readonly fields = new Map<string, JsonFieldEvidence>();
     private rowCount = 0;
+    private schemaTruncated = false;
 
     public add(row: ObjectRow): void {
         this.rowCount += 1;
         for (const [key, value] of row) {
             let evidence = this.fields.get(key);
             if (!evidence) {
+                if (this.fields.size >= JSON_SCHEMA_MAX_COLUMNS) {
+                    this.schemaTruncated = true;
+                    continue;
+                }
                 evidence = {
                     families: new Set<JsonValueFamily>(),
                     numeric: new NumericColumnAccumulator(),
@@ -137,7 +143,8 @@ class JsonSchemaAccumulator {
         const sampleValues: Record<string, SampleValue> = {};
         const observed: Record<string, number> = {};
         const maxLengths: Record<string, number> = {};
-        let typedProjectionSafe = !sampled;
+        const inferenceSampled = sampled || this.schemaTruncated;
+        let typedProjectionSafe = !inferenceSampled;
 
         for (const key of this.keys) {
             const evidence = this.fields.get(key)!;
@@ -159,7 +166,7 @@ class JsonSchemaAccumulator {
                 schema.push([key, 'str']);
                 if (evidence.maxStringLength !== null) {
                     observed[key] = evidence.maxStringLength;
-                    if (!sampled) {
+                    if (!inferenceSampled) {
                         maxLengths[key] = sizeSampledString(evidence.maxStringLength);
                     }
                 }
@@ -173,9 +180,9 @@ class JsonSchemaAccumulator {
             sampleValues[key] = jsonSafe(evidence.first);
         }
 
-        return {
+        const result: Partial<FileMetadata> = {
             schema,
-            row_count: rowCount === null && !sampled ? this.rowCount : rowCount,
+            row_count: rowCount === null && !inferenceSampled ? this.rowCount : rowCount,
             column_count: schema.length,
             has_header: true,
             json_format: jsonFormat,
@@ -184,12 +191,24 @@ class JsonSchemaAccumulator {
             json_typed_projection_safe: typedProjectionSafe,
             nullable_columns: this.keys.slice(),
             nullability_inference: 'conservative',
-            schema_inference: sampled ? 'sampled' : 'full',
+            schema_inference: inferenceSampled ? 'sampled' : 'full',
             schema_sample_size: this.rowCount,
             observed_max_string_lengths: observed,
             max_string_lengths: maxLengths,
         };
+        if (this.schemaTruncated) {
+            result.analysis_truncated = true;
+            result.warning =
+                `JSON schema inference retained the first ${JSON_SCHEMA_MAX_COLUMNS.toLocaleString('en-US')} ` +
+                'distinct keys. Additional keys were not retained; generated SQL uses ' +
+                'preservation-oriented types until the source shape is normalized.';
+        }
+        return result;
     }
+}
+
+function appendWarning(result: Partial<FileMetadata>, warning: string): void {
+    result.warning = result.warning ? `${result.warning} ${warning}` : warning;
 }
 
 /**
@@ -276,8 +295,10 @@ async function analyzeNdjsonCandidate(
 
     const result = accumulator.build('ndjson', rowCount, false);
     if (invalidLines > 0) {
-        result.warning =
-            `Skipped ${invalidLines} invalid NDJSON line${invalidLines === 1 ? '' : 's'}.`;
+        appendWarning(
+            result,
+            `Skipped ${invalidLines} invalid NDJSON line${invalidLines === 1 ? '' : 's'}.`,
+        );
     }
     return result;
 }
@@ -363,9 +384,11 @@ export async function analyzeJson(
             if (rows.length > 0) {
                 const result = buildJsonResult(rows, 'array', null, true);
                 result.analysis_truncated = true;
-                result.warning =
+                appendWarning(
+                    result,
                     'JSON array exceeds the full-parse limit; ' +
-                    'schema was inferred from a bounded prefix.';
+                    'schema was inferred from a bounded prefix.',
+                );
                 return result;
             }
         }
@@ -407,9 +430,11 @@ export async function analyzeJson(
                 sampled,
             );
             if (sampled) {
-                result.warning =
+                appendWarning(
+                    result,
                     'The JSON array mixes object rows with other values. Generated SQL ' +
-                    'uses preservation-oriented types until the shape is normalized.';
+                    'uses preservation-oriented types until the shape is normalized.',
+                );
             }
             return result;
         }

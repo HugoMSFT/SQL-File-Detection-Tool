@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.5
+
+- Preserved exact numeric and unexpected sampled values in previews, and kept
+  scientific notation loadable as text.
+- Bounded dynamic NDJSON schemas and aligned CSV field-size safety across the
+  extension and Python CLI.
+
 ## 1.0.4
 
 - Preserved exact CSV and JSON numerics, aggregated complete inputs beyond the

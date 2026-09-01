@@ -225,7 +225,18 @@ function looksNumeric(value: string): boolean {
 }
 
 function looksBoolean(value: string): boolean {
-    return TRUE_LITERALS.has(value) || FALSE_LITERALS.has(value);
+    return parseBooleanToken(value) !== null;
+}
+
+/** Parse a supported boolean token, or return null rather than fabricating false. */
+export function parseBooleanToken(value: string): boolean | null {
+    if (TRUE_LITERALS.has(value)) {
+        return true;
+    }
+    if (FALSE_LITERALS.has(value)) {
+        return false;
+    }
+    return null;
 }
 
 /**

@@ -825,9 +825,13 @@ containers = azure_auth.list_containers(connection, account_name="myaccount")
 - CSV files below 100 MB and NDJSON streams aggregate type and width evidence
   across every row at constant schema memory.
 - JSON documents below 32 MB are inspected completely.
+- Scientific-notation tokens remain text because direct CSV/OPENROWSET loading
+  does not normalize exponent syntax before converting to `DECIMAL`.
 - Large JSON arrays use a bounded prefix sample; their row count is reported as
   unknown rather than guessed, and generated types default to `NVARCHAR(MAX)`
   until explicitly overridden.
+- NDJSON retains at most 4,096 distinct schema keys; reaching that cap marks the
+  result truncated and disables typed `OPENJSON` projections.
 - Inferred CSV, JSON, and Excel columns remain conservatively nullable.
 - Complete string-width observations include sizing headroom; unknown widths use
   `NVARCHAR(MAX)`.

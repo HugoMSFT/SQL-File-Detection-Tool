@@ -333,6 +333,33 @@ test('analyzing the current file produces metadata, preview and SQL', async () =
     }
 });
 
+test('controller preview preserves exact CSV numerics as source text', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-exact-preview-'));
+    const source = path.join(root, 'exact.csv');
+    fs.writeFileSync(
+        source,
+        'big,decimal,scientific\n' +
+        '9223372036854775807,12345678901234.5678,1e-7\n',
+    );
+    const record = recorder({ workspaceFolders: [root] });
+    const ui = controller(record);
+    try {
+        record.activeFile = source;
+        await ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+
+        assert.deepEqual(snapshot(record).preview?.rows[0], [
+            '9223372036854775807',
+            '12345678901234.5678',
+            '1e-7',
+        ]);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 test('an unsupported editor scheme is reported instead of failing obscurely', async () => {
     const record = recorder();
     const ui = controller(record);

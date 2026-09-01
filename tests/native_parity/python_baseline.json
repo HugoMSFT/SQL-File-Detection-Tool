@@ -18,7 +18,8 @@
     "order_date": 13,
     "order_timestamp": 24,
     "order_timestamp_utc": 25,
-    "product_name": 23
+    "product_name": 23,
+    "unit_price": 12
    },
    "nullability_inference": "conservative",
    "nullable_columns": [
@@ -38,7 +39,8 @@
     "order_date": 10,
     "order_timestamp": 19,
     "order_timestamp_utc": 20,
-    "product_name": 18
+    "product_name": 18,
+    "unit_price": 9
    },
    "parquet_metadata": null,
    "row_count": 6,
@@ -47,7 +49,7 @@
     [
      1,
      12,
-     19.99,
+     "19.99",
      -3.5,
      true,
      "Widget, standard",
@@ -59,7 +61,7 @@
     [
      2,
      -4,
-     0.0,
+     "0.0",
      0.0,
      false,
      "Gadget \"Pro\"",
@@ -71,7 +73,7 @@
     [
      3,
      0,
-     1234.5678,
+     "1234.5678",
      21.25,
      true,
      "\u00dcnicode \u00dcnit \u2014 \u2605",
@@ -92,7 +94,7 @@
     ],
     [
      "unit_price",
-     "decimal(11,7)"
+     "object"
     ],
     [
      "temperature_c",
@@ -142,7 +144,8 @@
     "order_date": 13,
     "order_timestamp": 24,
     "order_timestamp_utc": 25,
-    "product_name": 23
+    "product_name": 23,
+    "unit_price": 12
    },
    "nullability_inference": "conservative",
    "nullable_columns": [
@@ -162,7 +165,8 @@
     "order_date": 10,
     "order_timestamp": 19,
     "order_timestamp_utc": 20,
-    "product_name": 18
+    "product_name": 18,
+    "unit_price": 9
    },
    "parquet_metadata": null,
    "row_count": 6,
@@ -171,7 +175,7 @@
     [
      1,
      12,
-     19.99,
+     "19.99",
      -3.5,
      true,
      "Widget, standard",
@@ -183,7 +187,7 @@
     [
      2,
      -4,
-     0.0,
+     "0.0",
      0.0,
      false,
      "Gadget \"Pro\"",
@@ -195,7 +199,7 @@
     [
      3,
      0,
-     1234.5678,
+     "1234.5678",
      21.25,
      true,
      "\u00dcnicode \u00dcnit \u2014 \u2605",
@@ -216,7 +220,7 @@
     ],
     [
      "unit_price",
-     "decimal(11,7)"
+     "object"
     ],
     [
      "temperature_c",
@@ -266,7 +270,8 @@
     "order_date": 13,
     "order_timestamp": 24,
     "order_timestamp_utc": 25,
-    "product_name": 23
+    "product_name": 23,
+    "unit_price": 12
    },
    "nullability_inference": "conservative",
    "nullable_columns": [
@@ -286,7 +291,8 @@
     "order_date": 10,
     "order_timestamp": 19,
     "order_timestamp_utc": 20,
-    "product_name": 18
+    "product_name": 18,
+    "unit_price": 9
    },
    "parquet_metadata": null,
    "row_count": 6,
@@ -295,7 +301,7 @@
     [
      1,
      12,
-     19.99,
+     "19.99",
      -3.5,
      true,
      "Widget, standard",
@@ -307,7 +313,7 @@
     [
      2,
      -4,
-     0.0,
+     "0.0",
      0.0,
      false,
      "Gadget \"Pro\"",
@@ -319,7 +325,7 @@
     [
      3,
      0,
-     1234.5678,
+     "1234.5678",
      21.25,
      true,
      "\u00dcnicode \u00dcnit \u2014 \u2605",
@@ -340,7 +346,7 @@
     ],
     [
      "unit_price",
-     "decimal(11,7)"
+     "object"
     ],
     [
      "temperature_c",
@@ -1740,7 +1746,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -1791,7 +1797,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2042,7 +2048,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2082,7 +2088,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2122,7 +2128,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2179,7 +2185,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2284,7 +2290,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2335,7 +2341,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2586,7 +2592,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2626,7 +2632,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2666,7 +2672,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2723,7 +2729,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2828,7 +2834,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -2879,7 +2885,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3130,7 +3136,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3170,7 +3176,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3210,7 +3216,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3267,7 +3273,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3372,7 +3378,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3423,7 +3429,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3674,7 +3680,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3714,7 +3720,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3754,7 +3760,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3811,7 +3817,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3916,7 +3922,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -3967,7 +3973,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4218,7 +4224,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4258,7 +4264,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4298,7 +4304,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4355,7 +4361,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4460,7 +4466,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4511,7 +4517,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4761,7 +4767,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4801,7 +4807,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4841,7 +4847,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -4898,7 +4904,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5003,7 +5009,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5054,7 +5060,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5304,7 +5310,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5344,7 +5350,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5384,7 +5390,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5441,7 +5447,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5546,7 +5552,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5597,7 +5603,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5847,7 +5853,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5887,7 +5893,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5927,7 +5933,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -5984,7 +5990,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6089,7 +6095,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6140,7 +6146,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6390,7 +6396,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6430,7 +6436,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6470,7 +6476,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6527,7 +6533,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6632,7 +6638,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6683,7 +6689,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6933,7 +6939,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -6973,7 +6979,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7013,7 +7019,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7070,7 +7076,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7148,7 +7154,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7188,7 +7194,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7259,7 +7265,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7310,7 +7316,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7556,7 +7562,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7596,7 +7602,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7636,7 +7642,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7696,7 +7702,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7770,7 +7776,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7810,7 +7816,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7881,7 +7887,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -7932,7 +7938,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8178,7 +8184,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8218,7 +8224,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8258,7 +8264,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8318,7 +8324,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8392,7 +8398,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8432,7 +8438,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8503,7 +8509,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8554,7 +8560,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8800,7 +8806,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8840,7 +8846,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8880,7 +8886,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -8940,7 +8946,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9014,7 +9020,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9054,7 +9060,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9125,7 +9131,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9176,7 +9182,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9422,7 +9428,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9462,7 +9468,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9502,7 +9508,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9562,7 +9568,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9636,7 +9642,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9676,7 +9682,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9747,7 +9753,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -9798,7 +9804,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10044,7 +10050,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10084,7 +10090,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10124,7 +10130,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10184,7 +10190,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10283,7 +10289,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10335,7 +10341,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10585,7 +10591,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10625,7 +10631,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10680,7 +10686,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10784,7 +10790,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -10836,7 +10842,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11086,7 +11092,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11126,7 +11132,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11181,7 +11187,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11279,7 +11285,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11331,7 +11337,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11576,7 +11582,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11616,7 +11622,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11672,7 +11678,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11770,7 +11776,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -11822,7 +11828,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12067,7 +12073,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12107,7 +12113,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12213,7 +12219,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12265,7 +12271,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12510,7 +12516,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12550,7 +12556,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12662,7 +12668,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12713,7 +12719,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -12963,7 +12969,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13003,7 +13009,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13057,7 +13063,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13160,7 +13166,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13211,7 +13217,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13461,7 +13467,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13501,7 +13507,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13555,7 +13561,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13652,7 +13658,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13703,7 +13709,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13948,7 +13954,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -13988,7 +13994,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14043,7 +14049,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14141,7 +14147,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14192,7 +14198,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14437,7 +14443,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14477,7 +14483,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14534,7 +14540,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14627,7 +14633,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14678,7 +14684,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14923,7 +14929,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -14963,7 +14969,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15020,7 +15026,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15119,7 +15125,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15170,7 +15176,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15420,7 +15426,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15460,7 +15466,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15514,7 +15520,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15617,7 +15623,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15668,7 +15674,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15918,7 +15924,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -15958,7 +15964,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16012,7 +16018,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16109,7 +16115,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16160,7 +16166,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16405,7 +16411,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16445,7 +16451,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16500,7 +16506,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16598,7 +16604,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16649,7 +16655,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16894,7 +16900,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16934,7 +16940,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -16991,7 +16997,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17084,7 +17090,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17135,7 +17141,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17380,7 +17386,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17420,7 +17426,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17477,7 +17483,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17578,7 +17584,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17629,7 +17635,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17880,7 +17886,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17920,7 +17926,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -17960,7 +17966,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18017,7 +18023,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18122,7 +18128,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18173,7 +18179,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18424,7 +18430,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18464,7 +18470,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18504,7 +18510,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18561,7 +18567,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18666,7 +18672,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18717,7 +18723,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -18968,7 +18974,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19008,7 +19014,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19048,7 +19054,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19105,7 +19111,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19210,7 +19216,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19261,7 +19267,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19512,7 +19518,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19552,7 +19558,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19592,7 +19598,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19649,7 +19655,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19754,7 +19760,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -19805,7 +19811,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20056,7 +20062,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20096,7 +20102,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20136,7 +20142,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20193,7 +20199,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20298,7 +20304,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20349,7 +20355,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20599,7 +20605,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20639,7 +20645,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20679,7 +20685,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20736,7 +20742,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20841,7 +20847,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -20892,7 +20898,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21142,7 +21148,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21182,7 +21188,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21222,7 +21228,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21279,7 +21285,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21384,7 +21390,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21435,7 +21441,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21685,7 +21691,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21725,7 +21731,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21765,7 +21771,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21822,7 +21828,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21927,7 +21933,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -21978,7 +21984,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22228,7 +22234,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22268,7 +22274,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22308,7 +22314,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22365,7 +22371,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22470,7 +22476,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22521,7 +22527,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22771,7 +22777,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22811,7 +22817,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22851,7 +22857,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22908,7 +22914,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -22986,7 +22992,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23026,7 +23032,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23097,7 +23103,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23148,7 +23154,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23394,7 +23400,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23434,7 +23440,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23474,7 +23480,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23534,7 +23540,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23608,7 +23614,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23648,7 +23654,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23719,7 +23725,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -23770,7 +23776,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24016,7 +24022,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24056,7 +24062,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24096,7 +24102,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24156,7 +24162,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24230,7 +24236,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24270,7 +24276,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24341,7 +24347,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24392,7 +24398,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24638,7 +24644,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24678,7 +24684,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24718,7 +24724,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24778,7 +24784,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24852,7 +24858,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24892,7 +24898,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -24963,7 +24969,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25014,7 +25020,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25260,7 +25266,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25300,7 +25306,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25340,7 +25346,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25400,7 +25406,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25474,7 +25480,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25514,7 +25520,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25585,7 +25591,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25636,7 +25642,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25882,7 +25888,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25922,7 +25928,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -25962,7 +25968,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26022,7 +26028,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26121,7 +26127,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26173,7 +26179,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26423,7 +26429,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26463,7 +26469,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26518,7 +26524,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26622,7 +26628,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26674,7 +26680,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26924,7 +26930,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -26964,7 +26970,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27019,7 +27025,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27117,7 +27123,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27169,7 +27175,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27414,7 +27420,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27454,7 +27460,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27510,7 +27516,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27608,7 +27614,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27660,7 +27666,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27905,7 +27911,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -27945,7 +27951,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28051,7 +28057,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28103,7 +28109,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28348,7 +28354,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28388,7 +28394,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28500,7 +28506,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28551,7 +28557,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28801,7 +28807,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28841,7 +28847,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28895,7 +28901,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -28998,7 +29004,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29049,7 +29055,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29299,7 +29305,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29339,7 +29345,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29393,7 +29399,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29490,7 +29496,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29541,7 +29547,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29786,7 +29792,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29826,7 +29832,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29881,7 +29887,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -29979,7 +29985,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30030,7 +30036,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30275,7 +30281,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30315,7 +30321,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30372,7 +30378,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30465,7 +30471,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30516,7 +30522,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30761,7 +30767,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30801,7 +30807,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30858,7 +30864,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -30957,7 +30963,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31008,7 +31014,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31258,7 +31264,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31298,7 +31304,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31352,7 +31358,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31455,7 +31461,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31506,7 +31512,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31756,7 +31762,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31796,7 +31802,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31850,7 +31856,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31947,7 +31953,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -31998,7 +32004,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32243,7 +32249,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32283,7 +32289,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32338,7 +32344,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32436,7 +32442,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32487,7 +32493,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32732,7 +32738,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32772,7 +32778,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32829,7 +32835,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32922,7 +32928,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -32973,7 +32979,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33218,7 +33224,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33258,7 +33264,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33315,7 +33321,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33416,7 +33422,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33467,7 +33473,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33718,7 +33724,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33758,7 +33764,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33798,7 +33804,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33855,7 +33861,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -33960,7 +33966,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34011,7 +34017,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34262,7 +34268,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34302,7 +34308,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34342,7 +34348,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34399,7 +34405,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34504,7 +34510,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34555,7 +34561,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34806,7 +34812,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34846,7 +34852,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34886,7 +34892,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -34943,7 +34949,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35048,7 +35054,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35099,7 +35105,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35350,7 +35356,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35390,7 +35396,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35430,7 +35436,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35487,7 +35493,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35592,7 +35598,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35643,7 +35649,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35894,7 +35900,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35934,7 +35940,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -35974,7 +35980,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36031,7 +36037,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36136,7 +36142,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36187,7 +36193,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36437,7 +36443,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36477,7 +36483,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36517,7 +36523,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36574,7 +36580,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36679,7 +36685,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36730,7 +36736,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -36980,7 +36986,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37020,7 +37026,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37060,7 +37066,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37117,7 +37123,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37222,7 +37228,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37273,7 +37279,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37523,7 +37529,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37563,7 +37569,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37603,7 +37609,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37660,7 +37666,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37765,7 +37771,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -37816,7 +37822,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38066,7 +38072,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38106,7 +38112,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38146,7 +38152,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38203,7 +38209,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38308,7 +38314,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38359,7 +38365,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38609,7 +38615,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38649,7 +38655,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38689,7 +38695,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38746,7 +38752,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38824,7 +38830,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38864,7 +38870,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38935,7 +38941,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -38986,7 +38992,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39232,7 +39238,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39272,7 +39278,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39312,7 +39318,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39372,7 +39378,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39446,7 +39452,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39486,7 +39492,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39557,7 +39563,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39608,7 +39614,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39854,7 +39860,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39894,7 +39900,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39934,7 +39940,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -39994,7 +40000,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40068,7 +40074,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40108,7 +40114,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40179,7 +40185,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40230,7 +40236,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40476,7 +40482,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40516,7 +40522,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40556,7 +40562,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40616,7 +40622,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40690,7 +40696,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40730,7 +40736,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40801,7 +40807,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -40852,7 +40858,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41098,7 +41104,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41138,7 +41144,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41178,7 +41184,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41238,7 +41244,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41312,7 +41318,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41352,7 +41358,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41423,7 +41429,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41474,7 +41480,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41720,7 +41726,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41760,7 +41766,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41800,7 +41806,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41860,7 +41866,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -41959,7 +41965,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42011,7 +42017,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42261,7 +42267,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42301,7 +42307,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42356,7 +42362,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42460,7 +42466,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42512,7 +42518,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42762,7 +42768,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42802,7 +42808,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42857,7 +42863,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -42955,7 +42961,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43007,7 +43013,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43252,7 +43258,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43292,7 +43298,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43348,7 +43354,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43446,7 +43452,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43498,7 +43504,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43743,7 +43749,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43783,7 +43789,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43889,7 +43895,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -43941,7 +43947,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44186,7 +44192,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44226,7 +44232,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44338,7 +44344,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44389,7 +44395,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44639,7 +44645,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44679,7 +44685,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44733,7 +44739,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44836,7 +44842,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -44887,7 +44893,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45137,7 +45143,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45177,7 +45183,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45231,7 +45237,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45328,7 +45334,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45379,7 +45385,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45624,7 +45630,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45664,7 +45670,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45719,7 +45725,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45817,7 +45823,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -45868,7 +45874,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46113,7 +46119,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46153,7 +46159,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46210,7 +46216,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46303,7 +46309,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46354,7 +46360,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46599,7 +46605,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46639,7 +46645,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46696,7 +46702,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46795,7 +46801,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -46846,7 +46852,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47096,7 +47102,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47136,7 +47142,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47190,7 +47196,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47293,7 +47299,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47344,7 +47350,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47594,7 +47600,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47634,7 +47640,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47688,7 +47694,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47785,7 +47791,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -47836,7 +47842,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48081,7 +48087,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48121,7 +48127,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48176,7 +48182,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48274,7 +48280,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48325,7 +48331,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48570,7 +48576,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48610,7 +48616,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48667,7 +48673,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48760,7 +48766,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -48811,7 +48817,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -49056,7 +49062,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -49096,7 +49102,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",
@@ -49153,7 +49159,7 @@
      ],
      [
       "[unit_price]",
-      "DECIMAL(11,7)"
+      "NVARCHAR(255)"
      ],
      [
       "[temperature_c]",

@@ -7,7 +7,7 @@
  */
 
 const NUMERIC_PATTERN =
-    /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/;
+    /^([+-]?)(?:([0-9]+)(?:\.([0-9]*))?|\.([0-9]+))(?:[eE]([+-]?[0-9]+))?$/;
 
 const INT32_MIN = -2_147_483_648n;
 const INT32_MAX = 2_147_483_647n;
@@ -18,6 +18,9 @@ const MIN_SAFE_BIGINT = BigInt(Number.MIN_SAFE_INTEGER);
 
 /** SQL Server's maximum exact-numeric precision. */
 export const MAX_EXACT_NUMERIC_PRECISION = 38;
+
+/** Numeric tokens beyond this bound are preserved as text without parsing. */
+export const MAX_NUMERIC_TOKEN_CHARS = 256;
 
 export type ExactNumericType =
     | 'int32'
@@ -33,6 +36,7 @@ interface CanonicalDecimal {
 export interface NumericToken {
     readonly raw: string;
     readonly integerSyntax: boolean;
+    readonly hasExponent: boolean;
     readonly integerDigits: number;
     readonly scale: number;
     readonly precision: number;
@@ -66,16 +70,21 @@ function canonicalDecimal(
         return { negative: false, digits: '0', scale: 0 };
     }
 
-    let scale = fractionPart.length - exponent;
-    while (digits.endsWith('0')) {
-        digits = digits.slice(0, -1);
-        scale -= 1;
+    let lastNonZero = digits.length - 1;
+    while (lastNonZero >= 0 && digits[lastNonZero] === '0') {
+        lastNonZero -= 1;
     }
+    const trailingZeros = digits.length - lastNonZero - 1;
+    digits = digits.slice(0, lastNonZero + 1);
+    const scale = fractionPart.length - exponent - trailingZeros;
     return { negative: sign === '-', digits, scale };
 }
 
 /** Parse one decimal token without converting it through JavaScript Number. */
 export function parseNumericToken(raw: string): NumericToken | null {
+    if (raw.length > MAX_NUMERIC_TOKEN_CHARS) {
+        return null;
+    }
     const token = raw.trim();
     const match = NUMERIC_PATTERN.exec(token);
     if (!match) {
@@ -96,6 +105,7 @@ export function parseNumericToken(raw: string): NumericToken | null {
     return {
         raw: token,
         integerSyntax: !token.includes('.') && !/[eE]/.test(token),
+        hasExponent: /[eE]/.test(token),
         integerDigits,
         scale,
         precision: Math.max(1, integerDigits + scale),
@@ -126,7 +136,11 @@ function canonicalIntegerValue(value: CanonicalDecimal): bigint | null {
  */
 export function exactNumericSample(raw: string): number | string {
     const parsed = parseNumericToken(raw);
-    if (!parsed || parsed.precision > MAX_EXACT_NUMERIC_PRECISION) {
+    if (
+        !parsed ||
+        parsed.hasExponent ||
+        parsed.precision > MAX_EXACT_NUMERIC_PRECISION
+    ) {
         return raw;
     }
 
@@ -164,6 +178,7 @@ export class NumericColumnAccumulator {
     private minimumInteger: bigint | null = null;
     private maximumInteger: bigint | null = null;
     private integerRangeKnown = true;
+    private sawExponentSyntax = false;
 
     public add(raw: string): boolean {
         const parsed = parseNumericToken(raw);
@@ -173,6 +188,7 @@ export class NumericColumnAccumulator {
 
         this.sawValue = true;
         this.allIntegerSyntax = this.allIntegerSyntax && parsed.integerSyntax;
+        this.sawExponentSyntax = this.sawExponentSyntax || parsed.hasExponent;
         this.maxIntegerDigits = Math.max(this.maxIntegerDigits, parsed.integerDigits);
         this.maxScale = Math.max(this.maxScale, parsed.scale);
 
@@ -196,7 +212,7 @@ export class NumericColumnAccumulator {
 
     /** Return a lossless SQL-oriented detected type. */
     public detectedType(): ExactNumericType | null {
-        if (!this.sawValue) {
+        if (!this.sawValue || this.sawExponentSyntax) {
             return null;
         }
 

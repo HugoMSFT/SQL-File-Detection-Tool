@@ -44,12 +44,17 @@ LARGE_FILE_THRESHOLD = 100 * 1024 * 1024  # 100 MB
 JSON_FULL_PARSE_MAX_BYTES = 32 * 1024 * 1024
 JSON_SAMPLE_MAX_CHARS = 4 * 1024 * 1024
 JSON_SCHEMA_SAMPLE_ROWS = 200
+JSON_SCHEMA_MAX_COLUMNS = 4096
 CACHE_MAX_ENTRIES = 256
 CSV_SCHEMA_SAMPLE_ROWS = 1000
 MAX_SQL_DECIMAL_PRECISION = 38
+MAX_NUMERIC_TOKEN_CHARS = 256
+MAX_FIELD_CHARS = 4 * 1024 * 1024
 _JS_SAFE_INTEGER = 9007199254740991
 _NUMERIC_TOKEN_RE = re.compile(
-    r'^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$'
+    r'^([+-]?)(?:([0-9]+)(?:\.([0-9]*))?|\.([0-9]+))'
+    r'(?:[eE]([+-]?[0-9]+))?$',
+    re.ASCII,
 )
 _CSV_NA_VALUES = frozenset({
     '', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN',
@@ -58,27 +63,24 @@ _CSV_NA_VALUES = frozenset({
 })
 _TRUE_LITERALS = frozenset({'True', 'TRUE', 'true'})
 _FALSE_LITERALS = frozenset({'False', 'FALSE', 'false'})
+csv.field_size_limit(MAX_FIELD_CHARS)
 
 
-class _JsonInt(int):
+class _JsonInt:
     """JSON integer retaining its original token."""
 
-    def __new__(cls, raw: str):
-        value = int.__new__(cls, raw)
-        value.raw = raw
-        return value
+    def __init__(self, raw: str):
+        self.raw = raw
 
     def __repr__(self) -> str:
         return self.raw
 
 
-class _JsonFloat(float):
+class _JsonFloat:
     """JSON float retaining its original token."""
 
-    def __new__(cls, raw: str):
-        value = float.__new__(cls, raw)
-        value.raw = raw
-        return value
+    def __init__(self, raw: str):
+        self.raw = raw
 
     def __repr__(self) -> str:
         return self.raw
@@ -98,6 +100,8 @@ def _bounded_exponent(raw: Optional[str]) -> int:
 
 
 def _parse_numeric_token(raw: str) -> Optional[Dict[str, Any]]:
+    if len(raw) > MAX_NUMERIC_TOKEN_CHARS:
+        return None
     token = raw.strip()
     match = _NUMERIC_TOKEN_RE.fullmatch(token)
     if not match:
@@ -128,14 +132,15 @@ def _parse_numeric_token(raw: str) -> Optional[Dict[str, Any]]:
     if not digits:
         canonical = (False, '0', 0)
     else:
-        while digits.endswith('0'):
-            digits = digits[:-1]
-            canonical_scale -= 1
+        trimmed = digits.rstrip('0')
+        canonical_scale -= len(digits) - len(trimmed)
+        digits = trimmed
         canonical = (sign == '-', digits, canonical_scale)
 
     return {
         'raw': token,
         'integer_syntax': '.' not in token and 'e' not in token.lower(),
+        'has_exponent': 'e' in token.lower(),
         'integer_digits': integer_digits,
         'scale': scale,
         'precision': max(1, integer_digits + scale),
@@ -153,7 +158,11 @@ def _canonical_integer_value(canonical) -> Optional[int]:
 
 def _exact_numeric_sample(raw: str):
     parsed = _parse_numeric_token(raw)
-    if not parsed or parsed['precision'] > MAX_SQL_DECIMAL_PRECISION:
+    if (
+        not parsed
+        or parsed['has_exponent']
+        or parsed['precision'] > MAX_SQL_DECIMAL_PRECISION
+    ):
         return raw
     if parsed['integer_syntax']:
         value = int(parsed['raw'])
@@ -186,6 +195,7 @@ class _NumericColumnAccumulator:
         self.minimum_integer = None
         self.maximum_integer = None
         self.integer_range_known = True
+        self.saw_exponent_syntax = False
 
     def add(self, raw: str) -> bool:
         parsed = _parse_numeric_token(raw)
@@ -194,6 +204,9 @@ class _NumericColumnAccumulator:
         self.saw_value = True
         self.all_integer_syntax = (
             self.all_integer_syntax and parsed['integer_syntax']
+        )
+        self.saw_exponent_syntax = (
+            self.saw_exponent_syntax or parsed['has_exponent']
         )
         self.max_integer_digits = max(
             self.max_integer_digits,
@@ -218,7 +231,7 @@ class _NumericColumnAccumulator:
         return True
 
     def detected_type(self) -> Optional[str]:
-        if not self.saw_value:
+        if not self.saw_value or self.saw_exponent_syntax:
             return None
         if (
             self.all_integer_syntax
@@ -244,6 +257,14 @@ def _is_missing_csv(value: Optional[str]) -> bool:
     return value is None or value in _CSV_NA_VALUES
 
 
+def _parse_boolean_token(value: str) -> Optional[bool]:
+    if value in _TRUE_LITERALS:
+        return True
+    if value in _FALSE_LITERALS:
+        return False
+    return None
+
+
 class _DelimitedColumnAccumulator:
     def __init__(self):
         self.saw_value = False
@@ -257,7 +278,7 @@ class _DelimitedColumnAccumulator:
             return
         self.saw_value = True
         self.max_raw_length = max(self.max_raw_length, _utf16_length(value))
-        if value not in _TRUE_LITERALS and value not in _FALSE_LITERALS:
+        if _parse_boolean_token(value) is None:
             self.all_boolean = False
         if not self.numeric.add(value.strip()):
             self.all_numeric = False
@@ -345,11 +366,15 @@ class _JsonSchemaAccumulator:
         self.keys: List[str] = []
         self.fields: Dict[str, Dict[str, Any]] = {}
         self.row_count = 0
+        self.schema_truncated = False
 
     def add(self, row: Dict[str, Any]) -> None:
         self.row_count += 1
         for key, value in row.items():
             if key not in self.fields:
+                if len(self.fields) >= JSON_SCHEMA_MAX_COLUMNS:
+                    self.schema_truncated = True
+                    continue
                 self.keys.append(key)
                 self.fields[key] = {
                     'families': set(),
@@ -395,7 +420,8 @@ class _JsonSchemaAccumulator:
         sample_values = {}
         observed_lengths = {}
         max_lengths = {}
-        typed_projection_safe = not sampled
+        inference_sampled = sampled or self.schema_truncated
+        typed_projection_safe = not inference_sampled
 
         for key in self.keys:
             evidence = self.fields[key]
@@ -421,7 +447,7 @@ class _JsonSchemaAccumulator:
                 length = evidence['max_string_length']
                 if length is not None:
                     observed_lengths[key] = length
-                    if not sampled:
+                    if not inference_sampled:
                         max_lengths[key] = _size_sampled_string(length)
             else:
                 nesting[key] = 'scalar'
@@ -430,11 +456,11 @@ class _JsonSchemaAccumulator:
                     typed_projection_safe = False
             sample_values[key] = _json_safe(evidence['first'])
 
-        return {
+        result = {
             'schema': schema,
             'row_count': (
                 self.row_count
-                if row_count is None and not sampled
+                if row_count is None and not inference_sampled
                 else row_count
             ),
             'column_count': len(schema),
@@ -445,11 +471,25 @@ class _JsonSchemaAccumulator:
             'json_typed_projection_safe': typed_projection_safe,
             'nullable_columns': list(self.keys),
             'nullability_inference': 'conservative',
-            'schema_inference': 'sampled' if sampled else 'full',
+            'schema_inference': 'sampled' if inference_sampled else 'full',
             'schema_sample_size': self.row_count,
             'observed_max_string_lengths': observed_lengths,
             'max_string_lengths': max_lengths,
         }
+        if self.schema_truncated:
+            result['analysis_truncated'] = True
+            result['warning'] = (
+                f'JSON schema inference retained the first '
+                f'{JSON_SCHEMA_MAX_COLUMNS:,} distinct keys. Additional keys '
+                'were not retained; generated SQL uses preservation-oriented '
+                'types until the source shape is normalized.'
+            )
+        return result
+
+
+def _append_warning(result: Dict[str, Any], warning: str) -> None:
+    existing = result.get('warning')
+    result['warning'] = f'{existing} {warning}' if existing else warning
 
 
 class FileDetector:
@@ -1475,9 +1515,10 @@ class FileDetector:
             sampled=False,
         )
         if invalid_lines:
-            result['warning'] = (
+            _append_warning(
+                result,
                 f'Skipped {invalid_lines} invalid NDJSON '
-                f'line{"s" if invalid_lines != 1 else ""}.'
+                f'line{"s" if invalid_lines != 1 else ""}.',
             )
         return result
 
@@ -1551,9 +1592,10 @@ class FileDetector:
                             sampled=True,
                         )
                         result['analysis_truncated'] = True
-                        result['warning'] = (
+                        _append_warning(
+                            result,
                             'JSON array exceeds the full-parse limit; '
-                            'schema was inferred from a bounded prefix.'
+                            'schema was inferred from a bounded prefix.',
                         )
                         return result
                 return {
@@ -1587,10 +1629,11 @@ class FileDetector:
                         sampled=sampled,
                     )
                     if sampled:
-                        result['warning'] = (
+                        _append_warning(
+                            result,
                             'The JSON array mixes object rows with other values. '
                             'Generated SQL uses preservation-oriented types until '
-                            'the shape is normalized.'
+                            'the shape is normalized.',
                         )
                     return result
             elif isinstance(data, dict):
@@ -1687,11 +1730,183 @@ class FileDetector:
             return pd.DataFrame(columns=parquet_file.schema_arrow.names)
         return batch.to_pandas()
 
+    @staticmethod
+    def _preview_columns(
+        metadata: Dict[str, Any],
+        names: List[str],
+    ) -> List[Dict[str, str]]:
+        detected = dict(metadata.get('schema') or [])
+        return [
+            {'name': name, 'type': detected.get(name, 'object')}
+            for name in names
+        ]
+
+    @staticmethod
+    def _preview_result(
+        metadata: Dict[str, Any],
+        columns: List[Dict[str, str]],
+        rows: List[List[Any]],
+        max_rows: int,
+    ) -> Dict[str, Any]:
+        return {
+            'columns': columns,
+            'rows': rows,
+            'total_rows': metadata.get('row_count'),
+            'truncated': bool(metadata.get('analysis_truncated'))
+            or (metadata.get('row_count') or 0) > max_rows,
+        }
+
+    @staticmethod
+    def _preview_csv_value(value: Optional[str], detected_type: str) -> Any:
+        if _is_missing_csv(value):
+            return None
+        if detected_type == 'bool':
+            parsed = _parse_boolean_token(value)
+            if parsed is not None:
+                return parsed
+        if (
+            detected_type in {'int32', 'int64'}
+            or detected_type.startswith('decimal(')
+        ):
+            trimmed = value.strip()
+            if _parse_numeric_token(trimmed):
+                return _exact_numeric_sample(trimmed)
+        return value
+
+    def _preview_csv_data(
+        self,
+        file_path: str,
+        metadata: Dict[str, Any],
+        encoding: str,
+        max_rows: int,
+    ) -> Dict[str, Any]:
+        schema = metadata.get('schema') or []
+        names = [str(name) for name, _ in schema]
+        types = [str(data_type) for _, data_type in schema]
+        rows: List[List[Any]] = []
+        with open(
+            file_path,
+            'r',
+            encoding=encoding,
+            errors='replace',
+            newline='',
+        ) as handle:
+            reader = csv.reader(
+                handle,
+                delimiter=metadata.get('delimiter', ',') or ',',
+            )
+            if metadata.get('has_header'):
+                next(reader, None)
+            for raw_row in reader:
+                if not raw_row:
+                    continue
+                if len(raw_row) > len(names):
+                    continue
+                rows.append([
+                    self._preview_csv_value(
+                        raw_row[index] if index < len(raw_row) else None,
+                        types[index],
+                    )
+                    for index in range(len(names))
+                ])
+                if len(rows) >= max_rows:
+                    break
+        return self._preview_result(
+            metadata,
+            self._preview_columns(metadata, names),
+            rows,
+            max_rows,
+        )
+
+    def _preview_json_data(
+        self,
+        file_path: str,
+        metadata: Dict[str, Any],
+        encoding: str,
+        max_rows: int,
+    ) -> Dict[str, Any]:
+        object_rows: List[Dict[str, Any]] = []
+        if metadata.get('json_format') == 'ndjson':
+            with open(
+                file_path,
+                'r',
+                encoding=encoding,
+                errors='replace',
+            ) as handle:
+                while len(object_rows) < max_rows:
+                    line = handle.readline(JSON_SAMPLE_MAX_CHARS + 1)
+                    if not line:
+                        break
+                    if (
+                        len(line) > JSON_SAMPLE_MAX_CHARS
+                        and not line.endswith(('\n', '\r'))
+                    ):
+                        raise ValueError(
+                            'JSON line exceeds the preview parse limit'
+                        )
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        value = json.loads(
+                            line,
+                            parse_int=_JsonInt,
+                            parse_float=_JsonFloat,
+                        )
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(value, dict):
+                        object_rows.append(value)
+        elif os.path.getsize(file_path) > JSON_FULL_PARSE_MAX_BYTES:
+            object_rows = self._read_json_array_sample(
+                file_path,
+                encoding,
+                max_rows=max_rows,
+            )
+            if not object_rows:
+                raise ValueError('JSON document exceeds the preview parse limit')
+        else:
+            with open(
+                file_path,
+                'r',
+                encoding=encoding,
+                errors='replace',
+            ) as handle:
+                data = json.load(
+                    handle,
+                    parse_int=_JsonInt,
+                    parse_float=_JsonFloat,
+                )
+            if isinstance(data, list):
+                object_rows = [
+                    value
+                    for value in data[:max_rows]
+                    if isinstance(value, dict)
+                ]
+            elif isinstance(data, dict):
+                object_rows = [data]
+
+        names: List[str] = []
+        seen = set()
+        for row in object_rows:
+            for key in row:
+                if key not in seen:
+                    seen.add(key)
+                    names.append(key)
+        rows = [
+            [_json_safe(row.get(name)) for name in names]
+            for row in object_rows
+        ]
+        return self._preview_result(
+            metadata,
+            self._preview_columns(metadata, names),
+            rows,
+            max_rows,
+        )
+
     def get_preview_data(self, file_path: str, max_rows: int = 100) -> Dict[str, Any]:
         """Return a tabular preview of the file as columns + rows."""
         max_rows = max(1, min(int(max_rows), 10000))
-        _ensure_pandas()
-        _ensure_pyarrow()
         file_type = self.detect_file_type(file_path)
         meta = self.analyze_file_metadata(file_path)
         encoding = meta.get('encoding', 'utf-8') or 'utf-8'
@@ -1700,14 +1915,21 @@ class FileDetector:
 
         try:
             if file_type == 'csv':
-                delimiter = meta.get('delimiter', ',') or ','
-                df = pd.read_csv(file_path, nrows=max_rows, encoding=encoding,
-                                 sep=delimiter, low_memory=False, on_bad_lines='skip')
+                return self._preview_csv_data(
+                    file_path,
+                    meta,
+                    encoding,
+                    max_rows,
+                )
 
             elif file_type == 'parquet':
+                _ensure_pandas()
+                _ensure_pyarrow()
                 df = self._parquet_preview_frame(file_path, max_rows)
 
             elif file_type == 'delta':
+                _ensure_pandas()
+                _ensure_pyarrow()
                 try:
                     from deltalake import DeltaTable  # type: ignore
                     dt = DeltaTable(file_path)
@@ -1725,6 +1947,8 @@ class FileDetector:
                     )
 
             elif file_type == 'iceberg':
+                _ensure_pandas()
+                _ensure_pyarrow()
                 parquet_file = self._first_parquet_file(
                     file_path, data_subdirectory='data'
                 )
@@ -1736,55 +1960,15 @@ class FileDetector:
                     )
 
             elif file_type == 'json':
-                # Try NDJSON first (line-delimited JSON: each line is a JSON object)
-                is_ndjson = False
-                with open(file_path, 'r', encoding=encoding, errors='replace') as f:
-                    first_char = f.read(1)
-                    if first_char == '{':
-                        f.seek(0)
-                        rows = []
-                        while len(rows) < max_rows:
-                            line = f.readline(JSON_SAMPLE_MAX_CHARS + 1)
-                            if not line:
-                                break
-                            if (
-                                len(line) > JSON_SAMPLE_MAX_CHARS
-                                and not line.endswith(('\n', '\r'))
-                            ):
-                                raise ValueError(
-                                    'JSON line exceeds the preview parse limit'
-                                )
-                            line = line.strip()
-                            if line:
-                                try:
-                                    rows.append(json.loads(line))
-                                except json.JSONDecodeError:
-                                    pass
-                        if rows:
-                            df = pd.DataFrame(rows)
-                            is_ndjson = True
-
-                if not is_ndjson:
-                    if os.path.getsize(file_path) > JSON_FULL_PARSE_MAX_BYTES:
-                        data = self._read_json_array_sample(
-                            file_path,
-                            encoding,
-                            max_rows=max_rows,
-                        )
-                        if not data:
-                            raise ValueError(
-                                'JSON document exceeds the preview parse limit'
-                            )
-                        df = pd.DataFrame(data)
-                    else:
-                        with open(file_path, 'r', encoding=encoding, errors='replace') as f:
-                            data = json.load(f)
-                        if isinstance(data, list):
-                            df = pd.DataFrame(data[:max_rows])
-                        else:
-                            df = pd.DataFrame([data])
+                return self._preview_json_data(
+                    file_path,
+                    meta,
+                    encoding,
+                    max_rows,
+                )
 
             elif file_type == 'excel':
+                _ensure_pandas()
                 try:
                     import openpyxl  # noqa: F401
                     df = pd.read_excel(file_path, nrows=max_rows, engine='openpyxl')
@@ -1792,6 +1976,7 @@ class FileDetector:
                     df = pd.read_excel(file_path, nrows=max_rows)
 
             else:
+                _ensure_pandas()
                 lines = []
                 with open(file_path, 'r', encoding=encoding, errors='replace') as f:
                     for i, line in enumerate(f):

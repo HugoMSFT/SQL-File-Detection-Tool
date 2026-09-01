@@ -112,12 +112,115 @@ def test_csv_exact_numeric_inference_preserves_boundary_samples(tmp_path):
         'decimal': 'decimal(18,4)',
         'over_big': 'decimal(19,0)',
         'over_precision': 'decimal(39,0)',
-        'scaled': 'decimal(5,2)',
-        'tiny': 'decimal(4,4)',
+        'scaled': 'object',
+        'tiny': 'object',
     }
     assert metadata['sample_rows'][0][2] == '9223372036854775807'
     assert metadata['sample_rows'][0][3] == '12345678901234.5678'
     assert metadata['schema_inference'] == 'full'
+
+
+def test_scientific_notation_stays_text_while_decimals_stay_exact(tmp_path):
+    """Direct CSV loading cannot convert exponent syntax to DECIMAL."""
+    source = tmp_path / 'scientific.csv'
+    source.write_text(
+        'normal,positive_exp,negative_exp\n'
+        '123.4500,1e+7,1e-7\n',
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert dict(metadata['schema']) == {
+        'normal': 'decimal(7,4)',
+        'positive_exp': 'object',
+        'negative_exp': 'object',
+    }
+    assert metadata['sample_rows'][0] == [123.45, '1e+7', '1e-7']
+
+
+def test_csv_and_json_preview_preserve_exact_numeric_text(
+    tmp_path,
+    monkeypatch,
+):
+    """The public preview API must bypass pandas/NumPy numeric coercion."""
+    detector = FileDetector()
+    csv_source = tmp_path / 'exact-preview.csv'
+    csv_source.write_text(
+        'big,decimal,scientific\n'
+        '9223372036854775807,12345678901234.5678,1e-7\n',
+        encoding='utf-8',
+    )
+    csv_preview = detector.get_preview_data(str(csv_source), max_rows=1)
+    assert csv_preview['rows'][0] == [
+        '9223372036854775807',
+        '12345678901234.5678',
+        '1e-7',
+    ]
+
+    json_source = tmp_path / 'exact-preview.json'
+    json_source.write_text(
+        '[{"big":9223372036854775807,'
+        '"decimal":12345678901234.5678,"scientific":1e-7}]',
+        encoding='utf-8',
+    )
+    json_preview = detector.get_preview_data(str(json_source), max_rows=1)
+    assert json_preview['rows'][0] == [
+        '9223372036854775807',
+        '12345678901234.5678',
+        '1e-7',
+    ]
+
+    mixed_source = tmp_path / 'mixed-preview.csv'
+    mixed_source.write_text(
+        'value,label,id\n1,first,10\nlater,second,20\n',
+        encoding='utf-8',
+    )
+    mixed_preview = detector.get_preview_data(str(mixed_source), max_rows=2)
+    assert mixed_preview['rows'] == [
+        ['1', 'first', 10],
+        ['later', 'second', 20],
+    ]
+
+    bool_source = tmp_path / 'sampled-bool-preview.csv'
+    bool_source.write_text(
+        'flag,label,id\nTrue,first,1\nunexpected,second,2\n',
+        encoding='utf-8',
+    )
+    sampled_metadata = detector.analyze_file_metadata(str(bool_source))
+    sampled_metadata['schema'] = [
+        ('flag', 'bool'),
+        ('label', 'object'),
+        ('id', 'int32'),
+    ]
+    monkeypatch.setattr(
+        detector,
+        'analyze_file_metadata',
+        lambda _path: sampled_metadata,
+    )
+    bool_preview = detector.get_preview_data(str(bool_source), max_rows=2)
+    assert bool_preview['rows'] == [
+        [True, 'first', 1],
+        ['unexpected', 'second', 2],
+    ]
+
+    numeric_source = tmp_path / 'sampled-numeric-preview.csv'
+    numeric_source.write_text(
+        'value,label,id\n1,first,1\n  unexpected  ,second,2\n',
+        encoding='utf-8',
+    )
+    numeric_metadata = sampled_metadata.copy()
+    numeric_metadata['schema'] = [
+        ('value', 'int32'),
+        ('label', 'object'),
+        ('id', 'int32'),
+    ]
+    monkeypatch.setattr(
+        detector,
+        'analyze_file_metadata',
+        lambda _path: numeric_metadata,
+    )
+    numeric_preview = detector.get_preview_data(str(numeric_source), max_rows=2)
+    assert numeric_preview['rows'][1][0] == '  unexpected  '
 
 
 def test_csv_complete_scan_aggregates_after_sample_cap(tmp_path):
@@ -162,6 +265,93 @@ def test_json_aggregates_ranges_and_heterogeneous_families(tmp_path):
     assert mixed_metadata['schema_inference'] == 'full'
     assert mixed_metadata['schema_sample_size'] == 201
     assert mixed_metadata['json_typed_projection_safe'] is False
+
+
+def test_ndjson_dynamic_keys_are_bounded_and_marked_unsafe(tmp_path):
+    """A stream cannot grow retained schema state past the column cap."""
+    from external_file_detection.sql_generator import SQLGenerator
+
+    source = tmp_path / 'dynamic.ndjson'
+    source.write_text(
+        ''.join(
+            json.dumps({f'key_{index}': index}) + '\n'
+            for index in range(file_detector_module.JSON_SCHEMA_MAX_COLUMNS + 2)
+        ),
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert len(metadata['schema']) == file_detector_module.JSON_SCHEMA_MAX_COLUMNS
+    assert metadata['column_count'] == file_detector_module.JSON_SCHEMA_MAX_COLUMNS
+    assert (
+        metadata['schema_sample_size']
+        == file_detector_module.JSON_SCHEMA_MAX_COLUMNS + 2
+    )
+    assert metadata['schema_inference'] == 'sampled'
+    assert metadata['analysis_truncated'] is True
+    assert metadata['json_typed_projection_safe'] is False
+    assert 'distinct keys' in metadata['warning']
+    assert (
+        f'key_{file_detector_module.JSON_SCHEMA_MAX_COLUMNS}'
+        not in dict(metadata['schema'])
+    )
+    generator = SQLGenerator()
+    assert generator._generate_openjson_columns(metadata) == []
+    assert '[key_0] NVARCHAR(MAX)' in generator.generate_create_table(
+        metadata,
+        'dynamic',
+    )
+
+
+def test_python_csv_field_limit_matches_native_bound(tmp_path):
+    """Python accepts former-128-KiB fields and rejects over 4 MiB."""
+    detector = FileDetector()
+    accepted = tmp_path / 'accepted.csv'
+    accepted.write_text(
+        'id,payload\n1,' + ('x' * 131_073) + '\n',
+        encoding='utf-8',
+    )
+    accepted_metadata = detector.analyze_file_metadata(str(accepted))
+    assert 'error' not in accepted_metadata
+    assert accepted_metadata['observed_max_string_lengths']['payload'] == 131_073
+
+    rejected = tmp_path / 'rejected.csv'
+    rejected.write_text(
+        'id,payload\n1,'
+        + ('x' * (file_detector_module.MAX_FIELD_CHARS + 1))
+        + '\n',
+        encoding='utf-8',
+    )
+    rejected_metadata = detector.analyze_file_metadata(str(rejected))
+    assert 'field larger than field limit' in rejected_metadata['error']
+
+
+def test_huge_numeric_tokens_fall_back_without_integer_conversion(tmp_path):
+    """Over-precision JSON stays raw even where int digit limits differ."""
+    token = '9' * 10_000
+    source = tmp_path / 'huge-number.json'
+    source.write_text(f'[{{"value":{token}}}]', encoding='utf-8')
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert metadata['schema'] == [('value', 'str')]
+    assert metadata['json_sample_values']['value'] == token
+    assert file_detector_module._parse_numeric_token(token) is None
+
+
+def test_unicode_digits_are_text_not_ascii_numerics(tmp_path):
+    """CSV numeric syntax is deliberately restricted to ASCII digits."""
+    source = tmp_path / 'unicode-digits.csv'
+    source.write_text(
+        'arabic_indic,full_width\n١٢٣,１２３\n',
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert metadata['schema'] == [
+        ('arabic_indic', 'object'),
+        ('full_width', 'object'),
+    ]
+    assert metadata['sample_rows'] == [['١٢٣', '１２３']]
 
 
 def test_parquet_unbounded_string_uses_max_and_blocks_external_table(tmp_path):

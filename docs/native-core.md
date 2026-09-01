@@ -148,8 +148,11 @@ materialise the file.
 **Type preservation.** CSV and JSON numerics are classified from their source
 tokens with BigInt range checks and decimal precision/scale/exponent arithmetic;
 unsafe preview values remain strings instead of passing through IEEE-754.
+Exponent notation remains text because direct file readers do not normalize it
+before `DECIMAL` conversion.
 Complete CSV, JSON, and NDJSON inputs aggregate every row at bounded schema
-memory. When a large input is genuinely sampled, SQL generation defaults to
+memory, with NDJSON retaining at most 4,096 distinct keys. When a large or
+dynamic-schema input is genuinely sampled, SQL generation defaults to
 `NVARCHAR(MAX)` and surfaces an override warning. Variable-width Parquet, Delta,
 and Iceberg strings also stay `NVARCHAR(MAX)` unless a trustworthy bound exists;
 external-table generation requires an explicit bounded override for LOB types.

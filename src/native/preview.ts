@@ -17,13 +17,20 @@ import type {
     SampleValue,
     StorageReference,
 } from './types';
-import { DelimitedRowParser, toSampleValue, type ParsedCell } from './analysis/delimited';
+import {
+    DelimitedRowParser,
+    PANDAS_NA_VALUES,
+    parseBooleanToken,
+    toSampleValue,
+    type ParsedCell,
+} from './analysis/delimited';
 import { firstParquetFile } from './analysis/delta';
 import { readExcelPreview } from './analysis/excel';
 import { previewJsonRows } from './analysis/json';
 import { readParquetPreview } from './analysis/parquet';
 import { readTextPreview } from './analysis/text';
 import { normaliseHeader } from './analysis/csv';
+import { exactNumericSample, parseNumericToken } from './analysis/numeric';
 import { ORC_UNSUPPORTED_MESSAGE, RC_GUIDANCE } from './analysis/orc';
 
 /** Clamp a caller-supplied row budget to the supported range. */
@@ -46,6 +53,7 @@ async function previewDelimited(
     hasHeader: boolean,
     encoding: string,
     maxRows: number,
+    detectedTypes: ReadonlyMap<string, string>,
     token?: CancellationToken,
 ): Promise<{ header: string[]; rows: SampleValue[][]; }> {
     const parser = new DelimitedRowParser(delimiter);
@@ -65,7 +73,9 @@ async function previewDelimited(
                     continue;
                 }
             }
-            rows.push(row.map((cell) => coerceCell(cell)));
+            rows.push(row.map((cell, index) =>
+                coerceCell(cell, detectedTypes.get(header?.[index] ?? '') ?? 'object')
+            ));
             if (rows.length >= maxRows) {
                 return true;
             }
@@ -86,23 +96,27 @@ async function previewDelimited(
     return { header: header ?? [], rows };
 }
 
-/** Convert a raw delimited cell into the value pandas would surface. */
-function coerceCell(cell: string): SampleValue {
+/** Convert a raw delimited cell without losing exact numeric text. */
+function coerceCell(cell: string, detectedType: string): SampleValue {
     const trimmed = cell.trim();
-    if (trimmed.length === 0) {
+    if (PANDAS_NA_VALUES.has(cell)) {
         return null;
     }
-    if (/^[+-]?\d+$/.test(trimmed)) {
-        const value = Number(trimmed);
-        if (Number.isSafeInteger(value)) {
-            return value;
+    if (detectedType === 'bool') {
+        const parsed = parseBooleanToken(cell);
+        if (parsed !== null) {
+            return parsed;
         }
     }
-    if (/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
-        const value = Number(trimmed);
-        if (Number.isFinite(value)) {
-            return value;
-        }
+    if (
+        (
+            detectedType === 'int32' ||
+            detectedType === 'int64' ||
+            detectedType.startsWith('decimal(')
+        ) &&
+        parseNumericToken(trimmed)
+    ) {
+        return exactNumericSample(trimmed);
     }
     return toSampleValue(cell as ParsedCell);
 }
@@ -134,6 +148,7 @@ export async function getPreviewData(
                     metadata.has_header,
                     encoding,
                     limit,
+                    new Map(metadata.schema ?? []),
                     token,
                 );
                 return finish(metadata, columnsFrom(metadata, preview.header), preview.rows, limit);

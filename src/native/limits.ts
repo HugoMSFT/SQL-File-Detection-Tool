@@ -25,6 +25,9 @@ export const JSON_SAMPLE_MAX_CHARS = 4 * 1024 * 1024;
 /** Rows sampled from a JSON document when inferring its schema. */
 export const JSON_SCHEMA_SAMPLE_ROWS = 200;
 
+/** Distinct JSON object keys retained for schema inference. */
+export const JSON_SCHEMA_MAX_COLUMNS = 4096;
+
 /** Entries retained by the analysis cache. */
 export const CACHE_MAX_ENTRIES = 256;
 
