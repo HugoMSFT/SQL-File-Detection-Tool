@@ -34,12 +34,14 @@ import {
 } from './quickAnalyze';
 import type {
     AppStateSnapshot,
-    AppearanceMode,
-    AzureState,
     FileEntry,
     Limitation,
     UiTab,
 } from './protocol';
+import {
+    credentialWizardState,
+    normalizeDataSourceType,
+} from './native';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -51,23 +53,6 @@ export interface RegisteredFile {
     readonly entry: FileEntry;
 }
 
-export const EMPTY_AZURE_STATE: AzureState = {
-    connected: false,
-    mode: null,
-    identity: null,
-    account: null,
-    subscriptions: [],
-    accounts: [],
-    containers: [],
-    container: null,
-    prefix: '',
-    blobs: [],
-    continuation: null,
-    canListSubscriptions: false,
-    error: null,
-    busy: false,
-};
-
 /** Default preview row count. Bounded again on every request. */
 export const DEFAULT_PREVIEW_ROWS = 25;
 
@@ -75,18 +60,20 @@ export interface AppStateOptions {
     readonly version: string;
     readonly platform?: TargetPlatform;
     readonly activeTab?: UiTab;
-    readonly appearance?: AppearanceMode;
     readonly formats?: readonly SupportedFormat[];
     /** Workspace folders, used to build relative display labels. */
     readonly workspaceFolders?: readonly string[];
 }
 
 function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
+    const platform = options.platform ?? DEFAULT_TARGET_PLATFORM;
+    const dataSourceType = normalizeDataSourceType(null, platform);
+    const credentialSetup = credentialWizardState(platform, dataSourceType, null);
     return {
         version: options.version,
-        platform: options.platform ?? DEFAULT_TARGET_PLATFORM,
+        platform,
         platforms: PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] })),
-        activeTab: options.activeTab ?? 'quick_analyze',
+        activeTab: options.activeTab ?? 'preview',
         files: [],
         selectedFileId: null,
         sourceLabel: null,
@@ -96,8 +83,10 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         tableName: '',
         schemaName: 'dbo',
         dataSource: 'MyDataSource',
+        dataSourceType,
         credentialName: '',
-        authMethod: '',
+        authMethod: credentialSetup.authMethod,
+        credentialSetup,
         storageUrl: '',
         formatName: '',
         parserOverrides: {},
@@ -129,15 +118,14 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
             ),
         },
         columnOverrides: {},
+        recommendedSqlTypes: {},
         previewRows: DEFAULT_PREVIEW_ROWS,
         busy: false,
         progress: null,
         error: null,
         notice: null,
         limitation: null,
-        azure: EMPTY_AZURE_STATE,
         formats: options.formats ?? [],
-        appearance: options.appearance ?? 'auto',
         lastAnalysisMs: null,
     };
 }
@@ -213,16 +201,22 @@ export class AppStateStore {
     }
 
     update(patch: Partial<AppStateSnapshot>): AppStateSnapshot {
-        this.snapshot = Object.freeze({ ...this.snapshot, ...patch });
+        const next = { ...this.snapshot, ...patch };
+        const credentialSetup = credentialWizardState(
+            next.platform,
+            next.dataSourceType,
+            next.authMethod,
+        );
+        this.snapshot = Object.freeze({
+            ...next,
+            dataSourceType: credentialSetup.dataSourceType,
+            authMethod: credentialSetup.authMethod,
+            credentialSetup,
+        });
         for (const listener of [...this.listeners]) {
             listener(this.snapshot);
         }
         return this.snapshot;
-    }
-
-    /** Merge a partial Azure state without clobbering unrelated fields. */
-    updateAzure(patch: Partial<AzureState>): AppStateSnapshot {
-        return this.update({ azure: { ...this.snapshot.azure, ...patch } });
     }
 
     /** Clear everything derived from a file, keeping user-entered options. */
@@ -234,6 +228,7 @@ export class AppStateStore {
             preview: null,
             statements: null,
             columnOverrides: {},
+            recommendedSqlTypes: {},
             parserOverrides: {},
             limitation: null,
             lastAnalysisMs: null,
@@ -259,12 +254,36 @@ export class AppStateStore {
     ): readonly FileEntry[] {
         this.registry.clear();
         const entries: FileEntry[] = [];
+        const roots = new Set(files.map((file) => path.resolve(file.allowedRoot)));
         for (const file of files) {
             const id = crypto.randomBytes(12).toString('hex');
-            const { label, folderLabel } = displayLabel(
+            let { label, folderLabel } = displayLabel(
                 file.absolutePath,
                 this.workspaceFolders,
             );
+            const absolutePath = path.resolve(file.absolutePath);
+            const allowedRoot = path.resolve(file.allowedRoot);
+            const relative = path.relative(allowedRoot, absolutePath);
+            if (
+                relative === ''
+                || (
+                    !relative.startsWith(`..${path.sep}`)
+                    && relative !== '..'
+                    && !path.isAbsolute(relative)
+                )
+            ) {
+                label = path.basename(absolutePath);
+                const relativeFolder =
+                    relative === '' || path.dirname(relative) === '.'
+                        ? ''
+                        : path.dirname(relative).split(path.sep).join('/');
+                folderLabel =
+                    roots.size > 1
+                        ? [path.basename(allowedRoot), relativeFolder]
+                            .filter(Boolean)
+                            .join('/')
+                        : relativeFolder;
+            }
             const entry: FileEntry = {
                 id,
                 label,
@@ -276,8 +295,8 @@ export class AppStateStore {
             };
             this.registry.set(id, {
                 id,
-                absolutePath: path.resolve(file.absolutePath),
-                allowedRoot: path.resolve(file.allowedRoot),
+                absolutePath,
+                allowedRoot,
                 entry,
             });
             entries.push(entry);
@@ -303,7 +322,6 @@ export class AppStateStore {
         this.snapshot = Object.freeze({
             ...initialSnapshot(this.options),
             platform: this.snapshot.platform,
-            appearance: this.snapshot.appearance,
             formats: this.snapshot.formats,
         });
         for (const listener of [...this.listeners]) {

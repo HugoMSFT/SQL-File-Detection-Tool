@@ -16,47 +16,13 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![Walkthrough of the native VS Code extension: selecting the SQL File Detection
-Tool icon in the Activity Bar, the interface rendering immediately with no setup
-step, a Parquet file analysed in place, the detected column types, Azure SQL
-Database preselected as the target platform with the generated CREATE TABLE and
-OPENROWSET scripts, the Azure Storage sign-in modes and public dataset URL box,
-and the same screen following a light VS Code theme.](media/sql-file-detection-tool-walkthrough.gif)
+![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough.gif)
 
-The walkthrough above, in text:
-
-1. Select the **SQL File Detection Tool** icon in the VS Code Activity Bar. The
-   full interface appears immediately, rendered natively — no Python, no server
-   and no browser tab. There is no install or setup step to sit through.
-2. Point it at any supported file - Parquet, ORC, CSV, TSV, JSON, Excel, or a
-   Delta or Iceberg table directory. The walkthrough analyses
-   `demo/parquet/sales.parquet` from this repository.
-3. **Quick Analyze** is the default view. It keeps the selected file, analyzed
-   facts, real row preview, common parser controls, source readiness, and
-   generated SQL together. Advanced parser details remain one disclosure away.
-4. Every parser value states its provenance: **Detected**, **Inferred**,
-   **Assumed**, **Mapped**, **From source**, **Platform default**,
-   **Unavailable/Unsupported**, **Mixed**, or **Overridden**. An override can be
-   reset to the analyzed expected value without changing the underlying file fact.
-5. The **Target platform** selector is preset to **Azure SQL Database**. Switch
-   to SQL Server 2019-2025, Azure SQL Managed Instance, or Fabric SQL Database
-   at any time.
-6. **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, and **External table** tabs
-   hold the generated T-SQL. Azure SQL output for a local file includes an
-   explicit "stage the data in Azure Storage first" prerequisite block.
-7. **Azure & URLs** offers four explicit extension sign-in modes - VS Code
-   Microsoft sign-in, SAS, connection string, or anonymous - with no silent
-   fallback between them, plus a **Public dataset or HTTPS URL** box that
-   analyzes any `https://` data file directly. The Python web application keeps
-   its wider set, including managed identity.
-8. The whole surface follows the active VS Code theme.
-
-Every panel in the recording is the real native webview, driven by the real
-analysis engine: the column types, the row values and the T-SQL are what the
-shipped code produces for that file. The Azure connection shown is a synthetic
-`contoso.example` identity with no token, SAS or account key. Regenerate the
-recording with `npm run capture:gif` (see
-[`scripts/capture-walkthrough.js`](scripts/capture-walkthrough.js)).
+Open the Activity Bar icon, select a supported file or folder, and Preview opens
+automatically. Use the SQL tabs for generated statements. In Credential setup,
+paste an `abs://`, `adls://`, or `abfss://` URL and the connector is detected
+automatically. The GIF uses the shipped renderer and can be regenerated with
+`npm run capture:gif`.
 
 ## Names and compatibility
 
@@ -78,18 +44,18 @@ Existing scripts, imports and automation continue to work unchanged.
 ## Features
 
 - Detects file formats and extracts schemas without loading whole tabular files.
-- Samples CSV, JSON, and Excel data conservatively for SQL type inference.
+- Samples CSV and JSON conservatively for SQL type inference; the optional
+  Python API also retains bounded Excel analysis.
 - Reads Parquet metadata and bounded record batches.
 - Reads Delta Lake metadata when the optional Delta dependency is installed.
 - Selects current Apache Iceberg schemas and partition specs from table metadata.
 - Generates `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, external-table,
-  credential, JSON, and best-practice scripts where the target supports them.
+  file-format, and guided credential/data-source scripts where supported.
 - Keeps generated SQL aligned with SQL Server, Azure SQL, and Fabric SQL
   Database feature differences.
 - Provides local, S3, and Azure Blob storage handlers.
-- Signs in to Azure Storage the way Azure Storage Explorer does: Microsoft Entra
-  ID, managed identity, SAS, connection string, or account key. The VS Code
-  extension offers the four of those that are meaningful on the desktop.
+- Lets the VS Code extension infer ABS, ADLS, or ABFSS connector formatting from
+  a provided storage URL.
 - Ships as an installable VS Code extension that runs entirely natively — no
   Python interpreter, virtual environment, server or port.
 
@@ -100,19 +66,20 @@ platform requirements before running it in a database.
 
 | Input | Analysis | Extension | Python CLI |
 | --- | --- | --- | --- |
-| CSV and TSV | Delimiter, encoding, sampled schema, logical row count | yes | yes |
+| CSV, TSV, and DAT | Delimiter, encoding, sampled schema, logical row count | yes | yes |
 | JSON, JSONL, and NDJSON | Bounded schema sample, nesting, row count where available | yes | yes |
 | Parquet | Arrow schema, row groups, compression, row count | yes | yes |
 | Delta Lake directories | Delta metadata, or a bounded Parquet schema fallback | yes | yes |
 | Apache Iceberg directories | Current schema, partition spec, snapshot row count | yes | yes |
-| Excel | Bounded worksheet sample | yes | yes |
+| Apache Hudi directories | Underlying Parquet data files; Hudi metadata is not interpreted | yes | yes |
+| Excel | Bounded worksheet sample | no - intentionally excluded from SQL source scans | yes |
 | Text | Encoding and streamed line count | yes | yes |
 | ORC and RCFile | Format recognition and SQL format guidance | recognition only | recognition only |
 
 That table is not a description; it is a test. `src/test/native/demoMatrix.test.ts` walks
-every fixture committed under `demo/`, analyses it through the shipped native
+every fixture committed under `data sample/`, analyses it through the shipped native
 service, and asserts the detected format, the recovered column count, and whether
-the file was genuinely parsed or only recognised. Adding a demo fixture without
+the file was genuinely parsed or only recognised. Adding a sample fixture without
 adding its row fails the suite, so the matrix cannot quietly drift away from what
 the code actually does.
 
@@ -166,8 +133,9 @@ external data source, so generated scripts create a companion
 Fabric SQL Database data virtualization is in preview. It supports
 `CREATE EXTERNAL DATA SOURCE`, `CREATE EXTERNAL FILE FORMAT`,
 `CREATE EXTERNAL TABLE`, and `OPENROWSET` over a **Fabric Lakehouse `Files`
-path** using **Microsoft Entra passthrough** - no database scoped credential or
-embedded secret is created.
+path** using an explicit `IDENTITY = 'USER IDENTITY'` database scoped
+credential for **Microsoft Entra passthrough**. No embedded secret or database
+master key is created.
 
 Constraints reflected in generated output:
 
@@ -193,8 +161,8 @@ tab. Nothing outside the `.vsix` is downloaded or executed.
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-2.0.0.vsix
-code --install-extension dist/sql-file-detection-tool-2.0.0.vsix --force
+npm run package     # writes dist/sql-file-detection-tool-1.0.1.vsix
+code --install-extension dist/sql-file-detection-tool-1.0.1.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -278,9 +246,9 @@ as directly runnable.
 Generated SQL output is now complete rather than a single statement. Each file
 produces one script containing every applicable section - prerequisite
 credential/data source setup, external file format, external table, regular
-table, `BULK INSERT`, `OPENROWSET`, JSON functions, `FOR JSON`, best practices,
-and a `COPY INTO` availability section - joined in dependency order with `GO`
-batch separators. The regular table and the external table are given distinct
+table, `BULK INSERT`, and `OPENROWSET` - joined in dependency order with `GO`
+batch separators. JSON-specific reading help appears inside `OPENROWSET` only
+for JSON input. The regular table and the external table are given distinct
 names (for example `orders` and `ext_orders`) so the whole script can run
 without object-name collisions.
 
@@ -297,13 +265,9 @@ explaining why, so the ordering stays stable across platforms.
 Behaviour worth knowing when you consume `generate_complete_ddl` or the
 `/api/sql_ddl` endpoint:
 
-- **JSON sections are gated to JSON input.** The `OPENJSON`/`JSON_VALUE` parse
-  and DML section is emitted only when `metadata['file_type'] == 'json'`. It is
-  no longer produced for CSV, Parquet, Delta or Excel input. `FOR JSON` is kept
-  for every file type because it only describes exporting query results.
-- **`@json` is declared at most once per `GO` batch**, so a complete script can
-  be executed batch by batch without `Variable name '@json' has already been
-  declared` errors.
+- **JSON help is contextual.** `OPENJSON` guidance appears in the `OPENROWSET`
+  output only when the selected file is JSON. JSON-only and `FOR JSON` sections
+  are not added to the complete loading document.
 - **Multi-file export deduplicates shared prerequisites.** When several files
   are exported into one `.sql` file, master keys, database scoped credentials,
   external data sources and external file formats are created once. Later
@@ -490,7 +454,7 @@ Run `sql-file-detection-tool COMMAND --help` for complete command options.
 ## Azure Storage authentication
 
 This section describes the **Python** package (CLI and web application). The VS
-Code extension's own four native modes are described under
+Code extension's URL-driven storage setup is described under
 [VS Code extension](#vs-code-extension).
 
 The tool attaches to Azure Storage the same way Azure Storage Explorer does.
@@ -502,7 +466,6 @@ silently downgraded to anonymous or shared-key access.
 | Microsoft Entra ID (recommended) | `entra_default` | Reuses an existing Azure CLI, Azure PowerShell or VS Code developer sign-in |
 | Microsoft Entra ID (interactive) | `entra_interactive` | Opens a browser sign-in; the refresh token is cached in the OS-protected store where the platform supports it |
 | Managed identity | `managed_identity` | **The production choice.** Selects `ManagedIdentityCredential` explicitly, optionally user-assigned via `AZURE_CLIENT_ID` |
-| VS Code sign-in | `vscode_token` | The extension brokers a token from VS Code's Microsoft auth provider |
 | Shared access signature | `sas` | A SAS URL or bare SAS token |
 | Connection string | `connection_string` | A full storage connection string |
 | Account key | `account_key` | Least preferred; use only when nothing else is possible |
@@ -548,9 +511,9 @@ sql-file-detection-tool analyze abs://data@acct.blob.core.windows.net/raw \
 - Credential inputs in the web UI are password fields, and the connection status
   shows only a masked hint such as `****3f9c`.
 
-No Microsoft Entra application registration is created. The tool uses VS Code's
-built-in Microsoft authentication provider and the Azure Identity public-client
-developer flows, so there is no client secret anywhere in this project.
+No Microsoft Entra application registration or client secret is created. The
+optional Python application uses Azure Identity developer flows or the explicit
+non-Entra methods above.
 
 ### Azure explorer in the web UI
 
@@ -565,7 +528,7 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension, version **2.0.0**. See
+The repository root is also a VS Code extension, version **1.0.1**. See
 [Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
@@ -585,12 +548,12 @@ slack for a shared CI runner.
 | --- | --- | --- |
 | Load the bundle (cold `require`) | 86 ms | < 1500 ms |
 | `activate()` | 0.8 ms | < 500 ms |
-| Activity Bar click to rendered shell | 0.8 ms | < 400 ms |
+| Activity Bar click to editor panel | 0.8 ms | < 400 ms |
 | Subsequent Activity Bar click | 0.2 ms | < 100 ms |
 | First analysis of a 5-column CSV | 30 ms | < 8000 ms |
 | Re-analysis of the same file | 4 ms | < 2000 ms |
 | Heap retained after 20 repeat analyses | 3.0 MiB | < 96 MiB |
-| Packaged `.vsix` | 619 KiB (17 files) | < 5 MB |
+| Packaged `.vsix` | 500 KiB (17 files) | < 5 MB |
 
 There is no setup step to measure, because there is no setup step. Activation
 is triggered by the Activity Bar view, a command or a context-menu action -
@@ -600,24 +563,25 @@ Commands (Command Palette, prefix **SQL File Detection Tool**):
 
 | Command | Purpose |
 | --- | --- |
-| `Open` | Reveals the native interface in the Activity Bar |
-| `Open in Editor` | Opens the same interface as an editor panel, for more width |
+| `Open` | Opens the native interface in an editor tab by default |
+| `Open in Editor` | Opens or focuses the editor tab explicitly |
 | `Analyze Current File` | Analyzes the active editor's file |
-| `Analyze Workspace Folder` | Analyzes a workspace folder |
 | `Analyze with SQL File Detection Tool` | Explorer / editor context menu, on the exact target |
-| `Connect to Azure Storage` | Signs in through VS Code |
-| `Disconnect Azure Storage` | Clears every credential, in memory and in secret storage |
 
-### Activity Bar
+### Editor panel and Activity Bar
 
-Selecting the **SQL File Detection Tool** container reveals the complete
-interface immediately, rendered from bundled assets. **Quick Analyze** is the
-default view, with a persistent source/file navigator, selected-file facts, real
-preview rows, provenance-aware parser options, source readiness, and generated
-SQL. Metadata, Schema, statement details, export, Formats, public HTTPS URLs, and
-the Azure Storage browser remain available through progressive disclosure. There is no
-loading state to wait through and nothing to install; see
+Selecting the **SQL File Detection Tool** container opens the complete interface
+in an editor tab and closes the temporary sidebar. **Preview** is the first and
+default tab, with a persistent source/file navigator and real rows from the
+selected file. Metadata, Schema, focused loading-statement tabs, the guided
+credential/data-source setup, and known storage URLs remain available. Set
+`sqlFileDetectionTool.defaultView` to `sidebar` to keep the interface in the
+Activity Bar instead. There is no loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
+
+**Browse folder** scans files in the selected folder and its immediate child
+folders only. Clicking a listed source analyzes it immediately and returns to
+Preview.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never
@@ -638,34 +602,43 @@ rather than inventing a cloud external source.
 - No token, account key or SAS signature ever reaches the webview, the output
   channel, a setting, a URL or generated SQL.
 
-`Open in Editor` and the sidebar share one state store, so they always agree.
+The editor panel and sidebar share one state store, so they always agree.
 
 ### Settings
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `sqlFileDetectionTool.defaultPlatform` | `azure_sql_db` | Target platform the UI preselects |
+| `sqlFileDetectionTool.defaultView` | `editor` | Primary interface surface (`editor` or `sidebar`) |
 
-The platform, the selected tab and the appearance preference are remembered in
-workspace and global state. File contents and credentials are never persisted
-there.
+The platform and selected tab are remembered in workspace and global state.
+File contents and credentials are never persisted there.
 
-### Azure Storage in the extension
+### Guided SQL credential setup
 
-Four authentication modes, all handled in the extension host:
+The **Credential setup** tab accepts an `abs://`, `adls://`, or `abfss://`
+location, with Azure HTTPS and `s3://` retained for compatibility. The extension
+validates the location, removes query strings and fragments, infers the storage
+service and connector from the URL, and generates credential/data-source SQL even
+before a file is analyzed.
 
-| Mode | Credential | Notes |
+The target SQL platform, inferred storage service, authentication method, and
+object names then constrain one another:
+
+| Target | Storage choices | Guided authentication |
 | --- | --- | --- |
-| VS Code sign-in (recommended) | Microsoft account token via `vscode.authentication` | Refreshed before expiry; enables subscription and account discovery |
-| SAS URL | SAS token | Signature is split off immediately and never displayed |
-| Connection string | Account key | Entered through a masked input box; endpoint pinned from the string |
-| Anonymous | none | Public containers only |
+| SQL Server 2019 | Azure Blob, ADLS Gen2 | SAS |
+| SQL Server 2022 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS; S3 access key for S3 |
+| SQL Server 2025 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS or user-assigned managed identity; S3 access key for S3 |
+| Azure SQL Database | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity, Microsoft Entra `USER IDENTITY`, or SAS |
+| Azure SQL Managed Instance | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity or SAS |
+| Fabric SQL Database | Fabric OneLake only, using ABFSS | Microsoft Entra `USER IDENTITY` |
 
-Remembering a credential in VS Code `SecretStorage` is opt-in and defaults to
-no. Disconnecting, and deactivating the extension, clear memory *and* delete the
-stored secret. Managed identity is deliberately **not** offered in the desktop
-extension, because a desktop extension does not have one - it remains a
-deployment concern for the CLI and the web application below.
+SQL Server 2025 managed identity requires an Azure Arc-enabled instance with the
+selected user-assigned identity configured. The wizard never asks for or stores
+a SAS token, S3 access key, or master-key password. It emits clearly marked
+placeholders for secret-bearing methods so the values can be supplied later in
+a secure SQL editor.
 
 ### Relationship to the Python CLI
 
@@ -676,7 +649,7 @@ and version 2.0.0 removed the last of the backend-lifecycle code: there is no
 `backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
 module left in the extension sources.
 
-The two distributions version independently. The extension is at 2.0.0; the
+The two distributions version independently. The extension is at 1.0.1; the
 Python distribution keeps its own version line, because nothing about the CLI
 changed when the extension stopped using it.
 
@@ -740,8 +713,8 @@ specific target:
 The **Public dataset URL** button accepts either a direct `https://` data file
 or an Azure Open Datasets page on `learn.microsoft.com`.
 
-- A **direct data URL** (`.csv`, `.tsv`, `.json`, `.jsonl`, `.ndjson`,
-  `.parquet`, `.orc`, `.txt`, `.xlsx`, `.xls`) is streamed into the current
+- A **direct data URL** (`.csv`, `.tsv`, `.dat`, `.json`, `.jsonl`, `.ndjson`,
+  `.parquet`, `.snappy`, `.orc`, `.rc`, `.txt`) is streamed into the current
   session's temporary upload area, analysed and previewed like an upload. The
   original URL is retained for SQL generation.
 - A **catalog page** such as
@@ -876,7 +849,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-tool-2.0.0.vsix
+npm run package        # writes dist/sql-file-detection-tool-1.0.1.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 
@@ -910,7 +883,7 @@ npm test                                              # Node suites compare agai
 See [`docs/native-core.md`](docs/native-core.md) for the module layout, the
 service API, the dependency and license choices, the format matrix, and the one
 explicit limitation (ORC), and [`docs/native-ui.md`](docs/native-ui.md) for the
-webview message flow, the CSP, and the Azure and SSRF threat models.
+webview message flow, the CSP, and the storage URL boundary.
 
 ## Project layout
 
@@ -922,14 +895,11 @@ src/                         extension TypeScript sources
 |-- nativeView.ts            WebviewView/Panel provider and UiHost (vscode)
 |-- protocol.ts              webview message contract and validation
 |-- appState.ts              shared state store and opaque file registry
-|-- azureScopes.ts           token scopes and expiry math
 |-- util.ts                  pure helpers (no network, no process)
 |-- ui/                      vscode-free UI layer
 |   |-- controller.ts        all product logic
-|   |-- host.ts              UiHost / AzureBridge seam
+|   |-- host.ts              UiHost seam
 |   `-- webviewShell.ts      HTML shell, CSP, nonce
-|-- azure/                   storage URLs, blob browsing, auth modes
-|-- net/                     SSRF-hardened HTTPS, IP guard, public datasets
 |-- native/                  native analysis + SQL generation core (see docs/)
 |   |-- index.ts             public barrel
 |   |-- service.ts           NativeAnalysisService facade
@@ -955,23 +925,25 @@ external_file_detection/
 |-- web_gui.py
 |-- web_ui.py
 `-- templates/
-demo/
+data sample/
 |-- README.md
 |-- generate_samples.py
 |-- collation_samples.sql
-`-- csv/ json/ parquet/ orc/ excel/ text/ tables/ unicode/
+`-- csv/ json/ parquet/ performance/ orc/ excel/ text/ tables/ unicode/
 ```
 
-## Demo samples
+## Data samples
 
-`demo/` holds small, deterministic fixtures covering every supported input type
-plus Unicode-encoding and SQL-collation cases. Regenerate them with:
+`data sample/` consolidates the former `demo/` and `test_data/` trees by format.
+It covers every supported input type, Unicode and collation cases, plus 25,000-
+and 250,000-row Parquet files for larger-file testing. Regenerate the canonical
+set with:
 
 ```bash
-python demo/generate_samples.py
+python "data sample/generate_samples.py"
 ```
 
-See [`demo/README.md`](demo/README.md) for the full inventory, the Parquet to
+See [`data sample/README.md`](data%20sample/README.md) for the full inventory, the Parquet to
 SQL type mapping, encoding/codepage notes, and ready-to-run CLI commands per
 platform.
 

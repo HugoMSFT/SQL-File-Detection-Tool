@@ -24,11 +24,21 @@ import {
     CancellationError,
     SimpleCancellationTokenSource,
     describeError,
+    effectiveStorageUrl,
+    generateCredentialSetup,
+    inferDataSourceType,
+    isSqlSourceFile,
+    knownStorageLocation,
+    mapTypeToSql,
     nativeAnalysisService,
+    NATIVE_SUPPORT_BY_TYPE,
+    normalizeDataSourceType,
+    normalizeGuidedAuthMethod,
     type FileMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
     type ParserOverrides,
+    sqlSourceFileType,
     type StatementKind,
     type TargetPlatform,
 } from '../native';
@@ -42,30 +52,17 @@ import {
     type RegisteredFile,
 } from '../appState';
 import {
-    sourceReadiness,
     suggestedObjectNames,
-    type SourceKind,
 } from '../quickAnalyze';
 import {
     MAX_PREVIEW_ROWS,
     MIN_PREVIEW_ROWS,
+    isStatementKind,
     parseWebviewRequest,
-    type AzureAuthMode,
     type WebviewRequest,
 } from '../protocol';
 import { resolveDocumentationUrl } from '../documentation';
-import { createSerialQueue } from '../util';
-import { listStorageAccounts, listSubscriptions } from '../azure/arm';
-import { redactAzure } from '../azure/storageUrl';
-import type { SafeHttpDeps } from '../net/safeHttp';
-import { SafeHttpError } from '../net/safeHttp';
-import {
-    dataExtension,
-    downloadDataFile,
-    firstSupportedBlob,
-    isAzureStorageUrl,
-    storageUrlFor,
-} from '../net/publicData';
+import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
 
 /** Files the extension will analyse in one "Export All" pass. */
@@ -74,12 +71,7 @@ export const MAX_EXPORT_FILES = 100;
 /** How long to wait after the last keystroke before regenerating SQL. */
 export const REGENERATE_DEBOUNCE_MS = 180;
 
-/** Blobs / containers fetched per page. Bounded again in the browser. */
-const AZURE_PAGE_SIZE = 50;
-
 export interface ControllerDeps {
-    /** Injected so network tests never touch DNS or a socket. */
-    readonly http?: SafeHttpDeps;
     readonly service?: NativeAnalysisService;
     /** Injected so debounce is deterministic under test. */
     readonly setTimeoutImpl?: (fn: () => void, ms: number) => unknown;
@@ -105,19 +97,27 @@ export function metadataForDisplay(
     };
 }
 
+/** Platform-neutral SQL type recommendations shown in the schema editor. */
+export function recommendedSqlTypes(
+    metadata: FileMetadata,
+): Readonly<Record<string, string>> {
+    const recommendations: Record<string, string> = {};
+    const lengths = metadata.max_string_lengths ?? {};
+    for (const [column, detectedType] of metadata.schema ?? []) {
+        recommendations[column] = mapTypeToSql(detectedType, lengths[column]);
+    }
+    return recommendations;
+}
+
 export class UiController {
     private readonly service: NativeAnalysisService;
     private readonly queue = createSerialQueue();
     private tokenSource: SimpleCancellationTokenSource | undefined;
-    private aborter: AbortController | undefined;
     private generation = 0;
     private regenerateHandle: unknown;
-    /** Temp files this controller downloaded, cleaned up on dispose. */
-    private readonly temporaryFiles = new Set<string>();
     /** The untouched metadata, i.e. the copy that still has a real path. */
     private rawMetadata: FileMetadata | null = null;
     private folderMetadata: readonly FileMetadata[] = [];
-    private sourceReferenceUrl = '';
     private disposed = false;
     /** Benchmark instrumentation: only the first analysis is timed in the log. */
     private firstAnalysisLogged = false;
@@ -131,8 +131,8 @@ export class UiController {
         this.store.setWorkspaceFolders(this.host.workspaceFolders());
         this.store.update({
             formats: this.service.listFormats(),
-            appearance: this.host.getPreference('appearance', 'auto'),
         });
+        this.generateNow();
     }
 
     // -- message entry point -------------------------------------------------
@@ -155,7 +155,7 @@ export class UiController {
             if (error instanceof CancellationError) {
                 return;
             }
-            const message = redactAzure(describeError(error));
+            const message = redact(describeError(error));
             this.host.log(`Request "${request.type}" failed: ${message}`);
             this.store.update({ busy: false, progress: null, error: message });
         }
@@ -177,20 +177,55 @@ export class UiController {
                 return;
             case 'setPlatform': {
                 const platform = this.service.normalizePlatform(request.platform);
-                this.store.update({ platform });
+                const inferred = inferDataSourceType(this.store.state.storageUrl);
+                const dataSourceType = normalizeDataSourceType(
+                    this.store.state.dataSourceType,
+                    platform,
+                );
+                const authMethod = normalizeGuidedAuthMethod(
+                    this.store.state.authMethod,
+                    platform,
+                    dataSourceType,
+                );
+                const storageUrl =
+                    inferred && normalizeDataSourceType(inferred, platform) !== inferred
+                        ? ''
+                        : this.store.state.storageUrl;
+                this.store.update({
+                    platform,
+                    dataSourceType,
+                    authMethod,
+                    storageUrl,
+                    notice:
+                        storageUrl !== this.store.state.storageUrl
+                            ? 'The storage URL was cleared because the selected SQL platform does not support that source.'
+                            : this.store.state.notice,
+                });
                 this.refreshQuickAnalyze();
                 void this.host.setPreference('platform', platform);
                 this.regenerate();
                 return;
             }
-            case 'setTab':
-                this.store.update({ activeTab: request.tab });
+            case 'setTab': {
+                if (isStatementKind(request.tab)) {
+                    const nextState = {
+                        ...this.store.state,
+                        activeTab: request.tab,
+                        quickAnalyze: {
+                            ...this.store.state.quickAnalyze,
+                            selectedStatement: request.tab,
+                        },
+                    };
+                    this.store.update({
+                        activeTab: request.tab,
+                        ...quickAnalyzePatch(nextState, this.rawMetadata, this.folderMetadata),
+                    });
+                } else {
+                    this.store.update({ activeTab: request.tab });
+                }
                 void this.host.setPreference('activeTab', request.tab);
                 return;
-            case 'setPreference':
-                this.store.update({ appearance: request.appearance });
-                void this.host.setPreference('appearance', request.appearance);
-                return;
+            }
             case 'selectFile':
                 return this.queue(() => this.selectFile(request.fileId));
             case 'openFileDialog':
@@ -199,8 +234,6 @@ export class UiController {
                 return this.queue(() => this.browse(true));
             case 'analyzeCurrentFile':
                 return this.queue(() => this.analyzeCurrentFile());
-            case 'analyzeWorkspaceFolder':
-                return this.queue(() => this.analyzeWorkspaceFolder());
             case 'setTableName':
                 this.store.update({ tableName: request.value });
                 this.regenerate();
@@ -220,31 +253,78 @@ export class UiController {
                 this.regenerate();
                 return;
             case 'setAuthMethod':
-                this.store.update({ authMethod: request.value });
+                this.store.update({
+                    authMethod:
+                        request.value === 'public'
+                        && this.store.state.authMethod === 'public'
+                            ? 'public'
+                            : normalizeGuidedAuthMethod(
+                                request.value,
+                                this.store.state.platform,
+                                this.store.state.dataSourceType,
+                            ),
+                });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
-            case 'setStorageUrl':
-                this.store.update({ storageUrl: request.value });
+            case 'setStorageUrl': {
+                const value = request.value.trim();
+                if (!value) {
+                    this.store.update({
+                        storageUrl: '',
+                        error: null,
+                        notice: 'Known storage URL cleared. Safe placeholders are used instead.',
+                    });
+                    this.refreshQuickAnalyze();
+                    this.generateNow();
+                    return;
+                }
+                const location = knownStorageLocation(value);
+                const dataSourceType = normalizeDataSourceType(
+                    location.dataSourceType,
+                    this.store.state.platform,
+                );
+                if (dataSourceType !== location.dataSourceType) {
+                    this.store.update({
+                        error:
+                            `${this.store.state.credentialSetup.dataSourceOptions
+                                .map((option) => option.label)
+                                .join(', ')} are the supported storage services for the selected SQL platform.`,
+                    });
+                    return;
+                }
+                const requestedAuth = location.hadSasSignature
+                    ? 'sas'
+                    : this.store.state.authMethod === 'public'
+                        ? null
+                        : this.store.state.authMethod;
+                const authMethod = normalizeGuidedAuthMethod(
+                    requestedAuth,
+                    this.store.state.platform,
+                    dataSourceType,
+                );
+                this.store.update({
+                    storageUrl: location.storageUrl,
+                    dataSourceType,
+                    authMethod,
+                    error: null,
+                    notice: location.removedSuffix
+                        ? 'Storage location applied. Query parameters and fragments were removed before SQL generation.'
+                        : 'Storage location applied to Credential Setup.',
+                });
                 this.refreshQuickAnalyze();
-                this.regenerate();
+                this.generateNow();
                 return;
+            }
             case 'setFormatName':
                 this.store.update({ formatName: request.value });
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
-            case 'setStatementKind':
-                this.store.update({
-                    activeTab: 'quick_analyze',
-                    quickAnalyze: {
-                        ...this.store.state.quickAnalyze,
-                        selectedStatement: request.kind,
-                    },
-                });
-                this.refreshQuickAnalyze();
-                return;
             case 'setParserOverride': {
+                if (request.fileId !== this.store.state.selectedFileId) {
+                    return;
+                }
                 const value = this.parseParserOverride(request.key, request.value);
                 if (value === undefined) {
                     return;
@@ -267,6 +347,9 @@ export class UiController {
                 return;
             }
             case 'setColumnOverride': {
+                if (request.fileId !== this.store.state.selectedFileId) {
+                    return;
+                }
                 const overrides = { ...this.store.state.columnOverrides };
                 if (request.sqlType.trim() === '') {
                     delete overrides[request.column];
@@ -311,32 +394,6 @@ export class UiController {
             case 'showOrcGuidance':
                 this.showLimitationGuidance();
                 return;
-            case 'azureConnect':
-                return this.queue(() => this.azureConnect(request.mode));
-            case 'azureDisconnect':
-                return this.queue(() => this.azureDisconnect());
-            case 'azureListSubscriptions':
-                return this.queue(() => this.azureListSubscriptions());
-            case 'azureListAccounts':
-                return this.queue(() => this.azureListAccounts(request.subscriptionId));
-            case 'azureSetAccount':
-                return this.queue(() => this.azureSetAccount(request.account));
-            case 'azureListContainers':
-                return this.queue(() => this.azureListContainers());
-            case 'azureListBlobs':
-                return this.queue(() =>
-                    this.azureListBlobs(
-                        request.container,
-                        request.prefix,
-                        request.continuation,
-                    ),
-                );
-            case 'azureAnalyzeBlob':
-                return this.queue(() =>
-                    this.azureAnalyzeBlob(request.container, request.blob),
-                );
-            case 'publicUrlAnalyze':
-                return this.queue(() => this.analyzePublicUrl(request.url));
             default: {
                 // Exhaustiveness: adding a request type without a case is a
                 // compile error rather than a silently ignored message.
@@ -352,24 +409,17 @@ export class UiController {
     private begin(): {
         token: SimpleCancellationTokenSource;
         generation: number;
-        signal: AbortSignal;
     } {
         this.cancelActive();
         const token = new SimpleCancellationTokenSource();
-        const aborter = new AbortController();
         this.tokenSource = token;
-        this.aborter = aborter;
         this.generation += 1;
-        return { token, generation: this.generation, signal: aborter.signal };
+        return { token, generation: this.generation };
     }
 
     private cancelActive(): void {
         this.tokenSource?.cancel();
         this.tokenSource = undefined;
-        // Cancelling must stop work in flight, not merely discard its result:
-        // an in-progress blob or public download reads the same signal.
-        this.aborter?.abort();
-        this.aborter = undefined;
     }
 
     /** True when *generation* is still the newest request. */
@@ -411,27 +461,27 @@ export class UiController {
         await this.loadFiles([target]);
     }
 
-    private async analyzeWorkspaceFolder(): Promise<void> {
-        const folder = await this.host.pickWorkspaceFolder();
-        if (!folder) {
-            return;
-        }
-        await this.loadDirectory(folder);
-    }
-
     /**
-     * Analyse a directory and list every supported file inside it.
+     * Analyse the selected directory and its immediate child folders.
      *
      * The directory itself becomes the allowed root, so nothing outside the
      * folder the user chose can be read even if it is linked into it.
      */
     async loadDirectory(directory: string): Promise<void> {
-        this.sourceReferenceUrl = '';
         this.folderMetadata = [];
         this.rawMetadata = null;
+        const state = this.store.state;
         this.store.update({
             sourceKind: 'local',
             storageUrl: '',
+            authMethod:
+                state.authMethod === 'public'
+                    ? normalizeGuidedAuthMethod(
+                          null,
+                          state.platform,
+                          state.dataSourceType,
+                      )
+                    : state.authMethod,
             parserOverrides: {},
             folderProfile: null,
         });
@@ -441,6 +491,7 @@ export class UiController {
             const result = await this.service.analyzeDirectory({
                 filePath: directory,
                 allowedRoot: directory,
+                maxDepth: 1,
                 token: token.token,
             });
             if (!this.isCurrent(generation)) {
@@ -473,6 +524,7 @@ export class UiController {
                 await this.selectFile(first.id);
             } else {
                 this.store.clearSelection();
+                this.generateNow();
             }
         } catch (error) {
             this.failIfCurrent(generation, error);
@@ -480,28 +532,54 @@ export class UiController {
     }
 
     /** Analyse one or more explicitly chosen files. */
-    async loadFiles(paths: readonly string[], sourceKind: SourceKind = 'local'): Promise<void> {
+    async loadFiles(paths: readonly string[]): Promise<void> {
         this.folderMetadata = [];
-        if (sourceKind === 'local') {
-            this.sourceReferenceUrl = '';
+        const supportedPaths = paths.filter(isSqlSourceFile);
+        const skipped = paths.length - supportedPaths.length;
+        if (supportedPaths.length === 0) {
+            this.rawMetadata = null;
+            this.store.setFiles([]);
+            this.store.clearSelection();
+            this.generateNow();
+            this.store.update({
+                error:
+                    'No SQL-readable data file was selected. Use CSV, TSV, DAT, JSON, ' +
+                    'Parquet, ORC, RCFile, Delta, Iceberg, or a folder containing them.',
+            });
+            return;
         }
-        const entries = paths.map((absolute) => ({
-            absolutePath: absolute,
-            // A single chosen file is confined to its own directory, matching
-            // the native core's implied-root rule.
-            allowedRoot: path.dirname(path.resolve(absolute)),
-            fileType: 'unknown',
-            sizeBytes: 0,
-            nativeSupport: 'supported' as const,
-            isDirectory: false,
-        }));
+        const entries = supportedPaths.map((absolute) => {
+            const fileType = sqlSourceFileType(absolute) ?? 'unknown';
+            return {
+                absolutePath: absolute,
+                // A chosen file is confined to its own directory, matching the
+                // native core's implied-root rule.
+                allowedRoot: path.dirname(path.resolve(absolute)),
+                fileType,
+                sizeBytes: 0,
+                nativeSupport: NATIVE_SUPPORT_BY_TYPE[fileType],
+                isDirectory: false,
+            };
+        });
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
-        const { label } = displayLabel(paths[0], this.host.workspaceFolders());
+        const { label } = displayLabel(supportedPaths[0], this.host.workspaceFolders());
+        const state = this.store.state;
         this.store.update({
-            sourceLabel: label,
-            sourceKind,
-            storageUrl: sourceKind === 'local' ? '' : this.store.state.storageUrl,
+            sourceLabel:
+                supportedPaths.length === 1
+                    ? label
+                    : `${supportedPaths.length} selected files`,
+            sourceKind: 'local',
+            storageUrl: '',
+            authMethod:
+                state.authMethod === 'public'
+                    ? normalizeGuidedAuthMethod(
+                          null,
+                          state.platform,
+                          state.dataSourceType,
+                      )
+                    : state.authMethod,
             parserOverrides: {},
             folderProfile: null,
             error: null,
@@ -510,6 +588,12 @@ export class UiController {
         this.refreshQuickAnalyze();
         if (first) {
             await this.selectFile(first.id);
+        }
+        if (skipped > 0) {
+            this.store.update({
+                notice:
+                    `${skipped} unsupported ${skipped === 1 ? 'file was' : 'files were'} skipped.`,
+            });
         }
     }
 
@@ -523,10 +607,14 @@ export class UiController {
         const changed = this.store.state.selectedFileId !== fileId;
         this.store.update({
             selectedFileId: fileId,
+            activeTab: 'preview',
+            tableName: changed ? '' : this.store.state.tableName,
             parserOverrides: changed ? {} : this.store.state.parserOverrides,
+            columnOverrides: changed ? {} : this.store.state.columnOverrides,
             error: null,
             notice: null,
         });
+        void this.host.setPreference('activeTab', 'preview');
         await this.analyzeSelected(file);
     }
 
@@ -602,13 +690,7 @@ export class UiController {
         if (error instanceof CancellationError || !this.isCurrent(generation)) {
             return;
         }
-        // A user-initiated cancel is not a failure, and must not leave an error
-        // banner behind after the work it stopped.
-        if (error instanceof SafeHttpError && error.code === 'cancelled') {
-            this.store.update({ busy: false, progress: null });
-            return;
-        }
-        const message = redactAzure(describeError(error));
+        const message = redact(describeError(error));
         this.host.log(`Analysis failed: ${message}`);
         this.store.update({ busy: false, progress: null, error: message });
     }
@@ -624,20 +706,17 @@ export class UiController {
                 : suggestedObjectNames(
                       state.storageUrl,
                       metadata.file_type,
-                      state.authMethod || (state.azure.mode === 'anonymous' ? 'public' : ''),
+                      state.authMethod,
                   );
         this.store.update({
             metadata: display,
+            recommendedSqlTypes: recommendedSqlTypes(metadata),
             limitation: limitationFor(metadata),
             tableName: state.tableName || this.service.resolveTableName(metadata, null),
             dataSource: sourceNames?.dataSource ?? state.dataSource,
             credentialName: sourceNames?.credentialName ?? state.credentialName,
             formatName: sourceNames?.formatName ?? state.formatName,
-            authMethod:
-                state.authMethod ||
-                (state.sourceKind === 'azure' && state.azure.mode === 'anonymous'
-                    ? 'public'
-                    : state.authMethod),
+            authMethod: state.authMethod,
             lastAnalysisMs: Math.max(0, Math.round(elapsedMs)),
         });
         this.refreshQuickAnalyze();
@@ -650,27 +729,6 @@ export class UiController {
             this.rawMetadata,
             this.folderMetadata,
         );
-        if (this.sourceReferenceUrl && this.store.state.sourceKind !== 'local') {
-            this.store.update({
-                ...patch,
-                quickAnalyze: {
-                ...patch.quickAnalyze,
-                source: sourceReadiness({
-                    sourceKind: this.store.state.sourceKind,
-                    storageUrl: this.sourceReferenceUrl,
-                    fileName: this.rawMetadata?.file_name ?? '',
-                    fileType: this.rawMetadata?.file_type ?? 'unknown',
-                    dataSource: this.store.state.dataSource,
-                    credentialName: this.store.state.credentialName,
-                    formatName: this.store.state.formatName,
-                    authMethod: this.store.state.authMethod,
-                    platform: this.store.state.platform,
-                    selectedStatement: patch.quickAnalyze.selectedStatement,
-                }),
-                },
-            });
-            return;
-        }
         this.store.update(patch);
     }
 
@@ -727,10 +785,30 @@ export class UiController {
 
     /** Regenerate every statement tab from the current options. Synchronous. */
     generateNow(): void {
-        if (this.disposed || !this.rawMetadata) {
+        if (this.disposed) {
             return;
         }
         const state = this.store.state;
+        if (!this.rawMetadata) {
+            const storageUrl = effectiveStorageUrl(
+                state.platform,
+                state.dataSourceType,
+                state.storageUrl || null,
+                '<file>',
+            );
+            this.store.update({
+                statements: {
+                    credential_setup: generateCredentialSetup({
+                        dataSource: state.dataSource || 'MyDataSource',
+                        credentialName: state.credentialName || null,
+                        authMethod: state.authMethod || null,
+                        targetPlatform: state.platform,
+                        storageUrl,
+                    }),
+                },
+            });
+            return;
+        }
         const statements: GeneratedStatements = this.service.generateStatements({
             metadata: {
                 ...this.rawMetadata,
@@ -743,6 +821,7 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            dataSourceType: state.dataSourceType,
             formatName: state.formatName || null,
             parserOverrides:
                 Object.keys(state.parserOverrides).length > 0
@@ -769,6 +848,7 @@ export class UiController {
             authMethod: state.authMethod || null,
             targetPlatform: state.platform,
             storageUrl: state.storageUrl || null,
+            dataSourceType: state.dataSourceType,
             formatName: state.formatName || null,
             parserOverrides:
                 Object.keys(state.parserOverrides).length > 0
@@ -870,6 +950,7 @@ export class UiController {
                 authMethod: state.authMethod || null,
                 targetPlatform: state.platform as TargetPlatform,
                 storageUrl: state.storageUrl || null,
+                dataSourceType: state.dataSourceType,
             });
             if (!this.isCurrent(generation)) {
                 return;
@@ -920,272 +1001,6 @@ export class UiController {
         );
     }
 
-    // -- Azure ---------------------------------------------------------------
-
-    private async azureConnect(mode: AzureAuthMode): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const info = await this.host.azure.connect(mode);
-            this.store.updateAzure({
-                busy: false,
-                connected: info.connected,
-                mode: info.mode,
-                identity: info.identity,
-                account: info.account,
-                canListSubscriptions: info.canListSubscriptions,
-                error: null,
-            });
-            if (info.account) {
-                await this.azureListContainers();
-            } else if (info.canListSubscriptions) {
-                await this.azureListSubscriptions();
-            }
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureDisconnect(): Promise<void> {
-        try {
-            await this.host.azure.disconnect();
-        } finally {
-            this.store.updateAzure({
-                connected: false,
-                mode: null,
-                identity: null,
-                account: null,
-                subscriptions: [],
-                accounts: [],
-                containers: [],
-                container: null,
-                prefix: '',
-                blobs: [],
-                continuation: null,
-                canListSubscriptions: false,
-                busy: false,
-                error: null,
-            });
-        }
-    }
-
-    private async azureListSubscriptions(): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const token = await this.host.azure.armToken();
-            if (!token) {
-                this.store.updateAzure({
-                    busy: false,
-                    canListSubscriptions: false,
-                    error:
-                        'Subscription discovery is unavailable. Enter a storage account name to attach directly.',
-                });
-                return;
-            }
-            const subscriptions = await listSubscriptions(token);
-            this.store.updateAzure({ busy: false, subscriptions, canListSubscriptions: true });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListAccounts(subscriptionId: string): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const token = await this.host.azure.armToken();
-            if (!token) {
-                this.store.updateAzure({
-                    busy: false,
-                    error: 'Sign in with a Microsoft account to list storage accounts.',
-                });
-                return;
-            }
-            const accounts = await listStorageAccounts(token, subscriptionId);
-            this.store.updateAzure({ busy: false, accounts });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureSetAccount(account: string): Promise<void> {
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const info = await this.host.azure.useAccount(account);
-            this.store.updateAzure({
-                busy: false,
-                account: info.account,
-                connected: info.connected,
-                mode: info.mode,
-                identity: info.identity,
-                containers: [],
-                container: null,
-                blobs: [],
-                continuation: null,
-            });
-            await this.azureListContainers();
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListContainers(): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({
-                busy: false,
-                error: 'Select a storage account first.',
-            });
-            return;
-        }
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const page = await browser.listContainers({ pageSize: AZURE_PAGE_SIZE });
-            this.store.updateAzure({ busy: false, containers: page.names });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureListBlobs(
-        container: string,
-        prefix: string,
-        continuation: string,
-    ): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({ busy: false, error: 'Select a storage account first.' });
-            return;
-        }
-        this.store.updateAzure({ busy: true, error: null });
-        try {
-            const page = await browser.listBlobs(container, {
-                prefix,
-                continuation: continuation || null,
-                pageSize: AZURE_PAGE_SIZE,
-            });
-            this.store.updateAzure({
-                busy: false,
-                container,
-                prefix,
-                continuation: page.continuation,
-                blobs: page.entries.map((entry) => ({
-                    name: entry.name,
-                    sizeBytes: entry.sizeBytes,
-                    supported: entry.isPrefix || dataExtension(entry.name) !== null,
-                })),
-            });
-        } catch (error) {
-            this.azureFail(error);
-        }
-    }
-
-    private async azureAnalyzeBlob(container: string, blob: string): Promise<void> {
-        const browser = this.host.azure.browser();
-        if (!browser) {
-            this.store.updateAzure({ busy: false, error: 'Select a storage account first.' });
-            return;
-        }
-        const { token, generation, signal } = this.begin();
-        this.store.update({ busy: true, progress: `Downloading ${blob}…`, error: null });
-        try {
-            const directory = await this.host.downloadDirectory();
-            const downloaded = await browser.downloadBlob(container, blob, directory, {
-                signal,
-            });
-            this.temporaryFiles.add(downloaded.path);
-            if (!this.isCurrent(generation) || token.token.isCancellationRequested) {
-                await this.host.cleanupDownload(downloaded.path);
-                this.temporaryFiles.delete(downloaded.path);
-                return;
-            }
-            this.sourceReferenceUrl = browser.blobUrl(container, blob);
-            this.store.update({ storageUrl: this.sourceReferenceUrl });
-            await this.loadFiles([downloaded.path], 'azure');
-            this.store.update({
-                notice:
-                    'Analyzed a local copy. The generated SQL points at the blob URL, not the copy.',
-            });
-        } catch (error) {
-            this.azureFail(error);
-            this.store.update({ busy: false, progress: null });
-        }
-    }
-
-    private azureFail(error: unknown): void {
-        const message = redactAzure(describeError(error));
-        this.host.log(`Azure request failed: ${message}`);
-        this.store.updateAzure({ busy: false, error: message });
-    }
-
-    // -- public data ---------------------------------------------------------
-
-    /**
-     * Download and analyse a public HTTPS URL.
-     *
-     * The URL is validated, fetched and stored by
-     * {@link ../net/publicData}, which enforces the SSRF policy. The generated
-     * SQL only points at the URL when SQL can actually read it; otherwise the
-     * user is told to stage the file.
-     */
-    private async analyzePublicUrl(url: string): Promise<void> {
-        const { token, generation, signal } = this.begin();
-        const http: SafeHttpDeps = { ...(this.deps.http ?? {}), signal };
-        this.store.update({ busy: true, progress: 'Resolving URL…', error: null, notice: null });
-        try {
-            let target = url;
-            if (!dataExtension(url) && isAzureStorageUrl(url)) {
-                this.store.update({ progress: 'Listing the public container…' });
-                const candidate = await firstSupportedBlob(url, http);
-                if (!this.isCurrent(generation)) {
-                    return;
-                }
-                if (!candidate) {
-                    this.store.update({
-                        busy: false,
-                        progress: null,
-                        error:
-                            'No supported data file was found under that container prefix.',
-                    });
-                    return;
-                }
-                target = candidate.url;
-            }
-
-            this.store.update({ progress: 'Downloading…' });
-            const directory = await this.host.downloadDirectory();
-            const downloaded = await downloadDataFile(target, directory, http);
-            this.temporaryFiles.add(downloaded.path);
-            if (!this.isCurrent(generation) || token.token.isCancellationRequested) {
-                await this.host.cleanupDownload(downloaded.path);
-                this.temporaryFiles.delete(downloaded.path);
-                return;
-            }
-
-            const queryable = storageUrlFor(target);
-            try {
-                const source = new URL(target);
-                source.search = '';
-                source.hash = '';
-                this.sourceReferenceUrl = source.toString();
-            } catch {
-                this.sourceReferenceUrl = '';
-            }
-            this.store.update({ storageUrl: queryable ?? '' });
-            await this.loadFiles(
-                [downloaded.path],
-                queryable && isAzureStorageUrl(queryable) ? 'azure' : 'public_https',
-            );
-            this.store.update({
-                busy: false,
-                progress: null,
-                notice: queryable
-                    ? 'Analyzed a local copy. The generated SQL reads the storage URL directly.'
-                    : 'SQL cannot read that URL directly. Stage the file in Azure Storage (or a local path SQL can reach) before running the generated script.',
-            });
-        } catch (error) {
-            this.failIfCurrent(generation, error);
-        }
-    }
-
     // -- lifecycle -----------------------------------------------------------
 
     /** Re-read workspace folders, e.g. after a folder was added or removed. */
@@ -1213,11 +1028,6 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
-        this.sourceReferenceUrl = '';
-        for (const file of this.temporaryFiles) {
-            await this.host.cleanupDownload(file);
-        }
-        this.temporaryFiles.clear();
     }
 }
 

@@ -14,9 +14,9 @@
  * form control `value`, so analysed file content can never become markup. All
  * markup comes from cloning the `<template>` elements in the shell document.
  *
- * The webview holds no state of its own beyond scroll and focus: it renders
- * whatever snapshot the host last sent, which is what keeps the Activity Bar
- * view and the editor panel from ever disagreeing.
+ * Product state always comes from the host snapshot. The renderer keeps only
+ * transient view state such as pending edits, focus, scroll and collapsed
+ * folders, so the Activity Bar view and editor panel cannot disagree on data.
  */
 
 /* eslint-env browser */
@@ -27,22 +27,15 @@
 
     /** Tabs in display order. Statement tabs appear only when they have text. */
     const TABS = [
-        { id: 'quick_analyze', label: 'Quick Analyze', always: true },
-        { id: 'metadata', label: 'Metadata', always: true },
         { id: 'preview', label: 'Preview', always: true },
+        { id: 'metadata', label: 'Metadata', always: true },
         { id: 'schema', label: 'Schema', always: true },
         { id: 'create_table', label: 'CREATE TABLE' },
         { id: 'bulk_insert', label: 'BULK INSERT' },
         { id: 'openrowset', label: 'OPENROWSET' },
-        { id: 'copy_into', label: 'COPY INTO' },
+        { id: 'create_external_table', label: 'EXT TABLE' },
         { id: 'external_file_format', label: 'File format' },
-        { id: 'create_external_table', label: 'External table' },
         { id: 'credential_setup', label: 'Credential setup' },
-        { id: 'json_functions', label: 'JSON' },
-        { id: 'for_json', label: 'FOR JSON' },
-        { id: 'best_practices', label: 'Best practices' },
-        { id: 'azure', label: 'Azure & URLs', always: true },
-        { id: 'formats', label: 'Formats', always: true },
     ];
 
     const SUPPORT_LABEL = {
@@ -55,6 +48,7 @@
     /** Values the user is mid-edit, so a state push cannot yank the caret. */
     const pendingEdits = new Map();
     const debounceTimers = new Map();
+    const collapsedFolders = new Set();
 
     // -- helpers -------------------------------------------------------------
 
@@ -87,14 +81,6 @@
         if (existing !== undefined) {
             clearTimeout(existing);
         }
-
-        function cancelDebounce(key) {
-            const timer = debounceTimers.get(key);
-            if (timer !== undefined) {
-                clearTimeout(timer);
-                debounceTimers.delete(key);
-            }
-        }
         debounceTimers.set(
             key,
             setTimeout(function () {
@@ -102,6 +88,27 @@
                 fn();
             }, ms),
         );
+    }
+
+    function cancelDebounce(key) {
+        const timer = debounceTimers.get(key);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+            debounceTimers.delete(key);
+        }
+    }
+
+    function clearFileEdits() {
+        for (const key of Array.from(debounceTimers.keys())) {
+            if (key.startsWith('parser:') || key.startsWith('override:')) {
+                cancelDebounce(key);
+            }
+        }
+        for (const key of Array.from(pendingEdits.keys())) {
+            if (key.startsWith('parser:') || key.startsWith('override:')) {
+                pendingEdits.delete(key);
+            }
+        }
     }
 
     function clear(node) {
@@ -154,6 +161,65 @@
         return pendingEdits.has(key) ? pendingEdits.get(key) : fallback;
     }
 
+    function captureFocus() {
+        const active = document.activeElement;
+        if (!active || !active.dataset) {
+            return null;
+        }
+        const identity = {
+            id: active.id || '',
+            edit: active.dataset.edit || '',
+            column: active.dataset.column || '',
+            parserOption: active.dataset.parserOption || '',
+        };
+        if (!identity.id && !identity.edit && !identity.parserOption) {
+            return null;
+        }
+        let start = null;
+        let end = null;
+        let direction = null;
+        if (typeof active.selectionStart === 'number') {
+            start = active.selectionStart;
+            end = active.selectionEnd;
+            direction = active.selectionDirection;
+        }
+        return { identity: identity, start: start, end: end, direction: direction };
+    }
+
+    function restoreFocus(snapshot) {
+        if (!snapshot) {
+            return;
+        }
+        const identity = snapshot.identity;
+        let control = identity.id ? byId(identity.id) : null;
+        if (!control) {
+            const controls = document.querySelectorAll('[data-edit], [data-parser-option]');
+            control = Array.prototype.find.call(controls, function (candidate) {
+                return (
+                    (candidate.dataset.edit || '') === identity.edit
+                    && (candidate.dataset.column || '') === identity.column
+                    && (candidate.dataset.parserOption || '') === identity.parserOption
+                );
+            });
+        }
+        if (!control) {
+            return;
+        }
+        control.focus({ preventScroll: true });
+        if (
+            snapshot.start !== null
+            && snapshot.end !== null
+            && typeof control.setSelectionRange === 'function'
+        ) {
+            const length = typeof control.value === 'string' ? control.value.length : 0;
+            control.setSelectionRange(
+                Math.min(snapshot.start, length),
+                Math.min(snapshot.end, length),
+                snapshot.direction || 'none',
+            );
+        }
+    }
+
     // -- rendering -----------------------------------------------------------
 
     function renderHeader() {
@@ -169,8 +235,6 @@
             });
         }
         platform.value = state.platform;
-        byId('appearance').value = state.appearance;
-        document.body.classList.toggle('density-compact', state.appearance === 'compact');
     }
 
     function renderStatus() {
@@ -186,22 +250,30 @@
 
     function renderFiles() {
         const list = byId('file-list');
+        const scrollTop = list.scrollTop;
         clear(list);
         byId('source-label').textContent = state.sourceLabel || '';
         byId('file-empty').hidden = state.files.length > 0;
 
-        state.files.forEach(function (file) {
+        function treeNode() {
+            return { folders: new Map(), files: [] };
+        }
+
+        function renderFile(parent, file) {
             const item = template('tpl-file-item');
             item.dataset.fileId = file.id;
+            if (file.isDirectory) {
+                item.classList.add('table-item');
+                item.querySelector('.file-icon').className = 'table-icon';
+            }
             item.setAttribute(
                 'aria-selected',
                 file.id === state.selectedFileId ? 'true' : 'false',
             );
-            item.querySelector('.file-name').textContent = file.label;
+            const name = item.querySelector('.file-name');
+            name.textContent = file.label;
+            name.title = file.label;
             const parts = [];
-            if (file.folderLabel) {
-                parts.push(file.folderLabel);
-            }
             parts.push(file.fileType);
             if (file.sizeBytes > 0) {
                 parts.push(formatBytes(file.sizeBytes));
@@ -210,7 +282,91 @@
                 parts.push(SUPPORT_LABEL[file.nativeSupport] || file.nativeSupport);
             }
             item.querySelector('.file-meta').textContent = parts.join(' · ');
-            list.appendChild(item);
+            parent.appendChild(item);
+        }
+
+        function renderFolder(parent, name, node, folderPath) {
+            const item = element('li', 'tree-folder');
+            item.setAttribute('role', 'treeitem');
+            const expanded = !collapsedFolders.has(folderPath);
+            item.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+            const button = element('button', 'tree-folder-label');
+            button.type = 'button';
+            button.dataset.folderPath = folderPath;
+            button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            button.appendChild(element('span', 'folder-chevron'));
+            button.appendChild(element('span', 'folder-icon'));
+            button.appendChild(element('span', 'folder-name', name));
+            item.appendChild(button);
+
+            const group = element('ul', 'tree-group');
+            group.setAttribute('role', 'group');
+            group.hidden = !expanded;
+            Array.from(node.folders.keys())
+                .sort(function (left, right) {
+                    return left.localeCompare(right);
+                })
+                .forEach(function (childName) {
+                    renderFolder(
+                        group,
+                        childName,
+                        node.folders.get(childName),
+                        folderPath ? folderPath + '/' + childName : childName,
+                    );
+                });
+            node.files
+                .slice()
+                .sort(function (left, right) {
+                    return left.label.localeCompare(right.label);
+                })
+                .forEach(function (file) {
+                    renderFile(group, file);
+                });
+            item.appendChild(group);
+            parent.appendChild(item);
+        }
+
+        const root = treeNode();
+        state.files.forEach(function (file) {
+            let node = root;
+            String(file.folderLabel || '')
+                .split('/')
+                .filter(function (segment) {
+                    return segment && segment !== '.' && segment !== '..';
+                })
+                .forEach(function (segment) {
+                    if (!node.folders.has(segment)) {
+                        node.folders.set(segment, treeNode());
+                    }
+                    node = node.folders.get(segment);
+                });
+            node.files.push(file);
+        });
+
+        Array.from(root.folders.keys())
+            .sort(function (left, right) {
+                return left.localeCompare(right);
+            })
+            .forEach(function (name) {
+                renderFolder(list, name, root.folders.get(name), name);
+            });
+        root.files
+            .slice()
+            .sort(function (left, right) {
+                return left.label.localeCompare(right.label);
+            })
+            .forEach(function (file) {
+                renderFile(list, file);
+            });
+        list.scrollTop = scrollTop;
+    }
+
+    function visibleFileItems() {
+        const list = byId('file-list');
+        return Array.prototype.filter.call(list.querySelectorAll('.file-item'), function (item) {
+            const hiddenGroup = item.closest('.tree-group[hidden]');
+            return !hiddenGroup;
         });
     }
 
@@ -271,189 +427,6 @@
             return;
         }
 
-        function renderParserOption(container, option) {
-            const node = template('tpl-parser-option');
-            node.classList.toggle('has-warning', Boolean(option.warning));
-            node.querySelector('label').textContent = option.label;
-            node.querySelector('.provenance').textContent = option.provenance;
-            node.querySelector('.expected').textContent =
-                'Expected: ' + option.expectedValue + ' · ' + option.provenance;
-            node.querySelector('.evidence').textContent =
-                option.warning || option.evidence || '';
-            const control = node.querySelector('.parser-control');
-            if (option.label === 'File encoding') {
-                control.appendChild(element('strong', null, option.value));
-            } else {
-                let input;
-                if (option.key === 'format') {
-                    input = document.createElement('select');
-                    (state.formats || []).forEach(function (format) {
-                        const entry = element('option', null, format.label);
-                        entry.value = format.fileType;
-                        input.appendChild(entry);
-                    });
-                } else {
-                    input = document.createElement('input');
-                    input.type = option.key === 'firstRow' ? 'number' : 'text';
-                    input.spellcheck = false;
-                    input.autocomplete = 'off';
-                }
-                input.value = editable('parser:' + option.key, option.value);
-                input.dataset.parserOption = option.key;
-                input.setAttribute('aria-label', option.label);
-                control.appendChild(input);
-            }
-            const reset = node.querySelector('.reset-option');
-            reset.hidden = !option.overridden;
-            reset.dataset.resetParser = option.key;
-            container.appendChild(node);
-        }
-
-        function renderQuickAnalyze(container) {
-            const metadata = state.metadata;
-            container.appendChild(element('h2', null, 'Quick Analyze'));
-            renderLimitation(container);
-            if (!metadata) {
-                container.appendChild(
-                    element('p', 'empty', 'Choose a source and file to analyze it.'),
-                );
-                return;
-            }
-
-            const summary = element('dl', 'kv-list quick-facts');
-            appendKv(summary, 'Selected file', metadata.file_path);
-            appendKv(summary, 'Rows', metadata.row_count);
-            appendKv(summary, 'Columns', metadata.column_count);
-            appendKv(summary, 'Schema', metadata.schema_inference ? 'Inferred' : 'Unavailable');
-            appendKv(summary, 'Encoding', metadata.encoding + ' (file fact)');
-            container.appendChild(summary);
-
-            if (state.folderProfile) {
-                const profile = element('aside', 'folder-profile');
-                profile.appendChild(element('h3', null, 'Folder profile · per-file detection'));
-                profile.appendChild(
-                    element(
-                        'p',
-                        'help',
-                        state.folderProfile.fileCount +
-                            ' files · format ' +
-                            state.folderProfile.format +
-                            ' · delimiter ' +
-                            state.folderProfile.delimiter +
-                            ' · encoding ' +
-                            state.folderProfile.encoding +
-                            ' · schema ' +
-                            state.folderProfile.schema +
-                            (state.folderProfile.outlierCount
-                                ? ' · ' + state.folderProfile.outlierCount + ' outlier(s)'
-                                : ''),
-                    ),
-                );
-                container.appendChild(profile);
-            }
-
-            container.appendChild(element('h3', null, 'Common parser options'));
-            const common = element('div', 'parser-grid');
-            state.quickAnalyze.options
-                .filter(function (option) {
-                    return !option.advanced;
-                })
-                .forEach(function (option) {
-                    renderParserOption(common, option);
-                });
-            container.appendChild(common);
-
-            const advanced = document.createElement('details');
-            if (
-                state.quickAnalyze.options.some(function (option) {
-                    return option.advanced && option.warning;
-                })
-            ) {
-                advanced.open = true;
-            }
-            advanced.appendChild(element('summary', null, 'Advanced parser details'));
-            const advancedGrid = element('div', 'parser-grid');
-            state.quickAnalyze.options
-                .filter(function (option) {
-                    return option.advanced;
-                })
-                .forEach(function (option) {
-                    renderParserOption(advancedGrid, option);
-                });
-            advanced.appendChild(advancedGrid);
-            container.appendChild(advanced);
-
-            container.appendChild(element('h3', null, 'Row preview'));
-            renderPreview(container);
-
-            const source = state.quickAnalyze.source;
-            const readiness = element(
-                'aside',
-                source.stagingRequired ? 'source-readiness has-warning' : 'source-readiness',
-            );
-            readiness.appendChild(element('h3', null, 'Source readiness'));
-            readiness.appendChild(
-                element(
-                    'p',
-                    'help',
-                    source.detail +
-                        (source.baseLocation ? ' Base: ' + source.baseLocation + '.' : '') +
-                        (source.relativePath ? ' Relative path: ' + source.relativePath + '.' : ''),
-                ),
-            );
-            if (source.objects.length > 0) {
-                const list = element('ul', 'readiness-list');
-                source.objects.forEach(function (object) {
-                    const item = template('tpl-readiness');
-                    item.querySelector('.readiness-name').textContent =
-                        object.name + (object.required ? ' · required' : ' · not required');
-                    item.querySelector('.provenance').textContent = object.provenance;
-                    item.querySelector('.readiness-detail').textContent = object.detail;
-                    renderDocumentationLinks(item, [object.documentation]);
-                    list.appendChild(item);
-                });
-                readiness.appendChild(list);
-            }
-            container.appendChild(readiness);
-
-            const statementLabel = element('label', 'field statement-picker');
-            statementLabel.appendChild(element('span', null, 'Generated statement'));
-            const statementSelect = document.createElement('select');
-            statementSelect.dataset.edit = 'statementKind';
-            TABS.filter(function (tab) {
-                return (
-                    !tab.always &&
-                    typeof (state.statements || {})[tab.id] === 'string' &&
-                    (state.statements || {})[tab.id].trim()
-                );
-            }).forEach(function (tab) {
-                const choice = element('option', null, tab.label);
-                choice.value = tab.id;
-                statementSelect.appendChild(choice);
-            });
-            statementSelect.value = state.quickAnalyze.selectedStatement;
-            statementLabel.appendChild(statementSelect);
-            container.appendChild(statementLabel);
-            renderDocumentationLinks(container, state.quickAnalyze.documentation);
-            if (state.quickAnalyze.polybase.visible) {
-                const polybase = element(
-                    'aside',
-                    'polybase-guidance has-warning',
-                    state.quickAnalyze.polybase.detail,
-                );
-                renderDocumentationLinks(polybase, state.quickAnalyze.polybase.documentation);
-                container.appendChild(polybase);
-            }
-            const kind = state.quickAnalyze.selectedStatement;
-            const sql = (state.statements || {})[kind];
-            if (sql) {
-                const block = template('tpl-sql');
-                block.dataset.kind = kind;
-                block.querySelector('code').textContent = sql;
-                block.querySelector('pre').setAttribute('aria-label', kind + ' statement');
-                container.appendChild(block);
-            }
-        }
         const list = element('dl', 'kv-list');
         appendKv(list, 'File', metadata.file_path);
         appendKv(list, 'Type', metadata.file_type);
@@ -514,6 +487,15 @@
     }
 
     function renderPreview(container) {
+        if (!state.selectedFileId) {
+            const start = element('div', 'start-state');
+            start.appendChild(
+                element('p', 'empty', 'Select a file, folder, or URL to begin.'),
+            );
+            container.appendChild(start);
+            return;
+        }
+
         const preview = state.preview;
         const rowsField = element('label', 'field');
         rowsField.appendChild(element('span', null, 'Preview rows'));
@@ -587,7 +569,7 @@
             element(
                 'p',
                 'help',
-                'Override a detected type to force the generated SQL to use it. Leave a box empty to keep the detected type.',
+                'Recommended SQL types are generated from the detected schema. Edit a value to customize the generated SQL.',
             ),
         );
 
@@ -595,7 +577,7 @@
         const table = document.createElement('table');
         const thead = document.createElement('thead');
         const headRow = document.createElement('tr');
-        ['Column', 'Detected type', 'Override'].forEach(function (label) {
+        ['Column', 'Source type', 'SQL Type'].forEach(function (label) {
             const cell = element('th', null, label);
             cell.scope = 'col';
             headRow.appendChild(cell);
@@ -611,10 +593,12 @@
             const input = row.querySelector('.override-input');
             input.dataset.edit = 'override';
             input.dataset.column = field[0];
-            input.setAttribute('aria-label', 'SQL type override for ' + field[0]);
+            input.setAttribute('aria-label', 'SQL type for ' + field[0]);
             input.value = editable(
                 'override:' + field[0],
-                state.columnOverrides[field[0]] || '',
+                state.columnOverrides[field[0]]
+                    || (state.recommendedSqlTypes || {})[field[0]]
+                    || '',
             );
             tbody.appendChild(row);
         });
@@ -622,10 +606,12 @@
         scroll.appendChild(table);
         container.appendChild(scroll);
 
-        const clearButton = element('button', 'btn subtle', 'Clear all overrides');
-        clearButton.type = 'button';
-        clearButton.dataset.action = 'clearColumnOverrides';
-        container.appendChild(clearButton);
+        if (Object.keys(state.columnOverrides || {}).length > 0) {
+            const clearButton = element('button', 'btn subtle', 'Reset SQL types');
+            clearButton.type = 'button';
+            clearButton.dataset.action = 'clearColumnOverrides';
+            container.appendChild(clearButton);
+        }
     }
 
     function renderNamingOptions(container) {
@@ -658,35 +644,10 @@
             row.appendChild(label);
         });
 
-        const authLabel = element('label', 'field');
-        authLabel.appendChild(element('span', null, 'Storage authentication'));
-        const authSelect = document.createElement('select');
-        authSelect.dataset.edit = 'authMethod';
-        [
-            ['', 'Recommended for platform'],
-            ['managed_identity', 'Managed identity (no secret)'],
-            ['sas', 'Shared access signature'],
-            ['storage_key', 'Storage account key'],
-            ['public', 'Public / anonymous'],
-        ].forEach(function (option) {
-            const node = document.createElement('option');
-            node.value = option[0];
-            node.textContent = option[1];
-            if ((state.authMethod || '') === option[0]) {
-                node.selected = true;
-            }
-            authSelect.appendChild(node);
-        });
-        authLabel.appendChild(authSelect);
-        row.appendChild(authLabel);
-
         container.appendChild(row);
     }
 
-    function renderStatement(container, kind) {
-        renderNamingOptions(container);
-        renderLimitation(container);
-        const text = (state.statements || {})[kind];
+    function renderSqlBlock(container, kind, text) {
         if (!text) {
             container.appendChild(
                 element('p', 'empty', 'Analyze a file to generate this statement.'),
@@ -700,133 +661,274 @@
         container.appendChild(block);
     }
 
-    function renderAzure(container) {
-        const node = template('tpl-azure');
-        const azure = state.azure;
-
-        node.querySelector('.azure-identity').textContent = azure.connected
-            ? 'Connected' +
-              (azure.identity ? ' as ' + azure.identity : '') +
-              (azure.account ? ' · account ' + azure.account : '')
-            : 'Not connected.';
-
-        const subscriptions = node.querySelector('.azure-subscriptions');
-        subscriptions.dataset.edit = 'subscription';
-        subscriptions.appendChild(element('option', null, 'Select a subscription…'));
-        azure.subscriptions.forEach(function (subscription) {
-            const option = element('option', null, subscription.name);
-            option.value = subscription.id;
-            subscriptions.appendChild(option);
-        });
-        subscriptions.disabled = !azure.canListSubscriptions;
-
-        const accounts = node.querySelector('.azure-accounts');
-        accounts.dataset.edit = 'account';
-        accounts.appendChild(element('option', null, 'Select an account…'));
-        azure.accounts.forEach(function (name) {
-            const option = element('option', null, name);
-            option.value = name;
-            accounts.appendChild(option);
-        });
-        if (azure.account) {
-            accounts.value = azure.account;
-        }
-
-        const containers = node.querySelector('.azure-containers');
-        containers.dataset.edit = 'container';
-        containers.appendChild(element('option', null, 'Select a container…'));
-        azure.containers.forEach(function (name) {
-            const option = element('option', null, name);
-            option.value = name;
-            containers.appendChild(option);
-        });
-        if (azure.container) {
-            containers.value = azure.container;
-        }
-
-        const prefix = node.querySelector('.azure-prefix');
-        prefix.dataset.edit = 'prefix';
-        prefix.value = editable('prefix', azure.prefix || '');
-
-        const blobs = node.querySelector('.azure-blobs');
-        azure.blobs.forEach(function (blob) {
-            const item = document.createElement('li');
-            const button = element('button', null, blob.name);
-            button.type = 'button';
-            button.dataset.blob = blob.name;
-            button.disabled = !blob.supported;
-            item.appendChild(button);
-            item.appendChild(
-                element(
-                    'span',
-                    'blob-size',
-                    blob.sizeBytes === null || blob.sizeBytes === undefined
-                        ? 'folder'
-                        : formatBytes(blob.sizeBytes),
-                ),
-            );
-            blobs.appendChild(item);
-        });
-
-        const more = node.querySelector('.azure-more');
-        more.hidden = !azure.continuation;
-        more.dataset.action = 'azureLoadMore';
-
-        node.querySelector('.azure-error').textContent = azure.error || '';
-        node.querySelector('.public-url-input').dataset.edit = 'publicUrl';
-        node.querySelector('.public-url-input').value = editable('publicUrl', '');
-
-        container.appendChild(node);
+    function renderStatement(container, kind) {
+        renderNamingOptions(container);
+        renderLimitation(container);
+        renderDocumentationLinks(container, state.quickAnalyze.documentation);
+        renderSqlBlock(container, kind, (state.statements || {})[kind]);
     }
 
-    function renderFormats(container) {
-        container.appendChild(
+    function selectControl(labelText, edit, options, selected) {
+        const label = element('label', 'field wizard-field');
+        label.appendChild(element('span', null, labelText));
+        const select = document.createElement('select');
+        select.dataset.edit = edit;
+        options.forEach(function (option) {
+            const node = document.createElement('option');
+            node.value = option.id;
+            node.textContent = option.label;
+            node.selected = option.id === selected;
+            select.appendChild(node);
+        });
+        label.appendChild(select);
+        return label;
+    }
+
+    function textControl(labelText, edit, value, placeholder) {
+        const label = element('label', 'field wizard-field');
+        label.appendChild(element('span', null, labelText));
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.spellcheck = false;
+        input.autocomplete = 'off';
+        input.dataset.edit = edit;
+        input.value = editable(edit, value || '');
+        if (placeholder) {
+            input.placeholder = placeholder;
+        }
+        label.appendChild(input);
+        return label;
+    }
+
+    function wizardStep(number, title, detail) {
+        const card = element('section', 'wizard-step');
+        const heading = element('div', 'wizard-step-heading');
+        heading.appendChild(element('span', 'wizard-step-number', number));
+        const copy = element('div');
+        copy.appendChild(element('h3', null, title));
+        copy.appendChild(element('p', 'wizard-step-detail', detail));
+        heading.appendChild(copy);
+        card.appendChild(heading);
+        return card;
+    }
+
+    function actionButton(label, action, className) {
+        const button = element('button', className || 'btn', label);
+        button.type = 'button';
+        button.dataset.action = action;
+        return button;
+    }
+
+    function renderStorageSource() {
+        const step = wizardStep(
+            '1',
+            'Storage URL',
+            'Paste the location SQL should use. The connector is inferred from the URL.',
+        );
+        step.classList.add('storage-source-step');
+
+        const options = element('div', 'storage-source-options');
+        const known = element('section', 'storage-source-option');
+        known.appendChild(element('h4', null, 'Provide a storage location'));
+        known.appendChild(
+            element(
+                'p',
+                'source-option-detail',
+                'Use an abs://, adls://, or abfss:// location. Azure HTTPS and s3:// locations remain supported.',
+            ),
+        );
+        const urlLabel = element('label', 'field');
+        urlLabel.appendChild(element('span', null, 'Storage URL'));
+        const urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.className = 'storage-url-input';
+        urlInput.spellcheck = false;
+        urlInput.autocomplete = 'off';
+        urlInput.placeholder = 'abs://container@account.blob.core.windows.net/path';
+        urlInput.dataset.edit = 'knownStorageUrl';
+        urlInput.value = editable('knownStorageUrl', state.storageUrl || '');
+        urlLabel.appendChild(urlInput);
+        known.appendChild(urlLabel);
+        const urlActions = element('div', 'storage-url-actions');
+        urlActions.appendChild(actionButton('Use URL', 'useStorageUrl', 'btn primary'));
+        const clearUrl = actionButton('Clear', 'clearStorageUrl', 'btn subtle');
+        clearUrl.hidden = !state.storageUrl;
+        urlActions.appendChild(clearUrl);
+        known.appendChild(urlActions);
+        known.appendChild(
             element(
                 'p',
                 'help',
-                'What the bundled TypeScript reader can do with each format. Nothing here launches an external process.',
+                'The URL determines ABS, ADLS, or ABFSS formatting. Query strings and fragments are removed before SQL generation.',
             ),
         );
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headRow = document.createElement('tr');
-        ['Format', 'Extensions', 'Support', 'Notes'].forEach(function (label) {
-            const cell = element('th', null, label);
-            cell.scope = 'col';
-            headRow.appendChild(cell);
+        options.appendChild(known);
+        step.appendChild(options);
+        return step;
+    }
+
+    function renderCredentialSetup(container) {
+        const wizard = state.credentialSetup;
+        const intro = element('div', 'credential-intro');
+        intro.appendChild(element('div', 'credential-mark', 'SQL'));
+        const introCopy = element('div');
+        introCopy.appendChild(element('h2', null, 'Configure external storage access'));
+        introCopy.appendChild(
+            element(
+                'p',
+                null,
+                'Provide a storage URL, then create the credential and external data source for your SQL platform.',
+            ),
+        );
+        intro.appendChild(introCopy);
+        container.appendChild(intro);
+        container.appendChild(renderStorageSource());
+
+        const steps = element('div', 'credential-steps');
+
+        const platformStep = wizardStep(
+            '2',
+            'Target platform',
+            'Choices are filtered for this SQL platform.',
+        );
+        platformStep.appendChild(
+            selectControl(
+                'SQL platform',
+                'wizardPlatform',
+                state.platforms,
+                state.platform,
+            ),
+        );
+        steps.appendChild(platformStep);
+
+        const sourceOption = wizard.dataSourceOptions.find(function (option) {
+            return option.id === wizard.dataSourceType;
         });
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        (state.formats || []).forEach(function (format) {
-            const row = template('tpl-format-row');
-            row.querySelector('th').textContent = format.label;
-            row.querySelector('.fmt-ext').textContent = (format.extensions || []).join(', ');
-            row.querySelector('.fmt-support').textContent =
-                SUPPORT_LABEL[format.support] || format.support;
-            row.querySelector('.fmt-notes').textContent = format.notes || '';
-            tbody.appendChild(row);
+        const sourceStep = wizardStep(
+            '3',
+            'Detected external data source',
+            state.storageUrl && sourceOption
+                ? sourceOption.detail
+                : 'Apply a storage URL to detect the storage service and connector.',
+        );
+        const detected = element('p', 'connector-prefix');
+        detected.appendChild(element('span', null, 'Detected service'));
+        detected.appendChild(
+            element(
+                'strong',
+                null,
+                state.storageUrl && sourceOption ? sourceOption.label : 'Waiting for URL',
+            ),
+        );
+        sourceStep.appendChild(detected);
+        const prefix = element('p', 'connector-prefix');
+        prefix.appendChild(element('span', null, 'Generated connector'));
+        prefix.appendChild(
+            element('strong', null, state.storageUrl ? wizard.locationPrefix : '—'),
+        );
+        sourceStep.appendChild(prefix);
+        steps.appendChild(sourceStep);
+
+        const authOption = wizard.authOptions.find(function (option) {
+            return option.id === wizard.authMethod;
         });
-        table.appendChild(tbody);
-        container.appendChild(table);
+        const authStep = wizardStep(
+            '4',
+            'Authentication',
+            authOption ? authOption.detail : '',
+        );
+        authStep.appendChild(
+            selectControl(
+                'Authentication method',
+                'authMethod',
+                wizard.authOptions,
+                wizard.authMethod,
+            ),
+        );
+        steps.appendChild(authStep);
+
+        const objectStep = wizardStep(
+            '5',
+            'Object names',
+            'Edit the generated database object names.',
+        );
+        const objectFields = element('div', 'wizard-object-fields');
+        objectFields.appendChild(
+            textControl('External data source name', 'dataSource', state.dataSource),
+        );
+        objectFields.appendChild(
+            textControl(
+                'Database scoped credential name',
+                'credentialName',
+                state.credentialName,
+                'cred_' + (state.dataSource || 'storage'),
+            ),
+        );
+        objectStep.appendChild(objectFields);
+        steps.appendChild(objectStep);
+
+        container.appendChild(steps);
+
+        const flow = element('div', 'object-flow');
+        [
+            {
+                number: '1',
+                kind: 'Database scoped credential',
+                name:
+                    state.credentialName
+                    || 'cred_' + (state.dataSource || 'storage'),
+                status: authOption ? authOption.label : wizard.authMethod,
+            },
+            {
+                number: '2',
+                kind: 'External data source',
+                name: state.dataSource || 'MyDataSource',
+                status: wizard.locationPrefix + ' location',
+            },
+        ].forEach(function (object) {
+            const card = element('div', 'object-card');
+            card.appendChild(
+                element('span', 'object-kind', object.number + '. ' + object.kind),
+            );
+            card.appendChild(element('strong', 'object-name', object.name));
+            card.appendChild(element('span', 'object-status', object.status));
+            flow.appendChild(card);
+        });
+        container.appendChild(flow);
+
+        const note = element('aside', 'wizard-note');
+        note.appendChild(element('strong', null, 'Platform guidance'));
+        note.appendChild(element('p', null, wizard.note));
+        note.appendChild(
+            element(
+                'p',
+                'secret-note',
+                'Secrets stay out of the extension; generated SQL uses placeholders.',
+            ),
+        );
+        container.appendChild(note);
+
+        renderLimitation(container);
+        renderDocumentationLinks(container, state.quickAnalyze.documentation);
+        renderSqlBlock(
+            container,
+            'credential_setup',
+            (state.statements || {}).credential_setup,
+        );
     }
 
     function renderPanel() {
         const panel = byId('panel');
         clear(panel);
         const tab = state.activeTab;
-        if (tab === 'quick_analyze') {
-            renderQuickAnalyze(panel);
-        } else if (tab === 'metadata') {
+        if (tab === 'metadata') {
             renderMetadata(panel);
         } else if (tab === 'preview') {
             renderPreview(panel);
         } else if (tab === 'schema') {
             renderSchema(panel);
-        } else if (tab === 'azure') {
-            renderAzure(panel);
-        } else if (tab === 'formats') {
-            renderFormats(panel);
+        } else if (tab === 'credential_setup') {
+            renderCredentialSetup(panel);
         } else {
             renderStatement(panel, tab);
         }
@@ -836,11 +938,13 @@
         if (!state) {
             return;
         }
+        const focus = captureFocus();
         renderHeader();
         renderStatus();
         renderFiles();
         renderTabs();
         renderPanel();
+        restoreFocus(focus);
     }
 
     // -- events --------------------------------------------------------------
@@ -857,6 +961,19 @@
             return;
         }
 
+        const folder = target.closest('[data-folder-path]');
+        if (folder && folder.dataset.folderPath) {
+            const folderPath = folder.dataset.folderPath;
+            if (collapsedFolders.has(folderPath)) {
+                collapsedFolders.delete(folderPath);
+            } else {
+                collapsedFolders.add(folderPath);
+            }
+            renderFiles();
+            byId('file-list').focus({ preventScroll: true });
+            return;
+        }
+
         const tab = target.closest('.tab');
         if (tab && tab.dataset.tab) {
             post({ type: 'setTab', tab: tab.dataset.tab });
@@ -866,15 +983,6 @@
         const sourceTab = target.closest('[data-source-tab]');
         if (sourceTab) {
             post({ type: 'setTab', tab: sourceTab.dataset.sourceTab });
-            return;
-        }
-
-        const resetParser = target.closest('[data-reset-parser]');
-        if (resetParser) {
-            const key = 'parser:' + resetParser.dataset.resetParser;
-            cancelDebounce(key);
-            pendingEdits.delete(key);
-            post({ type: 'resetParserOverride', key: resetParser.dataset.resetParser });
             return;
         }
 
@@ -900,49 +1008,20 @@
             return;
         }
 
-        const connect = target.closest('[data-azure-connect]');
-        if (connect) {
-            post({ type: 'azureConnect', mode: connect.dataset.azureConnect });
-            return;
-        }
-
-        const blob = target.closest('[data-blob]');
-        if (blob) {
-            const name = blob.dataset.blob;
-            if (name.endsWith('/')) {
-                post({
-                    type: 'azureListBlobs',
-                    container: state.azure.container || '',
-                    prefix: name,
-                    continuation: '',
-                });
-            } else {
-                post({
-                    type: 'azureAnalyzeBlob',
-                    container: state.azure.container || '',
-                    blob: name,
-                });
-            }
-            return;
-        }
-
         const action = target.closest('[data-action]');
         if (!action) {
             return;
         }
         const name = action.dataset.action;
-        if (name === 'publicUrlAnalyze') {
-            const input = document.querySelector('.public-url-input');
-            post({ type: 'publicUrlAnalyze', url: input ? input.value.trim() : '' });
+        if (name === 'useStorageUrl') {
+            const input = document.querySelector('.storage-url-input');
+            pendingEdits.delete('knownStorageUrl');
+            post({ type: 'setStorageUrl', value: input ? input.value.trim() : '' });
             return;
         }
-        if (name === 'azureLoadMore') {
-            post({
-                type: 'azureListBlobs',
-                container: state.azure.container || '',
-                prefix: state.azure.prefix || '',
-                continuation: state.azure.continuation || '',
-            });
+        if (name === 'clearStorageUrl') {
+            pendingEdits.delete('knownStorageUrl');
+            post({ type: 'setStorageUrl', value: '' });
             return;
         }
         post({ type: name });
@@ -957,17 +1036,13 @@
             post({ type: 'setPlatform', platform: target.value });
             return;
         }
-        if (target.id === 'appearance') {
-            post({ type: 'setPreference', appearance: target.value });
+        const edit = target.dataset ? target.dataset.edit : null;
+        if (edit === 'wizardPlatform') {
+            post({ type: 'setPlatform', platform: target.value });
             return;
         }
-        const edit = target.dataset ? target.dataset.edit : null;
         if (edit === 'authMethod') {
             post({ type: 'setAuthMethod', value: target.value });
-            return;
-        }
-        if (edit === 'statementKind') {
-            post({ type: 'setStatementKind', kind: target.value });
             return;
         }
         if (target.dataset && target.dataset.parserOption) {
@@ -976,23 +1051,11 @@
             pendingEdits.delete(key);
             post({
                 type: 'setParserOverride',
+                fileId: state.selectedFileId,
                 key: target.dataset.parserOption,
                 value: target.value,
             });
             return;
-        }
-        if (edit === 'subscription' && target.value) {
-            post({ type: 'azureListAccounts', subscriptionId: target.value });
-        } else if (edit === 'account' && target.value) {
-            post({ type: 'azureSetAccount', account: target.value });
-        } else if (edit === 'container' && target.value) {
-            pendingEdits.delete('prefix');
-            post({
-                type: 'azureListBlobs',
-                container: target.value,
-                prefix: '',
-                continuation: '',
-            });
         }
     });
 
@@ -1010,20 +1073,32 @@
 
         if (target.dataset.parserOption) {
             const parserKey = target.dataset.parserOption;
+            const fileId = state.selectedFileId;
             pendingEdits.set('parser:' + parserKey, value);
             debounce('parser:' + parserKey, function () {
                 pendingEdits.delete('parser:' + parserKey);
-                post({ type: 'setParserOverride', key: parserKey, value: value });
+                post({
+                    type: 'setParserOverride',
+                    fileId: fileId,
+                    key: parserKey,
+                    value: value,
+                });
             }, 250);
             return;
         }
 
         if (edit === 'override') {
             const column = target.dataset.column;
+            const fileId = state.selectedFileId;
             pendingEdits.set('override:' + column, value);
             debounce('override:' + column, function () {
                 pendingEdits.delete('override:' + column);
-                post({ type: 'setColumnOverride', column: column, sqlType: value });
+                post({
+                    type: 'setColumnOverride',
+                    fileId: fileId,
+                    column: column,
+                    sqlType: value,
+                });
             }, 250);
             return;
         }
@@ -1037,7 +1112,7 @@
             }, 350);
             return;
         }
-        if (edit === 'prefix' || edit === 'publicUrl') {
+        if (edit === 'knownStorageUrl') {
             pendingEdits.set(edit, value);
             return;
         }
@@ -1047,7 +1122,6 @@
             schemaName: 'setSchemaName',
             dataSource: 'setDataSource',
             credentialName: 'setCredentialName',
-            storageUrl: 'setStorageUrl',
             formatName: 'setFormatName',
         }[edit];
         if (!messageType) {
@@ -1061,11 +1135,21 @@
     });
 
     document.addEventListener('keydown', function (event) {
+        if (
+            event.key === 'Enter'
+            && event.target instanceof Element
+            && event.target.matches('.storage-url-input')
+        ) {
+            event.preventDefault();
+            pendingEdits.delete('knownStorageUrl');
+            post({ type: 'setStorageUrl', value: event.target.value.trim() });
+            return;
+        }
         const list = byId('file-list');
         if (!list || !list.contains(event.target)) {
             return;
         }
-        const items = Array.prototype.slice.call(list.querySelectorAll('.file-item'));
+        const items = visibleFileItems();
         if (items.length === 0) {
             return;
         }
@@ -1091,6 +1175,9 @@
         const message = event.data;
         if (!message || message.type !== 'state' || !message.state) {
             return;
+        }
+        if (state && state.selectedFileId !== message.state.selectedFileId) {
+            clearFileEdits();
         }
         state = message.state;
         render();

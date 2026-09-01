@@ -123,10 +123,6 @@ test('the native module graph reaches the whole product surface', () => {
         'ui/webviewShell.js',
         'appState.js',
         'protocol.js',
-        'azure/connection.js',
-        'azure/blobBrowser.js',
-        'net/publicData.js',
-        'net/safeHttp.js',
         'native/index.js',
     ]) {
         assert.ok(files.has(expected), `${expected} should be reachable from activation`);
@@ -148,19 +144,24 @@ test('nothing reachable from activation can spawn a process', () => {
     }
 });
 
-test('the legacy Python backend is not reachable from activation', () => {
+test('removed backend and storage-browser modules are not reachable from activation', () => {
     const files = new Set(graph.nodes.map((node) => relative(node.file)));
-    for (const legacy of ['backend.js', 'pythonEnv.js', 'process.js', 'webviewHtml.js', 'sidebar.js']) {
+    for (const legacy of [
+        'backend.js',
+        'pythonEnv.js',
+        'process.js',
+        'webviewHtml.js',
+        'sidebar.js',
+        'azure/connection.js',
+        'azure/blobBrowser.js',
+        'net/publicData.js',
+        'net/safeHttp.js',
+    ]) {
         assert.ok(!files.has(legacy), `${legacy} must not be on the native path`);
     }
 });
 
 test('no server vocabulary survives on the native path', () => {
-    // The SSRF guard's job is to *reject* loopback and link-local destinations,
-    // so it necessarily names them. Everything else must be free of the
-    // vocabulary of a server-backed design.
-    const guards = new Set(['net/ipGuard.js', 'net/safeHttp.js']);
-
     for (const node of graph.nodes) {
         const name = relative(node.file);
         if (name.startsWith('native/')) {
@@ -168,9 +169,6 @@ test('no server vocabulary survives on the native path', () => {
             continue;
         }
         for (const [pattern, label] of FORBIDDEN_VOCABULARY) {
-            if (guards.has(name) && /localhost|loopback/.test(label)) {
-                continue;
-            }
             assert.ok(!pattern.test(node.stripped), `${name} still references ${label}`);
         }
         for (const [pattern, label] of PYTHON_EXECUTION) {
@@ -222,6 +220,7 @@ test('activation registers the native view and never touches a backend', async (
 
     try {
         const mock = createMockVscode();
+        mock.state.secrets.set('sqlFileDetection.azure.credential', 'legacy-secret');
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const Module = require('node:module') as {
             _load(request: string, parent: unknown, isMain: boolean): unknown;
@@ -250,21 +249,34 @@ test('activation registers the native view and never touches a backend', async (
 
             const started = process.hrtime.bigint();
             extension.activate(mock.state.context);
+            await Promise.resolve();
             const activationMs = Number(process.hrtime.bigint() - started) / 1e6;
 
             assert.equal(spawned.length, 0, 'activation spawned a process');
+            assert.equal(
+                mock.state.secrets.has('sqlFileDetection.azure.credential'),
+                false,
+                'activation removes the retired Azure credential without restoring it',
+            );
             assert.ok(activationMs < 500, `activation took ${activationMs.toFixed(1)}ms`);
             assert.ok(
                 mock.state.views.has('sqlFileDetectionTool.sidebar'),
                 'the native webview view provider is registered',
             );
-            assert.ok(mock.state.commands.size >= 5, 'commands are contributed');
+            assert.ok(mock.state.commands.size >= 4, 'commands are contributed');
             for (const command of mock.state.commands.keys()) {
                 assert.ok(
-                    !/setup|installBackend|startBackend|stopBackend/i.test(command),
-                    `${command} looks like a backend lifecycle command`,
+                    !/setup|installBackend|startBackend|stopBackend|connectAzure|disconnectAzure/i
+                        .test(command),
+                    `${command} looks like a removed runtime command`,
                 );
             }
+            const open = mock.state.commands.get('sqlFileDetectionTool.open');
+            assert.ok(open, 'the open command is registered');
+            await open();
+            assert.equal(mock.state.panels.length, 1, 'Open defaults to one editor panel');
+            const panel = mock.state.panels[0];
+            assert.match(panel.webview.html, /data-surface="panel"/);
 
             // First render must come from bundled assets only.
             const provider = mock.state.views.get('sqlFileDetectionTool.sidebar') as {
@@ -280,10 +292,20 @@ test('activation registers the native view and never touches a backend', async (
             assert.equal(spawned.length, 0, 'first render spawned a process');
             assert.ok(!/http:\/\//.test(view.webview.html), 'no plaintext http origin in the shell');
             assert.match(view.webview.html, /Content-Security-Policy/);
+            assert.equal(mock.state.panels.length, 1, 'the Activity Bar opens one editor panel');
+            assert.ok(
+                mock.state.executedCommands.includes('workbench.action.closeSidebar'),
+                'the editor panel replaces the primary sidebar',
+            );
 
             // A real analysis, driven the way a user would drive it, still with
             // child_process sabotaged.
-            mock.state.activeEditorPath = path.join(REPO, 'test_data', 'employees.csv');
+            mock.state.activeEditorPath = path.join(
+                REPO,
+                'data sample',
+                'csv',
+                'employees.csv',
+            );
             const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
             assert.ok(analyze, 'the analyze command is registered');
             const analysisStart = process.hrtime.bigint();
@@ -292,7 +314,7 @@ test('activation registers the native view and never touches a backend', async (
             // benchmark reflects real work.
             const deadline = Date.now() + 8000;
             const analysed = (): boolean =>
-                view.webview.posted.some(
+                panel.webview.posted.some(
                     (message) =>
                         (message as { state?: { lastAnalysisMs?: number | null } }).state
                             ?.lastAnalysisMs != null,
@@ -312,7 +334,7 @@ test('activation registers the native view and never touches a backend', async (
                     `first render ${renderMs.toFixed(1)}ms, ` +
                     `first analysis ${analysisMs.toFixed(1)}ms`,
             );
-            const posted = view.webview.posted;
+            const posted = panel.webview.posted;
             assert.ok(posted.length > 0, 'the host answered the webview');
             const serialised = JSON.stringify(posted);
             assert.ok(!/localhost|127\.0\.0\.1|flask/i.test(serialised), 'no backend chatter');

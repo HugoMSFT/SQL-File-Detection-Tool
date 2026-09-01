@@ -30,7 +30,7 @@ const INTENTIONAL_DIFFERENCES: Readonly<Record<string, readonly string[]>> = {
     // single underlying Parquet part file. The native core parses `_delta_log`
     // directly, which yields Delta type names, real Delta metadata and a
     // different schema-inference provenance.
-    'demo/tables/events_delta': [
+    'data sample/tables/events_delta': [
         'schema',
         'schema_inference',
         'delta_metadata',
@@ -43,7 +43,7 @@ const INTENTIONAL_DIFFERENCES: Readonly<Record<string, readonly string[]>> = {
     // Python reads ORC through pyarrow. The native core has no portable ORC
     // reader (see docs/native-core.md) and reports an explicit
     // `unsupported_native` result instead of faking a schema.
-    'demo/orc/all_types.orc': [
+    'data sample/orc/all_types.orc': [
         'schema',
         'column_count',
         'row_count',
@@ -53,7 +53,7 @@ const INTENTIONAL_DIFFERENCES: Readonly<Record<string, readonly string[]>> = {
     // The native reader additionally reports `snapshot_count`, which the Python
     // implementation never surfaced. Every key Python *does* emit is asserted
     // to match in "keeps every Iceberg field Python reported" below.
-    'demo/tables/events_iceberg': ['iceberg_metadata'],
+    'data sample/tables/events_iceberg': ['iceberg_metadata'],
 };
 
 /** Keys the native core adds that Python never emitted. */
@@ -133,7 +133,7 @@ describe('native metadata parity with Python', () => {
 
 describe('documented native limitations', () => {
     it('reports ORC as explicitly unsupported rather than guessing', async () => {
-        const metadata = await analyzeFixture('demo/orc/all_types.orc');
+        const metadata = await analyzeFixture('data sample/orc/all_types.orc');
         assert.strictEqual(metadata.file_type, 'orc');
         assert.strictEqual(metadata.native_support, 'unsupported_native');
         assert.strictEqual(metadata.schema, null);
@@ -144,7 +144,7 @@ describe('documented native limitations', () => {
     });
 
     it('reads ORC postscript facts even though the stripes are unsupported', async () => {
-        const metadata = await analyzeFixture('demo/orc/all_types.orc');
+        const metadata = await analyzeFixture('data sample/orc/all_types.orc');
         assert.ok(
             typeof metadata.compression === 'string' && metadata.compression.length > 0,
             'expected the ORC postscript compression codec to be reported',
@@ -152,7 +152,7 @@ describe('documented native limitations', () => {
     });
 
     it('parses the Delta log natively instead of an underlying part file', async () => {
-        const metadata = await analyzeFixture('demo/tables/events_delta');
+        const metadata = await analyzeFixture('data sample/tables/events_delta');
         assert.strictEqual(metadata.file_type, 'delta');
         assert.strictEqual(metadata.native_support, 'supported');
         assert.strictEqual(metadata.schema_inference, 'delta_log');
@@ -162,15 +162,15 @@ describe('documented native limitations', () => {
     });
 
     it('selects the current Iceberg schema from table metadata', async () => {
-        const metadata = await analyzeFixture('demo/tables/events_iceberg');
+        const metadata = await analyzeFixture('data sample/tables/events_iceberg');
         assert.strictEqual(metadata.file_type, 'iceberg');
         assert.strictEqual(metadata.native_support, 'supported');
         assert.ok(Array.isArray(metadata.schema) && metadata.schema.length > 0);
     });
 
     it('keeps every Iceberg field Python reported, and adds snapshot_count', async () => {
-        const metadata = await analyzeFixture('demo/tables/events_iceberg');
-        const expected = loadBaseline().metadata['demo/tables/events_iceberg'][
+        const metadata = await analyzeFixture('data sample/tables/events_iceberg');
+        const expected = loadBaseline().metadata['data sample/tables/events_iceberg'][
             'iceberg_metadata'
         ] as Record<string, unknown>;
         const actual = metadata.iceberg_metadata as unknown as Record<string, unknown>;

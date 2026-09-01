@@ -178,7 +178,7 @@ def _exact_public_fixture(
         canonical_url = (
             str(publication['base_url']).rstrip('/')
             + '/'
-            + relative.removeprefix('demo/').rstrip('/')
+            + relative.removeprefix('data sample/').rstrip('/')
             + '/'
         )
     else:

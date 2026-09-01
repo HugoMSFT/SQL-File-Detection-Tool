@@ -1,6 +1,6 @@
 # generate_samples.py writes these fixtures with LF endings and exact bytes.
 # Without pinning, core.autocrlf would rewrite them on checkout and a plain
-# `python demo/generate_samples.py` would show every text sample as modified.
+# `python "data sample/generate_samples.py"` would show every text sample as modified.
 
 *.csv     text eol=lf
 *.tsv     text eol=lf

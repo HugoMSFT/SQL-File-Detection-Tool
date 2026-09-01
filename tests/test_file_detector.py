@@ -757,7 +757,7 @@ def test_chardet_still_names_a_legacy_codepage():
     pytest.importorskip('chardet')
     fixture = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'demo', 'unicode', 'japanese_cp932.csv')
+        'data sample', 'unicode', 'japanese_cp932.csv')
 
     detector = FileDetector()
     encoding, _ = detector.detect_encoding(fixture)

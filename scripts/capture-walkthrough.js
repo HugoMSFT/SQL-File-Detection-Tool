@@ -27,9 +27,8 @@
  *    `playwright-core`, then quantised and encoded to a GIF with `gifenc`. No
  *    browser download and no ffmpeg.
  *
- * The Azure beat uses a synthetic, obviously-fake tenant with no token, no SAS
- * and no account key, so the GIF cannot leak a credential. Paths shown are
- * repo-relative demo files.
+ * Storage setup uses non-secret ABS, ADLS, and ABFSS example locations. Paths
+ * shown are repo-relative demo files.
  *
  * Usage: `npm run capture:gif` (requires the optional devDependencies
  * `playwright-core`, `pngjs` and `gifenc`, and an installed Edge or Chrome).
@@ -91,7 +90,7 @@ async function collectStates() {
         const view = mock.state.makeView();
         await provider.resolveWebviewView(view, {}, { isCancellationRequested: false });
 
-        const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
+        const analyzeSelected = mock.state.commands.get('sqlFileDetectionTool.analyzeSelected');
         const settle = async (budgetMs) => {
             const deadline = Date.now() + budgetMs;
             const seen = view.webview.posted.length;
@@ -111,19 +110,43 @@ async function collectStates() {
         // Beat 2+: a real analysis of a committed demo fixture, then each tab
         // selected the way the renderer selects it, so the statements in the
         // frames are the statements the shipped generator produces.
-        const sample = path.join(REPO, 'demo', 'parquet', 'sales.parquet');
+        const samples = path.join(REPO, 'data sample');
+        const sample = path.join(samples, 'parquet', 'sales.parquet');
         if (!fs.existsSync(sample)) {
             throw new Error(`Missing demo fixture: ${sample}`);
         }
-        mock.state.activeEditorPath = sample;
-        await analyze();
+        await analyzeSelected(mock.module.Uri.file(samples));
+        await settle(8000);
+        const folderState = latestState(view.webview.posted);
+        const sampleEntry = folderState.files.find(
+            (entry) => entry.label === 'sales.parquet' && entry.folderLabel === 'parquet',
+        );
+        if (!sampleEntry) {
+            throw new Error('The demo folder did not expose parquet/sales.parquet.');
+        }
+        await view.receive({ type: 'selectFile', fileId: sampleEntry.id });
         await settle(8000);
 
-        for (const tab of ['preview', 'metadata', 'create_table', 'openrowset', 'azure']) {
+        for (const tab of [
+            'preview',
+            'metadata',
+            'schema',
+            'credential_setup',
+            'create_table',
+            'openrowset',
+        ]) {
             await view.receive({ type: 'setTab', tab });
             await settle(4000);
             captured[tab] = latestState(view.webview.posted);
         }
+        await view.receive({ type: 'setTab', tab: 'credential_setup' });
+        await settle(1000);
+        await view.receive({
+            type: 'setStorageUrl',
+            value: 'abs://datasets@contosodemo.blob.core.windows.net/sales.parquet',
+        });
+        await settle(4000);
+        captured.known_url = latestState(view.webview.posted);
 
         extension.deactivate();
     } finally {
@@ -153,61 +176,29 @@ function buildScenes(states) {
     const clone = (state, extra) =>
         Object.assign(JSON.parse(JSON.stringify(state)), { version }, extra || {});
 
-    // A synthetic, obviously-fake Azure connection. No token, no SAS, no key:
-    // the GIF shows the sign-in surface, never a credential.
-    const azure = Object.assign({}, states.azure.azure, {
-        connected: true,
-        mode: 'vscode',
-        identity: 'ada@contoso.example',
-        account: 'contosodemo',
-        accounts: ['contosodemo'],
-        containers: ['datasets', 'landing'],
-        container: 'datasets',
-        prefix: '',
-        blobs: [
-            { name: 'sales.parquet', sizeBytes: 131072, isPrefix: false },
-            { name: 'customers.csv', sizeBytes: 20480, isPrefix: false },
-        ],
-        subscriptions: [{ id: '00000000-0000-0000-0000-000000000000', name: 'Contoso Demo' }],
-        canListSubscriptions: true,
-        error: null,
-        busy: false,
-    });
-
     return [
-        { caption: 'activity-bar', state: clone(states.shell), hold: 1400, panel: false },
-        { caption: 'shell', state: clone(states.shell), hold: 1800, panel: true },
-        { caption: 'preview', state: clone(states.preview), hold: 2400, panel: true },
-        { caption: 'metadata', state: clone(states.metadata), hold: 2400, panel: true },
+        { caption: 'activity-bar', state: clone(states.shell), hold: 1200, panel: false },
+        { caption: 'preview', state: clone(states.preview), hold: 2200, panel: true },
+        {
+            caption: 'credential-setup',
+            state: clone(states.credential_setup),
+            hold: 2400,
+            panel: true,
+        },
+        { caption: 'known-url', state: clone(states.known_url), hold: 2400, panel: true },
         {
             caption: 'create-table',
             state: clone(states.create_table),
-            hold: 2800,
+            hold: 2400,
             panel: true,
-            scroll: 150,
+            scroll: 180,
         },
         {
             caption: 'openrowset',
             state: clone(states.openrowset),
-            hold: 2400,
-            panel: true,
-            scroll: 150,
-        },
-        { caption: 'azure', state: clone(states.azure, { azure }), hold: 2200, panel: true },
-        {
-            caption: 'public-url',
-            state: clone(states.azure, { azure }),
             hold: 2200,
             panel: true,
-            scroll: 320,
-        },
-        {
-            caption: 'light',
-            state: clone(states.create_table),
-            hold: 2200,
-            panel: true,
-            theme: 'light',
-            scroll: 150,
+            scroll: 180,
         },
     ];
 }
@@ -427,6 +418,128 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } });
     await page.goto(`file://${path.join(work, 'index.html').replace(/\\/g, '/')}`);
 
+    await page.evaluate((state) => window.__apply(state), states.shell);
+    await page.waitForTimeout(80);
+    const startState = await page.evaluate(() => ({
+        message: document.querySelector('.start-state .empty')?.textContent?.trim(),
+        hasPreviewRows: Boolean(document.querySelector('[data-edit="previewRows"]')),
+    }));
+    if (
+        startState.message !== 'Select a file, folder, or URL to begin.'
+        || startState.hasPreviewRows
+    ) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('The empty Preview did not render the source-selection start state.');
+    }
+
+    // A delayed schema edit must not survive a file change or post back for the
+    // newly selected file.
+    await page.evaluate((state) => {
+        window.__posted = [];
+        window.__apply(state);
+    }, states.schema);
+    await page.waitForTimeout(80);
+    await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="override"]');
+        input.value = 'DECIMAL(18,4)';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.evaluate(
+        (state) => window.__apply(Object.assign({}, state, {
+            selectedFileId: state.selectedFileId + '-next',
+        })),
+        states.schema,
+    );
+    await page.waitForTimeout(300);
+    const staleEditCleared = await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="override"]');
+        return Boolean(
+            input
+            && input.value !== 'DECIMAL(18,4)'
+            && !window.__posted.some((message) => message.type === 'setColumnOverride'),
+        );
+    });
+    if (!staleEditCleared) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('A pending SQL type edit survived a file selection change.');
+    }
+
+    // The credential form is rebuilt after every host snapshot. Prove the
+    // focused field and caret survive that replacement before recording.
+    await page.evaluate((state) => window.__apply(state), states.credential_setup);
+    await page.waitForTimeout(80);
+    await page.evaluate(() => {
+        const input = document.querySelector('[data-edit="credentialName"]');
+        input.value = 'credential_name';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        input.setSelectionRange(2, 2);
+    });
+    await page.evaluate(
+        (state) => window.__apply(Object.assign({}, state, { notice: 'focus check' })),
+        states.credential_setup,
+    );
+    await page.waitForTimeout(80);
+    const focusRestored = await page.evaluate(() => {
+        const active = document.activeElement;
+        return Boolean(
+            active
+            && active.dataset.edit === 'credentialName'
+            && active.selectionStart === 2
+            && active.selectionEnd === 2,
+        );
+    });
+    if (!focusRestored) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('Credential input focus or caret was lost after a state refresh.');
+    }
+
+    // Exercise every connector prefix accepted by the URL-only storage setup.
+    await page.evaluate((state) => {
+        window.__posted = [];
+        window.__apply(state);
+    }, states.credential_setup);
+    await page.waitForTimeout(80);
+    const storageUrls = [
+        'abs://datasets@contosodemo.blob.core.windows.net/sales.parquet',
+        'adls://datasets@contosodemo.dfs.core.windows.net/sales.parquet',
+        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/sales.parquet',
+    ];
+    const urlMessages = await page.evaluate((urls) => {
+        urls.forEach((url) => {
+            const input = document.querySelector('.storage-url-input');
+            input.value = url;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            document.querySelector('[data-action="useStorageUrl"]').click();
+        });
+        return window.__posted.slice();
+    }, storageUrls);
+    if (
+        urlMessages.length !== storageUrls.length
+        || urlMessages.some((message, index) =>
+            message.type !== 'setStorageUrl' || message.value !== storageUrls[index])
+    ) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('ABS, ADLS, or ABFSS URL submission is not wired.');
+    }
+    const signInRemoved = await page.evaluate(() => {
+        const text = document.body.textContent || '';
+        return (
+            !text.includes('Sign in with Microsoft Entra')
+            && !text.includes('Browse Microsoft storage')
+            && !document.querySelector('[data-azure-connect], .azure-tenant, .storage-browser')
+        );
+    });
+    if (!signInRemoved) {
+        await browser.close();
+        fs.rmSync(work, { recursive: true, force: true });
+        throw new Error('Microsoft storage sign-in remains in Credential Setup.');
+    }
+
     const frames = [];
     const frameDir = process.env.SFDT_FRAME_DIR;
     if (frameDir) {
@@ -459,6 +572,13 @@ async function main() {
                     '--activity-bg',
                     theme === 'light' ? '#f8f8f8' : '#181818',
                 );
+                window.scrollTo(0, 0);
+                for (const id of ['webview-root', 'panel']) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.scrollTop = 0;
+                    }
+                }
                 document.getElementById('act-tool').classList.toggle('active', showPanel);
                 document.getElementById('placeholder').style.display = showPanel ? 'none' : 'flex';
                 document.getElementById('webview-root').style.display = showPanel ? '' : 'none';
@@ -569,15 +689,12 @@ async function main() {
 }
 
 const CAPTIONS = {
-    'activity-bar': 'Select the SQL File Detection Tool icon in the Activity Bar',
-    shell: 'The native interface renders immediately — no Python, no server, no setup',
-    preview: 'Preview: real rows read straight from the file',
-    metadata: 'Metadata: detected types, nullability, encoding and collation',
-    'create-table': 'Azure SQL Database is the default target — CREATE TABLE',
-    openrowset: 'OPENROWSET and external-table scripts for the selected platform',
-    azure: 'Azure Storage: four explicit sign-in modes, handled in the extension host',
-    'public-url': 'Browse a container, or analyse any public https:// data file',
-    light: 'Follows the VS Code theme',
+    'activity-bar': 'Open SQL File Detection Tool',
+    preview: 'Select a file and preview its rows',
+    'credential-setup': 'Paste the storage URL',
+    'known-url': 'Detect ABS, ADLS, or ABFSS from the URL',
+    'create-table': 'Generate CREATE TABLE',
+    openrowset: 'Generate OPENROWSET and EXT TABLE',
 };
 
 main().catch((error) => {

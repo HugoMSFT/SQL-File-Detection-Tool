@@ -13,20 +13,17 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Readable } from 'node:stream';
 
 import { AppStateStore } from '../../appState';
 import { UiController, metadataForDisplay } from '../../ui/controller';
 import type { OpenDialogOptions, UiHost } from '../../ui/host';
-import type { AzureBridge, AzureConnectionInfo } from '../../ui/host';
-import type { BlobBrowser } from '../../azure/blobBrowser';
 import type { AppStateSnapshot } from '../../protocol';
 import type { StatementKind } from '../../native';
-import type { RawResponse, SafeHttpDeps } from '../../net/safeHttp';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
-const FIXTURES = path.join(REPO, 'test_data');
-const DEMO = path.join(REPO, 'demo');
+const SAMPLES = path.join(REPO, 'data sample');
+const FIXTURES = path.join(SAMPLES, 'csv');
+const DEMO = SAMPLES;
 
 interface Recorder {
     host: UiHost;
@@ -40,72 +37,14 @@ interface Recorder {
     readonly errors: string[];
     readonly warnings: string[];
     readonly preferences: Map<string, unknown>;
-    readonly cleaned: string[];
     readonly dialogs: OpenDialogOptions[];
     readonly downloadDir: string;
     dialogResult: readonly string[] | undefined;
-    workspaceFolderResult: string | undefined;
     activeFile: string | undefined;
     activeLimitation: string | undefined;
     saveResult: string | undefined;
     panelOpens: number;
     clock: number;
-    azure: FakeAzureBridge;
-}
-
-class FakeAzureBridge implements AzureBridge {
-    info: AzureConnectionInfo = {
-        connected: false,
-        mode: null,
-        identity: null,
-        account: null,
-        canListSubscriptions: false,
-    };
-    connectCalls: string[] = [];
-    disconnectCalls = 0;
-    connectResult: AzureConnectionInfo | Error | undefined;
-    currentBrowser: BlobBrowser | undefined;
-    token: string | undefined;
-
-    async connect(mode: string): Promise<AzureConnectionInfo> {
-        this.connectCalls.push(mode);
-        if (this.connectResult instanceof Error) {
-            throw this.connectResult;
-        }
-        this.info = this.connectResult ?? {
-            connected: true,
-            mode: 'anonymous',
-            identity: 'Anonymous public access',
-            account: 'myaccount',
-            canListSubscriptions: false,
-        };
-        return this.info;
-    }
-
-    async disconnect(): Promise<void> {
-        this.disconnectCalls += 1;
-        this.currentBrowser = undefined;
-        this.info = {
-            connected: false,
-            mode: null,
-            identity: null,
-            account: null,
-            canListSubscriptions: false,
-        };
-    }
-
-    async useAccount(account: string): Promise<AzureConnectionInfo> {
-        this.info = { ...this.info, connected: true, account };
-        return this.info;
-    }
-
-    browser(): BlobBrowser | undefined {
-        return this.currentBrowser;
-    }
-
-    async armToken(): Promise<string | undefined> {
-        return this.token;
-    }
 }
 
 function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
@@ -123,21 +62,17 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         errors: [],
         warnings: [],
         preferences: new Map<string, unknown>(),
-        cleaned: [],
         dialogs: [],
         downloadDir,
         dialogResult: undefined,
-        workspaceFolderResult: undefined,
         activeFile: undefined,
         activeLimitation: undefined,
         saveResult: undefined,
         panelOpens: 0,
         clock: 0,
-        azure: new FakeAzureBridge(),
     };
     const host: UiHost = {
         version: '1.1.1',
-        azure: state.azure,
         workspaceFolders: () => folders,
         activeFilePath: () => state.activeFile,
         activeFileLimitation: () => state.activeLimitation,
@@ -145,7 +80,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
             state.dialogs.push(dialogOptions);
             return state.dialogResult;
         },
-        pickWorkspaceFolder: async () => state.workspaceFolderResult,
         copyToClipboard: async (text) => void state.clipboard.push(text),
         openUntitledDocument: async (content, languageId) =>
             void state.untitled.push({ content, languageId }),
@@ -161,11 +95,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         showWarning: (message) => state.warnings.push(message),
         showError: (message) => state.errors.push(message),
         log: (message) => state.logs.push(message),
-        downloadDirectory: async () => downloadDir,
-        cleanupDownload: async (absolute) => {
-            state.cleaned.push(absolute);
-            await fs.promises.rm(absolute, { force: true });
-        },
         getPreference: <T,>(key: string, fallback: T): T =>
             (state.preferences.has(key) ? (state.preferences.get(key) as T) : fallback),
         setPreference: async (key, value) => void state.preferences.set(key, value),
@@ -195,7 +124,7 @@ function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
 
-test('Quick Analyze controller applies and resets parser overrides per selected file', async () => {
+test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();
     const timers: Array<() => void> = [];
     const ui = controller(record, {
@@ -209,9 +138,11 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
     try {
         await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
         await settle();
-        assert.equal(snapshot(record).activeTab, 'quick_analyze');
+        assert.equal(snapshot(record).activeTab, 'preview');
+        const fileId = snapshot(record).selectedFileId as string;
         await ui.handle({
             type: 'setParserOverride',
+            fileId,
             key: 'fieldDelimiter',
             value: '|',
         });
@@ -235,28 +166,6 @@ test('Quick Analyze controller applies and resets parser overrides per selected 
             'Inferred',
         );
 
-        await ui.handle({
-            type: 'setStatementKind',
-            kind: 'create_external_table',
-        });
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2019',
-        );
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, true);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2022',
-        );
-        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2025' });
-        assert.equal(snapshot(record).quickAnalyze.polybase.visible, false);
-        assert.equal(
-            snapshot(record).quickAnalyze.documentation[0]?.label,
-            'Learn about CREATE EXTERNAL TABLE for SQL Server 2025',
-        );
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -409,6 +318,12 @@ test('analyzing the current file produces metadata, preview and SQL', async () =
         assert.ok(state.selectedFileId);
         assert.equal(state.metadata?.file_type, 'csv');
         assert.ok((state.metadata?.schema?.length ?? 0) > 0);
+        assert.ok(Object.keys(state.recommendedSqlTypes).length > 0);
+        assert.ok(
+            (state.metadata?.schema ?? []).every(
+                ([column]) => Boolean(state.recommendedSqlTypes[column]),
+            ),
+        );
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.ok(state.statements?.create_table.includes('CREATE TABLE'));
         assert.ok(typeof state.lastAnalysisMs === 'number');
@@ -440,12 +355,12 @@ test('an unsupported editor scheme is reported instead of failing obscurely', as
     }
 });
 
-test('analyzing a workspace folder lists files and selects the first', async () => {
+test('choosing a folder lists files and selects the first', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
 
         const state = snapshot(record);
@@ -462,13 +377,59 @@ test('analyzing a workspace folder lists files and selects the first', async () 
     }
 });
 
+test('folder scans stop after one child level and skip non-SQL files', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-tree-'));
+    fs.mkdirSync(path.join(root, 'year', 'month'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'top.csv'), 'id,name\n1,top\n');
+    fs.writeFileSync(path.join(root, 'year', 'direct.csv'), 'id,name\n2,direct\n');
+    fs.writeFileSync(path.join(root, 'year', 'month', 'deep.csv'), 'id,name\n3,deep\n');
+    fs.writeFileSync(path.join(root, 'script.py'), 'id,name\n3,python\n');
+    fs.writeFileSync(path.join(root, 'workbook.xlsx'), 'id,name\n4,excel\n');
+    fs.writeFileSync(path.join(root, 'table.delta'), 'id,name\n5,not-a-delta-table\n');
+    const record = recorder({ workspaceFolders: [root] });
+    const ui = controller(record);
+    try {
+        await ui.loadDirectory(root);
+        await settle();
+
+        const state = snapshot(record);
+        assert.deepEqual(
+            state.files.map((entry) => entry.label).sort(),
+            ['direct.csv', 'top.csv'],
+        );
+        assert.equal(
+            state.files.find((entry) => entry.label === 'direct.csv')?.folderLabel,
+            'year',
+        );
+        assert.ok(!state.files.some((entry) => entry.label === 'deep.csv'));
+
+        await ui.loadFiles([path.join(root, 'script.py')]);
+        assert.equal(snapshot(record).files.length, 0);
+        assert.match(snapshot(record).error ?? '', /SQL-readable data file/i);
+
+        await ui.loadFiles([path.join(root, 'table.delta')]);
+        assert.equal(snapshot(record).files.length, 0);
+        assert.match(snapshot(record).error ?? '', /SQL-readable data file/i);
+
+        await ui.loadFiles([
+            path.join(root, 'top.csv'),
+            path.join(root, 'workbook.xlsx'),
+        ]);
+        await settle();
+        assert.equal(snapshot(record).files.length, 1);
+        assert.match(snapshot(record).notice ?? '', /unsupported file was skipped/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 test('cancelling the folder picker leaves the state untouched', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = undefined;
         record.dialogResult = undefined;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
         await ui.handle({ type: 'openFileDialog' });
         await ui.handle({ type: 'openFolderDialog' });
         await settle();
@@ -508,14 +469,49 @@ test('the renderer can only select files the host listed', async () => {
     }
 });
 
+test('selecting a listed file analyzes it immediately and opens Preview', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([
+            path.join(FIXTURES, 'employees.csv'),
+            path.join(SAMPLES, 'parquet', 'sample.parquet'),
+        ]);
+        await settle();
+        assert.equal(snapshot(record).tableName, 'employees');
+        await ui.handle({ type: 'setTab', tab: 'metadata' });
+        const parquet = snapshot(record).files.find(
+            (entry) => entry.label === 'sample.parquet',
+        );
+        assert.ok(parquet);
+
+        await ui.handle({ type: 'selectFile', fileId: parquet.id });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(state.selectedFileId, parquet.id);
+        assert.equal(state.activeTab, 'preview');
+        assert.equal(state.metadata?.file_type, 'parquet');
+        assert.equal(state.metadata?.file_name, 'sample.parquet');
+        assert.equal(state.tableName, 'sample');
+        assert.match(state.statements?.create_table ?? '', /\[dbo\]\.\[sample\]/);
+        assert.match(state.statements?.create_external_table ?? '', /\[dbo\]\.\[ext_sample\]/);
+        assert.ok((state.preview?.rows.length ?? 0) > 0);
+        assert.equal(record.preferences.get('activeTab'), 'preview');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 // -- formats ------------------------------------------------------------------
 
 for (const [name, fixture, fileType] of [
     ['CSV', path.join(FIXTURES, 'employees.csv'), 'csv'],
     ['TSV', path.join(FIXTURES, 'web_access_logs.tsv'), 'csv'],
-    ['JSON', path.join(FIXTURES, 'sample.json'), 'json'],
-    ['JSON Lines', path.join(FIXTURES, 'events.jsonl'), 'json'],
-    ['Parquet', path.join(FIXTURES, 'sample.parquet'), 'parquet'],
+    ['JSON', path.join(SAMPLES, 'json', 'sample.json'), 'json'],
+    ['JSON Lines', path.join(SAMPLES, 'json', 'events.jsonl'), 'json'],
+    ['Parquet', path.join(SAMPLES, 'parquet', 'sample.parquet'), 'parquet'],
 ] as const) {
     test(`${name} is analysed natively and generates SQL`, async () => {
         const record = recorder();
@@ -536,15 +532,38 @@ for (const [name, fixture, fileType] of [
     });
 }
 
+test('a large Parquet file keeps the default preview bounded', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.activeFile = path.join(
+            SAMPLES,
+            'performance',
+            'events_250k.parquet',
+        );
+        await ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(state.error, null);
+        assert.equal(state.metadata?.row_count, 250_000);
+        assert.equal(state.preview?.rows.length, 25);
+        assert.equal(state.preview?.truncated, true);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 for (const [name, fixture] of [
-    ['Delta', path.join(FIXTURES, 'delta_table')],
-    ['Iceberg', path.join(FIXTURES, 'iceberg_table')],
+    ['Delta', path.join(SAMPLES, 'tables', 'delta_table')],
+    ['Iceberg', path.join(SAMPLES, 'tables', 'iceberg_table')],
 ] as const) {
     test(`${name} directories are analysed through the native service`, async () => {
         const record = recorder();
         const ui = controller(record);
         try {
-            await ui.analyzePath(fixture, false);
+            await ui.analyzePath(fixture, true);
             await settle();
             const state = snapshot(record);
             assert.equal(state.error, null);
@@ -558,7 +577,7 @@ for (const [name, fixture] of [
 }
 
 test('a Unicode CSV keeps its characters through analysis and generation', async () => {
-    const unicode = path.join(DEMO, 'collation_cases_utf8.csv');
+    const unicode = path.join(DEMO, 'unicode', 'collation_cases_utf8.csv');
     if (!fs.existsSync(unicode)) {
         return;
     }
@@ -583,7 +602,7 @@ test('a Unicode CSV keeps its characters through analysis and generation', async
 });
 
 test('ORC reports its limitation and never reaches for Python', async () => {
-    const orc = path.join(DEMO, 'all_types.orc');
+    const orc = path.join(DEMO, 'orc', 'all_types.orc');
     if (!fs.existsSync(orc)) {
         return;
     }
@@ -646,18 +665,24 @@ test('platform, names and overrides regenerate the SQL and persist preferences',
         assert.equal(record.preferences.get('platform'), 'sql_server_2022');
 
         const column = snapshot(record).metadata?.schema?.[0]?.[0] as string;
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: 'DECIMAL(18,4)' });
+        const fileId = snapshot(record).selectedFileId as string;
+        await ui.handle({
+            type: 'setColumnOverride',
+            fileId,
+            column,
+            sqlType: 'DECIMAL(18,4)',
+        });
         await settle();
         timers.forEach((fire) => fire());
         assert.ok(snapshot(record).statements?.create_table.includes('DECIMAL(18,4)'));
         assert.equal(snapshot(record).columnOverrides[column], 'DECIMAL(18,4)');
 
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: '   ' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: '   ' });
         await settle();
         timers.forEach((fire) => fire());
         assert.equal(snapshot(record).columnOverrides[column], undefined, 'blank clears');
 
-        await ui.handle({ type: 'setColumnOverride', column, sqlType: 'BIGINT' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'BIGINT' });
         await ui.handle({ type: 'clearColumnOverrides' });
         await settle();
         assert.deepEqual(snapshot(record).columnOverrides, {});
@@ -682,6 +707,7 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
             cleared += 1;
         },
     });
+
     try {
         record.activeFile = path.join(FIXTURES, 'sample.csv');
         await ui.handle({ type: 'analyzeCurrentFile' });
@@ -696,6 +722,67 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
         // Only the final scheduled callback is meant to run.
         pending[pending.length - 1]();
         assert.ok(snapshot(record).statements?.create_table.includes('Custo'));
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('file-scoped edits cannot reach a newly selected file', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([
+            path.join(FIXTURES, 'sample.csv'),
+            path.join(FIXTURES, 'employees.csv'),
+        ]);
+        await settle();
+        const firstFileId = snapshot(record).selectedFileId as string;
+        const secondFileId = snapshot(record).files.find(
+            (file) => file.label === 'employees.csv',
+        )?.id as string;
+
+        await ui.handle({ type: 'selectFile', fileId: secondFileId });
+        await settle();
+        const column = snapshot(record).metadata?.schema?.[0]?.[0] as string;
+
+        await ui.handle({
+            type: 'setColumnOverride',
+            fileId: firstFileId,
+            column,
+            sqlType: 'DECIMAL(18,4)',
+        });
+        await ui.handle({
+            type: 'setParserOverride',
+            fileId: firstFileId,
+            key: 'fieldDelimiter',
+            value: '|',
+        });
+
+        assert.deepEqual(snapshot(record).columnOverrides, {});
+        assert.deepEqual(snapshot(record).parserOverrides, {});
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('statement tabs select their own platform documentation', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setTab', tab: 'create_external_table' });
+        assert.equal(snapshot(record).quickAnalyze.selectedStatement, 'create_external_table');
+        assert.deepEqual(
+            snapshot(record).quickAnalyze.documentation.map((link) => link.id),
+            ['create_external_table'],
+        );
+
+        await ui.handle({ type: 'setTab', tab: 'credential_setup' });
+        assert.deepEqual(
+            snapshot(record).quickAnalyze.documentation.map((link) => link.id),
+            ['create_database_scoped_credential', 'create_external_data_source'],
+        );
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -767,8 +854,8 @@ test('export all emits shared prerequisites once across many files', async () =>
     const ui = controller(record);
     try {
         record.saveResult = path.join(record.downloadDir, 'out.sql');
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
         assert.ok(snapshot(record).files.length > 2);
 
@@ -981,366 +1068,135 @@ test('credential name, auth method and table name reach the generator', async ()
     }
 });
 
-function fakeBrowser(overrides: Partial<BlobBrowser> = {}): BlobBrowser {
-    return {
-        account: 'myaccount',
-        listContainers: async () => ({ names: ['data', 'logs'], continuation: null }),
-        listBlobs: async () => ({
-            entries: [
-                { name: 'year=2020/', sizeBytes: null, isPrefix: true },
-                { name: 'a.csv', sizeBytes: 10, isPrefix: false },
-                { name: 'notes.md', sizeBytes: 10, isPrefix: false },
-            ],
-            continuation: 'next-page',
-        }),
-        downloadBlob: async () => ({ path: '', bytes: 0 }),
-        blobUrl: (container: string, blob: string) =>
-            `https://myaccount.blob.core.windows.net/${container}/${blob}`,
-        ...overrides,
-    } as BlobBrowser;
-}
-
-test('connecting lists containers and never exposes a credential', async () => {
+test('a known URL configures credential SQL without requiring file analysis', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.azure.currentBrowser = fakeBrowser();
-        await ui.handle({ type: 'azureConnect', mode: 'anonymous' });
-        await settle();
-
-        const azure = snapshot(record).azure;
-        assert.equal(azure.connected, true);
-        assert.equal(azure.account, 'myaccount');
-        assert.deepEqual(azure.containers, ['data', 'logs']);
-        assert.deepEqual(record.azure.connectCalls, ['anonymous']);
-        assert.ok(!JSON.stringify(snapshot(record)).toLowerCase().includes('sig='));
-        assert.ok(!JSON.stringify(snapshot(record)).includes('AccountKey'));
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('every auth mode is routed through the bridge unchanged', async () => {
-    for (const mode of ['vscode', 'sas', 'connectionString', 'anonymous'] as const) {
-        const record = recorder();
-        const ui = controller(record);
-        try {
-            record.azure.currentBrowser = fakeBrowser();
-            await ui.handle({ type: 'azureConnect', mode });
-            await settle();
-            assert.deepEqual(record.azure.connectCalls, [mode]);
-            assert.equal(snapshot(record).azure.connected, true);
-        } finally {
-            await ui.dispose();
-            cleanup(record);
-        }
-    }
-});
-
-test('a failed connection is reported redacted and leaves nothing connected', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        record.azure.connectResult = new Error(
-            'Auth failed for https://a.blob.core.windows.net/c?sv=1&sig=SECRETSIG',
-        );
-        await ui.handle({ type: 'azureConnect', mode: 'sas' });
-        await settle();
-
-        const azure = snapshot(record).azure;
-        assert.equal(azure.connected, false);
-        assert.equal(azure.busy, false);
-        assert.ok(azure.error);
-        assert.ok(!azure.error.includes('SECRETSIG'), azure.error);
-        assert.ok(!record.logs.join('\n').includes('SECRETSIG'));
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('browsing pages blobs and marks which ones can be analysed', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        record.azure.currentBrowser = fakeBrowser();
-        await ui.handle({ type: 'azureConnect', mode: 'anonymous' });
         await ui.handle({
-            type: 'azureListBlobs',
-            container: 'data',
-            prefix: '',
-            continuation: '',
+            type: 'setStorageUrl',
+            value:
+                'https://myaccount.blob.core.windows.net/data/orders.parquet' +
+                '?sv=2026&sig=SECRET#details',
         });
-        await settle();
-
-        const azure = snapshot(record).azure;
-        assert.equal(azure.container, 'data');
-        assert.equal(azure.continuation, 'next-page');
-        assert.deepEqual(
-            azure.blobs.map((blob) => [blob.name, blob.supported]),
-            [
-                ['year=2020/', true],
-                ['a.csv', true],
-                ['notes.md', false],
-            ],
-        );
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('browsing without an account asks for one instead of failing', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        record.azure.currentBrowser = undefined;
-        await ui.handle({ type: 'azureListContainers' });
-        await ui.handle({
-            type: 'azureListBlobs',
-            container: 'data',
-            prefix: '',
-            continuation: '',
-        });
-        await settle();
-        assert.match(snapshot(record).azure.error ?? '', /storage account/i);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('subscription discovery degrades gracefully without an ARM token', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        record.azure.token = undefined;
-        await ui.handle({ type: 'azureListSubscriptions' });
-        await settle();
-        assert.match(snapshot(record).azure.error ?? '', /storage account name/i);
-        assert.equal(snapshot(record).azure.canListSubscriptions, false);
-
-        await ui.handle({ type: 'azureListAccounts', subscriptionId: 'sub-1' });
-        await settle();
-        assert.match(snapshot(record).azure.error ?? '', /Microsoft account/i);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('analyzing a blob keeps the copy local and the SQL pointed at the URL', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        const local = path.join(record.downloadDir, 'a.csv');
-        fs.writeFileSync(local, 'id,name\n1,Ada\n2,Grace\n');
-        record.azure.currentBrowser = fakeBrowser({
-            downloadBlob: async () => ({ path: local, bytes: 24 }),
-        });
-        await ui.handle({ type: 'azureConnect', mode: 'anonymous' });
-        await ui.handle({ type: 'azureAnalyzeBlob', container: 'data', blob: 'a.csv' });
         await settle();
 
         const state = snapshot(record);
-        assert.equal(state.error, null);
         assert.equal(
             state.storageUrl,
-            'https://myaccount.blob.core.windows.net/data/a.csv',
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
         );
-        assert.equal(state.metadata?.file_type, 'csv');
-        assert.equal(state.sourceKind, 'azure');
-        assert.equal(state.quickAnalyze.source.baseLocation, 'https://myaccount.blob.core.windows.net/data');
-        assert.equal(state.quickAnalyze.source.relativePath, 'a.csv');
-        assert.equal(state.quickAnalyze.source.objects[0].required, false);
-        assert.equal(state.dataSource, 'ds_myaccount_data');
-        assert.match(state.notice ?? '', /local copy/i);
-        assert.ok(!state.storageUrl.includes('sig='), 'the URL in SQL is never signed');
+        assert.equal(state.dataSourceType, 'azure_blob');
+        assert.equal(state.authMethod, 'sas');
+        assert.match(state.statements?.credential_setup ?? '', /CREATE EXTERNAL DATA SOURCE/);
+        assert.ok(!JSON.stringify(state).includes('sig=SECRET'));
+        assert.ok(!JSON.stringify(state).includes('?sv=2026'));
+        assert.match(state.notice ?? '', /removed/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
 
-        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+test('an invalid known URL leaves the previous storage setup intact', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({
+            type: 'setStorageUrl',
+            value: 'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        });
+        await ui.handle({ type: 'setStorageUrl', value: 'https://example.com/orders.parquet' });
         await settle();
-        assert.equal(snapshot(record).sourceKind, 'local');
+
+        assert.equal(
+            snapshot(record).storageUrl,
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        );
+        assert.match(snapshot(record).error ?? '', /not a supported/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('changing to an incompatible SQL platform clears the known storage URL', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
+        await ui.handle({ type: 'setStorageUrl', value: 's3://sales-data/year=2026/' });
+        assert.equal(snapshot(record).storageUrl, 's3://sales-data/year=2026/');
+
+        await ui.handle({ type: 'setPlatform', platform: 'azure_sql_db' });
         assert.equal(snapshot(record).storageUrl, '');
-        assert.deepEqual(snapshot(record).quickAnalyze.source.objects, []);
+        assert.match(snapshot(record).notice ?? '', /does not support/i);
     } finally {
         await ui.dispose();
         cleanup(record);
     }
 });
 
-test('disconnecting clears every trace of the Azure session from the state', async () => {
+test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided URL', async () => {
     const record = recorder();
     const ui = controller(record);
-    try {
-        record.azure.currentBrowser = fakeBrowser();
-        await ui.handle({ type: 'azureConnect', mode: 'anonymous' });
-        await ui.handle({
-            type: 'azureListBlobs',
-            container: 'data',
-            prefix: '',
-            continuation: '',
-        });
-        await settle();
-        await ui.handle({ type: 'azureDisconnect' });
-        await settle();
+    const large = path.join(SAMPLES, 'performance', 'events_250k.parquet');
 
-        const azure = snapshot(record).azure;
-        assert.equal(record.azure.disconnectCalls, 1);
-        assert.deepEqual(
+    try {
+        assert.equal(snapshot(record).activeTab, 'preview');
+        assert.equal(snapshot(record).selectedFileId, null);
+        assert.equal(snapshot(record).preview, null);
+
+        await ui.loadFiles([large]);
+        await settle();
+        assert.equal(snapshot(record).metadata?.row_count, 250_000);
+        assert.equal(snapshot(record).preview?.rows.length, 25);
+
+        const cases = [
             {
-                connected: azure.connected,
-                mode: azure.mode,
-                identity: azure.identity,
-                account: azure.account,
-                container: azure.container,
-                prefix: azure.prefix,
-                continuation: azure.continuation,
+                platform: 'azure_sql_db',
+                url: 'abs://raw@myaccount.blob.core.windows.net/events_250k.parquet',
+                source: 'azure_blob',
+                connector: 'ABS',
+                location: "LOCATION = 'abs://raw@myaccount.blob.core.windows.net'",
             },
             {
-                connected: false,
-                mode: null,
-                identity: null,
-                account: null,
-                container: null,
-                prefix: '',
-                continuation: null,
+                platform: 'azure_sql_db',
+                url: 'adls://raw@myaccount.dfs.core.windows.net/events_250k.parquet',
+                source: 'azure_data_lake',
+                connector: 'ADLS',
+                location: "LOCATION = 'adls://raw@myaccount.dfs.core.windows.net'",
             },
-        );
-        assert.deepEqual(azure.blobs, []);
-        assert.deepEqual(azure.containers, []);
-        assert.deepEqual(azure.subscriptions, []);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-// -- public URL ---------------------------------------------------------------
-
-function httpDeps(body: string, headers: Record<string, string> = {}): SafeHttpDeps {
-    return {
-        resolve: async () => ['93.184.216.34'],
-        request: async () => {
-            const response: RawResponse = {
-                statusCode: 200,
-                headers,
-                body: Readable.from([Buffer.from(body)]),
-                destroy: () => undefined,
-            };
-            return response;
-        },
-    };
-}
-
-test('a public Azure URL is analysed and remains directly queryable', async () => {
-    const record = recorder();
-    const ui = controller(record, {
-        http: httpDeps('id,name\n1,Ada\n2,Grace\n'),
-    });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://azureopendatastorage.blob.core.windows.net/nyctlc/sample.csv',
-        });
-        await settle();
-
-        const state = snapshot(record);
-        assert.equal(state.error, null);
-        assert.equal(
-            state.storageUrl,
-            'https://azureopendatastorage.blob.core.windows.net/nyctlc/sample.csv',
-        );
-        assert.match(state.notice ?? '', /reads the storage URL directly/i);
-        assert.equal(state.metadata?.file_type, 'csv');
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('a generic public host is analysed but the SQL says to stage the file', async () => {
-    const record = recorder();
-    const ui = controller(record, { http: httpDeps('id,name\n1,Ada\n') });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/data/sample.csv',
-        });
-        await settle();
-
-        const state = snapshot(record);
-        assert.equal(state.error, null);
-        assert.equal(state.storageUrl, '', 'a generic host is not a queryable location');
-        assert.match(state.notice ?? '', /Stage the file/i);
-        assert.equal(state.metadata?.file_type, 'csv');
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('a public URL is subject to the SSRF policy', async () => {
-    for (const [url, pattern] of [
-        ['http://example.com/a.csv', /https/i],
-        ['https://127.0.0.1/a.csv', /publicly routable/i],
-        ['https://169.254.169.254/a.csv', /publicly routable/i],
-        ['https://localhost/a.csv', /Local host names/i],
-        ['https://user:pass@example.com/a.csv', /credentials/i],
-        ['https://example.com/setup.exe', /supported data file/i],
-    ] as const) {
-        const record = recorder();
-        const ui = controller(record, {
-            http: {
-                resolve: async () => ['93.184.216.34'],
-                request: async () => assert.fail(`a request was made for ${url}`),
+            {
+                platform: 'fabric_sql_db',
+                url:
+                    'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
+                    + 'lakehouse/Files/events_250k.parquet',
+                source: 'fabric_onelake',
+                connector: 'ABFSS',
+                location:
+                    "LOCATION = 'abfss://workspace@onelake.dfs.fabric.microsoft.com/"
+                    + "lakehouse/Files'",
             },
-        });
-        try {
-            await ui.handle({ type: 'publicUrlAnalyze', url });
+        ] as const;
+
+        for (const entry of cases) {
+            await ui.handle({ type: 'setStorageUrl', value: '' });
+            await ui.handle({ type: 'setPlatform', platform: entry.platform });
+            await ui.handle({ type: 'setStorageUrl', value: entry.url });
             await settle();
-            assert.match(snapshot(record).error ?? '', pattern, url);
-            assert.equal(snapshot(record).busy, false);
-        } finally {
-            await ui.dispose();
-            cleanup(record);
+
+            const state = snapshot(record);
+            assert.equal(state.error, null);
+            assert.equal(state.storageUrl, entry.url);
+            assert.equal(state.dataSourceType, entry.source);
+            assert.equal(state.credentialSetup.locationPrefix, entry.connector);
+            const sql = state.statements?.credential_setup ?? '';
+            assert.match(sql, /CREATE EXTERNAL DATA SOURCE/);
+            assert.ok(sql.includes(entry.location), sql);
+            assert.ok(!('azure' in state), 'connection state must not reach the renderer');
         }
-    }
-});
-
-test('a public download that overruns the cap leaves nothing behind', async () => {
-    const record = recorder();
-    const ui = controller(record, {
-        http: httpDeps('x', { 'content-length': '999999999999' }),
-    });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/huge.csv',
-        });
-        await settle();
-        assert.match(snapshot(record).error ?? '', /limit/i);
-        assert.deepEqual(fs.readdirSync(record.downloadDir), []);
     } finally {
         await ui.dispose();
-        cleanup(record);
-    }
-});
-
-test('downloaded temp files are cleaned up on dispose', async () => {
-    const record = recorder();
-    const ui = controller(record, { http: httpDeps('id,name\n1,Ada\n') });
-    try {
-        await ui.handle({
-            type: 'publicUrlAnalyze',
-            url: 'https://example.com/data/sample.csv',
-        });
-        await settle();
-        assert.equal(fs.readdirSync(record.downloadDir).length, 1);
-        await ui.dispose();
-        assert.equal(record.cleaned.length, 1);
-        assert.deepEqual(fs.readdirSync(record.downloadDir), []);
-    } finally {
         cleanup(record);
     }
 });
@@ -1352,7 +1208,6 @@ test('non-sensitive preferences are persisted and file contents are not', async 
     const ui = controller(record);
     try {
         await ui.handle({ type: 'setTab', tab: 'preview' });
-        await ui.handle({ type: 'setPreference', appearance: 'compact' });
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2019' });
         await settle();
 
@@ -1360,7 +1215,6 @@ test('non-sensitive preferences are persisted and file contents are not', async 
             [...record.preferences.entries()].sort(),
             [
                 ['activeTab', 'preview'],
-                ['appearance', 'compact'],
                 ['platform', 'sql_server_2019'],
             ],
         );
@@ -1406,8 +1260,8 @@ test('no snapshot ever contains an absolute filesystem path', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.workspaceFolderResult = FIXTURES;
-        await ui.handle({ type: 'analyzeWorkspaceFolder' });
+        record.dialogResult = [FIXTURES];
+        await ui.handle({ type: 'openFolderDialog' });
         await settle();
         const serialised = JSON.stringify(snapshot(record));
         assert.ok(!serialised.includes(FIXTURES.replace(/\\/g, '\\\\')), 'no workspace root');

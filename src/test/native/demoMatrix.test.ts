@@ -5,7 +5,7 @@
  * The README and the Marketplace copy make specific claims about which formats
  * the extension reads and what it does with ORC. Those claims are only worth
  * something if they are checked against real files, so every fixture under
- * `demo/` is analysed through the shipped service and compared to an explicit
+ * `data sample/` is analysed through the shipped service and compared to an explicit
  * expectation here. Adding a fixture without adding a row fails the suite, so
  * the matrix cannot silently go stale.
  *
@@ -23,7 +23,7 @@ import { NativeAnalysisService } from '../../native';
 import { PLATFORMS } from '../../native/sql/typeMapping';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
-const DEMO = path.join(REPO, 'demo');
+const DATA_SAMPLE = path.join(REPO, 'data sample');
 
 interface Expectation {
     /** Detected `file_type`. */
@@ -35,26 +35,44 @@ interface Expectation {
 }
 
 /**
- * Every committed fixture, keyed by its `demo/`-relative POSIX path.
+ * Every committed fixture, keyed by its `data sample/`-relative POSIX path.
  *
  * Directories that are table formats (Delta, Iceberg) are listed; directories
  * that are only containers are not analysed.
  */
 const MATRIX: Readonly<Record<string, Expectation>> = {
+    'csv/employees.csv': { type: 'csv', columns: 7, parsed: true },
+    'csv/employees_wide.csv': { type: 'csv', columns: 10, parsed: true },
+    'csv/products_catalog.csv': { type: 'csv', columns: 8, parsed: true },
+    'csv/sales_orders.csv': { type: 'csv', columns: 10, parsed: true },
     'csv/sales_scalars.csv': { type: 'csv', columns: 10, parsed: true },
     'csv/sales_scalars.tsv': { type: 'csv', columns: 10, parsed: true },
     'csv/sales_scalars_pipe.csv': { type: 'csv', columns: 10, parsed: true },
+    'csv/sample.csv': { type: 'csv', columns: 5, parsed: true },
+    'csv/web_access_logs.tsv': { type: 'csv', columns: 7, parsed: true },
     'excel/inventory.xlsx': { type: 'excel', columns: 6, parsed: true },
+    'json/customers_nested.json': { type: 'json', columns: 6, parsed: true },
+    'json/events.jsonl': { type: 'json', columns: 6, parsed: true },
     'json/orders.ndjson': { type: 'json', columns: 8, parsed: true },
     'json/orders_array.json': { type: 'json', columns: 8, parsed: true },
     'json/order_single_object.json': { type: 'json', columns: 8, parsed: true },
+    'json/sample.json': { type: 'json', columns: 5, parsed: true },
     // The one explicit limitation: recognised, never parsed.
     'orc/all_types.orc': { type: 'orc', columns: 0, parsed: false },
     'parquet/all_types.parquet': { type: 'parquet', columns: 26, parsed: true },
     'parquet/sales.parquet': { type: 'parquet', columns: 6, parsed: true },
+    'parquet/sales_transactions.parquet': { type: 'parquet', columns: 7, parsed: true },
+    'parquet/sample.parquet': { type: 'parquet', columns: 6, parsed: true },
+    'parquet/sensor_readings.parquet': { type: 'parquet', columns: 6, parsed: true },
+    'performance/events_25k.parquet': { type: 'parquet', columns: 7, parsed: true },
+    'performance/events_250k.parquet': { type: 'parquet', columns: 7, parsed: true },
+    'tables/delta_table': { type: 'delta', columns: 4, parsed: true },
     'tables/events_delta': { type: 'delta', columns: 5, parsed: true },
     'tables/events_iceberg': { type: 'iceberg', columns: 6, parsed: true },
+    'tables/iceberg_table': { type: 'iceberg', columns: 4, parsed: true },
+    'tables/sample_orders.delta': { type: 'delta', columns: 8, parsed: true },
     'text/readme_sample.txt': { type: 'text', columns: 0, parsed: true },
+    'text/sample.txt': { type: 'text', columns: 0, parsed: true },
     'unicode/collation_cases_utf8.csv': { type: 'csv', columns: 5, parsed: true },
     'unicode/japanese_cp932.csv': { type: 'csv', columns: 4, parsed: true },
     'unicode/unicode_utf16le_bom.csv': { type: 'csv', columns: 5, parsed: true },
@@ -71,7 +89,7 @@ const NOT_AN_INPUT = /(^|\/)(README\.md|generate_samples\.py|\.gitattributes|__p
  *
  * Membership in {@link MATRIX} is the test, deliberately, rather than a
  * `tables/` prefix. A prefix rule would swallow the contents of an *unlisted*
- * table directory too, so adding `demo/tables/events_hudi/...` would yield no
+ * table directory too, so adding `data sample/tables/events_hudi/...` would yield no
  * fixture paths at all and the coverage assertion would still pass — silently
  * exempting exactly the directory-shaped formats this matrix exists to police.
  */
@@ -84,7 +102,7 @@ function fixturePaths(): string[] {
     const walk = (directory: string): void => {
         for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
             const absolute = path.join(directory, entry.name);
-            const relative = path.relative(DEMO, absolute).split(path.sep).join('/');
+            const relative = path.relative(DATA_SAMPLE, absolute).split(path.sep).join('/');
             if (NOT_AN_INPUT.test(relative) || relative.includes('__pycache__')) {
                 continue;
             }
@@ -102,12 +120,12 @@ function fixturePaths(): string[] {
             found.push(relative);
         }
     };
-    walk(DEMO);
+    walk(DATA_SAMPLE);
     return found.sort();
 }
 
-describe('demo fixture support matrix', () => {
-    const service = new NativeAnalysisService(DEMO);
+describe('data sample support matrix', () => {
+    const service = new NativeAnalysisService(DATA_SAMPLE);
 
     it('covers every committed fixture, with no unlisted extras', () => {
         assert.deepEqual(fixturePaths(), Object.keys(MATRIX).sort());
@@ -116,7 +134,7 @@ describe('demo fixture support matrix', () => {
     for (const [relative, expected] of Object.entries(MATRIX)) {
         it(`${relative} is detected as ${expected.type}`, async () => {
             const metadata = await service.analyze({
-                filePath: path.join(DEMO, ...relative.split('/')),
+                filePath: path.join(DATA_SAMPLE, ...relative.split('/')),
             });
             assert.equal(metadata.file_type, expected.type, 'detected format');
             assert.equal(
@@ -145,7 +163,7 @@ describe('demo fixture support matrix', () => {
             // so this pins that real detector output stays generable on every
             // platform rather than reproducing a bug this side never had.
             const metadata = await service.analyze({
-                filePath: path.join(DEMO, ...relative.split('/')),
+                filePath: path.join(DATA_SAMPLE, ...relative.split('/')),
             });
             for (const targetPlatform of PLATFORMS) {
                 const statements = service.generateStatements({

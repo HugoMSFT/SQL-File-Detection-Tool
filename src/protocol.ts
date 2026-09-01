@@ -42,6 +42,12 @@ import type {
     QuickAnalyzeState,
     SourceKind,
 } from './quickAnalyze';
+import {
+    GUIDED_AUTH_METHODS,
+    type CredentialWizardState,
+    type ExternalDataSourceType,
+    type GuidedAuthMethod,
+} from './native';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -55,22 +61,15 @@ export const MAX_PREVIEW_ROWS = 500;
 
 /** Tabs the native interface can show. */
 export const UI_TABS = [
-    'quick_analyze',
-    'metadata',
     'preview',
+    'metadata',
+    'schema',
     'create_table',
     'bulk_insert',
     'openrowset',
-    'copy_into',
     'external_file_format',
     'create_external_table',
-    'json_functions',
-    'for_json',
     'credential_setup',
-    'best_practices',
-    'schema',
-    'azure',
-    'formats',
 ] as const;
 
 export type UiTab = (typeof UI_TABS)[number];
@@ -88,21 +87,6 @@ export const STATEMENT_KINDS: readonly StatementKind[] = [
     'credential_setup',
     'best_practices',
 ];
-
-/** Ways the extension can talk to Azure Storage. */
-export const AZURE_AUTH_MODES = [
-    'vscode',
-    'sas',
-    'connectionString',
-    'anonymous',
-] as const;
-
-export type AzureAuthMode = (typeof AZURE_AUTH_MODES)[number];
-
-/** UI appearance preference layered on top of the VS Code theme. */
-export const APPEARANCE_MODES = ['auto', 'comfortable', 'compact'] as const;
-
-export type AppearanceMode = (typeof APPEARANCE_MODES)[number];
 
 // ---------------------------------------------------------------------------
 // Webview -> host
@@ -124,23 +108,26 @@ export type WebviewRequest =
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
     | (Base & { readonly type: 'analyzeCurrentFile' })
-    | (Base & { readonly type: 'analyzeWorkspaceFolder' })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
     | (Base & { readonly type: 'setCredentialName'; readonly value: string })
-    | (Base & { readonly type: 'setAuthMethod'; readonly value: string })
+    | (Base & {
+          readonly type: 'setAuthMethod';
+          readonly value: GuidedAuthMethod | 'public';
+      })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
     | (Base & { readonly type: 'setFormatName'; readonly value: string })
     | (Base & {
           readonly type: 'setParserOverride';
+          readonly fileId: string;
           readonly key: keyof ParserOverrides;
           readonly value: string;
       })
     | (Base & { readonly type: 'resetParserOverride'; readonly key: keyof ParserOverrides })
-    | (Base & { readonly type: 'setStatementKind'; readonly kind: StatementKind })
     | (Base & {
           readonly type: 'setColumnOverride';
+          readonly fileId: string;
           readonly column: string;
           readonly sqlType: string;
       })
@@ -154,31 +141,6 @@ export type WebviewRequest =
     | (Base & { readonly type: 'exportAllSql' })
     | (Base & { readonly type: 'openInEditor' })
     | (Base & { readonly type: 'openDocumentation'; readonly id: DocumentationId })
-    | (Base & {
-          readonly type: 'setPreference';
-          readonly appearance: AppearanceMode;
-      })
-    | (Base & { readonly type: 'azureConnect'; readonly mode: AzureAuthMode })
-    | (Base & { readonly type: 'azureDisconnect' })
-    | (Base & { readonly type: 'azureListSubscriptions' })
-    | (Base & {
-          readonly type: 'azureListAccounts';
-          readonly subscriptionId: string;
-      })
-    | (Base & { readonly type: 'azureSetAccount'; readonly account: string })
-    | (Base & { readonly type: 'azureListContainers' })
-    | (Base & {
-          readonly type: 'azureListBlobs';
-          readonly container: string;
-          readonly prefix: string;
-          readonly continuation: string;
-      })
-    | (Base & {
-          readonly type: 'azureAnalyzeBlob';
-          readonly container: string;
-          readonly blob: string;
-      })
-    | (Base & { readonly type: 'publicUrlAnalyze'; readonly url: string })
     | (Base & { readonly type: 'showOrcGuidance' });
 
 export type WebviewRequestType = WebviewRequest['type'];
@@ -193,36 +155,13 @@ export interface FileEntry {
     readonly id: string;
     /** Workspace-relative (or basename) label safe to render. */
     readonly label: string;
-    /** Parent folder label, for disambiguation. May be empty. */
+    /** Safe path beneath the selected root, excluding the file name. */
     readonly folderLabel: string;
     readonly fileType: string;
     readonly sizeBytes: number;
     readonly nativeSupport: NativeSupport;
     /** Set when the entry is a Delta/Iceberg table directory. */
     readonly isDirectory: boolean;
-}
-
-/** Non-secret description of the current Azure connection. */
-export interface AzureState {
-    readonly connected: boolean;
-    readonly mode: AzureAuthMode | null;
-    /** Account label (an email or "SAS token"); never a credential. */
-    readonly identity: string | null;
-    readonly account: string | null;
-    readonly subscriptions: ReadonlyArray<{ id: string; name: string }>;
-    readonly accounts: readonly string[];
-    readonly containers: readonly string[];
-    readonly container: string | null;
-    readonly prefix: string;
-    readonly blobs: ReadonlyArray<{
-        name: string;
-        sizeBytes: number | null;
-        supported: boolean;
-    }>;
-    readonly continuation: string | null;
-    readonly canListSubscriptions: boolean;
-    readonly error: string | null;
-    readonly busy: boolean;
 }
 
 /** A limitation the UI must state plainly rather than work around. */
@@ -249,8 +188,10 @@ export interface AppStateSnapshot {
     readonly tableName: string;
     readonly schemaName: string;
     readonly dataSource: string;
+    readonly dataSourceType: ExternalDataSourceType;
     readonly credentialName: string;
     readonly authMethod: string;
+    readonly credentialSetup: CredentialWizardState;
     readonly storageUrl: string;
     readonly formatName: string;
     readonly parserOverrides: Readonly<ParserOverrides>;
@@ -258,15 +199,14 @@ export interface AppStateSnapshot {
     readonly folderProfile: FolderProfile | null;
     readonly quickAnalyze: QuickAnalyzeState;
     readonly columnOverrides: Readonly<Record<string, string>>;
+    readonly recommendedSqlTypes: Readonly<Record<string, string>>;
     readonly previewRows: number;
     readonly busy: boolean;
     readonly progress: string | null;
     readonly error: string | null;
     readonly notice: string | null;
     readonly limitation: Limitation | null;
-    readonly azure: AzureState;
     readonly formats: readonly SupportedFormat[];
-    readonly appearance: AppearanceMode;
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
 }
@@ -382,13 +322,9 @@ const BUILDERS: Record<string, Builder> = {
     openFileDialog: () => ({ type: 'openFileDialog' }),
     openFolderDialog: () => ({ type: 'openFolderDialog' }),
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
-    analyzeWorkspaceFolder: () => ({ type: 'analyzeWorkspaceFolder' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
-    azureDisconnect: () => ({ type: 'azureDisconnect' }),
-    azureListSubscriptions: () => ({ type: 'azureListSubscriptions' }),
-    azureListContainers: () => ({ type: 'azureListContainers' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
     openDocumentation: (source) => {
         const id = member(source, 'id', DOCUMENTATION_IDS);
@@ -426,7 +362,7 @@ const BUILDERS: Record<string, Builder> = {
             : { type: 'setCredentialName', value };
     },
     setAuthMethod: (source) => {
-        const value = text(source, 'value', 64);
+        const value = member(source, 'value', [...GUIDED_AUTH_METHODS, 'public'] as const);
         return value === undefined ? undefined : { type: 'setAuthMethod', value };
     },
     setStorageUrl: (source) => {
@@ -438,6 +374,7 @@ const BUILDERS: Record<string, Builder> = {
         return value === undefined ? undefined : { type: 'setFormatName', value };
     },
     setParserOverride: (source) => {
+        const fileId = text(source, 'fileId', 64);
         const key = member(source, 'key', [
             'format',
             'firstRow',
@@ -448,9 +385,9 @@ const BUILDERS: Record<string, Builder> = {
             'compression',
         ] as const);
         const value = text(source, 'value', 128);
-        return key === undefined || value === undefined
+        return !fileId || key === undefined || value === undefined
             ? undefined
-            : { type: 'setParserOverride', key, value };
+            : { type: 'setParserOverride', fileId, key, value };
     },
     resetParserOverride: (source) => {
         const key = member(source, 'key', [
@@ -464,15 +401,12 @@ const BUILDERS: Record<string, Builder> = {
         ] as const);
         return key === undefined ? undefined : { type: 'resetParserOverride', key };
     },
-    setStatementKind: (source) => {
-        const kind = member(source, 'kind', STATEMENT_KINDS);
-        return kind === undefined ? undefined : { type: 'setStatementKind', kind };
-    },
     setColumnOverride: (source) => {
+        const fileId = text(source, 'fileId', 64);
         const column = text(source, 'column', 256);
         const sqlType = text(source, 'sqlType', 128);
-        return column && sqlType !== undefined
-            ? { type: 'setColumnOverride', column, sqlType }
+        return fileId && column && sqlType !== undefined
+            ? { type: 'setColumnOverride', fileId, column, sqlType }
             : undefined;
     },
     setPreviewRows: (source) => {
@@ -488,45 +422,6 @@ const BUILDERS: Record<string, Builder> = {
         return kind === undefined
             ? undefined
             : { type: 'openStatementInEditor', kind };
-    },
-    setPreference: (source) => {
-        const appearance = member(source, 'appearance', APPEARANCE_MODES);
-        return appearance === undefined
-            ? undefined
-            : { type: 'setPreference', appearance };
-    },
-    azureConnect: (source) => {
-        const mode = member(source, 'mode', AZURE_AUTH_MODES);
-        return mode === undefined ? undefined : { type: 'azureConnect', mode };
-    },
-    azureListAccounts: (source) => {
-        const subscriptionId = text(source, 'subscriptionId', 64);
-        return subscriptionId
-            ? { type: 'azureListAccounts', subscriptionId }
-            : undefined;
-    },
-    azureSetAccount: (source) => {
-        const account = text(source, 'account', 64);
-        return account ? { type: 'azureSetAccount', account } : undefined;
-    },
-    azureListBlobs: (source) => {
-        const container = text(source, 'container', 128);
-        const prefix = text(source, 'prefix', 1024);
-        const continuation = text(source, 'continuation', MAX_TEXT_LENGTH);
-        return container && prefix !== undefined && continuation !== undefined
-            ? { type: 'azureListBlobs', container, prefix, continuation }
-            : undefined;
-    },
-    azureAnalyzeBlob: (source) => {
-        const container = text(source, 'container', 128);
-        const blob = text(source, 'blob', 1024);
-        return container && blob
-            ? { type: 'azureAnalyzeBlob', container, blob }
-            : undefined;
-    },
-    publicUrlAnalyze: (source) => {
-        const url = text(source, 'url', MAX_URL_LENGTH);
-        return url ? { type: 'publicUrlAnalyze', url } : undefined;
     },
 };
 

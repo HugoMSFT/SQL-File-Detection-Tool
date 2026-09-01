@@ -943,13 +943,13 @@ describe('path containment', () => {
     it('still analyses a genuine table directory with no links', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const iceberg = await service.analyze({
-            filePath: fixturePath('demo/tables/events_iceberg'),
+            filePath: fixturePath('data sample/tables/events_iceberg'),
         });
         assert.strictEqual(iceberg.file_type, 'iceberg');
         assert.strictEqual(iceberg.column_count, 6);
 
         const delta = await service.analyze({
-            filePath: fixturePath('demo/tables/events_delta'),
+            filePath: fixturePath('data sample/tables/events_delta'),
         });
         assert.strictEqual(delta.file_type, 'delta');
         assert.strictEqual(delta.column_count, 5);

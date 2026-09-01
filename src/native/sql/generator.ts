@@ -27,6 +27,11 @@ import type {
     StatementKind,
     TargetPlatform,
 } from '../types';
+import type { ExternalDataSourceType } from './credentialWizard';
+import {
+    effectiveStorageUrl,
+    normalizeDataSourceType,
+} from './credentialWizard';
 import {
     bulkDataSourceNames,
     cleanIdentifier,
@@ -175,19 +180,8 @@ function cloudStagingNotice(
     const base = baseName(String(fileName).split('\\').join('/')) || '<file>';
     const label = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     return [
-        '-- --------------------------------------------------------------------',
-        '-- STAGE THE DATA IN AZURE STORAGE FIRST',
-        `-- ${sqlComment(label)} runs in Azure and cannot read a path on`,
-        '-- your workstation or an on-premises file share. The analyzed source',
-        `-- (${sqlComment(base)}) is a local file, so this script uses`,
-        '-- <storage_account>, <container> and <path> placeholders.',
-        '--   1. Upload the file to an Azure Blob Storage or ADLS Gen2 container.',
-        '--   2. Replace the placeholders below with the real account,',
-        '--      container and blob path.',
-        '--   3. Grant the credential (SAS or Managed Identity) read access.',
-        '-- Tip: attach the storage account in the app and analyze the blob',
-        '--      directly to get a script with the real location filled in.',
-        '-- --------------------------------------------------------------------',
+        `-- ${sqlComment(label)} cannot read local file ${sqlComment(base)}.`,
+        '-- Upload it to Azure Storage, replace the location placeholders, and grant read access.',
         '',
     ];
 }
@@ -232,7 +226,7 @@ function createTableQuickLoad(
     if (fileType === 'json') {
         return lines.concat([
             '-- JSON is not an OPENROWSET file format.',
-            '-- Use the JSON Functions tab for SINGLE_CLOB + OPENJSON.',
+            '-- Use the OPENROWSET tab for SINGLE_CLOB + OPENJSON.',
         ]);
     }
 
@@ -495,7 +489,7 @@ function bulkInsertFabricAlternatives(
             'AS src;',
             '',
             `-- Detected source type: ${sqlComment(detectedType)}`,
-            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see JSON Functions tab).',
+            '-- For JSON payloads, combine OPENROWSET with OPENJSON (see OPENROWSET tab).',
         ]);
 
     return header.concat(body).join('\n');
@@ -571,14 +565,11 @@ export function generateBulkInsert(
     const delimName = DELIMITER_NAMES[delimiter] ?? pythonStringRepr(delimiter);
 
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
-    const useForNote = `High-speed batch load into ${platformLabel}`;
-
     const storageKind = storageUrlKind(storageUrl);
     const needsBulkSource = bulkDataSourceSupported(targetPlatform, storageUrl);
     let prereqLines: string[] = [];
     let dataSourceLine: string | null = null;
     let fromPath: string;
-    let prereqNote: string;
 
     if (needsBulkSource) {
         // BULK INSERT reads Azure storage through a TYPE = BLOB_STORAGE
@@ -595,14 +586,9 @@ export function generateBulkInsert(
         const [sourceRoot, relativePath] = azureBulkStorageParts(storageUrl, fileName);
         fromPath = quoteLiteral(relativePath);
         dataSourceLine = `    DATA_SOURCE     = '${bulkLiteral}',`;
-        prereqNote =
-            'A BLOB_STORAGE external data source is required; ' +
-            'FROM is relative to its container';
         prereqLines = includePrereq
             ? [
-                  '-- Step 0: Create the BLOB_STORAGE data source used by BULK INSERT.',
-                  '--         This is separate from the abs:// / adls:// data',
-                  '--         virtualization source used by external tables.',
+                  '-- BLOB_STORAGE source for this bulk load',
                   ...credentialDdl(bulkCredIdent, bulkAuth, ''),
                   '',
                   `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
@@ -616,9 +602,7 @@ export function generateBulkInsert(
                   '',
               ]
             : [
-                  `-- Step 0: [${bulkIdent}] (TYPE = BLOB_STORAGE, LOCATION`,
-                  `--         '${quoteLiteral(sourceRoot)}') is created in the`,
-                  '--         prerequisite setup section above.',
+                  `-- Uses BLOB_STORAGE source [${bulkIdent}] from the setup section.`,
                   '',
               ];
     } else if (
@@ -636,23 +620,13 @@ export function generateBulkInsert(
         fromPath = quoteLiteral(
             `<local_or_UNC_staging_path>/${baseName(String(fileName))}`,
         );
-        prereqNote = `BULK INSERT cannot read ${label}; stage the file locally first`;
         prereqLines = [
-            `-- Step 0: BULK INSERT cannot read ${sqlComment(label)}.`,
-            '--         TYPE = BLOB_STORAGE data sources only accept Azure',
-            '--         Blob Storage https:// endpoints.',
-            `--         Source: ${sqlComment(String(storageUrl))}`,
+            `-- BULK INSERT cannot read ${sqlComment(label)} directly.`,
+            `-- Stage ${sqlComment(String(storageUrl))} on a local or UNC path first.`,
         ];
         if (storageKind === 's3' && S3_BULK_PLATFORMS.has(targetPlatform)) {
             prereqLines.push(
-                '--         Use OPENROWSET with an s3:// data source instead',
-                '--         (see OPENROWSET tab), or stage the file on a path the',
-                '--         SQL Server service account can read.',
-            );
-        } else {
-            prereqLines.push(
-                '--         Stage the file on a local or UNC path the SQL Server',
-                '--         service account can read, then run the load below.',
+                '-- OPENROWSET can query the S3 source without staging.',
             );
         }
         prereqLines.push('');
@@ -662,27 +636,17 @@ export function generateBulkInsert(
                 .split('\\')
                 .join('/'),
         );
-        prereqNote = 'File must be accessible to the SQL Server service account';
     }
 
     const lines = [
-        '-- ====================================================================',
-        '-- BULK INSERT',
-        `-- Source    : ${sqlComment(fileName)}`,
-        `-- Encoding  : ${sqlComment(encoding.toUpperCase())}  ` +
-            `(codepage ${sqlComment(codepage)})`,
-        `-- Delimiter : ${sqlComment(delimName)}  ` + `("${sqlComment(delimEscaped)}")`,
-        `-- Target   : ${sqlComment(platformLabel)}`,
-        `-- Use for   : ${sqlComment(useForNote)}`,
-        `-- Prereq    : ${sqlComment(prereqNote)}`,
-        '-- ====================================================================',
+        `-- BULK INSERT: ${sqlComment(fileName)} -> ${sqlComment(platformLabel)}`,
+        `-- Encoding ${sqlComment(encoding.toUpperCase())} (${sqlComment(codepage)}); ` +
+            `delimiter ${sqlComment(delimName)} ("${sqlComment(delimEscaped)}").`,
         '',
     ];
     lines.push(...prereqLines);
     lines.push(
-        '-- Step 1: Create the target table (see CREATE TABLE tab)',
-        '',
-        '-- Step 2: Load the data',
+        '-- Create the target table first.',
         `BULK INSERT [${schemaName}].[${tableName}]`,
         `FROM '${fromPath}'`,
         'WITH',
@@ -693,9 +657,9 @@ export function generateBulkInsert(
     }
     lines.push(...csvReaderOptions(metadata, { trailingComma: true }));
     lines.push(
-        '    TABLOCK,                            -- Minimally logged; remove if concurrent inserts needed',
-        '    MAXERRORS       = 0,               -- Fail on first error; increase for tolerant loads',
-        '    BATCHSIZE       = 50000            -- Tune per available memory',
+        '    TABLOCK,',
+        '    MAXERRORS       = 0,',
+        '    BATCHSIZE       = 50000',
         ');',
         '',
         '-- Verify row count',
@@ -861,7 +825,7 @@ export function generateExternalTable(
             alts.push('BULK INSERT (see BULK INSERT tab)');
         }
         if (supports('json_openjson', targetPlatform)) {
-            alts.push('JSON functions (see JSON Functions tab)');
+            alts.push('OPENROWSET with OPENJSON (see OPENROWSET tab)');
         }
         const altText =
             alts.length > 0 ? alts.join(', ') : 'Use the appropriate data access method.';
@@ -911,7 +875,7 @@ export function generateExternalTable(
         : `ext_${derivedTableName(metadata)}`;
     const fileName = stringOr(metadata.file_name, '')
         || baseName(stringOr(metadata.file_path, ''));
-    const [sourceLocation, relativePath] = externalSourceParts(
+    const [, relativePath] = externalSourceParts(
         storageUrl,
         fileName,
         targetPlatform,
@@ -985,24 +949,18 @@ export function generateExternalTable(
 
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     const header = [
-        '-- ====================================================================',
         `-- CREATE EXTERNAL TABLE  (${sqlComment(platformLabel)})`,
-        '-- Prereq: CREATE EXTERNAL DATA SOURCE and CREATE EXTERNAL FILE FORMAT',
-        '-- LOCATION is relative to the external data source:',
-        `--   ${sqlComment(sourceLocation)}`,
+        `-- Requires [${dataSource}] and [${fileFormat}]; LOCATION is relative to the data source.`,
     ];
     for (const columnName of Object.keys(externalTypeOverrides)) {
         header.push(
-            `-- Mapped: ${externalTypeMappingNotes[columnName]} column ` +
-            `[${sqlComment(columnName)}] uses ${externalTypeOverrides[columnName]} ` +
-            'for external-table compatibility.',
+            `-- [${sqlComment(columnName)}] uses ${externalTypeOverrides[columnName]} ` +
+            `(${externalTypeMappingNotes[columnName]}).`,
         );
     }
     if (targetPlatform === 'fabric_sql_db') {
-        header.push('-- Fabric SQL Database data virtualization is in preview and uses');
-        header.push('-- Microsoft Entra passthrough over Lakehouse Files.');
+        header.push('-- Fabric data virtualization uses Entra passthrough and is in preview.');
     }
-    header.push('-- ====================================================================');
 
     return header
         .concat([
@@ -1050,7 +1008,7 @@ export function generateCopyInto(
         );
     }
     if (supports('json_openjson', targetPlatform)) {
-        alternatives.push('OPENJSON / JSON_VALUE for JSON ingestion (see JSON Functions tab).');
+        alternatives.push('OPENROWSET with OPENJSON / JSON_VALUE for JSON ingestion.');
     }
     if (targetPlatform === 'fabric_sql_db') {
         alternatives.push(
@@ -1095,13 +1053,8 @@ function bulkDataSourceBlock(
     const [bulkLocation] = azureBulkStorageParts(storageUrl, fileName);
     const clause = credentialClause(bulkCredIdent, resolvedAuth);
     return [
-        '',
         `-- ${stepNumber}. External Data Source for BULK INSERT / OPENROWSET(BULK)`,
-        '-- Bulk access needs TYPE = BLOB_STORAGE with an https:// endpoint,',
-        '-- which cannot back an external table, so it gets its own name.',
-        '-- This source is also what makes SINGLE_CLOB / SINGLE_NCLOB usable:',
-        '-- certified live, the single-LOB options work through a',
-        '-- TYPE = BLOB_STORAGE source and are rejected only by abs:// / adls://.',
+        '-- Bulk access uses a separate BLOB_STORAGE source.',
         ...credentialDdl(bulkCredIdent, resolvedAuth, ''),
         '',
         `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
@@ -1183,52 +1136,44 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
 
     if (targetPlatform === 'fabric_sql_db') {
         return [
-            '-- ====================================================================',
-            `-- PREREQUISITE SETUP  (${sqlComment(platformLabel)})`,
-            '-- Data virtualization on Fabric SQL Database is in PREVIEW.',
-            '-- Authorisation uses Microsoft Entra passthrough, so there is no',
-            '-- master key, database scoped credential, SAS token, or secret.',
-            '-- The caller must have access to the target Fabric Lakehouse.',
-            '-- https://learn.microsoft.com/fabric/database/sql/data-virtualization',
-            '-- ====================================================================',
+            `-- PREREQUISITE SETUP (${sqlComment(platformLabel)})`,
+            '-- OneLake uses ABFSS with USER IDENTITY (preview).',
             '',
-            '-- 1. External Data Source over the Lakehouse Files area',
+            ...masterKeyLines(authMethod),
+            ...credentialDdl(credIdent, authMethod, '2.'),
+            '',
+            '-- 3. External data source',
             `CREATE EXTERNAL DATA SOURCE [${dataSource}]`,
             'WITH (',
-            `    LOCATION = '${quoteLiteral(sourceLocation)}'`,
+            `    LOCATION = '${quoteLiteral(sourceLocation)}',`,
+            `    CREDENTIAL = [${credIdent}]`,
             ');',
             'GO',
             '',
-            '-- 2. External File Format (see EXTERNAL FILE FORMAT section)',
-            '-- Fabric SQL Database supports DELIMITEDTEXT and PARQUET.',
-            '-- JSON is read indirectly through the CSV reader + OPENJSON.',
-            '-- Delta tables must be reached through a OneLake shortcut in a',
-            '-- Lakehouse or Warehouse instead.',
-            'GO',
+            '-- Create the external file format from the File format tab.',
         ].join('\n');
     }
 
     const lines = [
-        '-- ====================================================================',
-        `-- PREREQUISITE SETUP  (${sqlComment(platformLabel)})`,
-        '-- Run these ONCE before using CREATE EXTERNAL TABLE or OPENROWSET',
-        '-- with a DATA_SOURCE reference.',
-        '-- ====================================================================',
+        `-- PREREQUISITE SETUP (${sqlComment(platformLabel)})`,
+        '-- Run once per database and storage source.',
         '',
     ];
     if (!formatSupported) {
         lines.push(
-            `-- NOTE: ${sqlComment(config.format_type)} has no CREATE EXTERNAL FILE FORMAT on`,
-            `-- ${sqlComment(platformLabel)}, so no external table is possible and`,
-            '-- the EXTERNAL FILE FORMAT step below is omitted. The data sources',
-            '-- are still required: the reads for this format go through',
-            '-- OPENROWSET(BULK ...) with a DATA_SOURCE, which cannot resolve',
-            '-- unless the source exists (error 12703 / 46501).',
+            `-- ${sqlComment(config.format_type)} has no external file format on ${sqlComment(platformLabel)}.`,
+            '-- The data source is still required for OPENROWSET.',
             '',
         );
     }
     lines.push(...cloudStagingNotice(storageUrl, targetPlatform, fileName));
     lines.push(...masterKeyLines(authMethod));
+    if (targetPlatform === 'sql_server_2025' && authMethod === 'managed_identity') {
+        lines.push(
+            '-- SQL Server 2025 managed identity requires an Azure Arc-enabled instance and a configured user-assigned identity.',
+            '',
+        );
+    }
 
     if (targetPlatform === 'sql_server_2019') {
         lines.push(...credentialDdl(credIdent, authMethod, '2.'));
@@ -1236,10 +1181,7 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         lines.push(
             '',
             '-- 3. External Data Source (external tables / PolyBase)',
-            '-- SQL Server 2019 uses wasbs:// for Azure Blob Storage or',
-            '-- abfss:// for ADLS Gen2 (CU11+) and requires TYPE = HADOOP.',
-            '-- TYPE = BLOB_STORAGE sources cannot back external tables, so',
-            '-- bulk access gets its own source below.',
+            '-- SQL Server 2019 PolyBase uses TYPE = HADOOP.',
             `CREATE EXTERNAL DATA SOURCE [${dataSource}]`,
             'WITH (',
             '    TYPE = HADOOP,',
@@ -1267,15 +1209,11 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     lines.push('', '-- 3. External Data Source (data virtualization)');
     if (AZURE_SQL_PLATFORMS.has(targetPlatform)) {
         lines.push(
-            '-- Azure SQL data virtualization requires abs:// (Blob Storage)',
-            '-- or adls:// (ADLS Gen2). Do not specify TYPE and do not use',
-            '-- an https:// location here.',
+            '-- Use abs:// for Blob Storage or adls:// for ADLS Gen2.',
         );
     } else {
         lines.push(
-            '-- SQL Server 2022+ infers the connector from LOCATION.',
-            '-- Do not specify TYPE. Use abs:// for Azure Blob Storage,',
-            '-- adls:// for ADLS Gen2, or s3:// for S3-compatible storage.',
+            '-- SQL Server infers ABS, ADLS, or S3 from LOCATION.',
         );
     }
     const credClause = credentialClause(credIdent, authMethod);
@@ -1909,6 +1847,8 @@ export interface GenerateAllOptions {
     schemaName?: string;
     targetPlatform?: TargetPlatform | string | null;
     storageUrl?: string | null;
+    /** Connector selected by the guided external data source setup. */
+    dataSourceType?: ExternalDataSourceType | string | null;
     /**
      * Name for the generated external file format. Defaults to
      * `ff_<file_type>_format`.
@@ -1963,6 +1903,18 @@ export function generateAllStatements(
     const schemaName = options.schemaName ?? 'dbo';
     const dataSource = options.dataSource || 'MyDataSource';
     const tableName = resolveTableName(effectiveMetadata, options.tableName);
+    const selectedSourceType = options.dataSourceType
+        ? normalizeDataSourceType(options.dataSourceType, targetPlatform)
+        : null;
+    const externalStorageUrl = selectedSourceType
+        ? effectiveStorageUrl(
+            targetPlatform,
+            selectedSourceType,
+            storageUrl,
+            displayFileName(effectiveMetadata),
+        )
+        : storageUrl;
+    const openrowsetStorageUrl = selectedSourceType ? externalStorageUrl : storageUrl;
 
     // The external table must not collide with the regular table in the same
     // script, so it always gets its own name.
@@ -1977,7 +1929,7 @@ export function generateAllStatements(
         tableName,
         schemaName,
         targetPlatform,
-        storageUrl,
+        storageUrl: openrowsetStorageUrl,
         dataSource,
     };
 
@@ -1989,7 +1941,7 @@ export function generateAllStatements(
             authMethod: options.authMethod,
         }),
         openrowset: generateOpenrowset(effectiveMetadata, {
-            storageUrl,
+            storageUrl: openrowsetStorageUrl,
             dataSource,
             targetPlatform,
         }),
@@ -2005,7 +1957,7 @@ export function generateAllStatements(
             fileFormat: fmtName,
             schemaName,
             targetPlatform,
-            storageUrl,
+            storageUrl: externalStorageUrl,
         }),
         json_functions: generateJsonFunctions(effectiveMetadata, shared),
         for_json: generateForJsonPath(effectiveMetadata, shared),
@@ -2014,7 +1966,7 @@ export function generateAllStatements(
             fileFormat: fmtName,
             metadata: effectiveMetadata,
             targetPlatform,
-            storageUrl,
+            storageUrl: externalStorageUrl,
             credentialName: options.credentialName,
             authMethod: options.authMethod,
         }),
@@ -2349,13 +2301,6 @@ export function generateCompleteDdl(
         'bulk_insert',
         'openrowset',
     ];
-    // The JSON parse / DML section only makes sense for JSON input; emitting it
-    // for CSV or Parquet produces statements that reference a file the script
-    // never reads. FOR JSON stays because it exports any table.
-    if (metadata.file_type === 'json') {
-        orderedSections.push('json_functions');
-    }
-    orderedSections.push('for_json', 'best_practices', 'copy_into');
 
     // The prerequisite setup section already creates the BLOB_STORAGE source
     // that BULK INSERT needs, so do not create it twice.

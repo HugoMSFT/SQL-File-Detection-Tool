@@ -7,14 +7,18 @@ Three ways in, all local and all native:
 - Right-click a file or folder in the Explorer and choose
   **Analyze with SQL File Detection Tool**.
 
+Folder browsing checks the selected folder and one child level. Selecting any
+listed source analyzes it immediately and opens Preview.
+
 | Format | What is read |
 | --- | --- |
-| CSV, TSV, delimited text | Delimiter, encoding, sampled schema, row count |
+| CSV, TSV, DAT, delimited text | Delimiter, encoding, sampled schema, row count |
 | JSON, JSONL, NDJSON | Bounded schema sample, nesting, row count |
 | Parquet | Schema, row groups, compression, row count |
 | Delta Lake, Apache Iceberg | Table metadata, current schema, partitioning |
-| Excel (.xlsx) | Bounded worksheet sample |
+| Apache Hudi | Underlying Parquet data files; Hudi metadata is not interpreted |
 | Text | Encoding and streamed line count |
 | ORC, RCFile | Recognized; schema detection is **not** available natively |
 
-Files are read in bounded chunks, so a large file is never loaded whole.
+Unsupported files, including Python, Word, and Excel, are filtered before they
+are opened. Supported files are read in bounded chunks.

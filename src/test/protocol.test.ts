@@ -10,8 +10,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-    APPEARANCE_MODES,
-    AZURE_AUTH_MODES,
     MAX_PREVIEW_ROWS,
     MAX_TEXT_LENGTH,
     MIN_PREVIEW_ROWS,
@@ -21,6 +19,7 @@ import {
     parseWebviewRequest,
 } from '../protocol';
 import { DOCUMENTATION_IDS } from '../documentation';
+import { GUIDED_AUTH_METHODS } from '../native';
 
 test('a well formed message is accepted and normalised', () => {
     const parsed = parseWebviewRequest({ type: 'setTab', tab: 'preview' });
@@ -33,6 +32,15 @@ test('unknown message types are dropped', () => {
         'exec',
         'spawn',
         'setupBackend',
+        'setDataSourceType',
+        'azureConnect',
+        'azureDisconnect',
+        'azureListSubscriptions',
+        'azureListAccounts',
+        'azureSetAccount',
+        'azureListContainers',
+        'azureListBlobs',
+        'azureAnalyzeBlob',
         'readFile',
         'toString',
         'constructor',
@@ -78,12 +86,9 @@ test('the contract has no way to send a path or a root', () => {
     // probing it with a value that would be a path if one were accepted.
     const attempts = [
         { type: 'selectFile', fileId: 'C:\\Windows\\win.ini' },
-        { type: 'azureAnalyzeBlob', container: 'data', blob: '../../etc/passwd' },
-        { type: 'azureListBlobs', container: 'data', prefix: '../..', continuation: '' },
     ];
-    // A traversal-shaped id simply does not resolve to a registered file, and
-    // the blob helpers reject the traversal at the Azure layer; what matters
-    // here is that no request type carries a filesystem root at all.
+    // A traversal-shaped id simply does not resolve to a registered file. What
+    // matters here is that no request type carries a filesystem root at all.
     for (const attempt of attempts) {
         const parsed = parseWebviewRequest(attempt) as Record<string, unknown> | undefined;
         if (parsed) {
@@ -112,7 +117,7 @@ test('control characters are refused in free text', () => {
 test('over-long text is refused rather than truncated', () => {
     const long = 'x'.repeat(MAX_TEXT_LENGTH + 1);
     assert.equal(parseWebviewRequest({ type: 'setTableName', value: long }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'publicUrlAnalyze', url: long }), undefined);
+    assert.equal(parseWebviewRequest({ type: 'setStorageUrl', value: long }), undefined);
 });
 
 test('enumerated fields accept only their own members', () => {
@@ -120,20 +125,20 @@ test('enumerated fields accept only their own members', () => {
         assert.deepEqual(parseWebviewRequest({ type: 'setTab', tab }), { type: 'setTab', tab });
     }
     assert.equal(parseWebviewRequest({ type: 'setTab', tab: 'metadata ' }), undefined);
-    for (const mode of AZURE_AUTH_MODES) {
-        assert.deepEqual(parseWebviewRequest({ type: 'azureConnect', mode }), {
-            type: 'azureConnect',
-            mode,
+    for (const value of [...GUIDED_AUTH_METHODS, 'public'] as const) {
+        assert.deepEqual(parseWebviewRequest({ type: 'setAuthMethod', value }), {
+            type: 'setAuthMethod',
+            value,
         });
     }
     assert.equal(
-        parseWebviewRequest({ type: 'azureConnect', mode: 'managedIdentity' }),
+        parseWebviewRequest({ type: 'setAuthMethod', value: 'connection-string' }),
         undefined,
-        'managed identity is not a desktop auth mode',
     );
-    for (const appearance of APPEARANCE_MODES) {
-        assert.ok(parseWebviewRequest({ type: 'setPreference', appearance }));
-    }
+    assert.equal(
+        parseWebviewRequest({ type: 'setPreference', appearance: 'compact' }),
+        undefined,
+    );
     for (const kind of STATEMENT_KINDS) {
         assert.deepEqual(parseWebviewRequest({ type: 'copyStatement', kind }), {
             type: 'copyStatement',
@@ -186,41 +191,56 @@ test('requestId must look like a correlation id', () => {
 test('missing required fields are refused, not defaulted', () => {
     assert.equal(parseWebviewRequest({ type: 'selectFile' }), undefined);
     assert.equal(parseWebviewRequest({ type: 'setColumnOverride', column: 'a' }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'azureListBlobs', container: 'c' }), undefined);
-    assert.equal(parseWebviewRequest({ type: 'publicUrlAnalyze', url: '' }), undefined);
+    assert.equal(parseWebviewRequest({ type: 'setStorageUrl' }), undefined);
 });
 
 test('clearing an override is expressed as an empty type, which is allowed', () => {
     assert.deepEqual(
-        parseWebviewRequest({ type: 'setColumnOverride', column: 'id', sqlType: '' }),
-        { type: 'setColumnOverride', column: 'id', sqlType: '' },
+        parseWebviewRequest({
+            type: 'setColumnOverride',
+            fileId: 'file-1',
+            column: 'id',
+            sqlType: '',
+        }),
+        { type: 'setColumnOverride', fileId: 'file-1', column: 'id', sqlType: '' },
     );
 });
 
-test('Quick Analyze parser messages are allowlisted and bounded', () => {
+test('parser override messages are allowlisted and bounded', () => {
     assert.deepEqual(
         parseWebviewRequest({
             type: 'setParserOverride',
+            fileId: 'file-1',
             key: 'fieldDelimiter',
             value: '|',
         }),
-        { type: 'setParserOverride', key: 'fieldDelimiter', value: '|' },
+        { type: 'setParserOverride', fileId: 'file-1', key: 'fieldDelimiter', value: '|' },
     );
     assert.deepEqual(
         parseWebviewRequest({ type: 'resetParserOverride', key: 'codepage' }),
         { type: 'resetParserOverride', key: 'codepage' },
     );
-    assert.deepEqual(
+    assert.equal(
         parseWebviewRequest({ type: 'setStatementKind', kind: 'openrowset' }),
-        { type: 'setStatementKind', kind: 'openrowset' },
+        undefined,
     );
     assert.equal(
-        parseWebviewRequest({ type: 'setParserOverride', key: 'encoding', value: 'utf-8' }),
+        parseWebviewRequest({
+            type: 'setParserOverride',
+            fileId: 'file-1',
+            key: 'encoding',
+            value: 'utf-8',
+        }),
         undefined,
         'file encoding is a fact, not an override',
     );
     assert.equal(
-        parseWebviewRequest({ type: 'setParserOverride', key: 'fieldDelimiter', value: 'x'.repeat(129) }),
+        parseWebviewRequest({
+            type: 'setParserOverride',
+            fileId: 'file-1',
+            key: 'fieldDelimiter',
+            value: 'x'.repeat(129),
+        }),
         undefined,
     );
 });
@@ -233,7 +253,7 @@ test('fuzzing never throws and never invents a request', () => {
         'selectFile',
         'azureConnect',
         'setPreviewRows',
-        'publicUrlAnalyze',
+        'setStorageUrl',
         '__proto__',
         'toString',
     ];
@@ -264,7 +284,7 @@ test('fuzzing never throws and never invents a request', () => {
         const message: Record<string, unknown> = { type: types[next(types.length)] };
         const fields = ['fileId', 'tab', 'kind', 'rows', 'url', 'value', 'mode', 'column',
             'sqlType', 'container', 'blob', 'prefix', 'continuation', 'account',
-            'subscriptionId', 'appearance', 'platform', 'requestId'];
+            'subscriptionId', 'tenantId', 'appearance', 'platform', 'requestId'];
         const count = next(4);
         for (let field = 0; field < count; field += 1) {
             message[fields[next(fields.length)]] = values[next(values.length)];

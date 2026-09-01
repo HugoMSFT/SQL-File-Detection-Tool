@@ -21,6 +21,7 @@ export {
     nativeAnalysisService,
     type AnalysisRequest,
     type DirectoryAnalysis,
+    type DirectoryAnalysisRequest,
     type ExportEntry,
     type GenerationRequest,
     type MultiFileRequest,
@@ -34,6 +35,9 @@ export {
     scanDirectory,
     NATIVE_SUPPORT_BY_TYPE,
     SUPPORTED_EXTENSIONS,
+    SQL_SOURCE_EXTENSIONS,
+    isSqlSourceFile,
+    sqlSourceFileType,
 } from './detector';
 export { clampPreviewRows, getPreviewData } from './preview';
 export {
@@ -76,6 +80,22 @@ export {
     type ExternalFormatType,
     type PlatformFeature,
 } from './sql/typeMapping';
+export {
+    EXTERNAL_DATA_SOURCE_TYPES,
+    GUIDED_AUTH_METHODS,
+    credentialWizardState,
+    dataSourceOptionsFor,
+    effectiveStorageUrl,
+    inferDataSourceType,
+    knownStorageLocation,
+    normalizeDataSourceType,
+    normalizeGuidedAuthMethod,
+    type CredentialWizardOption,
+    type CredentialWizardState,
+    type ExternalDataSourceType,
+    type GuidedAuthMethod,
+    type KnownStorageLocation,
+} from './sql/credentialWizard';
 export {
     DuplicateColumnError,
     cleanIdentifier,

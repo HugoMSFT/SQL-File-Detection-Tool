@@ -235,7 +235,9 @@ class TestAzureConnectRoute(_AzureRouteTestCase):
         payload = self.client.get('/api/azure/status',
                                   headers=self.headers()).get_json()
         listed = {mode['id'] for mode in payload['modes']}
-        self.assertEqual(listed, set(azure_auth.AUTH_MODES))
+        expected = set(azure_auth.AUTH_MODES) - {azure_auth.AUTH_VSCODE_TOKEN}
+        self.assertEqual(listed, expected)
+        self.assertNotIn(azure_auth.AUTH_VSCODE_TOKEN, listed)
         self.assertFalse(payload['connection']['connected'])
 
     def test_connect_rejects_an_unknown_mode(self):

@@ -203,29 +203,31 @@ parsed.
 
 ## Format support matrix
 
-Measured by running the native core over every committed fixture in `demo/`:
+Representative results from the consolidated fixtures in `data sample/`:
 
 | Fixture | Type | Native support | Columns | Rows | Encoding |
 | --- | --- | --- | --- | --- | --- |
-| `demo/csv/sales_scalars.csv` | csv | supported | 10 | 6 | utf-8 |
-| `demo/csv/sales_scalars.tsv` | csv | supported | 10 | 6 | utf-8 |
-| `demo/csv/sales_scalars_pipe.csv` | csv | supported | 10 | 6 | utf-8 |
-| `demo/excel/inventory.xlsx` | excel | supported | 6 | 4 | binary |
-| `demo/json/orders.ndjson` | json (ndjson) | supported | 8 | 3 | utf-8 |
-| `demo/json/orders_array.json` | json (array) | supported | 8 | 3 | utf-8 |
-| `demo/json/order_single_object.json` | json (object) | supported | 8 | 1 | ascii |
-| `demo/orc/all_types.orc` | orc | **unsupported_native** | – | – | binary |
-| `demo/parquet/all_types.parquet` | parquet | supported | 26 | 4 | binary |
-| `demo/parquet/sales.parquet` | parquet | supported | 6 | 4 | binary |
-| `demo/tables/events_delta` | delta | supported | 5 | (null) | binary |
-| `demo/tables/events_iceberg` | iceberg | supported | 6 | 3 | binary |
-| `demo/text/readme_sample.txt` | text | supported | – | 10 | utf-8 |
-| `demo/unicode/collation_cases_utf8.csv` | csv | supported | 5 | 14 | utf-8 |
-| `demo/unicode/japanese_cp932.csv` | csv | supported | 4 | 6 | cp932 |
-| `demo/unicode/unicode_utf16le_bom.csv` | csv | supported | 5 | 20 | utf-16 |
-| `demo/unicode/unicode_utf16le_bom.tsv` | csv | supported | 5 | 20 | utf-16 |
-| `demo/unicode/unicode_utf8.csv` | csv | supported | 5 | 20 | utf-8 |
-| `demo/unicode/unicode_utf8_bom.csv` | csv | supported | 5 | 20 | utf-8-sig |
+| `data sample/csv/sales_scalars.csv` | csv | supported | 10 | 6 | utf-8 |
+| `data sample/csv/sales_scalars.tsv` | csv | supported | 10 | 6 | utf-8 |
+| `data sample/csv/sales_scalars_pipe.csv` | csv | supported | 10 | 6 | utf-8 |
+| `data sample/excel/inventory.xlsx` | excel | supported | 6 | 4 | binary |
+| `data sample/json/orders.ndjson` | json (ndjson) | supported | 8 | 3 | utf-8 |
+| `data sample/json/orders_array.json` | json (array) | supported | 8 | 3 | utf-8 |
+| `data sample/json/order_single_object.json` | json (object) | supported | 8 | 1 | ascii |
+| `data sample/orc/all_types.orc` | orc | **unsupported_native** | – | – | binary |
+| `data sample/parquet/all_types.parquet` | parquet | supported | 26 | 4 | binary |
+| `data sample/parquet/sales.parquet` | parquet | supported | 6 | 4 | binary |
+| `data sample/performance/events_25k.parquet` | parquet | supported | 7 | 25,000 | binary |
+| `data sample/performance/events_250k.parquet` | parquet | supported | 7 | 250,000 | binary |
+| `data sample/tables/events_delta` | delta | supported | 5 | (null) | binary |
+| `data sample/tables/events_iceberg` | iceberg | supported | 6 | 3 | binary |
+| `data sample/text/readme_sample.txt` | text | supported | – | 10 | utf-8 |
+| `data sample/unicode/collation_cases_utf8.csv` | csv | supported | 5 | 14 | utf-8 |
+| `data sample/unicode/japanese_cp932.csv` | csv | supported | 4 | 6 | cp932 |
+| `data sample/unicode/unicode_utf16le_bom.csv` | csv | supported | 5 | 20 | utf-16 |
+| `data sample/unicode/unicode_utf16le_bom.tsv` | csv | supported | 5 | 20 | utf-16 |
+| `data sample/unicode/unicode_utf8.csv` | csv | supported | 5 | 20 | utf-8 |
+| `data sample/unicode/unicode_utf8_bom.csv` | csv | supported | 5 | 20 | utf-8-sig |
 
 `row_count` is `null` for Delta in both implementations: neither counts rows
 across every part file, because doing so would defeat the point of reading only
@@ -391,9 +393,9 @@ stale.
 
 | Fixture | Differing keys | Why |
 | --- | --- | --- |
-| `demo/tables/events_delta` | `schema`, `schema_inference`, `delta_metadata`, `warning`, `nullable_columns`, `parquet_metadata`, `compression` | The baseline environment has no `deltalake` package, so Python falls back to analysing one Parquet part. The native core parses `_delta_log` directly and reports the real table name, version, and partition columns. The native result is *better*; the difference is deliberate. |
-| `demo/orc/all_types.orc` | `schema`, `column_count`, `row_count`, `warning`, `nullable_columns` | The ORC limitation above. `compression` and `schema_inference` match. |
-| `demo/tables/events_iceberg` | `iceberg_metadata` | Native adds `snapshot_count`. A dedicated test asserts every Python key matches exactly and that `snapshot_count` is the only addition. |
+| `data sample/tables/events_delta` | `schema`, `schema_inference`, `delta_metadata`, `warning`, `nullable_columns`, `parquet_metadata`, `compression` | The baseline environment has no `deltalake` package, so Python falls back to analysing one Parquet part. The native core parses `_delta_log` directly and reports the real table name, version, and partition columns. The native result is *better*; the difference is deliberate. |
+| `data sample/orc/all_types.orc` | `schema`, `column_count`, `row_count`, `warning`, `nullable_columns` | The ORC limitation above. `compression` and `schema_inference` match. |
+| `data sample/tables/events_iceberg` | `iceberg_metadata` | Native adds `snapshot_count`. A dedicated test asserts every Python key matches exactly and that `snapshot_count` is the only addition. |
 
 `encoding_confidence`, `encoding_warning`, `file_path`, Parquet
 `serialized_size`, and Delta `created_time` are excluded by the baseline
@@ -412,7 +414,7 @@ npm test
 
 | Suite | What it covers |
 | --- | --- |
-| `analysis.test.ts` | Format matrix over `demo/`, every encoding, CSV quoting, malformed/truncated/oversize input, cancellation, bounded previews, the service facade. |
+| `analysis.test.ts` | Format matrix over `data sample/`, every encoding, CSV quoting, malformed/truncated/oversize input, cancellation, bounded previews, the service facade. |
 | `analysisParity.test.ts` | Normalised metadata against the Python baseline, plus the explicit limitation tests and the allowlist staleness guard. |
 | `generatorParity.test.ts` | Statement invariants against the Python baseline across every fixture, platform, and storage URL. |
 | `generatorMatrix.test.ts` | 6 targets x CSV/Parquet/JSON/Delta x local/remote, plus multi-file export and the corrected edge cases. |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the deterministic demo fixtures shipped in ``demo/``.
+"""Generate the deterministic fixtures shipped in ``data sample/``.
 
 The generator only uses dependencies that the project already declares
 (``pandas``, ``pyarrow``, ``openpyxl``, ``fastavro``) plus the standard library.  Every
@@ -11,8 +11,8 @@ not necessarily in bytes.
 
 Usage::
 
-    python demo/generate_samples.py
-    python demo/generate_samples.py --output-dir path/to/demo
+    python "data sample/generate_samples.py"
+    python "data sample/generate_samples.py" --output-dir path/to/samples
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from fastavro import writer as avro_writer
 
-DEMO_DIR = os.path.dirname(os.path.abspath(__file__))
+SAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # A fixed instant used for every embedded document property so that no
 # sample depends on the moment it was generated.
@@ -290,7 +290,58 @@ def generate_parquet_samples(root: str):
 
 
 # ---------------------------------------------------------------------------
-# 4. ORC
+# 4. Performance-scale Parquet
+# ---------------------------------------------------------------------------
+
+PERFORMANCE_SAMPLE_ROWS = (25_000, 250_000)
+
+
+def _performance_table(row_count: int) -> pa.Table:
+    """Build deterministic, business-shaped rows that do not compress to nothing."""
+    indexes = range(row_count)
+    return pa.table({
+        'event_id': pa.array(indexes, pa.int64()),
+        'device_id': pa.array(
+            [f'device-{index % 1000:04d}' for index in indexes], pa.string()),
+        'region': pa.array(
+            [('NA', 'EU', 'APAC', 'LATAM')[index % 4] for index in indexes],
+            pa.string()),
+        'reading': pa.array(
+            [((index * 7919) % 200_000 - 100_000) / 100.0
+             for index in indexes],
+            pa.float64()),
+        'event_timestamp': pa.array(
+            [FIXED_EPOCH_MS * 1000 + index * 1_000_000 for index in indexes],
+            pa.timestamp('us', tz='UTC')),
+        'is_valid': pa.array([index % 17 != 0 for index in indexes], pa.bool_()),
+        'payload': pa.array(
+            [
+                f'measurement-{index:07d}-sequence-{(index * 104729) % 1000003:07d}'
+                for index in indexes
+            ],
+            pa.string()),
+    })
+
+
+def generate_performance_samples(root: str) -> list:
+    """Write two larger files for bounded-analysis and preview testing."""
+    created = []
+    directory = _ensure_dir(os.path.join(root, 'performance'))
+    for row_count in PERFORMANCE_SAMPLE_ROWS:
+        path = os.path.join(directory, f'events_{row_count // 1000}k.parquet')
+        pq.write_table(
+            _performance_table(row_count),
+            path,
+            compression='snappy',
+            version='2.6',
+            row_group_size=25_000,
+        )
+        created.append(path)
+    return created
+
+
+# ---------------------------------------------------------------------------
+# 5. ORC
 # ---------------------------------------------------------------------------
 
 # The Arrow ORC writer does not accept every Arrow type that Parquet does;
@@ -332,7 +383,7 @@ def generate_orc_sample(root: str, table: pa.Table) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 5. Excel and plain text
+# 6. Excel and plain text
 # ---------------------------------------------------------------------------
 
 def generate_excel_sample(root: str) -> list:
@@ -421,7 +472,7 @@ def generate_text_sample(root: str) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 6. Delta Lake table folder
+# 7. Delta Lake table folder
 # ---------------------------------------------------------------------------
 
 DELTA_SCHEMA_STRING = json.dumps({
@@ -494,7 +545,7 @@ def generate_delta_table(root: str) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 7. Apache Iceberg table folder
+# 8. Apache Iceberg table folder
 # ---------------------------------------------------------------------------
 
 def generate_iceberg_table(root: str) -> list:
@@ -818,7 +869,7 @@ def generate_iceberg_table(root: str) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 8. Unicode encoding fixtures
+# 9. Unicode encoding fixtures
 # ---------------------------------------------------------------------------
 
 UNICODE_HEADER = ['row_id', 'script', 'sample_text', 'code_points', 'note']
@@ -909,7 +960,7 @@ def generate_unicode_samples(root: str) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 9. Collation-sensitive value pairs
+# 10. Collation-sensitive value pairs
 # ---------------------------------------------------------------------------
 
 COLLATION_HEADER = ['pair_id', 'category', 'left_value', 'right_value',
@@ -963,7 +1014,7 @@ DEMO_COLLATIONS = [
 
 
 def build_collation_script() -> str:
-    """Render demo/collation_samples.sql from the collation fixture rows."""
+    """Render data sample/collation_samples.sql from the fixture rows."""
     collation_list = ',\n'.join(
         '                 ' + _collation_literal(name)
         for name in DEMO_COLLATIONS
@@ -973,7 +1024,7 @@ def build_collation_script() -> str:
         '-- ============================================================',
         '-- SQL File Detection Tool demo: encoding vs. collation',
         '-- ------------------------------------------------------------',
-        '-- Generated by demo/generate_samples.py - do not edit by hand.',
+        '-- Generated by data sample/generate_samples.py - do not edit by hand.',
         '--',
         '-- File ENCODING (UTF-8, UTF-16LE, CP932, ...) decides which bytes',
         '-- represent a character on disk. SQL COLLATION decides how the',
@@ -1155,13 +1206,15 @@ def generate_collation_script(root: str) -> list:
 # Entry point
 # ---------------------------------------------------------------------------
 
-def generate_all(root: str = DEMO_DIR) -> list:
-    """Generate every demo sample under *root* and return the file list."""
+def generate_all(root: str = SAMPLE_DIR, *, include_performance: bool = True) -> list:
+    """Generate every canonical sample under *root* and return the file list."""
     created = []
     created += generate_scalar_csv(root)
     created += generate_json_samples(root)
     parquet_files, all_types_table = generate_parquet_samples(root)
     created += parquet_files
+    if include_performance:
+        created += generate_performance_samples(root)
     created += generate_orc_sample(root, all_types_table)
     created += generate_excel_sample(root)
     created += generate_text_sample(root)
@@ -1176,8 +1229,8 @@ def generate_all(root: str = DEMO_DIR) -> list:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description='Generate the deterministic SQL File Detection Tool '
-                    'demo samples.')
-    parser.add_argument('--output-dir', default=DEMO_DIR,
+                    'data samples.')
+    parser.add_argument('--output-dir', default=SAMPLE_DIR,
                         help='Directory to write the samples into.')
     parser.add_argument('--quiet', action='store_true',
                         help='Do not print the generated file list.')

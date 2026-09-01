@@ -1,4 +1,4 @@
-"""Tests for the ``demo/`` sample fixtures and their generator.
+"""Tests for the consolidated ``data sample/`` fixtures and their generator.
 
 These tests keep the committed samples honest: they must exist, they must
 be analysable by the detector, they must map to the SQL types the README
@@ -18,7 +18,7 @@ import sys
 import pytest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEMO_DIR = os.path.join(REPO_ROOT, 'demo')
+DEMO_DIR = os.path.join(REPO_ROOT, 'data sample')
 sys.path.insert(0, REPO_ROOT)
 
 from external_file_detection.file_detector import FileDetector  # noqa: E402
@@ -51,20 +51,44 @@ EXPECTED_SAMPLES = [
     'README.md',
     'generate_samples.py',
     'collation_samples.sql',
+    'csv/employees.csv',
+    'csv/employees_wide.csv',
+    'csv/products_catalog.csv',
+    'csv/sales_orders.csv',
     'csv/sales_scalars.csv',
     'csv/sales_scalars.tsv',
     'csv/sales_scalars_pipe.csv',
+    'csv/sample.csv',
+    'csv/web_access_logs.tsv',
+    'json/customers_nested.json',
+    'json/events.jsonl',
     'json/orders_array.json',
     'json/orders.ndjson',
     'json/order_single_object.json',
+    'json/sample.json',
     'parquet/all_types.parquet',
     'parquet/sales.parquet',
+    'parquet/sales_transactions.parquet',
+    'parquet/sample.parquet',
+    'parquet/sensor_readings.parquet',
+    'performance/events_25k.parquet',
+    'performance/events_250k.parquet',
     'excel/inventory.xlsx',
+    'orc/all_types.orc',
     'text/readme_sample.txt',
+    'text/sample.txt',
+    'tables/delta_table/_delta_log/00000000000000000000.json',
+    'tables/delta_table/data/part-00000-00000.snappy.parquet',
     'tables/events_delta/_delta_log/00000000000000000000.json',
+    'tables/events_delta/part-00000-demo-c000.snappy.parquet',
+    'tables/events_iceberg/data/00000-0-demo.parquet',
     'tables/events_iceberg/metadata/v1.metadata.json',
     'tables/events_iceberg/metadata/demo-m0.avro',
     'tables/events_iceberg/metadata/snap-1000000000000000001-1-demo.avro',
+    'tables/iceberg_table/data/00000-0.parquet',
+    'tables/iceberg_table/metadata/v1.metadata.json',
+    'tables/sample_orders.delta/_delta_log/00000000000000000000.json',
+    'tables/sample_orders.delta/part-00000-574bcd76-03d5-4e51-a574-aba75f6ac27c-c000.snappy.parquet',
     'unicode/unicode_utf8.csv',
     'unicode/unicode_utf8_bom.csv',
     'unicode/unicode_utf16le_bom.csv',
@@ -81,12 +105,12 @@ def test_sample_is_committed(relative_path):
     assert os.path.getsize(path) > 0
 
 
-def test_no_sample_is_large():
-    """Demo fixtures stay small enough to live in git comfortably."""
-    for root, _dirs, files in os.walk(DEMO_DIR):
-        for name in files:
-            path = os.path.join(root, name)
-            assert os.path.getsize(path) < 256 * 1024, path
+def test_performance_samples_cover_two_meaningful_sizes():
+    """Committed scale fixtures are large enough to exercise bounded reads."""
+    medium = os.path.join(DEMO_DIR, 'performance', 'events_25k.parquet')
+    large = os.path.join(DEMO_DIR, 'performance', 'events_250k.parquet')
+    assert os.path.getsize(medium) > 512 * 1024
+    assert os.path.getsize(large) > os.path.getsize(medium) * 8
 
 
 # ---------------------------------------------------------------------------
@@ -97,14 +121,31 @@ ANALYSABLE = {
     'csv/sales_scalars.csv': 'csv',
     'csv/sales_scalars.tsv': 'csv',
     'csv/sales_scalars_pipe.csv': 'csv',
+    'csv/employees.csv': 'csv',
+    'csv/employees_wide.csv': 'csv',
+    'csv/products_catalog.csv': 'csv',
+    'csv/sales_orders.csv': 'csv',
+    'csv/sample.csv': 'csv',
+    'csv/web_access_logs.tsv': 'csv',
+    'json/customers_nested.json': 'json',
+    'json/events.jsonl': 'json',
     'json/orders_array.json': 'json',
     'json/orders.ndjson': 'json',
     'json/order_single_object.json': 'json',
+    'json/sample.json': 'json',
     'parquet/all_types.parquet': 'parquet',
     'parquet/sales.parquet': 'parquet',
+    'parquet/sales_transactions.parquet': 'parquet',
+    'parquet/sample.parquet': 'parquet',
+    'parquet/sensor_readings.parquet': 'parquet',
+    'performance/events_25k.parquet': 'parquet',
+    'performance/events_250k.parquet': 'parquet',
     'excel/inventory.xlsx': 'excel',
+    'tables/delta_table': 'delta',
     'tables/events_delta': 'delta',
     'tables/events_iceberg': 'iceberg',
+    'tables/iceberg_table': 'iceberg',
+    'tables/sample_orders.delta': 'delta',
     'unicode/unicode_utf8.csv': 'csv',
     'unicode/unicode_utf8_bom.csv': 'csv',
     'unicode/unicode_utf16le_bom.csv': 'csv',
@@ -240,7 +281,7 @@ def test_all_types_parquet_external_table_maps_nanoseconds_to_physical_int64(det
     assert '[c_timestamp_utc] DATETIMEOFFSET(6)' in create_table
     assert '[c_timestamp_ns] BIGINT' in external_table
     assert '[c_timestamp_utc] DATETIME2(6)' in external_table
-    assert 'Mapped: Parquet TIMESTAMP(NANOS) physical INT64' in external_table
+    assert '[c_timestamp_ns] uses BIGINT (Parquet TIMESTAMP(NANOS) physical INT64)' in external_table
 
 
 def test_all_types_parquet_external_table_refuses_nested_columns(detector):
@@ -517,11 +558,11 @@ def _normalise_binary_derived_sizes(relative, blob):
 def test_generator_is_idempotent_for_text_samples(tmp_path):
     first_dir = tmp_path / 'first'
     second_dir = tmp_path / 'second'
-    generate_samples.generate_all(str(first_dir))
-    generate_samples.generate_all(str(second_dir))
+    generate_samples.generate_all(str(first_dir), include_performance=False)
+    generate_samples.generate_all(str(second_dir), include_performance=False)
 
     # Running twice into the same directory must also be stable.
-    generate_samples.generate_all(str(first_dir))
+    generate_samples.generate_all(str(first_dir), include_performance=False)
 
     for relative in TEXT_SAMPLES:
         left = first_dir / relative
@@ -534,7 +575,7 @@ def test_generator_is_idempotent_for_text_samples(tmp_path):
 
 def test_generator_output_matches_committed_text_samples(tmp_path):
     fresh = tmp_path / 'fresh'
-    generate_samples.generate_all(str(fresh))
+    generate_samples.generate_all(str(fresh), include_performance=False)
     for relative in TEXT_SAMPLES:
         produced = _normalise_binary_derived_sizes(
             relative, _read_bytes(str(fresh / relative)))
@@ -553,7 +594,7 @@ def test_delta_log_size_matches_the_parquet_it_describes(tmp_path):
     keeps the log correct instead of merely keeping it unchanged.
     """
     fresh = tmp_path / 'fresh'
-    generate_samples.generate_all(str(fresh))
+    generate_samples.generate_all(str(fresh), include_performance=False)
 
     for root in (str(fresh), DEMO_DIR):
         table = os.path.join(root, 'tables', 'events_delta')
@@ -576,7 +617,7 @@ def test_generator_binary_samples_are_content_stable(tmp_path):
     import pyarrow.parquet as pq
 
     fresh = tmp_path / 'fresh'
-    generate_samples.generate_all(str(fresh))
+    generate_samples.generate_all(str(fresh), include_performance=False)
 
     for relative in ('parquet/all_types.parquet', 'parquet/sales.parquet',
                      'tables/events_delta/part-00000-demo-c000.snappy.parquet',
@@ -604,8 +645,8 @@ def test_xlsx_zip_container_is_normalised(tmp_path):
 
     first = tmp_path / 'first'
     second = tmp_path / 'second'
-    generate_samples.generate_all(str(first))
-    generate_samples.generate_all(str(second))
+    generate_samples.generate_all(str(first), include_performance=False)
+    generate_samples.generate_all(str(second), include_performance=False)
 
     left = first / 'excel' / 'inventory.xlsx'
     right = second / 'excel' / 'inventory.xlsx'
@@ -627,6 +668,20 @@ def test_generator_runs_as_a_script(tmp_path):
     )
     assert completed.returncode == 0, completed.stderr
     assert (output / 'csv' / 'sales_scalars.csv').exists()
+    assert (output / 'performance' / 'events_250k.parquet').exists()
+
+
+def test_performance_samples_regenerate_with_the_same_rows(tmp_path):
+    import pyarrow.parquet as pq
+
+    fresh = tmp_path / 'performance'
+    generated = generate_samples.generate_performance_samples(str(fresh))
+    assert len(generated) == 2
+    for row_count in generate_samples.PERFORMANCE_SAMPLE_ROWS:
+        relative = f'performance/events_{row_count // 1000}k.parquet'
+        committed = pq.read_table(os.path.join(DEMO_DIR, relative))
+        regenerated = pq.read_table(str(fresh / relative))
+        assert committed.equals(regenerated), relative
 
 
 # ---------------------------------------------------------------------------

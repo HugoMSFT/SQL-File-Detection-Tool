@@ -15,7 +15,6 @@ import * as path from 'node:path';
 import {
     AppStateStore,
     DEFAULT_PREVIEW_ROWS,
-    EMPTY_AZURE_STATE,
     displayLabel,
     limitationFor,
     supportsPreview,
@@ -47,11 +46,25 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.deepEqual(state.files, []);
     assert.equal(state.selectedFileId, null);
     assert.equal(state.metadata, null);
-    assert.equal(state.activeTab, 'quick_analyze');
+    assert.equal(state.activeTab, 'preview');
     assert.equal(state.quickAnalyze.selectedStatement, 'openrowset');
+    assert.equal(state.dataSourceType, 'azure_blob');
+    assert.equal(state.authMethod, 'managed_identity');
+    assert.equal(state.credentialSetup.authMethod, 'managed_identity');
+    assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
-    assert.deepEqual(state.azure, EMPTY_AZURE_STATE);
     assert.ok(state.platforms.some((entry) => entry.id === 'azure_sql_db'));
+});
+
+test('credential selections stay normalized in the shared snapshot', () => {
+    const state = store().update({
+        platform: 'sql_server_2022',
+        dataSourceType: 's3',
+        authMethod: 'managed_identity',
+    });
+    assert.equal(state.dataSourceType, 's3');
+    assert.equal(state.authMethod, 's3_access_key');
+    assert.equal(state.credentialSetup.authMethod, 's3_access_key');
 });
 
 test('file ids are opaque, unguessable and unrelated to the path', () => {
@@ -75,7 +88,7 @@ test('an entry never carries an absolute path and the lookup does', () => {
     const entries = model.setFiles(listing(1));
     const entry = entries[0];
     assert.equal(entry.label, 'file0.csv');
-    assert.equal(entry.folderLabel, 'data');
+    assert.equal(entry.folderLabel, '');
     assert.ok(!JSON.stringify(entry).includes(ROOT.replace(/\\/g, '\\\\')));
 
     const resolved = model.lookup(entry.id);
@@ -121,6 +134,24 @@ test('every listed file carries its own allowed root', () => {
     ]);
     assert.equal(model.lookup(entries[0].id)?.allowedRoot, path.join(ROOT, 'a'));
     assert.equal(model.lookup(entries[1].id)?.allowedRoot, path.join(ROOT, 'b'));
+    assert.equal(entries[0].folderLabel, 'a');
+    assert.equal(entries[1].folderLabel, 'b');
+});
+
+test('folder labels preserve a safe hierarchy beneath one selected root', () => {
+    const model = store();
+    const entries = model.setFiles([
+        {
+            absolutePath: path.join(ROOT, 'data', 'year', 'month', 'x.csv'),
+            allowedRoot: path.join(ROOT, 'data'),
+            fileType: 'csv',
+            sizeBytes: 1,
+            nativeSupport: 'supported',
+            isDirectory: false,
+        },
+    ]);
+    assert.equal(entries[0].folderLabel, 'year/month');
+    assert.ok(!JSON.stringify(entries[0]).includes(ROOT.replace(/\\/g, '\\\\')));
 });
 
 test('subscribers see an immediate snapshot and every later one', () => {
@@ -150,15 +181,6 @@ test('each published snapshot is a fresh frozen object', () => {
     }, TypeError);
 });
 
-test('azure state merges rather than clobbers', () => {
-    const model = store();
-    model.updateAzure({ connected: true, account: 'myaccount' });
-    model.updateAzure({ container: 'data' });
-    assert.equal(model.state.azure.connected, true);
-    assert.equal(model.state.azure.account, 'myaccount');
-    assert.equal(model.state.azure.container, 'data');
-});
-
 test('clearing the selection keeps user-entered options', () => {
     const model = store();
     const entries = model.setFiles(listing(1));
@@ -168,6 +190,7 @@ test('clearing the selection keeps user-entered options', () => {
         schemaName: 'sales',
         platform: 'fabric_sql_db',
         columnOverrides: { id: 'BIGINT' },
+        recommendedSqlTypes: { id: 'INT' },
         lastAnalysisMs: 12,
     });
     model.clearSelection();
@@ -176,6 +199,7 @@ test('clearing the selection keeps user-entered options', () => {
     assert.equal(model.state.metadata, null);
     assert.equal(model.state.lastAnalysisMs, null);
     assert.deepEqual(model.state.columnOverrides, {});
+    assert.deepEqual(model.state.recommendedSqlTypes, {});
     assert.equal(model.state.tableName, 'Customers', 'a typed table name survives');
     assert.equal(model.state.schemaName, 'sales');
     assert.equal(model.state.platform, 'fabric_sql_db');
@@ -184,14 +208,13 @@ test('clearing the selection keeps user-entered options', () => {
 test('reset clears files and registry but keeps durable preferences', () => {
     const model = store();
     const entries = model.setFiles(listing(2));
-    model.update({ platform: 'sql_server_2022', appearance: 'compact', tableName: 'X' });
+    model.update({ platform: 'sql_server_2022', tableName: 'X' });
     model.reset();
 
     assert.deepEqual(model.state.files, []);
     assert.equal(model.lookup(entries[0].id), undefined);
     assert.equal(model.state.tableName, '');
     assert.equal(model.state.platform, 'sql_server_2022');
-    assert.equal(model.state.appearance, 'compact');
 });
 
 test('the selected getter follows the registry, not the id alone', () => {

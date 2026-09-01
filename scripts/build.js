@@ -39,7 +39,7 @@ function verifyBundle() {
     // A surviving bare `require("hyparquet")` would mean the ESM-only package
     // was left external and the extension would throw ERR_REQUIRE_ESM on first
     // Parquet analysis.
-    for (const bare of ['hyparquet', 'chardet', 'iconv-lite', 'fflate', '@azure/storage-blob']) {
+    for (const bare of ['hyparquet', 'chardet', 'iconv-lite', 'fflate']) {
         const pattern = new RegExp(`require\\((["'])${bare.replace('/', '\\/')}\\1\\)`);
         if (pattern.test(code)) {
             problems.push(`${bare} was not bundled`);

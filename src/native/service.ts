@@ -41,6 +41,7 @@ import {
     resolveTableName,
 } from './sql/generator';
 import { DEFAULT_TARGET_PLATFORM, PLATFORMS, normalizePlatform } from './sql/typeMapping';
+import type { ExternalDataSourceType } from './sql/credentialWizard';
 
 /** Options accepted by every filesystem-touching service call. */
 export interface AnalysisRequest {
@@ -60,6 +61,11 @@ export interface PreviewRequest extends AnalysisRequest {
     readonly maxRows?: number;
 }
 
+/** Options for a directory scan. Depth zero means only the selected root. */
+export interface DirectoryAnalysisRequest extends AnalysisRequest {
+    readonly maxDepth?: number;
+}
+
 /** Options for the SQL generation entry points. */
 export interface GenerationRequest {
     readonly metadata: GeneratorMetadata;
@@ -71,6 +77,7 @@ export interface GenerationRequest {
     readonly location?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
+    readonly dataSourceType?: ExternalDataSourceType | string | null;
     readonly formatName?: string | null;
     readonly parserOverrides?: ParserOverrides;
 }
@@ -90,6 +97,7 @@ export interface MultiFileRequest {
     readonly authMethod?: string | null;
     readonly targetPlatform?: TargetPlatform | string | null;
     readonly storageUrl?: string | null;
+    readonly dataSourceType?: ExternalDataSourceType | string | null;
 }
 
 /** Result of analysing a directory that holds a supported table format. */
@@ -146,13 +154,13 @@ export class NativeAnalysisService {
      * Delta and Iceberg table directories are treated as a single logical
      * table rather than a list of Parquet parts.
      */
-    async analyzeDirectory(request: AnalysisRequest): Promise<DirectoryAnalysis> {
+    async analyzeDirectory(request: DirectoryAnalysisRequest): Promise<DirectoryAnalysis> {
         const token = request.token ?? NEVER_CANCELLED;
         throwIfCancelled(token);
         reportProgress(request.progress, 'Resolving directory');
         const reference = await this.resolve(request);
         reportProgress(request.progress, 'Scanning directory');
-        const files = await scanDirectory(reference, token);
+        const files = await scanDirectory(reference, token, request.maxDepth);
         return { root: reference.realPath, files };
     }
 
@@ -199,6 +207,7 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
         });
     }
@@ -217,6 +226,7 @@ export class NativeAnalysisService {
             location: request.location ?? null,
             targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
             storageUrl: request.storageUrl ?? null,
+            dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
         });
     }
@@ -237,6 +247,7 @@ export class NativeAnalysisService {
                 authMethod: request.authMethod ?? null,
                 targetPlatform: request.targetPlatform ?? DEFAULT_TARGET_PLATFORM,
                 storageUrl: request.storageUrl ?? null,
+                dataSourceType: request.dataSourceType ?? null,
             });
             chunks.push(deduplicateSharedPrerequisites(script, seen));
         }

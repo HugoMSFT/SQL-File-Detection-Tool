@@ -29,6 +29,7 @@ import { analyzeText } from './analysis/text';
 /** Extension to file-type table, identical to the Python `SUPPORTED_EXTENSIONS`. */
 export const SUPPORTED_EXTENSIONS: Readonly<Record<string, FileType>> = Object.freeze({
     '.txt': 'text',
+    '.dat': 'csv',
     '.csv': 'csv',
     '.tsv': 'csv',
     '.parquet': 'parquet',
@@ -42,6 +43,43 @@ export const SUPPORTED_EXTENSIONS: Readonly<Record<string, FileType>> = Object.f
     '.xlsx': 'excel',
     '.xls': 'excel',
 });
+
+/**
+ * Extensions the VS Code experience may enumerate or open.
+ *
+ * The native library can still analyse Excel when called directly, but Excel is
+ * not a SQL external-file format and is intentionally excluded from the SQL
+ * source explorer. Unknown extensions are never content-sniffed during a scan.
+ */
+export const SQL_SOURCE_EXTENSIONS = Object.freeze([
+    '.txt',
+    '.dat',
+    '.csv',
+    '.tsv',
+    '.parquet',
+    '.snappy',
+    '.json',
+    '.jsonl',
+    '.ndjson',
+    '.orc',
+    '.rc',
+] as const);
+
+const SQL_SOURCE_EXTENSION_SET = new Set<string>(SQL_SOURCE_EXTENSIONS);
+
+/** Return the known SQL-readable file type without opening the file. */
+export function sqlSourceFileType(filePath: string): FileType | undefined {
+    const extension = path.extname(filePath).toLowerCase();
+    if (!SQL_SOURCE_EXTENSION_SET.has(extension)) {
+        return undefined;
+    }
+    return SUPPORTED_EXTENSIONS[extension];
+}
+
+/** True when a path has a SQL-readable extension. Does not touch the file. */
+export function isSqlSourceFile(filePath: string): boolean {
+    return sqlSourceFileType(filePath) !== undefined;
+}
 
 /** How completely the native core handles each recognised family. */
 export const NATIVE_SUPPORT_BY_TYPE: Readonly<Record<FileType, NativeSupport>> = Object.freeze({
@@ -62,8 +100,8 @@ export function listSupportedFormats(): SupportedFormat[] {
     return [
         {
             fileType: 'csv',
-            extensions: ['.csv', '.tsv'],
-            label: 'Delimited text (CSV / TSV / pipe)',
+            extensions: ['.csv', '.tsv', '.dat'],
+            label: 'Delimited text (CSV / TSV / DAT / pipe)',
             support: 'supported',
             notes:
                 'Streaming delimiter, header, encoding, nullability and length ' +
@@ -354,7 +392,7 @@ export async function firstCharacter(filePath: string, encoding: string): Promis
 }
 
 /**
- * Recursively analyse every supported file beneath a directory.
+ * Analyse supported files beneath a directory, optionally bounded by depth.
  *
  * Delta and Iceberg folders are reported as a single table entry and are not
  * descended into, matching `FileDetector.scan_directory`.
@@ -362,11 +400,18 @@ export async function firstCharacter(filePath: string, encoding: string): Promis
 export async function scanDirectory(
     reference: StorageReference,
     token?: CancellationToken,
+    maxDepth = Number.POSITIVE_INFINITY,
 ): Promise<FileMetadata[]> {
     if (!reference.isDirectory) {
         throw new NativeAnalysisError(
             'not_a_directory',
             `Directory does not exist: ${reference.requestedPath}`,
+        );
+    }
+    if (maxDepth !== Number.POSITIVE_INFINITY && (!Number.isInteger(maxDepth) || maxDepth < 0)) {
+        throw new NativeAnalysisError(
+            'malformed_input',
+            'Directory scan depth must be a non-negative integer.',
         );
     }
     if (
@@ -377,11 +422,14 @@ export async function scanDirectory(
     }
 
     const results: FileMetadata[] = [];
-    const queue: StorageReference[] = [reference];
+    const queue: Array<{ reference: StorageReference; depth: number }> = [
+        { reference, depth: 0 },
+    ];
     const visited = new Set<string>();
 
     while (queue.length > 0) {
-        const current = queue.shift() as StorageReference;
+        const currentItem = queue.shift() as { reference: StorageReference; depth: number };
+        const current = currentItem.reference;
         if (visited.has(current.realPath)) {
             continue;
         }
@@ -390,21 +438,23 @@ export async function scanDirectory(
 
         const entries = await listContainedEntries(current);
         const directories: StorageReference[] = [];
-        for (const entry of entries) {
-            if (!entry.isDirectory) {
-                continue;
-            }
-            const name = path.basename(entry.realPath);
-            if (name.startsWith('.') || name === '__pycache__') {
-                continue;
-            }
-            if (
-                (await isDeltaTableDirectory(entry.realPath)) ||
-                (await isIcebergTableDirectory(entry.realPath))
-            ) {
-                results.push(await analyzeFileMetadata(entry, token));
-            } else {
-                directories.push(entry);
+        if (currentItem.depth < maxDepth) {
+            for (const entry of entries) {
+                if (!entry.isDirectory) {
+                    continue;
+                }
+                const name = path.basename(entry.realPath);
+                if (name.startsWith('.') || name === '__pycache__') {
+                    continue;
+                }
+                if (
+                    (await isDeltaTableDirectory(entry.realPath)) ||
+                    (await isIcebergTableDirectory(entry.realPath))
+                ) {
+                    results.push(await analyzeFileMetadata(entry, token));
+                } else {
+                    directories.push(entry);
+                }
             }
         }
 
@@ -412,11 +462,16 @@ export async function scanDirectory(
             if (entry.isDirectory) {
                 continue;
             }
-            if ((await detectFileType(entry)) !== 'unknown') {
+            if (sqlSourceFileType(entry.realPath) !== undefined) {
                 results.push(await analyzeFileMetadata(entry, token));
             }
         }
-        queue.push(...directories);
+        queue.push(
+            ...directories.map((entry) => ({
+                reference: entry,
+                depth: currentItem.depth + 1,
+            })),
+        );
     }
     return results;
 }

@@ -2,7 +2,7 @@
  * Shared helpers for the Python↔TypeScript parity suite.
  *
  * `scripts/generate_parity_baselines.py` records what the current Python
- * implementation produces for the committed `demo/` fixtures. To compare
+ * implementation produces for the committed `data sample/` fixtures. To compare
  * against it we have to reduce native output using *exactly* the same
  * normalisation, including the marker keys, which embed the original Python
  * regular-expression source text.
@@ -110,9 +110,9 @@ const INVARIANT_PATTERNS: readonly InvariantPattern[] = [
     pattern(String.raw`\bFIELDQUOTE\s*=\s*\'([^\']*)\'`, 'i'),
     pattern(String.raw`\bENCODING\s*=\s*\'([^\']*)\'`, 'i'),
     pattern(String.raw`\bDATAFILETYPE\s*=\s*\'([^\']*)\'`, 'i'),
-    // The credential shape is a security property: managed identity means no
-    // secret and no master key, a SAS means both.
-    pattern(String.raw`\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE)\'`, 'i'),
+    // The credential shape is a security property: identity-based methods store
+    // no secret, while SAS and S3 access-key methods require one.
+    pattern(String.raw`\bIDENTITY\s*=\s*\'(MANAGED\s+IDENTITY|USER\s+IDENTITY|SHARED\s+ACCESS\s+SIGNATURE|S3\s+ACCESS\s+KEY)\'`, 'i'),
     // A live TRUNCATE in a generated document empties a table the user already
     // had. Anchored so the commented guidance form does not count as a live one.
     pattern(String.raw`^\s*TRUNCATE\s+TABLE\s+(\[[^\]]*\]\.\[[^\]]*\])`, 'im'),

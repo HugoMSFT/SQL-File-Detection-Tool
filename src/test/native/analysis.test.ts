@@ -33,29 +33,29 @@ import { PREVIEW_DEFAULT_ROWS, PREVIEW_MAX_ROWS } from '../../native/limits';
 import type { FileMetadata, FileType, NativeSupport } from '../../native/types';
 import { fixturePath, REPO_ROOT } from './parityInvariants';
 
-/** Every committed demo fixture, and what the native core should do with it. */
+/** Representative committed samples, and what the native core should do with them. */
 const FORMAT_MATRIX: ReadonlyArray<
     readonly [relative: string, fileType: FileType, support: NativeSupport]
 > = [
-    ['demo/csv/sales_scalars.csv', 'csv', 'supported'],
-    ['demo/csv/sales_scalars.tsv', 'csv', 'supported'],
-    ['demo/csv/sales_scalars_pipe.csv', 'csv', 'supported'],
-    ['demo/json/orders_array.json', 'json', 'supported'],
-    ['demo/json/orders.ndjson', 'json', 'supported'],
-    ['demo/json/order_single_object.json', 'json', 'supported'],
-    ['demo/parquet/all_types.parquet', 'parquet', 'supported'],
-    ['demo/parquet/sales.parquet', 'parquet', 'supported'],
-    ['demo/excel/inventory.xlsx', 'excel', 'supported'],
-    ['demo/orc/all_types.orc', 'orc', 'unsupported_native'],
-    ['demo/text/readme_sample.txt', 'text', 'supported'],
-    ['demo/unicode/unicode_utf8.csv', 'csv', 'supported'],
-    ['demo/unicode/unicode_utf8_bom.csv', 'csv', 'supported'],
-    ['demo/unicode/unicode_utf16le_bom.csv', 'csv', 'supported'],
-    ['demo/unicode/unicode_utf16le_bom.tsv', 'csv', 'supported'],
-    ['demo/unicode/japanese_cp932.csv', 'csv', 'supported'],
-    ['demo/unicode/collation_cases_utf8.csv', 'csv', 'supported'],
-    ['demo/tables/events_delta', 'delta', 'supported'],
-    ['demo/tables/events_iceberg', 'iceberg', 'supported'],
+    ['data sample/csv/sales_scalars.csv', 'csv', 'supported'],
+    ['data sample/csv/sales_scalars.tsv', 'csv', 'supported'],
+    ['data sample/csv/sales_scalars_pipe.csv', 'csv', 'supported'],
+    ['data sample/json/orders_array.json', 'json', 'supported'],
+    ['data sample/json/orders.ndjson', 'json', 'supported'],
+    ['data sample/json/order_single_object.json', 'json', 'supported'],
+    ['data sample/parquet/all_types.parquet', 'parquet', 'supported'],
+    ['data sample/parquet/sales.parquet', 'parquet', 'supported'],
+    ['data sample/excel/inventory.xlsx', 'excel', 'supported'],
+    ['data sample/orc/all_types.orc', 'orc', 'unsupported_native'],
+    ['data sample/text/readme_sample.txt', 'text', 'supported'],
+    ['data sample/unicode/unicode_utf8.csv', 'csv', 'supported'],
+    ['data sample/unicode/unicode_utf8_bom.csv', 'csv', 'supported'],
+    ['data sample/unicode/unicode_utf16le_bom.csv', 'csv', 'supported'],
+    ['data sample/unicode/unicode_utf16le_bom.tsv', 'csv', 'supported'],
+    ['data sample/unicode/japanese_cp932.csv', 'csv', 'supported'],
+    ['data sample/unicode/collation_cases_utf8.csv', 'csv', 'supported'],
+    ['data sample/tables/events_delta', 'delta', 'supported'],
+    ['data sample/tables/events_iceberg', 'iceberg', 'supported'],
 ];
 
 async function analyze(relative: string): Promise<FileMetadata> {
@@ -110,10 +110,10 @@ describe('format matrix', () => {
 
 describe('encoding detection', () => {
     const cases: ReadonlyArray<readonly [string, string, string]> = [
-        ['demo/csv/sales_scalars.csv', 'utf-8', '65001'],
-        ['demo/unicode/unicode_utf8_bom.csv', 'utf-8-sig', '65001'],
-        ['demo/unicode/unicode_utf16le_bom.csv', 'utf-16', '1200'],
-        ['demo/unicode/japanese_cp932.csv', 'cp932', '932'],
+        ['data sample/csv/sales_scalars.csv', 'utf-8', '65001'],
+        ['data sample/unicode/unicode_utf8_bom.csv', 'utf-8-sig', '65001'],
+        ['data sample/unicode/unicode_utf16le_bom.csv', 'utf-16', '1200'],
+        ['data sample/unicode/japanese_cp932.csv', 'cp932', '932'],
     ];
 
     for (const [relative, encoding, codepage] of cases) {
@@ -125,7 +125,7 @@ describe('encoding detection', () => {
     }
 
     it('round-trips non-ASCII values through the CP932 decoder', async () => {
-        const metadata = await analyze('demo/unicode/japanese_cp932.csv');
+        const metadata = await analyze('data sample/unicode/japanese_cp932.csv');
         const rendered = JSON.stringify(metadata.sample_rows ?? []);
         assert.ok(
             /日本語/.test(rendered),
@@ -138,7 +138,7 @@ describe('encoding detection', () => {
     });
 
     it('round-trips non-ASCII column names through UTF-8', async () => {
-        const metadata = await analyze('demo/unicode/unicode_utf8.csv');
+        const metadata = await analyze('data sample/unicode/unicode_utf8.csv');
         const rendered = JSON.stringify([
             metadata.schema ?? [],
             metadata.sample_rows ?? [],
@@ -214,7 +214,7 @@ describe('malformed, truncated and hostile input', () => {
 
     it('rejects truncated Parquet without inventing a schema', async () => {
         const real = await fs.promises.readFile(
-            fixturePath('demo/parquet/sales.parquet'),
+            fixturePath('data sample/parquet/sales.parquet'),
         );
         await write('truncated.parquet', real.subarray(0, Math.floor(real.length / 3)));
         const metadata = await analyzeTemp('truncated.parquet');
@@ -336,7 +336,7 @@ describe('malformed, truncated and hostile input', () => {
 
     it('detects file type from content, not just extension', async () => {
         const real = await fs.promises.readFile(
-            fixturePath('demo/parquet/sales.parquet'),
+            fixturePath('data sample/parquet/sales.parquet'),
         );
         await write('mislabelled.csv', real);
         const reference = await resolveWithinRoot(
@@ -356,7 +356,7 @@ describe('cancellation', () => {
         const source = new SimpleCancellationTokenSource();
         source.cancel();
         const reference = await resolveWithinRoot(
-            fixturePath('demo/csv/sales_scalars.csv'),
+            fixturePath('data sample/csv/sales_scalars.csv'),
             REPO_ROOT,
         );
         await assert.rejects(
@@ -370,7 +370,7 @@ describe('cancellation', () => {
         const source = new SimpleCancellationTokenSource();
         source.cancel();
         const reference = await resolveWithinRoot(
-            fixturePath('demo/csv/sales_scalars.csv'),
+            fixturePath('data sample/csv/sales_scalars.csv'),
             REPO_ROOT,
         );
         await assert.rejects(() => analyzeFileMetadata(reference, source.token));
@@ -385,7 +385,7 @@ describe('cancellation', () => {
         source.cancel();
         await assert.rejects(() =>
             service.preview({
-                filePath: fixturePath('demo/csv/sales_scalars.csv'),
+                filePath: fixturePath('data sample/csv/sales_scalars.csv'),
                 token: source.token,
             }),
         );
@@ -405,10 +405,11 @@ describe('bounded previews', () => {
     it('never returns more rows than requested', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         for (const relative of [
-            'demo/csv/sales_scalars.csv',
-            'demo/json/orders_array.json',
-            'demo/parquet/sales.parquet',
-            'demo/excel/inventory.xlsx',
+            'data sample/csv/sales_scalars.csv',
+            'data sample/json/orders_array.json',
+            'data sample/parquet/sales.parquet',
+            'data sample/excel/inventory.xlsx',
+            'data sample/performance/events_250k.parquet',
         ]) {
             const preview = await service.preview({
                 filePath: fixturePath(relative),
@@ -421,13 +422,23 @@ describe('bounded previews', () => {
             assert.ok(preview.columns.length > 0, `${relative} returned no columns`);
         }
     });
+
+    it('keeps a large-file preview bounded', async () => {
+        const service = new NativeAnalysisService(REPO_ROOT);
+        const filePath = fixturePath('data sample/performance/events_250k.parquet');
+        const metadata = await service.analyze({ filePath });
+        const preview = await service.preview({ filePath, maxRows: 25 });
+        assert.strictEqual(metadata.row_count, 250_000);
+        assert.strictEqual(preview.rows.length, 25);
+        assert.strictEqual(preview.truncated, true);
+    });
 });
 
 describe('service facade', () => {
     it('analyses and generates in one call', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const result = await service.analyzeAndGenerate({
-            filePath: fixturePath('demo/csv/sales_scalars.csv'),
+            filePath: fixturePath('data sample/csv/sales_scalars.csv'),
         });
         assert.strictEqual(result.metadata.file_type, 'csv');
         assert.ok(/CREATE\s+TABLE/i.test(result.statements.create_table));
@@ -436,9 +447,9 @@ describe('service facade', () => {
     it('scans a directory of supported files', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const result = await service.analyzeDirectory({
-            filePath: fixturePath('demo/csv'),
+            filePath: fixturePath('data sample/csv'),
         });
-        assert.strictEqual(result.files.length, 3);
+        assert.ok(result.files.length >= 9);
         for (const metadata of result.files) {
             assert.strictEqual(metadata.file_type, 'csv');
         }
@@ -447,7 +458,7 @@ describe('service facade', () => {
     it('treats a Delta directory as one logical table', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const result = await service.analyzeDirectory({
-            filePath: fixturePath('demo/tables/events_delta'),
+            filePath: fixturePath('data sample/tables/events_delta'),
         });
         assert.strictEqual(result.files.length, 1);
         assert.strictEqual(result.files[0].file_type, 'delta');
@@ -456,7 +467,7 @@ describe('service facade', () => {
     it('reports errors instead of throwing when asked to', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const result = await service.tryAnalyze({
-            filePath: fixturePath('demo/does-not-exist.csv'),
+            filePath: fixturePath('data sample/does-not-exist.csv'),
         });
         assert.strictEqual(result.ok, false);
     });
@@ -464,7 +475,10 @@ describe('service facade', () => {
     it('produces a multi-file script with shared prerequisites once', async () => {
         const service = new NativeAnalysisService(REPO_ROOT);
         const entries = await Promise.all(
-            ['demo/csv/sales_scalars.csv', 'demo/csv/sales_scalars.tsv'].map(
+            [
+                'data sample/csv/sales_scalars.csv',
+                'data sample/csv/sales_scalars.tsv',
+            ].map(
                 async (relative) => ({
                     metadata: await analyze(relative),
                 }),

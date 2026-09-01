@@ -148,7 +148,8 @@ describe('live certification evidence', () => {
             const secretBased = generateCredentialSetup({
                 dataSource: 'TestDS',
                 metadata: csvMetadata(),
-                targetPlatform: 'azure_sql_db',
+                targetPlatform:
+                    method === 's3_access_key' ? 'sql_server_2022' : 'azure_sql_db',
                 authMethod: method,
             });
             assert.match(
@@ -366,8 +367,8 @@ describe('live certification evidence', () => {
         });
         const found = script.match(new RegExp(expect.placeholder_pattern, 'g'));
         assert.ok(found && found.length > 0, 'expected staging placeholders');
-        assert.match(script, /STAGE THE DATA IN AZURE STORAGE FIRST/);
-        assert.match(script, /Replace the placeholders/);
+        assert.match(script, /cannot read local file/i);
+        assert.match(script, /replace the location placeholders/i);
         const lowered = script.toLowerCase();
         for (const phrase of expect.forbidden_when_placeholders_present) {
             assert.ok(!lowered.includes(phrase), phrase);
@@ -379,7 +380,7 @@ describe('live certification evidence', () => {
             targetPlatform: 'azure_sql_db' as TargetPlatform,
             storageUrl: 'https://acct.blob.core.windows.net/raw/sales.csv',
         });
-        assert.ok(!script.includes('STAGE THE DATA IN AZURE STORAGE FIRST'));
+        assert.ok(!/cannot read local file/i.test(script));
         assert.ok(!script.includes('<storage_account>'));
         assert.ok(!script.includes('<container>'));
     });

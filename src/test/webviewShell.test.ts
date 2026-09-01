@@ -118,10 +118,6 @@ test('the shell ships templates rather than rendered data', () => {
         'tpl-sql',
         'tpl-limitation',
         'tpl-schema-row',
-        'tpl-azure',
-        'tpl-format-row',
-        'tpl-parser-option',
-        'tpl-readiness',
     ]) {
         assert.ok(html.includes(`id="${id}"`), `${id} template is missing`);
     }
@@ -133,35 +129,78 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'openFileDialog',
         'openFolderDialog',
         'analyzeCurrentFile',
-        'analyzeWorkspaceFolder',
         'exportAllSql',
         'openInEditor',
-        'publicUrlAnalyze',
-        'azureDisconnect',
+        'useStorageUrl',
+        'clearStorageUrl',
         'showOrcGuidance',
     ]) {
-        assert.ok(html.includes(`data-action="${action}"`), `${action} is not reachable`);
+        assert.ok(
+            html.includes(`data-action="${action}"`) || script.includes(`'${action}'`),
+            `${action} is not reachable`,
+        );
     }
-    for (const mode of ['vscode', 'sas', 'connectionString', 'anonymous']) {
-        assert.ok(html.includes(`data-azure-connect="${mode}"`), `${mode} is not offered`);
-    }
+    assert.doesNotMatch(script, /azureConnect|azureList|azureSetAccount|azureAnalyzeBlob/);
 });
 
-test('Quick Analyze is the primary native workflow with provenance and reset controls', () => {
+test('Preview is the primary workflow and credential setup is guided', () => {
     const html = render();
-    assert.match(script, /Quick Analyze/);
-    assert.match(script, /Expected:/);
-    assert.match(script, /resetParserOverride/);
-    assert.match(script, /Source readiness/);
-    assert.match(script, /polybase-guidance/);
+    assert.match(script, /Configure external storage access/);
+    assert.doesNotMatch(script, /setDataSourceType/);
+    assert.match(script, /Authentication method/);
+    assert.match(script, /Secrets stay out of the extension/);
     assert.match(script, /openDocumentation/);
     assert.match(script, /opens Microsoft Learn externally/);
     assert.match(script, /dataset\.documentation/);
-    assert.match(script, /state\.quickAnalyze\.documentation/);
-    assert.match(script, /object\.documentation/);
-    assert.match(script, /polybase\.documentation/);
-    assert.match(html, /Sources & files/);
-    assert.match(html, /HTTPS \/ Azure/);
+    assert.match(html, /Sources &amp; files/);
+    assert.match(html, />Explorer</);
+    assert.match(html, /Storage setup/);
+    assert.match(html, /Select a file, folder, or URL to begin\./);
+    assert.match(
+        script,
+        /if \(!state\.selectedFileId\)[\s\S]*Select a file, folder, or URL to begin\.[\s\S]*Preview rows/,
+    );
+    assert.doesNotMatch(html, /Appearance|id="appearance"/);
+    assert.doesNotMatch(script, /setPreference|density-compact/);
+    assert.match(script, /label: 'EXT TABLE'/);
+    assert.match(script, /\['Column', 'Source type', 'SQL Type'\]/);
+    assert.match(script, /recommendedSqlTypes/);
+    assert.match(script, /captureFocus/);
+    assert.match(script, /setSelectionRange/);
+    assert.match(script, /tree-folder/);
+    assert.match(script, /Provide a storage location/);
+    assert.match(script, /abs:\/\/, adls:\/\/, or abfss:\/\//);
+    assert.match(script, /Detected external data source/);
+    assert.doesNotMatch(script, /Sign in with Microsoft Entra|Browse Microsoft storage/);
+    assert.doesNotMatch(script, /Directory \(tenant\)|Storage account name|Container name/);
+    assert.doesNotMatch(script, /label: 'Azure & URLs'/);
+    assert.match(
+        script,
+        /id: 'openrowset'[\s\S]*id: 'create_external_table'[\s\S]*id: 'external_file_format'/,
+    );
+    assert.match(
+        script,
+        /renderDocumentationLinks\(container, state\.quickAnalyze\.documentation\)/,
+    );
+
+    const explorer = html.slice(
+        html.indexOf('<nav class="file-pane"'),
+        html.indexOf('<main class="content"'),
+    );
+    assert.ok(!explorer.includes('data-action="openFileDialog"'));
+    assert.ok(!explorer.includes('data-action="openFolderDialog"'));
+    assert.doesNotMatch(html, /class="source-actions"/);
+
+    const toolbar = html.slice(
+        html.indexOf('<div class="toolbar"'),
+        html.indexOf('<div class="option-row">'),
+    );
+    assert.match(
+        toolbar,
+        /Browse files[\s\S]*Browse folder[\s\S]*Storage setup/,
+    );
+    assert.equal((html.match(/data-action="openFileDialog"/g) ?? []).length, 1);
+    assert.equal((html.match(/data-action="openFolderDialog"/g) ?? []).length, 1);
 });
 
 test('the shell has no trace of the removed server flow', () => {
@@ -190,7 +229,7 @@ test('accessibility landmarks and live regions are present', () => {
     assert.match(html, /role="toolbar"/);
     assert.match(html, /role="tablist"/);
     assert.match(html, /role="tabpanel"/);
-    assert.match(html, /role="listbox"/);
+    assert.match(html, /role="tree"/);
     assert.match(html, /<main class="content" id="main" tabindex="-1">/);
 });
 
@@ -258,6 +297,12 @@ test('the stylesheet uses theme variables rather than fixed colours', () => {
         !styles.includes('@import') && !styles.includes('url(http'),
         'the stylesheet must not pull a remote resource',
     );
+});
+
+test('the explorer gives the filename its own readable row', () => {
+    assert.match(styles, /grid-template-areas:\s*'icon name'\s*'\. meta'/);
+    assert.match(styles, /\.file-name[\s\S]*overflow-wrap: anywhere/);
+    assert.match(script, /name\.title = file\.label/);
 });
 
 test('the renderer keeps the keyboard workflow', () => {

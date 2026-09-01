@@ -1,23 +1,24 @@
-# Demo samples
+# Data samples
 
-Small, deterministic fixtures that let you try SQL File Detection Tool
-without hunting for data. Every file here is generated from constant values
-by [`generate_samples.py`](generate_samples.py), so the folder can be
-regenerated at any time and the results do not depend on the machine, the
-clock, or the network.
+This is the single home for every local dataset used to try and test SQL File
+Detection Tool. It consolidates the former `demo/` and `test_data/` trees by
+format. The canonical fixtures and the performance-scale Parquet files are
+generated from constant values by [`generate_samples.py`](generate_samples.py);
+additional business-shaped fixtures can be refreshed with
+[`scripts/generate_additional_samples.py`](../scripts/generate_additional_samples.py).
 
 Canonical public copies are mapped in
 [`scripts/certification/public-demo-fixtures.json`](../scripts/certification/public-demo-fixtures.json).
 The mapping preserves every relative path required by Delta and Iceberg. Its
 `publication_status` and anonymous container status are authoritative. All 23
 objects are published at the canonical base and were anonymously downloaded,
-byte-counted, and SHA-256 verified. Local fixtures remain the deterministic
-offline source for tests.
+byte-counted, and SHA-256 verified. Local fixtures remain the deterministic offline source for tests.
 
 ```bash
-python demo/generate_samples.py            # regenerate everything in place
-python demo/generate_samples.py --quiet    # no file listing
-python demo/generate_samples.py --output-dir /tmp/demo
+python "data sample/generate_samples.py"            # regenerate canonical samples
+python "data sample/generate_samples.py" --quiet    # no file listing
+python "data sample/generate_samples.py" --output-dir /tmp/sql-file-samples
+python scripts/generate_additional_samples.py       # refresh additional samples
 ```
 
 The generator uses only dependencies the project already requires
@@ -34,6 +35,12 @@ The generator uses only dependencies the project already requires
 | `csv/sales_scalars.csv` | CSV, comma | UTF-8 | signed ints (incl. `int32` min/max), floats (negative, zero, `1e-07`), booleans, strings with Unicode and embedded quotes/commas, NULLs (empty fields), ISO dates, ISO timestamps, ISO timestamps with `Z` |
 | `csv/sales_scalars.tsv` | TSV, tab | UTF-8 | same values, tab delimited |
 | `csv/sales_scalars_pipe.csv` | CSV, pipe | UTF-8 | same values, exercises delimiter sniffing |
+| `csv/employees.csv` | CSV, comma | UTF-8 | 50 employee records |
+| `csv/employees_wide.csv` | CSV, comma | UTF-8 | wider business schema |
+| `csv/products_catalog.csv` | CSV, comma | UTF-8 | 75 product records |
+| `csv/sales_orders.csv` | CSV, comma | UTF-8 | numeric and timestamp columns |
+| `csv/sample.csv` | CSV, comma | UTF-8 | minimal five-column sample |
+| `csv/web_access_logs.tsv` | TSV, tab | UTF-8 | 200 web access records |
 
 ### JSON
 
@@ -42,6 +49,9 @@ The generator uses only dependencies the project already requires
 | `json/orders_array.json` | JSON array | scalars, `null`, nested object (`customer.address`), list of objects (`items`), list of strings (`tags`), booleans, ISO timestamps |
 | `json/orders.ndjson` | NDJSON | identical records, one JSON object per line |
 | `json/order_single_object.json` | single JSON object | the object (non-array) code path |
+| `json/customers_nested.json` | JSON array | nested contacts and addresses |
+| `json/events.jsonl` | JSON Lines | sparse event records |
+| `json/sample.json` | JSON array | minimal mixed scalar sample |
 
 ### Columnar
 
@@ -49,7 +59,17 @@ The generator uses only dependencies the project already requires
 | --- | --- | --- |
 | `parquet/all_types.parquet` | Parquet | every Arrow family the SQL mapper claims to support — see the table below |
 | `parquet/sales.parquet` | Parquet | a narrow, business-shaped table for the everyday walkthrough |
+| `parquet/sales_transactions.parquet` | Parquet | 500 transaction rows |
+| `parquet/sensor_readings.parquet` | Parquet | 1,000 sensor rows |
+| `parquet/sample.parquet` | Parquet | minimal six-column sample |
 | `orc/all_types.orc` | ORC | the subset of the same columns the Arrow ORC writer accepts |
+
+### Performance-scale files
+
+| File | Rows | Approximate size | Purpose |
+| --- | ---: | ---: | --- |
+| `performance/events_25k.parquet` | 25,000 | 0.8 MB | medium-file analysis and preview |
+| `performance/events_250k.parquet` | 250,000 | 8 MB | verify footer-only analysis and bounded preview behavior |
 
 `parquet/all_types.parquet` column coverage and the SQL Server type the
 generator produces:
@@ -98,8 +118,11 @@ flattening guidance instead of emitting a construct that fails at runtime.
 
 | Path | Format | Covers |
 | --- | --- | --- |
-| `tables/events_delta/` | Delta Lake | `_delta_log/00000000000000000000.json` with `protocol`, `metaData`, `add` and `commitInfo` actions plus one Snappy Parquet part file |
+| `tables/events_delta/` | Delta Lake | `_delta_log/00000000000000000000.json` with `protocol`, `metaData`, `add` and `commitInfo` actions plus `part-00000-demo-c000.snappy.parquet` |
 | `tables/events_iceberg/` | Apache Iceberg | `metadata/v1.metadata.json` (format-version 2, schema, partition spec, snapshot with `total-records`), `metadata/snap-1000000000000000001-1-demo.avro`, `metadata/demo-m0.avro`, and `data/00000-0-demo.parquet` |
+| `tables/delta_table/` | Delta Lake | `_delta_log/00000000000000000000.json` plus `data/part-00000-00000.snappy.parquet` |
+| `tables/iceberg_table/` | Apache Iceberg | `metadata/v1.metadata.json` plus `data/00000-0.parquet` |
+| `tables/sample_orders.delta/` | Delta Lake | transaction log plus `part-00000-574bcd76-03d5-4e51-a574-aba75f6ac27c-c000.snappy.parquet` |
 
 ### Other
 
@@ -107,6 +130,7 @@ flattening guidance instead of emitting a construct that fails at runtime.
 | --- | --- | --- |
 | `excel/inventory.xlsx` | Excel | mixed text/number/boolean/date cells, an empty cell, Unicode product names |
 | `text/readme_sample.txt` | Plain text | ASCII plus composed/decomposed accents, CJK, Cyrillic and Greek |
+| `text/sample.txt` | Plain text | five-line basic text sample |
 
 ---
 
@@ -196,7 +220,7 @@ script creates nothing but a `#temp` table and drops it again, so it is
 safe to run anywhere:
 
 ```bash
-sqlcmd -S <server> -d <database> -i demo/collation_samples.sql
+sqlcmd -S <server> -d <database> -i "data sample/collation_samples.sql"
 ```
 
 ---
@@ -206,17 +230,17 @@ sqlcmd -S <server> -d <database> -i demo/collation_samples.sql
 ### Inspect what is here
 
 ```bash
-python -m external_file_detection.cli list-files demo --recursive
+python -m external_file_detection.cli list-files "data sample" --recursive
 python -m external_file_detection.cli supported-types
 ```
 
 ### Analyse a single file
 
 ```bash
-python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv
-python -m external_file_detection.cli analyze demo/parquet/all_types.parquet
-python -m external_file_detection.cli analyze demo/tables/events_delta
-python -m external_file_detection.cli analyze demo/tables/events_iceberg
+python -m external_file_detection.cli analyze "data sample/csv/sales_scalars.csv"
+python -m external_file_detection.cli analyze "data sample/parquet/all_types.parquet"
+python -m external_file_detection.cli analyze "data sample/tables/events_delta"
+python -m external_file_detection.cli analyze "data sample/tables/events_iceberg"
 ```
 
 ### Generate SQL per platform
@@ -225,12 +249,12 @@ Azure SQL Database is the default, so it needs no `--target-platform`:
 
 ```bash
 # Azure SQL Database - the default target platform
-python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
-    --storage-url abs://raw@myaccount.blob.core.windows.net/demo/sales_scalars.csv \
+python -m external_file_detection.cli analyze "data sample/csv/sales_scalars.csv" \
+    --storage-url abs://raw@myaccount.blob.core.windows.net/samples/sales_scalars.csv \
     --data-source LakeDS
 ```
 
-Analysing a local demo file without `--storage-url` still targets Azure SQL
+Analysing a local sample file without `--storage-url` still targets Azure SQL
 Database, and the generated script says so: the prerequisite section explains
 that the file must be uploaded to Azure Storage first, because Azure SQL cannot
 read a local path.
@@ -239,27 +263,27 @@ Every other platform is selected explicitly:
 
 ```bash
 # SQL Server 2022 / 2025 - external table + OPENROWSET + BULK INSERT
-python -m external_file_detection.cli analyze demo/parquet/sales.parquet \
+python -m external_file_detection.cli analyze "data sample/parquet/sales.parquet" \
     --target-platform sql_server_2022 \
-    --storage-url abfss://raw@myaccount.dfs.core.windows.net/demo/sales.parquet \
+    --storage-url abfss://raw@myaccount.dfs.core.windows.net/samples/sales.parquet \
     --data-source LakeDS
 
 # SQL Server 2019 - CSV only for bulk access, HADOOP source for external tables
-python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
+python -m external_file_detection.cli analyze "data sample/csv/sales_scalars.csv" \
     --target-platform sql_server_2019 \
-    --storage-url https://myaccount.blob.core.windows.net/raw/demo/sales_scalars.csv \
+    --storage-url https://myaccount.blob.core.windows.net/raw/samples/sales_scalars.csv \
     --data-source LakeDS
 
 # Azure SQL Managed Instance
-python -m external_file_detection.cli analyze demo/csv/sales_scalars.csv \
+python -m external_file_detection.cli analyze "data sample/csv/sales_scalars.csv" \
     --target-platform azure_sql_mi \
-    --storage-url abs://raw@myaccount.blob.core.windows.net/demo/sales_scalars.csv \
+    --storage-url abs://raw@myaccount.blob.core.windows.net/samples/sales_scalars.csv \
     --data-source LakeDS
 
 # Microsoft Fabric SQL database (OneLake)
-python -m external_file_detection.cli analyze demo/parquet/sales.parquet \
+python -m external_file_detection.cli analyze "data sample/parquet/sales.parquet" \
     --target-platform fabric_sql_db \
-    --storage-url https://onelake.dfs.fabric.microsoft.com/<workspace>/<lakehouse>.Lakehouse/Files/demo/sales.parquet \
+    --storage-url https://onelake.dfs.fabric.microsoft.com/<workspace>/<lakehouse>.Lakehouse/Files/samples/sales.parquet \
     --data-source LakeDS
 ```
 
@@ -267,7 +291,7 @@ python -m external_file_detection.cli analyze demo/parquet/sales.parquet \
 
 ```bash
 python -m external_file_detection.cli analyze-files \
-    demo/csv/sales_scalars.csv demo/parquet/sales.parquet \
+    "data sample/csv/sales_scalars.csv" "data sample/parquet/sales.parquet" \
     --target-platform sql_server_2022 \
     --data-source LakeDS \
     --output demo_export.sql --format sql
@@ -282,7 +306,7 @@ it runs top to bottom without "already exists" failures.
 python -m external_file_detection.cli gui
 ```
 
-Then browse to the `demo` folder from the file browser.
+Then browse to the `data sample` folder from the file browser.
 
 Useful controls once a file is selected:
 
@@ -290,8 +314,8 @@ Useful controls once a file is selected:
   name (shown next to the field); a value overrides it everywhere.
 * **Data URL / storage location** — one field for the complete location the
   SQL engine will use. Paste
-  `abs://data@acct.blob.core.windows.net/demo/sales_scalars.csv` while a local
-  demo file is selected to see exactly what the cloud script would look like.
+  `abs://data@acct.blob.core.windows.net/samples/sales_scalars.csv` while a local
+  sample file is selected to see exactly what the cloud script would look like.
 * **Theme toggle** — light/dark, in the header.
 
 ### Public dataset URL
@@ -370,7 +394,7 @@ Two details the generator handles for you:
   encoded size by twenty bytes changes the log too. The invariant that actually
   holds across versions, and the one the tests assert, is that `add.size`
   equals the real length of the file it names.
-* `demo/.gitattributes` pins those files to LF and marks the UTF-16LE
+* `data sample/.gitattributes` pins those files to LF and marks the UTF-16LE
   fixtures as binary, so `core.autocrlf` cannot rewrite them on checkout and
   regenerating after a fresh clone is a no-op.
 * XLSX would normally embed the current time in every ZIP entry and in
@@ -380,5 +404,5 @@ Two details the generator handles for you:
   stable in **content** (schema, values, row count) across runs on the same
   PyArrow build; tests compare the decoded table rather than raw bytes so a
   library upgrade does not break them.
-* No sample contains secrets, credentials, personal data, or anything
-  larger than a few kilobytes.
+* No sample contains secrets, credentials, or personal data. The two files in
+  `performance/` are intentionally larger; all other fixtures stay compact.

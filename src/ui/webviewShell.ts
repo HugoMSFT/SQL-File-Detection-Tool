@@ -72,14 +72,18 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <header class="app-header">
     <div class="title-row">
-      <h1 id="app-title">SQL File Detection Tool</h1>
+      <div class="title-copy">
+        <h1 id="app-title">SQL File Detection Tool</h1>
+        <p>Preview files &bull; Generate T-SQL &bull; Understand metadata</p>
+      </div>
       <span class="version" id="app-version"></span>
     </div>
-    <div class="toolbar" role="toolbar" aria-labelledby="app-title">
+    <div class="toolbar" role="toolbar" aria-label="Sources and file actions">
+      <span class="toolbar-title">Sources &amp; files</span>
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
+      <button type="button" class="btn" data-source-tab="credential_setup">Storage setup</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
-      <button type="button" class="btn" data-action="analyzeWorkspaceFolder">Workspace folder</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
       <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
     </div>
@@ -89,14 +93,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
         <select id="platform" aria-describedby="platform-help"></select>
       </label>
       <p id="platform-help" class="help">Azure SQL Database is the default target.</p>
-      <label class="field">
-        <span>Appearance</span>
-        <select id="appearance">
-          <option value="auto">Match VS Code</option>
-          <option value="comfortable">Comfortable</option>
-          <option value="compact">Compact</option>
-        </select>
-      </label>
     </div>
   </header>
 
@@ -110,16 +106,12 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <div class="layout">
     <nav class="file-pane" aria-labelledby="file-pane-title">
-      <h2 id="file-pane-title">Sources & files</h2>
-      <div class="source-actions" role="toolbar" aria-label="Add data source">
-        <button type="button" class="btn subtle" data-action="openFileDialog">File</button>
-        <button type="button" class="btn subtle" data-action="openFolderDialog">Folder</button>
-        <button type="button" class="btn subtle" data-action="analyzeWorkspaceFolder">Workspace</button>
-        <button type="button" class="btn subtle" data-source-tab="azure">HTTPS / Azure</button>
+      <div class="explorer-heading">
+        <h2 id="file-pane-title">Explorer</h2>
+        <p class="source" id="source-label"></p>
       </div>
-      <p class="source" id="source-label"></p>
-      <ul class="file-list" id="file-list" role="listbox" aria-labelledby="file-pane-title" tabindex="0"></ul>
-      <p class="empty" id="file-empty">Select a file or folder to begin.</p>
+      <ul class="file-list" id="file-list" role="tree" aria-labelledby="file-pane-title" tabindex="0"></ul>
+      <p class="empty" id="file-empty">Select a file, folder, or URL to begin.</p>
     </nav>
 
     <main class="content" id="main" tabindex="-1">
@@ -130,7 +122,8 @@ export function buildWebviewHtml(options: ShellOptions): string {
 
   <!-- Templates. The script clones these; it never builds markup from strings. -->
   <template id="tpl-file-item">
-    <li class="file-item" role="option">
+    <li class="file-item" role="treeitem">
+      <span class="file-icon" aria-hidden="true"></span>
       <span class="file-name"></span>
       <span class="file-meta"></span>
     </li>
@@ -169,78 +162,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <td class="col-detected"></td>
       <td class="col-override"><input type="text" class="override-input" spellcheck="false" autocomplete="off"></td>
     </tr>
-  </template>
-
-  <template id="tpl-azure">
-    <div class="azure">
-      <div class="azure-auth">
-        <h3>Connect</h3>
-        <p class="azure-identity"></p>
-        <div class="azure-buttons">
-          <button type="button" class="btn primary" data-azure-connect="vscode">Microsoft account</button>
-          <button type="button" class="btn" data-azure-connect="sas">SAS URL</button>
-          <button type="button" class="btn" data-azure-connect="connectionString">Connection string</button>
-          <button type="button" class="btn" data-azure-connect="anonymous">Public (anonymous)</button>
-          <button type="button" class="btn subtle" data-action="azureDisconnect">Disconnect</button>
-        </div>
-        <p class="azure-note">Managed identity applies to server-side deployments of the optional command line package, not to this desktop extension.</p>
-      </div>
-      <div class="azure-browse">
-        <label class="field">
-          <span>Subscription</span>
-          <select class="azure-subscriptions"></select>
-        </label>
-        <label class="field">
-          <span>Storage account</span>
-          <select class="azure-accounts"></select>
-        </label>
-        <label class="field">
-          <span>Container</span>
-          <select class="azure-containers"></select>
-        </label>
-        <label class="field">
-          <span>Prefix</span>
-          <input type="text" class="azure-prefix" spellcheck="false" autocomplete="off">
-        </label>
-        <ul class="azure-blobs" aria-label="Blobs"></ul>
-        <button type="button" class="btn subtle azure-more" hidden>Load more</button>
-        <p class="azure-error" role="alert"></p>
-      </div>
-      <div class="public-url">
-        <h3>Public dataset or HTTPS URL</h3>
-        <label class="field">
-          <span>URL</span>
-          <input type="url" class="public-url-input" spellcheck="false" autocomplete="off" placeholder="https://…">
-        </label>
-        <button type="button" class="btn" data-action="publicUrlAnalyze">Analyze URL</button>
-        <p class="help">Only https:// URLs that resolve to a public address are fetched. Redirects are re-checked on every hop.</p>
-      </div>
-    </div>
-  </template>
-
-  <template id="tpl-format-row">
-    <tr><th scope="row"></th><td class="fmt-ext"></td><td class="fmt-support"></td><td class="fmt-notes"></td></tr>
-  </template>
-
-  <template id="tpl-parser-option">
-    <div class="parser-option">
-      <div class="parser-option-head">
-        <label></label>
-        <span class="provenance"></span>
-      </div>
-      <div class="parser-control"></div>
-      <p class="expected"></p>
-      <p class="evidence"></p>
-      <button type="button" class="btn subtle reset-option" hidden>Use expected</button>
-    </div>
-  </template>
-
-  <template id="tpl-readiness">
-    <li class="readiness-item">
-      <span class="readiness-name"></span>
-      <span class="provenance"></span>
-      <span class="readiness-detail"></span>
-    </li>
   </template>
 
 <script nonce="${nonce}" src="${scriptUri}"></script>

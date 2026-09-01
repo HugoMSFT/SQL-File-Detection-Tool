@@ -4,6 +4,50 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.1]
+
+First Visual Studio Marketplace release. The `2.1.x` entries below describe
+unpublished development builds.
+
+### Changed
+
+- Credential Setup is now URL-driven: `abs://`, `adls://`, and `abfss://`
+  locations select the matching connector automatically.
+
+### Removed
+
+- Removed Microsoft Entra sign-in, subscription/account/container browsing,
+  remote blob downloads, saved connection state, and the Azure Storage SDK from
+  the VS Code extension.
+
+## [2.1.2]
+
+### Fixed
+
+- Selecting a new file now refreshes the shared table-name field from that file,
+  so `sample.*` defaults to `sample` in both CREATE TABLE and EXT TABLE instead
+  of retaining `employees` from the previous selection.
+
+## [2.1.1]
+
+### Added
+
+- Added 25,000-row and 250,000-row Parquet samples for larger-file analysis and
+  bounded-preview testing.
+- Pull-request updates now require the extension version to advance by at least
+  one patch.
+
+### Changed
+
+- Consolidated `demo/` and `test_data/` into the format-organized
+  `data sample/` directory and updated all test, generator, certification, and
+  documentation paths.
+
+### Fixed
+
+- The initial Preview page now asks users to select a file, folder, or URL
+  instead of showing file-specific preview controls before a source is selected.
+
 ## [2.1.0]
 
 Generated SQL was verified by this project against live engines - an Azure SQL Database
@@ -15,13 +59,11 @@ project test results, not Microsoft certification.
 
 ### Added
 
-- **Quick Analyze is now the extension's default workflow.** The persistent
-  source/file navigator feeds a selected-file view with analyzed facts, real row
-  preview, provenance-aware parser overrides and reset actions, source-derived
-  external-object readiness, and production-generated SQL. Folder summaries
-  report mixed facts and outliers without sharing one file's settings across the
-  folder. Existing metadata, schema, statement, Azure/URL, Formats, copy/open,
-  and export surfaces remain available.
+- **Credential setup is now a guided, platform-aware workflow.** It constrains
+  storage and authentication choices by SQL platform, generates safe
+  placeholders for SAS and S3 credentials, supports `USER IDENTITY` and managed
+  identity where available, maps Blob/ADLS/OneLake/S3 connector locations, and
+  explains the SQL Server 2025 Azure Arc requirement.
 - **Public certification evidence omits all engine timing data.** JSON no longer
   serializes batch/cell elapsed times, JUnit carries no `time` attributes, and
   Markdown carries no run timestamps. This preserves functional compatibility
@@ -30,7 +72,58 @@ project test results, not Microsoft certification.
   independent project** and explicitly disclaims Microsoft sponsorship,
   endorsement, approval, or certification.
 
+### Changed
+
+- **The full editor tab is now the default extension surface.** Selecting the
+  Activity Bar icon, running **Open**, analyzing a file or folder, or connecting
+  Azure Storage opens or focuses the editor panel instead of keeping the
+  workflow in the narrow sidebar. Set `sqlFileDetectionTool.defaultView` to
+  `sidebar` to retain the previous layout; both surfaces still share one state.
+- **Preview is now the first and default tab.** The previous Quick Analyze,
+  Formats, Best Practices, COPY INTO, JSON, and FOR JSON tabs were removed to
+  keep the workflow focused. JSON guidance remains contextual inside
+  `OPENROWSET` and external-table output.
+- **The native interface now uses the Power Studio visual language** recovered
+  from the original design mockup, while continuing to use VS Code theme
+  variables for dark, light, and high-contrast compatibility.
+- **Sources now use an Explorer-style folder tree.** The selected folder and one
+  child level are shown without exposing absolute paths or running an unbounded
+  recursive scan, while source actions live together in the top toolbar.
+  Filenames use their own row so type and size details no longer truncate them.
+- **Storage and credential setup are one workflow.** Paste a known Azure Blob,
+  ADLS, OneLake, or S3 location to generate the external data source, or sign in
+  with Microsoft Entra to browse a storage account and fetch a file for analysis.
+  Credential SQL is available even before a file is analyzed.
+- **Appearance follows VS Code directly.** The extra Appearance control and
+  density modes were removed.
+- **The Schema tab now shows recommended `SQL Type` values** instead of empty
+  override boxes. Recommendations use the same length-aware mapping as generated
+  SQL and remain editable.
+- **Generated BULK INSERT, EXT TABLE, and credential scripts are more concise.**
+  Detailed guidance moved to platform-specific Microsoft Learn links in each
+  panel, while required platform caveats remain beside the SQL.
+- **EXT TABLE now follows OPENROWSET** in the statement tab order.
+
 ### Fixed
+
+- **Unsupported files are filtered before analysis.** Folder scans and direct
+  selection now ignore Python, Office, archive, and other non-SQL sources instead
+  of opening them for content sniffing. SQL-readable data files and
+  Delta/Iceberg tables remain available; Hudi folders expose Parquet data files.
+- **Credential inputs now retain focus and caret position** when regenerated SQL
+  pushes a new shared-state snapshot into the webview.
+- **Selecting a supported Explorer file now analyzes it immediately** and opens
+  Preview so JSON, Parquet, and other results are visible without another action.
+- **Microsoft storage browsing no longer dead-ends after sign-in.** Microsoft Entra access can
+  be pinned to the storage directory, clears stale VS Code account preferences,
+  offers explicit subscription discovery, and accepts a storage account name
+  directly. Tenant mismatch errors now explain the corrective action.
+- **Scoped storage credentials stay in scope.** Container/prefix SAS URLs and
+  public container URLs browse that location directly instead of attempting an
+  account-wide container listing that Azure rejects.
+- **Failed replacement sign-ins preserve the working storage connection.** A
+  cancelled account picker or tenant mismatch no longer discards the current
+  browser session or remembered credential.
 
 - **A BOM, pure ASCII and valid UTF-8 now settle the encoding before `chardet`
   is consulted.** `chardet` is a statistical guess, and on some builds it scores
@@ -461,7 +554,7 @@ It remains supported as optional compatibility tooling.
 - **The walkthrough GIF was recaptured from the native UI.** The previous one
   showed the Flask browser interface that no longer exists. The new recording
   (960x540, 19.5 s, 0.20 MB) is driven by the real controller against
-  `demo/parquet/sales.parquet`, so the column types, row values and generated
+  `data sample/parquet/sales.parquet`, so the column types, row values and generated
   T-SQL in the frames are what the shipped engine produces. The Azure beat uses
   a synthetic `contoso.example` identity with no token, SAS or account key.
 
@@ -489,7 +582,7 @@ It remains supported as optional compatibility tooling.
   activation, first render, warm render, first analysis, repeat analysis and
   retained-heap measurements as regression guards.
 - **`src/test/native/demoMatrix.test.ts`** — turns the supported-format table in
-  the README into an executable claim. Every fixture committed under `demo/` is
+  the README into an executable claim. Every fixture committed under `data sample/` is
   analysed through the shipped service and checked for its detected format,
   recovered column count and whether it was genuinely parsed or only recognised.
   Adding a fixture without adding its row fails the suite.
@@ -702,7 +795,7 @@ It remains supported as optional compatibility tooling.
   and row bounds.
 - Deterministic parity testing against the live Python implementation.
   `scripts/generate_parity_baselines.py` records normalised metadata and
-  semantic statement invariants for the committed `demo/` fixtures into
+  semantic statement invariants for the committed `data sample/` fixtures into
   `tests/native_parity/python_baseline.json` (no absolute paths, no timings),
   and the Node suites compare against it marker for marker. The handful of
   intentional differences are allowlisted individually, with a guard test that

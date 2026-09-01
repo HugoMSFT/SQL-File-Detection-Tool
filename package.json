@@ -1,8 +1,8 @@
 {
   "name": "sql-file-detection-tool",
   "displayName": "SQL File Detection Tool",
-  "description": "Analyze CSV, JSON, Parquet, Delta, Iceberg and Excel files and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
-  "version": "2.1.0",
+  "description": "Analyze SQL-readable CSV, JSON, Parquet, ORC, Delta and Iceberg sources and generate platform-aware T-SQL, defaulting to Azure SQL Database. Runs natively in the extension host — no Python required.",
+  "version": "1.0.1",
   "publisher": "HugoMSFT",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -65,21 +65,6 @@
         "category": "SQL File Detection Tool"
       },
       {
-        "command": "sqlFileDetectionTool.analyzeWorkspaceFolder",
-        "title": "Analyze Workspace Folder",
-        "category": "SQL File Detection Tool"
-      },
-      {
-        "command": "sqlFileDetectionTool.connectAzureStorage",
-        "title": "Connect to Azure Storage",
-        "category": "SQL File Detection Tool"
-      },
-      {
-        "command": "sqlFileDetectionTool.disconnectAzureStorage",
-        "title": "Disconnect Azure Storage",
-        "category": "SQL File Detection Tool"
-      },
-      {
         "command": "sqlFileDetectionTool.analyzeSelected",
         "title": "Analyze with SQL File Detection Tool"
       },
@@ -93,20 +78,21 @@
       "explorer/context": [
         {
           "command": "sqlFileDetectionTool.analyzeSelected",
-          "when": "resourceExtname =~ /^\\.(csv|tsv|txt|json|jsonl|ndjson|parquet|orc|avro|xlsx|xls)$/i || explorerResourceIsFolder",
+          "when": "resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i || explorerResourceIsFolder",
           "group": "7_modification"
         }
       ],
       "editor/title/context": [
         {
           "command": "sqlFileDetectionTool.analyzeCurrentFile",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
       ],
       "editor/context": [
         {
           "command": "sqlFileDetectionTool.analyzeCurrentFile",
-          "when": "resourceScheme == file",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
       ],
@@ -140,6 +126,19 @@
             "Fabric SQL Database"
           ],
           "markdownDescription": "Target SQL platform used when generating T-SQL. Defaults to **Azure SQL Database**."
+        },
+        "sqlFileDetectionTool.defaultView": {
+          "type": "string",
+          "default": "editor",
+          "enum": [
+            "editor",
+            "sidebar"
+          ],
+          "enumDescriptions": [
+            "Open the full interface in an editor tab (default)",
+            "Keep the full interface in the Activity Bar sidebar"
+          ],
+          "markdownDescription": "Where **Open**, analysis commands, and the Activity Bar entry display the interface."
         }
       }
     },
@@ -152,7 +151,7 @@
           {
             "id": "openTool",
             "title": "Open the tool",
-            "description": "Select the SQL File Detection Tool icon in the Activity Bar. The interface renders immediately — there is no setup step, no interpreter check and no server to wait for.\n[Open the tool](command:sqlFileDetectionTool.open)",
+            "description": "Select the SQL File Detection Tool icon in the Activity Bar. The full interface opens immediately in an editor tab — there is no setup step, no interpreter check and no server to wait for.\n[Open the tool](command:sqlFileDetectionTool.open)",
             "media": {
               "markdown": "media/walkthrough/open.md"
             },
@@ -163,7 +162,7 @@
           {
             "id": "analyzeFile",
             "title": "Analyze a data file",
-            "description": "Open any CSV, TSV, JSON, NDJSON, Parquet, Excel, Delta or Iceberg file and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
+            "description": "Open any CSV, TSV, DAT, JSON, NDJSON, Parquet, ORC, Delta or Iceberg source and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
             "media": {
               "markdown": "media/walkthrough/analyze.md"
             },
@@ -174,21 +173,18 @@
           {
             "id": "reviewSql",
             "title": "Review the generated T-SQL",
-            "description": "CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Azure SQL Database is the default; switch platforms at any time.",
+            "description": "Preview is the first tab. CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Credential setup guides compatible storage and authentication choices without collecting secrets.",
             "media": {
               "markdown": "media/walkthrough/sql.md"
             }
           },
           {
-            "id": "connectAzure",
-            "title": "Attach Azure Storage",
-            "description": "Sign in with your Microsoft account, a SAS URL, a connection string, or browse anonymously, then analyze blobs in place.\n[Connect to Azure Storage](command:sqlFileDetectionTool.connectAzureStorage)",
+            "id": "configureStorage",
+            "title": "Set up external storage",
+            "description": "Paste an ABS, ADLS, or ABFSS storage URL. The extension infers the connector and generates the platform-aware credential and external data source.",
             "media": {
               "markdown": "media/walkthrough/azure.md"
-            },
-            "completionEvents": [
-              "onCommand:sqlFileDetectionTool.connectAzureStorage"
-            ]
+            }
           }
         ]
       }
@@ -198,18 +194,19 @@
     "vscode:prepublish": "npm run bundle",
     "bundle": "node scripts/build.js",
     "bundle:dev": "node scripts/build.js --dev",
-    "compile": "tsc -p ./",
+    "compile": "node scripts/clean-output.js && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "typecheck": "tsc -p ./ --noEmit",
     "lint": "eslint src scripts --ext .ts,.js",
+    "icon": "node scripts/generate-icon.js",
     "notices": "node scripts/generate-notices.js",
     "test": "npm run compile && npm run bundle && node scripts/run-tests.js",
+    "version:check": "node scripts/check-extension-version.js",
     "package": "node scripts/ensure-dist.js && vsce package --out dist",
     "audit:vsix": "node scripts/audit-vsix.js",
     "capture:gif": "npm run compile && node scripts/capture-walkthrough.js"
   },
   "devDependencies": {
-    "@azure/core-auth": "^1.11.0",
     "@types/node": "^20.11.30",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
@@ -223,7 +220,6 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
-    "@azure/storage-blob": "^12.33.0",
     "chardet": "^2.2.0",
     "fflate": "^0.8.3",
     "hyparquet": "^1.29.2",

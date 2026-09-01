@@ -602,10 +602,10 @@ class ExternalFileDetectionWebGUI:
             payload = {
                 'success': True,
                 'azure_extras': _azure_extras_available(),
-                'vscode': self._vscode_tokens.status(),
                 'modes': [
                     {'id': mode, 'label': azure_auth.AUTH_MODE_LABELS[mode]}
                     for mode in azure_auth.AUTH_MODES
+                    if mode != azure_auth.AUTH_VSCODE_TOKEN
                 ],
             }
             payload['connection'] = (

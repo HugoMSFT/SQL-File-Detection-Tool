@@ -345,7 +345,7 @@ def test_placeholder_script_never_implies_it_is_runnable(rules):
 
     expect = rules['R17']['expect']
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata, target_platform='azure_sql_db'
@@ -353,8 +353,8 @@ def test_placeholder_script_never_implies_it_is_runnable(rules):
 
     placeholders = set(re.findall(expect['placeholder_pattern'], script))
     assert placeholders, 'a local file on Azure SQL must produce placeholders'
-    assert 'STAGE THE DATA IN AZURE STORAGE FIRST' in script
-    assert 'Replace the placeholders' in script
+    assert 'cannot read local file' in script
+    assert 'replace the location placeholders' in script
     lowered = script.lower()
     for phrase in expect['forbidden_when_placeholders_present']:
         assert phrase not in lowered, phrase
@@ -364,14 +364,14 @@ def test_staged_cloud_script_has_no_placeholders_and_no_staging_notice():
     from external_file_detection.file_detector import FileDetector
 
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata,
         target_platform='azure_sql_db',
         storage_url='https://acct.blob.core.windows.net/raw/sales_scalars.csv',
     )
-    assert 'STAGE THE DATA IN AZURE STORAGE FIRST' not in script
+    assert 'cannot read local file' not in script
     assert '<storage_account>' not in script
     assert '<container>' not in script
 
@@ -382,7 +382,7 @@ def test_blob_paths_keep_their_case(rules):
 
     assert rules['R14']['expect']['paths_are_case_sensitive'] is True
     metadata = FileDetector().analyze_file_metadata(
-        os.path.join(REPO_ROOT, 'demo', 'csv', 'sales_scalars.csv')
+        os.path.join(REPO_ROOT, 'data sample', 'csv', 'sales_scalars.csv')
     )
     script = SQLGenerator().generate_complete_ddl(
         metadata,

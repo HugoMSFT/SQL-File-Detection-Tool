@@ -92,7 +92,7 @@ def test_the_bulk_cell_says_where_its_data_source_came_from(vm_plan):
     # Dropping the CREATE silently would leave a reader wondering what the
     # statement depends on. The generator replaces it with a pointer.
     cell = _cell(vm_plan, 'C14')
-    assert 'prerequisite setup section' in _sql_of(cell['batches'][0])
+    assert 'from the setup section' in _sql_of(cell['batches'][0])
 
 
 def test_the_bulk_cell_is_still_ready(vm_plan):

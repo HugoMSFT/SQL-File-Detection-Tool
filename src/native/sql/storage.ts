@@ -305,7 +305,12 @@ export function azureVirtualizationParts(
     fileName: string,
 ): [string, string] {
     const [account, container, relativePath] = parseAzureStorageUrl(storageUrl, fileName);
-    const prefix = account.toLowerCase().endsWith('.dfs.core.windows.net') ? 'adls' : 'abs';
+    const lowerAccount = account.toLowerCase();
+    const prefix =
+        lowerAccount.endsWith('.dfs.core.windows.net')
+        || lowerAccount.endsWith('.dfs.fabric.microsoft.com')
+            ? 'adls'
+            : 'abs';
     return [`${prefix}://${container}@${account}`, relativePath];
 }
 

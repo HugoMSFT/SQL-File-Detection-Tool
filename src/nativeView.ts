@@ -1,38 +1,32 @@
 /**
  * The VS Code surface of the native interface.
  *
- * Two webviews render the same {@link AppStateStore}: the Activity Bar view and
- * an optional wider editor panel. Because both subscribe to one store and post
- * one snapshot type, they cannot drift apart, and neither of them holds state
- * of its own.
+ * Two webviews render the same {@link AppStateStore}: the primary editor panel
+ * and an optional Activity Bar view. Because both subscribe to one store and
+ * post one snapshot type, they cannot drift apart, and neither of them holds
+ * state of its own.
  *
  * This module is the only place in the native path that imports `vscode`.
- * Everything below it — the controller, the Azure bridge, the HTTP guard, the
+ * Everything below it — the controller, the HTTP guard, and the
  * analysis core — is plain TypeScript reached through {@link UiHost}, which is
  * what lets the tests assert that opening and analysing never starts a process,
  * binds a port or looks for a Python interpreter.
  *
- * Revealing the view starts nothing. The provider resolves synchronously into a
- * bundled HTML shell plus two bundled assets; the first analysis happens only
- * when the user asks for one.
+ * Revealing the Activity Bar entry opens the editor panel by default. Both
+ * surfaces use a bundled HTML shell plus two bundled assets; the first analysis
+ * happens only when the user asks for one.
  */
 
 import * as vscode from 'vscode';
 
 import { AppStateStore } from './appState';
-import { NativeAzureBridge, type AuthEnvironment, type AuthToken } from './azure/connection';
-import { expiryFromJwt } from './azureScopes';
-import { redactAzure } from './azure/storageUrl';
-import type { AzureAuthMode } from './protocol';
 import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
 import { buildWebviewHtml, createNonce } from './ui/webviewShell';
+import { redact } from './util';
 
 export const SIDEBAR_VIEW_ID = 'sqlFileDetectionTool.sidebar';
 export const PANEL_VIEW_TYPE = 'sqlFileDetectionTool.panel';
-
-const AUTH_PROVIDER = 'microsoft';
-const DOWNLOAD_DIR = 'downloads';
 
 /** File dialog filters, kept in step with the native reader's formats. */
 const OPEN_FILTERS: Record<string, string[]> = {
@@ -45,15 +39,10 @@ const OPEN_FILTERS: Record<string, string[]> = {
         'jsonl',
         'ndjson',
         'parquet',
-        'avro',
+        'snappy',
         'orc',
         'rc',
-        'xlsx',
-        'xls',
-        'gz',
-        'zip',
     ],
-    'All files': ['*'],
 };
 
 function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
@@ -87,7 +76,6 @@ class VsCodeUiHost implements UiHost {
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly output: vscode.OutputChannel,
-        readonly azure: NativeAzureBridge,
         private readonly revealPanel: () => Promise<void>,
     ) {}
 
@@ -167,21 +155,6 @@ class VsCodeUiHost implements UiHost {
         return local.map((uri) => uri.fsPath);
     }
 
-    async pickWorkspaceFolder(): Promise<string | undefined> {
-        const folders = (vscode.workspace.workspaceFolders ?? []).filter(
-            (folder) => folder.uri.scheme === 'file',
-        );
-        if (folders.length === 0) {
-            this.showWarning('Open a local folder or workspace first.');
-            return undefined;
-        }
-        if (folders.length === 1) {
-            return folders[0].uri.fsPath;
-        }
-        const picked = await vscode.window.showWorkspaceFolderPick();
-        return picked?.uri.scheme === 'file' ? picked.uri.fsPath : undefined;
-    }
-
     async copyToClipboard(text: string): Promise<void> {
         await vscode.env.clipboard.writeText(text);
     }
@@ -227,25 +200,7 @@ class VsCodeUiHost implements UiHost {
     }
 
     log(message: string): void {
-        this.output.appendLine(redactAzure(message));
-    }
-
-    /** A directory inside the extension's own storage, created on demand. */
-    async downloadDirectory(): Promise<string> {
-        const directory = vscode.Uri.joinPath(this.context.globalStorageUri, DOWNLOAD_DIR);
-        await vscode.workspace.fs.createDirectory(directory);
-        return directory.fsPath;
-    }
-
-    async cleanupDownload(absolutePath: string): Promise<void> {
-        try {
-            await vscode.workspace.fs.delete(vscode.Uri.file(absolutePath), {
-                recursive: true,
-                useTrash: false,
-            });
-        } catch {
-            /* a temp file that is already gone is the desired end state */
-        }
+        this.output.appendLine(redact(message));
     }
 
     getPreference<T>(key: string, fallback: T): T {
@@ -263,64 +218,6 @@ class VsCodeUiHost implements UiHost {
     now(): number {
         return Date.now();
     }
-}
-
-/** {@link AuthEnvironment} implemented against the real editor. */
-function createAuthEnvironment(
-    context: vscode.ExtensionContext,
-    output: vscode.OutputChannel,
-): AuthEnvironment {
-    return {
-        async getSession(scopes: string[], interactive: boolean): Promise<AuthToken | undefined> {
-            const session = await vscode.authentication.getSession(
-                AUTH_PROVIDER,
-                scopes,
-                interactive ? { createIfNone: true } : { silent: true },
-            );
-            if (!session) {
-                return undefined;
-            }
-            return {
-                accessToken: session.accessToken,
-                expiresOnMs: expiryFromJwt(session.accessToken),
-                account: session.account?.label,
-            };
-        },
-        async prompt(options) {
-            return vscode.window.showInputBox({
-                title: options.title,
-                prompt: options.prompt,
-                password: options.password,
-                placeHolder: options.placeHolder,
-                ignoreFocusOut: true,
-            });
-        },
-        async confirm(message, yes, no) {
-            const answer = await vscode.window.showInformationMessage(
-                `SQL File Detection Tool: ${message}`,
-                { modal: true },
-                yes,
-                no,
-            );
-            return answer === yes;
-        },
-        secrets: {
-            get: (key) => Promise.resolve(context.secrets.get(key)),
-            store: (key, value) => Promise.resolve(context.secrets.store(key, value)),
-            delete: (key) => Promise.resolve(context.secrets.delete(key)),
-        },
-        log(message) {
-            output.appendLine(redactAzure(message));
-        },
-        now: () => Date.now(),
-        setTimer(callback, delayMs) {
-            const handle = setTimeout(callback, delayMs);
-            handle.unref?.();
-            return {
-                cancel: () => clearTimeout(handle),
-            };
-        },
-    };
 }
 
 /** One webview bound to the shared store. */
@@ -352,7 +249,7 @@ class Surface implements vscode.Disposable {
 }
 
 /**
- * Owns the store, the controller, the Azure bridge and both webviews.
+ * Owns the store, the controller, and both webviews.
  *
  * Everything the extension entry point needs is a method here, so `activate`
  * stays a list of command registrations.
@@ -360,14 +257,14 @@ class Surface implements vscode.Disposable {
 export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
     readonly store: AppStateStore;
     readonly controller: UiController;
-    readonly azure: NativeAzureBridge;
-
     private readonly host: VsCodeUiHost;
     private readonly disposables: vscode.Disposable[] = [];
+    private viewSubscriptions: vscode.Disposable[] = [];
     private view: vscode.WebviewView | undefined;
     private viewSurface: Surface | undefined;
     private panel: vscode.WebviewPanel | undefined;
     private panelSurface: Surface | undefined;
+    private panelOpenFromActivityBarPending = false;
     private firstRenderLogged = false;
 
     constructor(
@@ -376,8 +273,7 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         /** Monotonic activation timestamp, for the first-render measurement. */
         private readonly activatedAtMs: number,
     ) {
-        this.azure = new NativeAzureBridge(createAuthEnvironment(context, output));
-        this.host = new VsCodeUiHost(context, output, this.azure, () => this.openPanel());
+        this.host = new VsCodeUiHost(context, output, () => this.openPanel());
         this.store = new AppStateStore({
             version:
                 (context.extension?.packageJSON as { version?: string } | undefined)?.version ??
@@ -395,27 +291,10 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         );
     }
 
-    /** Restore a remembered Azure credential without blocking activation. */
-    restoreAzure(): void {
-        void this.azure
-            .restore()
-            .then((info) => {
-                if (info.connected) {
-                    this.store.updateAzure({
-                        connected: true,
-                        mode: info.mode,
-                        identity: info.identity,
-                        account: info.account,
-                        canListSubscriptions: info.canListSubscriptions,
-                    });
-                }
-            })
-            .catch(() => undefined);
-    }
-
     // -- WebviewViewProvider -------------------------------------------------
 
-    resolveWebviewView(view: vscode.WebviewView): void {
+    async resolveWebviewView(view: vscode.WebviewView): Promise<void> {
+        this.disposeViewSubscriptions();
         this.view = view;
         this.viewSurface?.dispose();
         this.viewSurface = new Surface(
@@ -425,20 +304,91 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
             this.store,
             (raw) => this.onMessage(raw),
         );
-        view.onDidDispose(() => {
-            this.viewSurface?.dispose();
-            this.viewSurface = undefined;
-            this.view = undefined;
-        });
+        this.viewSubscriptions.push(
+            view.onDidChangeVisibility(() => {
+                if (view.visible) {
+                    void this.openPanelFromActivityBar(view);
+                }
+            }),
+            view.onDidDispose(() => {
+                if (this.view === view) {
+                    this.viewSurface?.dispose();
+                    this.viewSurface = undefined;
+                    this.view = undefined;
+                }
+                this.disposeViewSubscriptions();
+            }),
+        );
+        if (view.visible) {
+            await this.openPanelFromActivityBar(view);
+        }
     }
 
-    /** Focus the Activity Bar view, creating it if it is not resolved yet. */
-    async reveal(): Promise<void> {
+    private usesEditorByDefault(): boolean {
+        return (
+            vscode.workspace
+                .getConfiguration('sqlFileDetectionTool')
+                .get<'editor' | 'sidebar'>('defaultView', 'editor') !== 'sidebar'
+        );
+    }
+
+    /** Open the configured primary surface. */
+    async openDefault(): Promise<void> {
+        if (this.usesEditorByDefault()) {
+            await this.openPanel();
+            return;
+        }
+        await this.revealSidebar();
+    }
+
+    /** Focus the Activity Bar view when the user explicitly opts into it. */
+    private async revealSidebar(): Promise<void> {
         if (this.view) {
             this.view.show?.(true);
             return;
         }
         await vscode.commands.executeCommand(`${SIDEBAR_VIEW_ID}.focus`);
+    }
+
+    /**
+     * Treat the Activity Bar icon as an editor launcher by default.
+     *
+     * The registered view still renders so users who select the sidebar setting
+     * retain the complete alternate surface. In editor mode, the panel is ready
+     * before the primary sidebar is closed, avoiding an empty intermediate UI.
+     */
+    private async openPanelFromActivityBar(view: vscode.WebviewView): Promise<void> {
+        if (
+            !this.usesEditorByDefault() ||
+            !view.visible ||
+            this.view !== view ||
+            this.panelOpenFromActivityBarPending
+        ) {
+            return;
+        }
+        this.panelOpenFromActivityBarPending = true;
+        try {
+            await this.openPanel();
+        } catch (error) {
+            const message = redact(error instanceof Error ? error.message : String(error));
+            this.host.log(`Could not open the editor panel from the Activity Bar: ${message}`);
+            this.host.showError(`Could not open the editor panel: ${message}`);
+            return;
+        } finally {
+            this.panelOpenFromActivityBarPending = false;
+        }
+
+        if (this.view === view && view.visible) {
+            try {
+                await vscode.commands.executeCommand('workbench.action.closeSidebar');
+            } catch (error) {
+                this.host.log(
+                    `Editor panel opened, but the sidebar could not close: ${redact(
+                        error instanceof Error ? error.message : String(error),
+                    )}`,
+                );
+            }
+        }
     }
 
     async openPanel(): Promise<void> {
@@ -469,27 +419,13 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
     // -- commands ------------------------------------------------------------
 
     async analyzePath(target: string, isDirectory: boolean): Promise<void> {
-        await this.reveal();
+        await this.openDefault();
         await this.controller.analyzePath(target, isDirectory);
     }
 
     async analyzeCurrentFile(): Promise<void> {
-        await this.reveal();
+        await this.openDefault();
         await this.controller.handle({ type: 'analyzeCurrentFile' });
-    }
-
-    async analyzeWorkspaceFolder(): Promise<void> {
-        await this.reveal();
-        await this.controller.handle({ type: 'analyzeWorkspaceFolder' });
-    }
-
-    async connectAzure(mode: AzureAuthMode = 'vscode'): Promise<void> {
-        await this.reveal();
-        await this.controller.handle({ type: 'azureConnect', mode });
-    }
-
-    async disconnectAzure(): Promise<void> {
-        await this.controller.handle({ type: 'azureDisconnect' });
     }
 
     // -- plumbing ------------------------------------------------------------
@@ -518,14 +454,20 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
     }
 
     dispose(): void {
+        this.disposeViewSubscriptions();
         for (const disposable of this.disposables.splice(0)) {
             disposable.dispose();
         }
         this.viewSurface?.dispose();
         this.panelSurface?.dispose();
         this.panel?.dispose();
-        this.azure.dispose();
         void this.controller.dispose();
         this.store.dispose();
+    }
+
+    private disposeViewSubscriptions(): void {
+        for (const disposable of this.viewSubscriptions.splice(0)) {
+            disposable.dispose();
+        }
     }
 }
