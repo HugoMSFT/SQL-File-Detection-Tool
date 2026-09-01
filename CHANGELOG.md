@@ -4,6 +4,14 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [2.1.2]
+
+### Fixed
+
+- Selecting a new file now refreshes the shared table-name field from that file,
+  so `sample.*` defaults to `sample` in both CREATE TABLE and EXT TABLE instead
+  of retaining `employees` from the previous selection.
+
 ## [2.1.1]
 
 ### Added

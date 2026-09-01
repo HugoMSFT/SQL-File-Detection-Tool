@@ -684,6 +684,7 @@ export class UiController {
         this.store.update({
             selectedFileId: fileId,
             activeTab: 'preview',
+            tableName: changed ? '' : this.store.state.tableName,
             parserOverrides: changed ? {} : this.store.state.parserOverrides,
             columnOverrides: changed ? {} : this.store.state.columnOverrides,
             error: null,

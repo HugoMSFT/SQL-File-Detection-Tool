@@ -550,10 +550,11 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
     const ui = controller(record);
     try {
         await ui.loadFiles([
-            path.join(FIXTURES, 'sample.csv'),
+            path.join(FIXTURES, 'employees.csv'),
             path.join(SAMPLES, 'parquet', 'sample.parquet'),
         ]);
         await settle();
+        assert.equal(snapshot(record).tableName, 'employees');
         await ui.handle({ type: 'setTab', tab: 'metadata' });
         const parquet = snapshot(record).files.find(
             (entry) => entry.label === 'sample.parquet',
@@ -568,6 +569,9 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
         assert.equal(state.activeTab, 'preview');
         assert.equal(state.metadata?.file_type, 'parquet');
         assert.equal(state.metadata?.file_name, 'sample.parquet');
+        assert.equal(state.tableName, 'sample');
+        assert.match(state.statements?.create_table ?? '', /\[dbo\]\.\[sample\]/);
+        assert.match(state.statements?.create_external_table ?? '', /\[dbo\]\.\[ext_sample\]/);
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.equal(record.preferences.get('activeTab'), 'preview');
     } finally {
