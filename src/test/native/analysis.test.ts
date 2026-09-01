@@ -21,7 +21,7 @@ import {
     detectFileType,
     listSupportedFormats,
 } from '../../native/detector';
-import { generateCreateTable } from '../../native/sql/generator';
+import { generateBulkInsert, generateCreateTable } from '../../native/sql/generator';
 import { generateOpenjsonColumns } from '../../native/sql/generatorHelpers';
 import { clampPreviewRows, getPreviewData } from '../../native/preview';
 import { resolveWithinRoot } from '../../native/paths';
@@ -429,6 +429,45 @@ describe('malformed, truncated and hostile input', () => {
         ]);
     });
 
+    it('accepts 256-character JSON numerics but preserves 257-character evidence', async () => {
+        const accepted = '9'.repeat(256);
+        await write('numeric-boundary.json', `[{"value":${accepted}}]`);
+
+        const metadata = await analyzeTemp('numeric-boundary.json');
+        assert.deepStrictEqual(metadata.schema, [['value', 'decimal(256,0)']]);
+        assert.strictEqual(metadata.json_sample_values?.value, accepted);
+        assert.strictEqual(metadata.json_typed_projection_safe, true);
+        assert.match(generateCreateTable(metadata), /\[value\]\s+NVARCHAR\(MAX\)/);
+
+        const rejected = '8'.repeat(257);
+        await write('numeric-over-boundary.json', `[{"value":${rejected}}]`);
+        const overBoundary = await analyzeTemp('numeric-over-boundary.json');
+        assert.deepStrictEqual(overBoundary.schema, [['value', 'str']]);
+        assert.strictEqual(overBoundary.json_sample_values?.value, rejected);
+        assert.strictEqual(overBoundary.json_typed_projection_safe, false);
+
+        await write(
+            'oversized-numeric.json',
+            `[{"value":1},{"value":${rejected}}]`,
+        );
+        const oversized = await analyzeTemp('oversized-numeric.json');
+        assert.deepStrictEqual(oversized.schema, [['value', 'str']]);
+        assert.strictEqual(oversized.json_typed_projection_safe, false);
+        assert.deepStrictEqual(generateOpenjsonColumns(oversized), []);
+        assert.match(generateCreateTable(oversized), /\[value\]\s+NVARCHAR\(MAX\)/);
+        const fabricLoad = generateBulkInsert(oversized, {
+            targetPlatform: 'fabric_sql_db',
+        });
+        assert.match(fabricLoad, /Preserve each JSON object or NDJSON line/);
+        assert.doesNotMatch(fabricLoad, /INSERT INTO \[/);
+
+        const preview = await new NativeAnalysisService(root).preview({
+            filePath: path.join(root, 'oversized-numeric.json'),
+            maxRows: 2,
+        });
+        assert.deepStrictEqual(preview.rows, [[1], [rejected]]);
+    });
+
     it('falls back from object/scalar JSON mixtures to schemaless OPENJSON', async () => {
         await write('mixed-json-shape.json', '[{"value":{"id":1}},{"value":2}]');
         const metadata = await analyzeTemp('mixed-json-shape.json');
@@ -454,7 +493,10 @@ describe('malformed, truncated and hostile input', () => {
         assert.strictEqual(metadata.json_typed_projection_safe, false);
         assert.match(metadata.warning ?? '', /distinct keys/i);
         assert.deepStrictEqual(generateOpenjsonColumns(metadata), []);
-        assert.match(generateCreateTable(metadata), /\[key_0\]\s+NVARCHAR\(MAX\)/);
+        const createTable = generateCreateTable(metadata);
+        assert.match(createTable, /4,096 detected columns/);
+        assert.match(createTable, /1,024-column target-table limit/);
+        assert.doesNotMatch(createTable, /CREATE TABLE \[/);
         assert.ok(
             !(metadata.schema ?? []).some(
                 ([key]) => key === `key_${JSON_SCHEMA_MAX_COLUMNS}`,

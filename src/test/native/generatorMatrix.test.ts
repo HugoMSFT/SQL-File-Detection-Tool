@@ -21,6 +21,7 @@ import {
     generateCreateTable,
     generateExternalFileFormat,
     generateExternalTable,
+    generateJsonFunctions,
     resolveTableName,
 } from '../../native/sql/generator';
 import {
@@ -28,6 +29,7 @@ import {
     PLATFORMS,
     normalizePlatform,
 } from '../../native/sql/typeMapping';
+import { TARGET_TABLE_MAX_COLUMNS } from '../../native/limits';
 import type { GeneratorMetadata, TargetPlatform } from '../../native/types';
 
 const STORAGE_URLS: Readonly<Record<string, string | null>> = {
@@ -57,6 +59,31 @@ function csvMetadata(): GeneratorMetadata {
             ['note', 'object'],
         ],
     };
+}
+
+function ndjsonMetadata(columnCount: number): GeneratorMetadata {
+    return {
+        file_path: 'C:/data/wide.ndjson',
+        file_name: 'wide.ndjson',
+        file_type: 'json',
+        file_size: 1024,
+        schema: Array.from(
+            { length: columnCount },
+            (_, index): [string, string] => [`field_${index}`, 'int32'],
+        ),
+        column_count: columnCount,
+        nullable_columns: [],
+        json_format: 'ndjson',
+        json_typed_projection_safe: true,
+        schema_inference: 'full',
+    };
+}
+
+function executableSql(sql: string): string {
+    return sql
+        .split('\n')
+        .filter((line) => line.trim() && !line.trim().startsWith('--'))
+        .join('\n');
 }
 
 function parquetMetadata(): GeneratorMetadata {
@@ -437,6 +464,113 @@ describe('type mapping edge cases', () => {
                 `${nested} must not be flattened to a scalar: ${sql}`,
             );
         }
+    });
+});
+
+describe('target-table column limit', () => {
+    assert.strictEqual(TARGET_TABLE_MAX_COLUMNS, 1024);
+
+    for (const targetPlatform of PLATFORMS) {
+        it(`preserves the 1,024/1,025 boundary on ${targetPlatform}`, () => {
+            const atLimit = ndjsonMetadata(TARGET_TABLE_MAX_COLUMNS);
+            const atLimitStatements = generateAllStatements(atLimit, { targetPlatform });
+            assert.match(atLimitStatements.create_table, /CREATE TABLE \[/);
+            assert.match(atLimitStatements.create_table, /\[field_1023\]/);
+            assert.match(atLimitStatements.openrowset, /\[field_1023\]/);
+            assert.match(atLimitStatements.openrowset, /ROWTERMINATOR\s*=\s*'0x0a'/);
+            assert.match(atLimitStatements.openrowset, /CODEPAGE\s*=\s*'65001'/);
+            if (targetPlatform === 'fabric_sql_db') {
+                assert.match(atLimitStatements.bulk_insert, /\[field_1023\]/);
+                assert.match(
+                    atLimitStatements.bulk_insert,
+                    /ROWTERMINATOR\s*=\s*'0x0a'/,
+                );
+            }
+
+            const atLimitDocument = generateCompleteDdl(atLimit, { targetPlatform });
+            assert.match(atLimitDocument, /CREATE TABLE \[/);
+            assert.match(atLimitDocument, /\[field_1023\]/);
+
+            const overLimit = ndjsonMetadata(TARGET_TABLE_MAX_COLUMNS + 1);
+            const statements = generateAllStatements(overLimit, { targetPlatform });
+            for (const key of [
+                'create_table',
+                'bulk_insert',
+                'copy_into',
+                'create_external_table',
+                'json_functions',
+                'for_json',
+                'best_practices',
+            ] as const) {
+                const statement = statements[key];
+                assert.match(statement, /1,025 detected columns/);
+                assert.match(statement, /1,024-column target-table limit/);
+                assert.match(statement, /No analyzed columns were dropped/);
+                assert.strictEqual(executableSql(statement), '');
+            }
+            assert.match(statements.openrowset, /OPENROWSET RAW-JSON ACCESS/);
+            assert.match(statements.openrowset, /raw JSON in/);
+            assert.doesNotMatch(statements.openrowset, /\[field_\d+\]/);
+            assert.match(statements.openrowset, /ROWTERMINATOR\s*=\s*'0x0a'/);
+            assert.match(statements.openrowset, /CODEPAGE\s*=\s*'65001'/);
+
+            const document = generateCompleteDdl(overLimit, { targetPlatform });
+            assert.match(document, /COMPLETE SCRIPT/);
+            assert.match(document, /raw JSON in/);
+            assert.strictEqual(executableSql(document), '');
+        });
+    }
+
+    it('keeps wide schemaless Parquet reads available', () => {
+        const metadata: GeneratorMetadata = {
+            ...parquetMetadata(),
+            schema: Array.from(
+                { length: TARGET_TABLE_MAX_COLUMNS + 1 },
+                (_, index): [string, string] => [`field_${index}`, 'int32'],
+            ),
+            column_count: TARGET_TABLE_MAX_COLUMNS + 1,
+        };
+        const statements = generateAllStatements(metadata, {
+            targetPlatform: 'sql_server_2022',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        assert.match(statements.openrowset, /FORMAT = 'PARQUET'/);
+        assert.doesNotMatch(statements.openrowset, /target-table limit/);
+        assert.match(statements.create_table, /1,024-column target-table limit/);
+    });
+
+    it('preserves exact JSON keys and code pages in Fabric typed loads', () => {
+        const metadata: GeneratorMetadata = {
+            ...ndjsonMetadata(1),
+            schema: [['first name', 'int32']],
+            codepage: '1200',
+            encoding: 'utf-16-le',
+        };
+        const sql = generateBulkInsert(metadata, {
+            targetPlatform: 'fabric_sql_db',
+        });
+        assert.match(sql, /INSERT INTO .*\(\[first name\]\)/);
+        assert.match(sql, /SELECT \[j\]\.\[first name\]/);
+        assert.match(sql, /WITH \(\s*\[first name\]\s+INT/);
+        assert.match(sql, /CODEPAGE\s*=\s*'1200'/);
+        assert.doesNotMatch(sql, /\[first_name\]/);
+
+        const collision = generateBulkInsert({
+            ...metadata,
+            schema: [['json_doc', 'str']],
+        }, {
+            targetPlatform: 'fabric_sql_db',
+        });
+        assert.match(collision, /SELECT \[j\]\.\[json_doc\]/);
+    });
+
+    it('does not emit remote NDJSON framing for SQL Server 2019', () => {
+        const sql = generateJsonFunctions(ndjsonMetadata(1), {
+            targetPlatform: 'sql_server_2019',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        assert.match(sql, /REMOTE NDJSON STAGING REQUIRED/);
+        assert.strictEqual(executableSql(sql), '');
     });
 });
 

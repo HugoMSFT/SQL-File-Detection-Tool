@@ -382,6 +382,7 @@ class _JsonSchemaAccumulator:
                     'first': None,
                     'has_first': False,
                     'max_string_length': None,
+                    'rejected_numeric': False,
                 }
             evidence = self.fields[key]
             if value is None:
@@ -394,7 +395,8 @@ class _JsonSchemaAccumulator:
                 evidence['families'].add('boolean')
             elif numeric_raw is not None:
                 evidence['families'].add('numeric')
-                evidence['numeric'].add(numeric_raw)
+                if not evidence['numeric'].add(numeric_raw):
+                    evidence['rejected_numeric'] = True
             elif isinstance(value, str):
                 evidence['families'].add('string')
                 length = _utf16_length(value)
@@ -439,8 +441,14 @@ class _JsonSchemaAccumulator:
                 nesting[key] = 'scalar'
                 schema.append((
                     key,
-                    evidence['numeric'].detected_type() or 'str',
+                    (
+                        'str'
+                        if evidence['rejected_numeric']
+                        else evidence['numeric'].detected_type() or 'str'
+                    ),
                 ))
+                if evidence['rejected_numeric']:
+                    typed_projection_safe = False
             elif families == {'string'}:
                 nesting[key] = 'scalar'
                 schema.append((key, 'str'))

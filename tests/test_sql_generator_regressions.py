@@ -5,6 +5,7 @@ produce a script that fails when executed against the target platform.
 """
 
 import os
+import re
 import sys
 
 import pytest
@@ -16,6 +17,7 @@ from external_file_detection.external_file_detector import (  # noqa: E402
 )
 from external_file_detection.sql_generator import (  # noqa: E402
     SQLGenerator,
+    TARGET_TABLE_MAX_COLUMNS,
     _delta_table_folder,
 )
 
@@ -46,6 +48,154 @@ def csv_meta(**overrides):
     }
     meta.update(overrides)
     return meta
+
+
+def ndjson_meta(column_count):
+    return {
+        'file_type': 'json',
+        'file_path': 'wide.ndjson',
+        'file_name': 'wide.ndjson',
+        'schema': [
+            (f'field_{index}', 'int32')
+            for index in range(column_count)
+        ],
+        'column_count': column_count,
+        'nullable_columns': [],
+        'json_format': 'ndjson',
+        'json_typed_projection_safe': True,
+        'schema_inference': 'full',
+        'encoding': 'utf-8',
+        'file_size': 1024,
+    }
+
+
+@pytest.mark.parametrize('platform', SQLGenerator.PLATFORMS)
+def test_target_table_column_limit_boundaries(platform):
+    """All platforms preserve 1,024 fields and reject a 1,025-column target."""
+    assert TARGET_TABLE_MAX_COLUMNS == 1024
+    generator = SQLGenerator()
+
+    at_limit = ndjson_meta(TARGET_TABLE_MAX_COLUMNS)
+    at_limit_statements = generator.generate_all_statements(
+        at_limit,
+        target_platform=platform,
+    )
+    assert 'CREATE TABLE [' in at_limit_statements['create_table']
+    assert '[field_1023]' in at_limit_statements['create_table']
+    assert '[field_1023]' in at_limit_statements['openrowset']
+    assert re.search(
+        r"ROWTERMINATOR\s*=\s*'0x0a'",
+        at_limit_statements['openrowset'],
+    )
+    assert re.search(r"CODEPAGE\s*=\s*'65001'", at_limit_statements['openrowset'])
+    if platform == 'fabric_sql_db':
+        assert '[field_1023]' in at_limit_statements['bulk_insert']
+        assert re.search(
+            r"ROWTERMINATOR\s*=\s*'0x0a'",
+            at_limit_statements['bulk_insert'],
+        )
+    at_limit_document = generator.generate_complete_ddl(
+        at_limit,
+        target_platform=platform,
+    )
+    assert 'CREATE TABLE [' in at_limit_document
+    assert '[field_1023]' in at_limit_document
+
+    over_limit = ndjson_meta(TARGET_TABLE_MAX_COLUMNS + 1)
+    statements = generator.generate_all_statements(
+        over_limit,
+        target_platform=platform,
+    )
+    for key in (
+        'create_table',
+        'bulk_insert',
+        'copy_into',
+        'create_external_table',
+        'json_functions',
+        'for_json',
+        'best_practices',
+    ):
+        statement = statements[key]
+        assert '1,025 detected columns' in statement
+        assert '1,024-column target-table limit' in statement
+        assert 'No analyzed columns were dropped' in statement
+        assert not code_only(statement).strip()
+
+    assert 'OPENROWSET RAW-JSON ACCESS' in statements['openrowset']
+    assert 'raw JSON in' in statements['openrowset']
+    assert '[field_' not in statements['openrowset']
+    assert re.search(r"ROWTERMINATOR\s*=\s*'0x0a'", statements['openrowset'])
+    assert re.search(r"CODEPAGE\s*=\s*'65001'", statements['openrowset'])
+
+    document = generator.generate_complete_ddl(
+        over_limit,
+        target_platform=platform,
+    )
+    assert 'COMPLETE SCRIPT' in document
+    assert 'raw JSON in' in document
+    assert not code_only(document).strip()
+
+
+def test_wide_schemaless_parquet_openrowset_remains_available():
+    """The target-table ceiling does not block schema-on-read Parquet access."""
+    metadata = {
+        **csv_meta(),
+        'file_type': 'parquet',
+        'file_name': 'wide.parquet',
+        'file_path': 'wide.parquet',
+        'schema': [
+            (f'field_{index}', 'int32')
+            for index in range(TARGET_TABLE_MAX_COLUMNS + 1)
+        ],
+        'column_count': TARGET_TABLE_MAX_COLUMNS + 1,
+    }
+    statements = SQLGenerator().generate_all_statements(
+        metadata,
+        target_platform='sql_server_2022',
+        storage_url=AZURE_URL.replace('orders.csv', 'wide.parquet'),
+    )
+    assert "FORMAT = 'PARQUET'" in statements['openrowset']
+    assert 'target-table limit' not in statements['openrowset']
+    assert '1,024-column target-table limit' in statements['create_table']
+
+
+def test_fabric_json_load_preserves_keys_and_codepage():
+    """Typed Fabric loads use the exact names emitted by OPENJSON and CREATE."""
+    metadata = {
+        **ndjson_meta(1),
+        'schema': [('first name', 'int32')],
+        'codepage': '1200',
+        'encoding': 'utf-16-le',
+    }
+    sql = SQLGenerator().generate_bulk_insert(
+        metadata,
+        target_platform='fabric_sql_db',
+    )
+    assert re.search(r'INSERT INTO .*\(\[first name\]\)', sql)
+    assert 'SELECT [j].[first name]' in sql
+    assert re.search(r'WITH \(\s*\[first name\]\s+INT', sql)
+    assert re.search(r"CODEPAGE\s*=\s*'1200'", sql)
+    assert '[first_name]' not in sql
+
+    collision = SQLGenerator().generate_bulk_insert(
+        {
+            **metadata,
+            'schema': [('json_doc', 'str')],
+        },
+        target_platform='fabric_sql_db',
+    )
+    assert 'SELECT [j].[json_doc]' in collision
+
+
+def test_sql_server_2019_remote_ndjson_json_functions_are_guidance_only():
+    """The 2019 BLOB_STORAGE reader cannot frame remote NDJSON rows."""
+    sql = SQLGenerator().generate_json_functions(
+        ndjson_meta(1),
+        target_platform='sql_server_2019',
+        storage_url=AZURE_URL.replace('orders.csv', 'wide.ndjson'),
+    )
+    assert 'REMOTE NDJSON STAGING REQUIRED' in sql
+    assert not code_only(sql).strip()
 
 
 # ---------------------------------------------------------------------------

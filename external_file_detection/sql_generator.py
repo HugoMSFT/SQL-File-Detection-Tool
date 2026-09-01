@@ -28,6 +28,9 @@ class ExternalFileFormatConfig:
 #: never drift between layers. Explicit platform selection is untouched.
 DEFAULT_TARGET_PLATFORM = 'azure_sql_db'
 
+#: Maximum regular columns in a generated SQL target table or typed projection.
+TARGET_TABLE_MAX_COLUMNS = 1024
+
 
 _S3_SCHEMES = frozenset({'s3', 's3a', 's3n'})
 
@@ -393,6 +396,57 @@ def _temporal_sql_type(lowered: str) -> Optional[str]:
     return None
 
 
+def _target_table_column_count(metadata: Dict[str, Any]) -> int:
+    """Return the detected width a generated target would need to preserve."""
+    schema = metadata.get('schema')
+    schema_count = len(schema) if isinstance(schema, (list, tuple)) else 0
+    declared = metadata.get('column_count')
+    declared_count = (
+        declared
+        if isinstance(declared, int) and not isinstance(declared, bool)
+        and declared > 0
+        else 0
+    )
+    return max(schema_count, declared_count)
+
+
+def _exceeds_target_table_column_limit(metadata: Dict[str, Any]) -> bool:
+    """Return True when an ordinary SQL target cannot represent the schema."""
+    return _target_table_column_count(metadata) > TARGET_TABLE_MAX_COLUMNS
+
+
+def _target_table_column_limit_guidance(
+    metadata: Dict[str, Any],
+    feature_label: str,
+) -> str:
+    """Return comment-only preservation guidance for an impossible target."""
+    count = _target_table_column_count(metadata)
+    lines = [
+        '-- ====================================================================',
+        f'-- {_sql_comment(feature_label)}',
+        '-- NOT GENERATED: RAW DATA PRESERVATION REQUIRED',
+        '-- ====================================================================',
+        f'-- {count:,} detected columns exceed the '
+        f'{TARGET_TABLE_MAX_COLUMNS:,}-column target-table limit.',
+        '-- No analyzed columns were dropped, but typed table and projection SQL',
+        '-- was not generated because it cannot run on SQL Server, Azure SQL,',
+        '-- or Fabric SQL Database.',
+    ]
+    if metadata.get('file_type') == 'json':
+        lines += [
+            '-- Preserve each JSON object or NDJSON line intact as raw JSON in',
+            '-- NVARCHAR(MAX). Inspect it with schemaless OPENJSON ([key], [value],',
+            '-- [type]), then normalize or split it across related tables before',
+            '-- generating a typed projection.',
+        ]
+    else:
+        lines += [
+            '-- Preserve each source record in a raw staging form, then normalize',
+            '-- or split it across related tables before generating a typed load.',
+        ]
+    return '\n'.join(lines)
+
+
 class SQLGenerator:
     """Generates T-SQL statements for CREATE TABLE, BULK INSERT, OPENROWSET, and CREATE EXTERNAL TABLE."""
 
@@ -461,6 +515,7 @@ class SQLGenerator:
     #: Product-wide default platform, mirrored from the module constant so
     #: callers holding a generator instance need not import it separately.
     DEFAULT_PLATFORM = DEFAULT_TARGET_PLATFORM
+    TARGET_TABLE_MAX_COLUMNS = TARGET_TABLE_MAX_COLUMNS
 
     @staticmethod
     def normalize_platform(target_platform: Optional[str]) -> str:
@@ -673,8 +728,8 @@ class SQLGenerator:
         """
         lines = [
             '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-            '-- Row framing needs the abs:// / adls:// virtualization source. The',
-            '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+            '-- Row framing uses the data-virtualization source. The https://',
+            '-- BLOB_STORAGE connector rejects FIELDTERMINATOR /',
             '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
             '-- The file is never read whole here: concatenated NDJSON is not one',
             '-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.',
@@ -686,7 +741,10 @@ class SQLGenerator:
             f"    BULK '{bulk_path}',",
             f"    DATA_SOURCE     = '{source_name}',",
         ]
-        lines += self._json_row_frame_options(row_terminator='0x0a')
+        lines += self._json_row_frame_options(
+            metadata,
+            row_terminator='0x0a',
+        )
         if cols:
             lines += [
                 ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
@@ -701,8 +759,46 @@ class SQLGenerator:
             )
         return lines
 
+    def _ndjson_local_lines(
+        self,
+        metadata: Dict[str, Any],
+        local_path: str,
+    ) -> List[str]:
+        """Read local NDJSON by framing one JSON document per line."""
+        cols = self._generate_openjson_columns(metadata, indent=4)
+        lines = [
+            '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+            '-- FORMAT = CSV is used only to frame LF-delimited JSON documents.',
+            (
+                'SELECT TOP (100) [j].*'
+                if cols
+                else 'SELECT TOP (100) [src].doc'
+            ),
+            'FROM OPENROWSET(',
+            f"    BULK N'{local_path}',",
+        ]
+        lines += self._json_row_frame_options(
+            metadata,
+            row_terminator='0x0a',
+        )
+        if cols:
+            lines += [
+                ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
+                'CROSS APPLY OPENJSON([src].doc)',
+                'WITH (',
+                ',\n'.join(cols),
+                ') AS [j];',
+            ]
+        else:
+            lines.append(
+                ') WITH (doc NVARCHAR(MAX)) AS [src];  '
+                '-- LF: one document per line'
+            )
+        return lines
+
     @staticmethod
-    def _json_row_frame_options(indent: int = 4,
+    def _json_row_frame_options(metadata: Dict[str, Any],
+                                indent: int = 4,
                                 row_terminator: str = '0x0b') -> List[str]:
         """Options that make the CSV reader return whole JSON text per row.
 
@@ -714,12 +810,20 @@ class SQLGenerator:
         """
         pad = ' ' * indent
         width = SQLGenerator.CSV_OPTION_WIDTH
-        return [
+        lines = [
             f'{pad}{"FORMAT":<{width}} = \'CSV\',',
             f'{pad}{"FIELDTERMINATOR":<{width}} = \'0x0b\',',
             f'{pad}{"FIELDQUOTE":<{width}} = \'0x0b\',',
             f'{pad}{"ROWTERMINATOR":<{width}} = \'{row_terminator}\'',
         ]
+        if row_terminator == '0x0a':
+            codepage = _metadata_text(metadata, 'codepage', '65001')
+            lines[-1] += ','
+            lines.append(
+                f'{pad}{"CODEPAGE":<{width}} = '
+                f'\'{_quote_literal(codepage)}\''
+            )
+        return lines
 
     #: Encodings whose whole-file OPENROWSET read needs ``SINGLE_NCLOB``.
     #: ``SINGLE_CLOB`` fails with error 4806 ("SINGLE_CLOB requires a double-byte
@@ -813,6 +917,9 @@ class SQLGenerator:
         """
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'CREATE TABLE')
 
         if not self._supports('create_table', target_platform):
             return self._not_supported_message(
@@ -979,6 +1086,12 @@ class SQLGenerator:
         """Generate a BULK INSERT statement (CSV / delimited text files only)."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'BULK / TYPED LOAD',
+            )
 
         if not self._supports('bulk_insert', target_platform):
             if target_platform == 'fabric_sql_db':
@@ -1156,6 +1269,27 @@ class SQLGenerator:
             ])
 
         if file_type == 'json':
+            openjson_cols = self._generate_openjson_columns(
+                metadata,
+                indent=4,
+            )
+            if not openjson_cols:
+                return '\n'.join(header + [
+                    '-- A typed JSON load is not safe for the analyzed evidence.',
+                    '-- Preserve each JSON object or NDJSON line intact as raw JSON',
+                    '-- in NVARCHAR(MAX), inspect [key], [value], and [type] through',
+                    '-- the OPENROWSET tab, then normalize before loading a table.',
+                ])
+            json_columns = self._column_name_list(metadata)
+            json_select_columns = self._column_name_list(
+                metadata,
+                qualifier='j',
+            )
+            row_terminator = (
+                '0x0a'
+                if metadata.get('json_format') == 'ndjson'
+                else '0x0b'
+            )
             return '\n'.join(header + [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
                 '-- Fabric has no TYPE = BLOB_STORAGE data source, which is what',
@@ -1164,14 +1298,20 @@ class SQLGenerator:
                 '-- value, then parsed with OPENJSON. This also reads NDJSON',
                 '-- correctly, because every line arrives as its own row.',
                 '',
-                f'INSERT INTO [{schema_name}].[{table_name}]',
-                'SELECT j.*',
+                f'INSERT INTO [{schema_name}].[{table_name}] ({json_columns})',
+                f'SELECT {json_select_columns}',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
-            ] + self._json_row_frame_options() + [
+            ] + self._json_row_frame_options(
+                metadata,
+                row_terminator=row_terminator
+            ) + [
                 ') WITH (json_doc NVARCHAR(MAX)) AS src',
-                'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+                'CROSS APPLY OPENJSON(src.json_doc)',
+                'WITH (',
+                ',\n'.join(openjson_cols),
+                ') AS j;',
             ])
 
         format_keyword = _format_keyword(file_type)
@@ -1211,10 +1351,15 @@ class SQLGenerator:
         ]
         return '\n'.join(header + body)
 
-    def _column_name_list(self, metadata: Dict[str, Any]) -> str:
-        """Return a bracketed comma-separated column list, or ``*`` if unknown."""
+    def _column_name_list(
+        self,
+        metadata: Dict[str, Any],
+        qualifier: Optional[str] = None,
+    ) -> str:
+        """Return a bracketed column list, optionally qualified by an alias."""
         schema = metadata.get('schema') or []
-        names = [f'[{_escape_identifier(_clean_identifier(name))}]'
+        prefix = f'[{_escape_identifier(qualifier)}].' if qualifier else ''
+        names = [f'{prefix}[{_escape_identifier(name)}]'
                  for name, _ in schema]
         return ', '.join(names) if names else '*'
 
@@ -1234,6 +1379,18 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        exceeds_column_limit = _exceeds_target_table_column_limit(metadata)
+        wide_json = exceeds_column_limit and file_type == 'json'
+        if (
+            exceeds_column_limit
+            and file_type not in {'json', 'parquet', 'delta'}
+        ):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'OPENROWSET TYPED PROJECTION',
+            )
+
         if not self._supports('openrowset', target_platform):
             alts = []
             if self._supports('bulk_insert', target_platform):
@@ -1245,12 +1402,18 @@ class SQLGenerator:
                 'OPENROWSET', target_platform,
                 f'Alternative: {alt_text}')
 
-        file_type = _metadata_text(metadata, 'file_type', 'csv')
         file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         local_path = _quote_literal(_metadata_text(metadata, 'file_path', '').replace('\\', '/'))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
-        lines = [
+        lines = (
+            _target_table_column_limit_guidance(
+                metadata,
+                'OPENROWSET RAW-JSON ACCESS',
+            ).splitlines() + ['']
+            if wide_json
+            else []
+        ) + [
             f'-- ====================================================================',
             f'-- OPENROWSET',
             f'-- Source  : {_sql_comment(file_name)}  '
@@ -1372,6 +1535,15 @@ class SQLGenerator:
         ]
 
         if file_type == 'json':
+            if metadata.get('json_format') == 'ndjson':
+                lines += [
+                    '-- NDJSON cannot use SINGLE_CLOB through this BLOB_STORAGE source:',
+                    '-- it would return concatenated documents, while this connector rejects',
+                    '-- the row-framing options needed to separate them. Preserve each line',
+                    '-- as raw NVARCHAR(MAX) JSON by staging the file on a local/UNC path or',
+                    '-- by using a data-virtualization source on a newer/Azure SQL target.',
+                ]
+                return '\n'.join(lines)
             lob = self._single_lob_keyword(metadata)
             lines += [
                 f'-- JSON: a TYPE = BLOB_STORAGE data source accepts {lob},',
@@ -1455,6 +1627,13 @@ class SQLGenerator:
             return '\n'.join(lines)
 
         if file_type == 'json':
+            if metadata.get('json_format') == 'ndjson':
+                lines += self._ndjson_cloud_lines(
+                    metadata,
+                    bulk_path,
+                    source_name,
+                )
+                return '\n'.join(lines)
             lines += [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
                 '-- Read the document as one text column via the CSV reader,',
@@ -1465,7 +1644,7 @@ class SQLGenerator:
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_row_frame_options(metadata)
             openjson_cols = self._generate_openjson_columns(metadata, indent=4)
             lines.append(') WITH (json_doc NVARCHAR(MAX)) AS [src]')
             if openjson_cols:
@@ -1634,6 +1813,7 @@ class SQLGenerator:
         """Generate OPENROWSET(BULK ...) for on-prem SQL Server using local file paths."""
         file_type = _metadata_text(metadata, 'file_type', 'csv')
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
+        json_format = _metadata_text(metadata, 'json_format', 'array')
         codepage = metadata.get('codepage', '65001')
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
@@ -1677,6 +1857,9 @@ class SQLGenerator:
                 f'{self._single_lob_keyword(metadata)}) AS [src];',
             ]
         elif file_type == 'json':
+            if json_format == 'ndjson':
+                lines += self._ndjson_local_lines(metadata, local_path)
+                return '\n'.join(lines)
             lines += [
                 f'-- {_sql_comment(self.PLATFORM_LABELS[target_platform])} does not support',
                 f'-- FORMAT = \'JSON\' or JSON external tables. This workaround',
@@ -1984,6 +2167,12 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'CREATE EXTERNAL TABLE',
+            )
+
         if not self._supports('external_table', target_platform):
             alts = []
             if self._supports('bulk_insert', target_platform):
@@ -2221,6 +2410,12 @@ class SQLGenerator:
         """Explain COPY INTO availability for the exposed SQL targets."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'COPY INTO / TYPED LOAD',
+            )
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         lines = [
@@ -2495,6 +2690,29 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'TYPED JSON PROJECTION',
+            )
+
+        if (
+            metadata.get('file_type') == 'json'
+            and metadata.get('json_format') == 'ndjson'
+            and target_platform == 'sql_server_2019'
+            and storage_url
+        ):
+            return '\n'.join([
+                '-- ====================================================================',
+                '-- T-SQL JSON FUNCTIONS',
+                '-- NOT GENERATED: REMOTE NDJSON STAGING REQUIRED',
+                '-- ====================================================================',
+                '-- SQL Server 2019 cannot line-frame remote NDJSON through its',
+                '-- BLOB_STORAGE reader, and SINGLE_CLOB would return invalid',
+                '-- concatenated documents. Stage the file on a local/UNC path or',
+                '-- use an Azure SQL or SQL Server 2022+ data-virtualization source.',
+            ])
+
         if not self._supports('json_openjson', target_platform):
             alts = []
             if self._supports('openrowset', target_platform):
@@ -2584,7 +2802,10 @@ class SQLGenerator:
             # LF, so each line is its own row. The default 0x0b framing
             # returns the whole file as one row, which is not a JSON document
             # here.
-            lines += self._json_row_frame_options(row_terminator='0x0a')
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator='0x0a',
+            )
             lines.append(
                 ') WITH (json_doc NVARCHAR(MAX)) AS [src]  '
                 '-- LF: one document per line'
@@ -2610,7 +2831,10 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options(row_terminator='0x0a')
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator='0x0a',
+            )
             lines += [
                 f') WITH (json_doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line',
                 f'',
@@ -2651,7 +2875,7 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_row_frame_options(metadata)
             lines += [
                 f') WITH (json_doc NVARCHAR(MAX)) AS j;',
                 f'',
@@ -2877,6 +3101,9 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'FOR JSON PATH')
+
         if not self._supports('for_json', target_platform):
             return self._not_supported_message(
                 'FOR JSON PATH', target_platform,
@@ -2976,6 +3203,9 @@ class SQLGenerator:
         """Generate a best-practices guide for ingesting / querying this file type."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'BEST PRACTICES')
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         file_type = _metadata_text(metadata, 'file_type', 'csv')
@@ -3108,6 +3338,12 @@ class SQLGenerator:
         with an explicit schema and table name to have it emitted live - see
         :func:`_owns_load_target` for why both are required.
         """
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'COMPLETE SCRIPT',
+            ) + '\n'
+
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
             schema_name, target_platform=target_platform,
@@ -3488,7 +3724,8 @@ class SQLGenerator:
         cols: List[str] = []
         _validate_unique_column_names(schema)
         if (
-            metadata.get('json_typed_projection_safe') is False
+            _exceeds_target_table_column_limit(metadata)
+            or metadata.get('json_typed_projection_safe') is False
             or (
                 self._has_incomplete_type_evidence(metadata)
                 and any(

@@ -79,6 +79,7 @@ import {
     determineFormatConfig,
     displayFileName,
     columnSqlType,
+    exceedsTargetTableColumnLimit,
     generateColumnDefinitions,
     generateOpenjsonColumns,
     jsonRowFrameOptions,
@@ -91,6 +92,7 @@ import {
     resolveAuthMethod,
     singleLobKeyword,
     splitextRoot,
+    targetTableColumnLimitGuidance,
 } from './generatorHelpers';
 import {
     bestPracticesCsv,
@@ -330,6 +332,10 @@ export function generateCreateTable(
     const storageUrl = options.storageUrl ?? null;
     const dataSource = options.dataSource ?? 'MyDataSource';
 
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'CREATE TABLE');
+    }
+
     if (!supports('create_table', targetPlatform)) {
         return notSupportedMessage(
             'CREATE TABLE',
@@ -427,6 +433,20 @@ function bulkInsertFabricAlternatives(
     }
 
     if (fileType === 'json') {
+        const openjsonCols = generateOpenjsonColumns(metadata, 4);
+        if (openjsonCols.length === 0) {
+            return header
+                .concat([
+                    '-- A typed JSON load is not safe for the analyzed evidence.',
+                    '-- Preserve each JSON object or NDJSON line intact as raw JSON',
+                    '-- in NVARCHAR(MAX), inspect [key], [value], and [type] through',
+                    '-- the OPENROWSET tab, then normalize before loading a table.',
+                ])
+                .join('\n');
+        }
+        const jsonColumns = columnNameList(metadata);
+        const jsonSelectColumns = columnNameList(metadata, 'j');
+        const rowTerminator = metadata.json_format === 'ndjson' ? '0x0a' : '0x0b';
         return header
             .concat([
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
@@ -436,16 +456,19 @@ function bulkInsertFabricAlternatives(
                 '-- value, then parsed with OPENJSON. This also reads NDJSON',
                 '-- correctly, because every line arrives as its own row.',
                 '',
-                `INSERT INTO [${schemaName}].[${tableName}]`,
-                'SELECT j.*',
+                `INSERT INTO [${schemaName}].[${tableName}] (${jsonColumns})`,
+                `SELECT ${jsonSelectColumns}`,
                 'FROM OPENROWSET(',
                 `    BULK '${bulkPath}',`,
                 `    DATA_SOURCE     = '${sourceName}',`,
             ])
-            .concat(jsonRowFrameOptions())
+            .concat(jsonRowFrameOptions(metadata, 4, rowTerminator))
             .concat([
                 ') WITH (json_doc NVARCHAR(MAX)) AS src',
-                'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+                'CROSS APPLY OPENJSON(src.json_doc)',
+                'WITH (',
+                openjsonCols.join(',\n'),
+                ') AS j;',
             ])
             .join('\n');
     }
@@ -514,6 +537,10 @@ export function generateBulkInsert(
     const dataSource = options.dataSource ?? 'MyDataSource';
     const includePrereq = options.includePrereq ?? true;
     const rawSchemaName = options.schemaName ?? 'dbo';
+
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'BULK / TYPED LOAD');
+    }
 
     if (!supports('bulk_insert', targetPlatform)) {
         if (targetPlatform === 'fabric_sql_db') {
@@ -820,6 +847,10 @@ export function generateExternalTable(
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
 
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'CREATE EXTERNAL TABLE');
+    }
+
     if (!supports('external_table', targetPlatform)) {
         const alts: string[] = [];
         if (supports('bulk_insert', targetPlatform)) {
@@ -1012,10 +1043,13 @@ export function generateExternalTable(
 
 /** Explain `COPY INTO` availability for the exposed SQL targets. */
 export function generateCopyInto(
-    _metadata: GeneratorMetadata,
+    metadata: GeneratorMetadata,
     options: StatementOptions = {},
 ): string {
     const targetPlatform = normalizePlatform(options.targetPlatform);
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'COPY INTO / TYPED LOAD');
+    }
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     const lines = [
         '-- ====================================================================',
@@ -1284,6 +1318,28 @@ export function generateJsonFunctions(
     const storageUrl = options.storageUrl ?? null;
     const dataSource = options.dataSource ?? 'MyDataSource';
 
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'TYPED JSON PROJECTION');
+    }
+
+    if (
+        metadata.file_type === 'json' &&
+        metadata.json_format === 'ndjson' &&
+        targetPlatform === 'sql_server_2019' &&
+        storageUrl
+    ) {
+        return [
+            '-- ====================================================================',
+            '-- T-SQL JSON FUNCTIONS',
+            '-- NOT GENERATED: REMOTE NDJSON STAGING REQUIRED',
+            '-- ====================================================================',
+            '-- SQL Server 2019 cannot line-frame remote NDJSON through its',
+            '-- BLOB_STORAGE reader, and SINGLE_CLOB would return invalid',
+            '-- concatenated documents. Stage the file on a local/UNC path or',
+            '-- use an Azure SQL or SQL Server 2022+ data-virtualization source.',
+        ].join('\n');
+    }
+
     if (!supports('json_openjson', targetPlatform)) {
         const alts: string[] = [];
         if (supports('openrowset', targetPlatform)) {
@@ -1382,7 +1438,7 @@ export function generateJsonFunctions(
         );
         // LF, so each line is its own row. The default 0x0b framing returns
         // the whole file as one row, which is not a JSON document here.
-        lines.push(...jsonRowFrameOptions(4, '0x0a'));
+        lines.push(...jsonRowFrameOptions(metadata, 4, '0x0a'));
         lines.push(
             ') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
         );
@@ -1406,7 +1462,7 @@ export function generateJsonFunctions(
             `    BULK '${filePathSql}',`,
             `    DATA_SOURCE     = '${jsonBulkSource}',`,
         );
-        lines.push(...jsonRowFrameOptions(4, '0x0a'));
+        lines.push(...jsonRowFrameOptions(metadata, 4, '0x0a'));
         lines.push(
             ') WITH (json_doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line',
             '',
@@ -1443,7 +1499,7 @@ export function generateJsonFunctions(
             `    BULK '${filePathSql}',`,
             `    DATA_SOURCE     = '${jsonBulkSource}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        lines.push(...jsonRowFrameOptions(metadata));
         lines.push(') WITH (json_doc NVARCHAR(MAX)) AS j;', '');
     } else {
         const lobKeyword = singleLobKeyword(metadata.encoding);
@@ -1675,6 +1731,10 @@ export function generateForJsonPath(
 ): string {
     const targetPlatform = normalizePlatform(options.targetPlatform);
 
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'FOR JSON PATH');
+    }
+
     if (!supports('for_json', targetPlatform)) {
         return notSupportedMessage(
             'FOR JSON PATH',
@@ -1776,6 +1836,10 @@ export function generateBestPractices(
 ): string {
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const schemaName = options.schemaName ?? 'dbo';
+
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return targetTableColumnLimitGuidance(metadata, 'BEST PRACTICES');
+    }
 
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     const fileType = stringOr(metadata.file_type, 'csv');
@@ -2328,6 +2392,10 @@ export function generateCompleteDdl(
     metadata: GeneratorMetadata,
     options: GenerateAllOptions = {},
 ): string {
+    if (exceedsTargetTableColumnLimit(metadata)) {
+        return `${targetTableColumnLimitGuidance(metadata, 'COMPLETE SCRIPT')}\n`;
+    }
+
     const dataSource = options.dataSource || 'MyDataSource';
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;

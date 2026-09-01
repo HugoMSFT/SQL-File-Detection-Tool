@@ -28,6 +28,9 @@ export const JSON_SCHEMA_SAMPLE_ROWS = 200;
 /** Distinct JSON object keys retained for schema inference. */
 export const JSON_SCHEMA_MAX_COLUMNS = 4096;
 
+/** Maximum regular columns in a generated SQL target table or typed projection. */
+export const TARGET_TABLE_MAX_COLUMNS = 1024;
+
 /** Entries retained by the analysis cache. */
 export const CACHE_MAX_ENTRIES = 256;
 

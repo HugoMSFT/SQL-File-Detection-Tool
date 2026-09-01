@@ -4,6 +4,17 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.6]
+
+### Fixed
+
+- Preserved 257-character and larger JSON numeric tokens as raw text, including
+  fields that also contain ordinary integers, instead of retaining an unsafe INT
+  projection.
+- Kept wide JSON analysis complete while blocking impossible 1,025-column typed
+  targets and runnable scripts; NDJSON now uses line-preserving, codepage-aware
+  raw JSON guidance across all supported SQL platforms.
+
 ## [1.0.5]
 
 ### Fixed

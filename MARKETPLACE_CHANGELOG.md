@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.6
+
+- Preserved oversized JSON numerics as raw text instead of unsafe INT
+  projections.
+- Replaced impossible 1,025-column typed targets with explicit raw NDJSON
+  preservation guidance across all supported SQL platforms.
+
 ## 1.0.5
 
 - Preserved exact numeric and unexpected sampled values in previews, and kept

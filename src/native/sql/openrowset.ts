@@ -39,6 +39,8 @@ import {
     notSupportedMessage,
     openrowsetWithSchema,
     displayFileName,
+    exceedsTargetTableColumnLimit,
+    targetTableColumnLimitGuidance,
     type GeneratorMetadata,
 } from './generatorHelpers';
 
@@ -70,6 +72,18 @@ export function generateOpenrowset(
     const targetPlatform = options.targetPlatform;
     const storageUrl = options.storageUrl ?? null;
     const dataSource = options.dataSource ?? 'MyDataSource';
+    const fileType = stringOr(metadata.file_type, 'csv');
+    const exceedsColumnLimit = exceedsTargetTableColumnLimit(metadata);
+    const wideJson = exceedsColumnLimit && fileType === 'json';
+
+    if (
+        exceedsColumnLimit &&
+        fileType !== 'json' &&
+        fileType !== 'parquet' &&
+        fileType !== 'delta'
+    ) {
+        return targetTableColumnLimitGuidance(metadata, 'OPENROWSET TYPED PROJECTION');
+    }
 
     if (!supports('openrowset', targetPlatform)) {
         const alts: string[] = [];
@@ -90,7 +104,6 @@ export function generateOpenrowset(
         );
     }
 
-    const fileType = stringOr(metadata.file_type, 'csv');
     const fileName = displayFileName(metadata);
     const localPath = quoteLiteral(
         stringOr(metadata.file_path, '').split('\\').join('/'),
@@ -98,6 +111,15 @@ export function generateOpenrowset(
 
     const platformLabel = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
     const lines = [
+        ...(wideJson
+            ? [
+                ...targetTableColumnLimitGuidance(
+                    metadata,
+                    'OPENROWSET RAW-JSON ACCESS',
+                ).split('\n'),
+                '',
+            ]
+            : []),
         '-- ====================================================================',
         '-- OPENROWSET',
         `-- Source  : ${sqlComment(fileName)}  (${sqlComment(fileType.toUpperCase())})`,
@@ -161,8 +183,8 @@ function ndjsonCloudLines(
 ): string[] {
     const lines = [
         '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-        '-- Row framing needs the abs:// / adls:// virtualization source. The',
-        '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+        '-- Row framing uses the data-virtualization source. The https://',
+        '-- BLOB_STORAGE connector rejects FIELDTERMINATOR /',
         '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
         '-- The file is never read whole here: concatenated NDJSON is not one',
         '-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.',
@@ -174,7 +196,35 @@ function ndjsonCloudLines(
         `    BULK '${bulkPath}',`,
         `    DATA_SOURCE     = '${sourceName}',`,
     );
-    lines.push(...jsonRowFrameOptions(4, '0x0a'));
+    lines.push(...jsonRowFrameOptions(metadata, 4, '0x0a'));
+    if (cols.length > 0) {
+        lines.push(
+            ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
+            'CROSS APPLY OPENJSON([src].doc)',
+            'WITH (',
+            cols.join(',\n'),
+            ') AS [j];',
+        );
+    } else {
+        lines.push(') WITH (doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line');
+    }
+    return lines;
+}
+
+/** NDJSON read for a server-local path, framed into one document per line. */
+function ndjsonLocalLines(
+    metadata: GeneratorMetadata,
+    localPath: string,
+): string[] {
+    const cols = generateOpenjsonColumns(metadata, 4);
+    const lines = [
+        '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+        '-- FORMAT = CSV is used only to frame LF-delimited JSON documents.',
+        cols.length > 0 ? 'SELECT TOP (100) [j].*' : 'SELECT TOP (100) [src].doc',
+        'FROM OPENROWSET(',
+        `    BULK N'${localPath}',`,
+        ...jsonRowFrameOptions(metadata, 4, '0x0a'),
+    ];
     if (cols.length > 0) {
         lines.push(
             ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
@@ -275,6 +325,16 @@ function openrowsetBlobStorageBulk(
     );
 
     if (fileType === 'json') {
+        if (metadata.json_format === 'ndjson') {
+            lines.push(
+                '-- NDJSON cannot use SINGLE_CLOB through this BLOB_STORAGE source:',
+                '-- it would return concatenated documents, while this connector rejects',
+                '-- the row-framing options needed to separate them. Preserve each line',
+                '-- as raw NVARCHAR(MAX) JSON by staging the file on a local/UNC path or',
+                '-- by using a data-virtualization source on a newer/Azure SQL target.',
+            );
+            return lines.join('\n');
+        }
         const lob = singleLobKeyword(metadata.encoding);
         lines.push(
             `-- JSON: a TYPE = BLOB_STORAGE data source accepts ${lob},`,
@@ -355,6 +415,10 @@ function openrowsetFabric(
     }
 
     if (fileType === 'json') {
+        if (metadata.json_format === 'ndjson') {
+            lines.push(...ndjsonCloudLines(metadata, bulkPath, sourceName));
+            return lines.join('\n');
+        }
         lines.push(
             '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
             '-- Read the document as one text column via the CSV reader,',
@@ -365,7 +429,7 @@ function openrowsetFabric(
             `    BULK '${bulkPath}',`,
             `    DATA_SOURCE     = '${sourceName}',`,
         );
-        lines.push(...jsonRowFrameOptions());
+        lines.push(...jsonRowFrameOptions(metadata));
         lines.push(
             ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
         );
@@ -541,6 +605,7 @@ function openrowsetLocal(
 ): string {
     const fileType = stringOr(metadata.file_type, 'csv');
     const encoding = stringOr(metadata.encoding, 'utf-8');
+    const jsonFormat = stringOr(metadata.json_format, 'array');
 
     if (fileType === 'csv' || fileType === 'text') {
         // A FORMATFILE placeholder makes this statement unrunnable: there is no
@@ -574,6 +639,10 @@ function openrowsetLocal(
             `FROM OPENROWSET(BULK N'${localPath}', ${lob}) AS [src];`,
         );
     } else if (fileType === 'json') {
+        if (jsonFormat === 'ndjson') {
+            lines.push(...ndjsonLocalLines(metadata, localPath));
+            return lines.join('\n');
+        }
         lines.push(
             `-- ${sqlComment(PLATFORM_LABELS[targetPlatform])} does not support`,
             "-- FORMAT = 'JSON' or JSON external tables. This workaround",

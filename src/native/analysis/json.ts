@@ -75,6 +75,7 @@ interface JsonFieldEvidence {
     readonly numeric: NumericColumnAccumulator;
     first: JsonNode | null;
     maxStringLength: number | null;
+    rejectedNumeric: boolean;
 }
 
 class JsonSchemaAccumulator {
@@ -97,6 +98,7 @@ class JsonSchemaAccumulator {
                     numeric: new NumericColumnAccumulator(),
                     first: null,
                     maxStringLength: null,
+                    rejectedNumeric: false,
                 };
                 this.fields.set(key, evidence);
                 this.keys.push(key);
@@ -112,7 +114,9 @@ class JsonSchemaAccumulator {
                 case 'int':
                 case 'float':
                     evidence.families.add('numeric');
-                    evidence.numeric.add(value.raw);
+                    if (!evidence.numeric.add(value.raw)) {
+                        evidence.rejectedNumeric = true;
+                    }
                     break;
                 case 'string':
                     evidence.families.add('string');
@@ -160,7 +164,15 @@ class JsonSchemaAccumulator {
                 schema.push([key, 'bool']);
             } else if (families.length === 1 && families[0] === 'numeric') {
                 nesting[key] = 'scalar';
-                schema.push([key, evidence.numeric.detectedType() ?? 'str']);
+                schema.push([
+                    key,
+                    evidence.rejectedNumeric
+                        ? 'str'
+                        : evidence.numeric.detectedType() ?? 'str',
+                ]);
+                if (evidence.rejectedNumeric) {
+                    typedProjectionSafe = false;
+                }
             } else if (families.length === 1 && families[0] === 'string') {
                 nesting[key] = 'scalar';
                 schema.push([key, 'str']);

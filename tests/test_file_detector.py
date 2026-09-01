@@ -297,10 +297,13 @@ def test_ndjson_dynamic_keys_are_bounded_and_marked_unsafe(tmp_path):
     )
     generator = SQLGenerator()
     assert generator._generate_openjson_columns(metadata) == []
-    assert '[key_0] NVARCHAR(MAX)' in generator.generate_create_table(
+    create_table = generator.generate_create_table(
         metadata,
         'dynamic',
     )
+    assert '4,096 detected columns' in create_table
+    assert '1,024-column target-table limit' in create_table
+    assert 'CREATE TABLE [' not in create_table
 
 
 def test_python_csv_field_limit_matches_native_bound(tmp_path):
@@ -336,6 +339,58 @@ def test_huge_numeric_tokens_fall_back_without_integer_conversion(tmp_path):
     assert metadata['schema'] == [('value', 'str')]
     assert metadata['json_sample_values']['value'] == token
     assert file_detector_module._parse_numeric_token(token) is None
+
+
+def test_json_numeric_token_boundary_and_mixed_oversized_evidence(tmp_path):
+    """The 257th token character switches the whole field to raw text."""
+    from external_file_detection.sql_generator import SQLGenerator
+
+    accepted = '9' * 256
+    boundary = tmp_path / 'numeric-boundary.json'
+    boundary.write_text(f'[{{"value":{accepted}}}]', encoding='utf-8')
+
+    detector = FileDetector()
+    metadata = detector.analyze_file_metadata(str(boundary))
+    assert metadata['schema'] == [('value', 'decimal(256,0)')]
+    assert metadata['json_sample_values']['value'] == accepted
+    assert metadata['json_typed_projection_safe'] is True
+    assert '[value] NVARCHAR(MAX)' in SQLGenerator().generate_create_table(
+        metadata,
+        'numeric_boundary',
+    )
+
+    rejected = '8' * 257
+    over_boundary = tmp_path / 'numeric-over-boundary.json'
+    over_boundary.write_text(f'[{{"value":{rejected}}}]', encoding='utf-8')
+    over_boundary_metadata = detector.analyze_file_metadata(str(over_boundary))
+    assert over_boundary_metadata['schema'] == [('value', 'str')]
+    assert over_boundary_metadata['json_sample_values']['value'] == rejected
+    assert over_boundary_metadata['json_typed_projection_safe'] is False
+
+    oversized = tmp_path / 'oversized-numeric.json'
+    oversized.write_text(
+        f'[{{"value":1}},{{"value":{rejected}}}]',
+        encoding='utf-8',
+    )
+    oversized_metadata = detector.analyze_file_metadata(str(oversized))
+    assert oversized_metadata['schema'] == [('value', 'str')]
+    assert oversized_metadata['json_typed_projection_safe'] is False
+    assert SQLGenerator()._generate_openjson_columns(oversized_metadata) == []
+    assert '[value] NVARCHAR(MAX)' in SQLGenerator().generate_create_table(
+        oversized_metadata,
+        'oversized_numeric',
+    )
+    fabric_load = SQLGenerator().generate_bulk_insert(
+        oversized_metadata,
+        'oversized_numeric',
+        target_platform='fabric_sql_db',
+    )
+    assert 'Preserve each JSON object or NDJSON line' in fabric_load
+    assert 'INSERT INTO [' not in fabric_load
+    assert detector.get_preview_data(str(oversized), max_rows=2)['rows'] == [
+        [1],
+        [rejected],
+    ]
 
 
 def test_unicode_digits_are_text_not_ascii_numerics(tmp_path):
