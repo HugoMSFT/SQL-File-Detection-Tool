@@ -16,7 +16,7 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough.gif)
+![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.0.2.gif)
 
 Open the Activity Bar icon, select a supported file or folder, and Preview opens
 automatically. Use the SQL tabs for generated statements. In Credential setup,
@@ -553,7 +553,7 @@ slack for a shared CI runner.
 | First analysis of a 5-column CSV | 30 ms | < 8000 ms |
 | Re-analysis of the same file | 4 ms | < 2000 ms |
 | Heap retained after 20 repeat analyses | 3.0 MiB | < 96 MiB |
-| Packaged `.vsix` | 500 KiB (17 files) | < 5 MB |
+| Packaged `.vsix` | 461 KiB (17 files) | < 5 MB |
 
 There is no setup step to measure, because there is no setup step. Activation
 is triggered by the Activity Bar view, a command or a context-menu action -
