@@ -4,6 +4,15 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.9]
+
+### Changed
+
+- Replaced the Marketplace walkthrough with a cache-busted GIF generated from
+  the current controller, renderer, styles, and SQL output.
+- Made the capture target follow the extension version so regenerated assets
+  cannot silently overwrite an older release image.
+
 ## [1.0.8]
 
 ### Changed
