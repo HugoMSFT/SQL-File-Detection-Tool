@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.8
+
+- Moved the Marketplace publication to the personal **Hugo Queiroz**
+  publisher under `hvbqueiroz.sql-file-detection` so its independent
+  ownership is unambiguous.
+- Runtime behavior is unchanged from 1.0.7.
+
 ## 1.0.7
 
 - Hardened storage host, platform, and authentication recommendations.
