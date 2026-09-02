@@ -43,7 +43,11 @@ const path = require('node:path');
 const REPO = path.resolve(__dirname, '..');
 const OUT = path.join(REPO, 'out');
 const MEDIA = path.join(REPO, 'media');
-const TARGET = path.join(MEDIA, 'sql-file-detection-tool-walkthrough-1.0.2.gif');
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8'));
+const TARGET = path.join(
+    MEDIA,
+    `sql-file-detection-tool-walkthrough-${MANIFEST.version}.gif`,
+);
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -172,9 +176,8 @@ function latestState(posted) {
 
 /** Derive the scene list: which state, and how long to hold it. */
 function buildScenes(states) {
-    const version = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')).version;
     const clone = (state, extra) =>
-        Object.assign(JSON.parse(JSON.stringify(state)), { version }, extra || {});
+        Object.assign(JSON.parse(JSON.stringify(state)), { version: MANIFEST.version }, extra || {});
 
     return [
         { caption: 'activity-bar', state: clone(states.shell), hold: 1200, panel: false },
@@ -300,9 +303,16 @@ function themeCss(name) {
  * `bundleRuntime.test.ts`; this page is only responsible for pixels.
  */
 function buildPage(shellHtml, activityIcon) {
-    const body = shellHtml
-        .replace(/^[\s\S]*?<body([^>]*)>/, '<div id="webview-root"$1>')
-        .replace(/<\/body>[\s\S]*$/, '</div>');
+    const bodyMatch = /<body([^>]*)>([\s\S]*?)<\/body>/.exec(shellHtml);
+    if (!bodyMatch) {
+        throw new Error('The webview shell has no body to capture.');
+    }
+    const bodyAttributes = bodyMatch[1];
+    const scriptPattern = /\s*<script\b[^>]*\bsrc="[^"]*"[^>]*><\/script>\s*$/;
+    if (!scriptPattern.test(bodyMatch[2])) {
+        throw new Error('The webview shell script could not be isolated for capture.');
+    }
+    const body = bodyMatch[2].replace(scriptPattern, '');
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <link rel="stylesheet" href="./main.css">
@@ -327,8 +337,9 @@ function buildPage(shellHtml, activityIcon) {
   .act.active::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
     width: 2px; background: var(--vscode-foreground); }
   #stage { flex: 1; min-width: 0; display: flex; }
-  #webview-root { flex: 1; min-width: 0; overflow: hidden;
-    background: var(--vscode-editor-background); color: var(--vscode-foreground); }
+  #webview-root { flex: 1; min-width: 0; overflow: hidden; padding: 14px;
+    background: var(--vscode-editor-background); color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); line-height: 1.45; }
   #placeholder { flex: 1; display: flex; align-items: center; justify-content: center;
     color: var(--vscode-descriptionForeground); font-size: 13px;
     background: var(--vscode-editor-background); }
@@ -343,7 +354,7 @@ function buildPage(shellHtml, activityIcon) {
     color: var(--vscode-descriptionForeground); }
 </style>
 </head>
-<body>
+<body${bodyAttributes}>
 <div id="chrome">
   <div id="titlebar"><div id="dots"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div><span id="title">sales.parquet — SQL File Detection Tool</span></div>
   <div id="body">
@@ -354,7 +365,7 @@ function buildPage(shellHtml, activityIcon) {
     </div>
     <div id="stage">
       <div id="placeholder">Select the SQL File Detection Tool icon</div>
-      ${body}
+      <div id="webview-root">${body}</div>
     </div>
   </div>
   <div id="caption"></div>

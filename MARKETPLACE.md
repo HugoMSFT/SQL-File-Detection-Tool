@@ -10,7 +10,7 @@ Preview data files and generate platform-aware T-SQL without leaving VS Code.
 **Topics:** ETL · Data Engineering · Bulk Loading · Data Virtualization ·
 PolyBase
 
-![SQL File Detection Tool workflow](media/sql-file-detection-tool-walkthrough-1.0.2.gif)
+![SQL File Detection Tool workflow](media/sql-file-detection-tool-walkthrough-1.0.9.gif)
 
 ## What it does
 

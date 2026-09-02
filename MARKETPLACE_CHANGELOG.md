@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.9
+
+- Replaced the walkthrough GIF with a current capture of the editor-first UI.
+- Runtime behavior is unchanged from 1.0.8.
+
 ## 1.0.8
 
 - Moved the Marketplace publication to the personal **Hugo Queiroz**

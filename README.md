@@ -16,7 +16,7 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.0.2.gif)
+![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.0.9.gif)
 
 Open the Activity Bar icon, select a supported file or folder, and Preview opens
 automatically. Use the SQL tabs for generated statements. In Credential setup,
@@ -163,8 +163,8 @@ Marketplace ID: `hvbqueiroz.sql-file-detection`
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-1.0.8.vsix
-code --install-extension dist/sql-file-detection-1.0.8.vsix --force
+npm run package     # writes dist/sql-file-detection-1.0.9.vsix
+code --install-extension dist/sql-file-detection-1.0.9.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -858,7 +858,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-1.0.8.vsix
+npm run package        # writes dist/sql-file-detection-1.0.9.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 
