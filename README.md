@@ -159,10 +159,12 @@ The extension is self-contained. Installing it does not create a virtual
 environment, install a package, start a server, choose a port or open a browser
 tab. Nothing outside the `.vsix` is downloaded or executed.
 
+Marketplace ID: `hvbqueiroz.sql-file-detection`
+
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-1.0.7.vsix
-code --install-extension dist/sql-file-detection-tool-1.0.7.vsix --force
+npm run package     # writes dist/sql-file-detection-1.0.8.vsix
+code --install-extension dist/sql-file-detection-1.0.8.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -856,7 +858,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-tool-1.0.7.vsix
+npm run package        # writes dist/sql-file-detection-1.0.8.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 

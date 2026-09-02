@@ -38,6 +38,7 @@ const audit = require(path.join(REPO, 'scripts', 'audit-vsix.js')) as {
 };
 
 const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as {
+    name: string;
     version: string;
     main: string;
     scripts: Record<string, string>;
@@ -205,7 +206,7 @@ test('the third party notices cover every bundled package', () => {
 
 test('a built VSIX contains no Python, sources, dependencies or secrets', (t) => {
     const dist = path.join(REPO, 'dist');
-    const vsix = `sql-file-detection-tool-${manifest.version}.vsix`;
+    const vsix = `${manifest.name}-${manifest.version}.vsix`;
     if (!fs.existsSync(path.join(dist, vsix))) {
         t.skip('no .vsix in dist; run "npm run package" to audit the real archive');
         return;

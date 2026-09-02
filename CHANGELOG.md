@@ -4,6 +4,16 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.8]
+
+### Changed
+
+- Moved the VS Code Marketplace publication from
+  `HugoMSFT.sql-file-detection-tool` to
+  `hvbqueiroz.sql-file-detection`, published under the personal **Hugo
+  Queiroz** identity.
+- Kept runtime behavior unchanged from 1.0.7.
+
 ## [1.0.7]
 
 ### Fixed

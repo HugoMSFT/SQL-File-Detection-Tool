@@ -102,8 +102,8 @@ test('the explorer context menu is wired to the analyze command', () => {
 });
 
 test('the manifest metadata is Marketplace-ready', () => {
-    assert.equal(manifest.publisher, 'HugoMSFT');
-    assert.equal(manifest.name, 'sql-file-detection-tool');
+    assert.equal(manifest.publisher, 'hvbqueiroz');
+    assert.equal(manifest.name, 'sql-file-detection');
     assert.equal(manifest.main, './dist/extension.js');
     for (const keyword of [
         'etl',
