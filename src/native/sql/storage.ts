@@ -61,7 +61,7 @@ function fallbackFileName(fileName: string): string {
     return baseName(fileName) || '<file>';
 }
 
-const S3_SCHEMES: ReadonlySet<string> = new Set(['s3', 's3a', 's3n']);
+const S3_SCHEMES: ReadonlySet<string> = new Set(['s3']);
 
 /** Platforms whose bulk readers can reach S3-compatible object storage. */
 export const S3_BULK_PLATFORMS: ReadonlySet<TargetPlatform> = new Set([
@@ -78,6 +78,64 @@ const AZURE_STORAGE_SCHEMES: ReadonlySet<string> = new Set([
     'abfss',
 ]);
 
+const AZURE_BLOB_SUFFIXES = [
+    'blob.core.windows.net',
+    'blob.core.usgovcloudapi.net',
+    'blob.core.chinacloudapi.cn',
+    'blob.core.cloudapi.de',
+] as const;
+
+const AZURE_DFS_SUFFIXES = [
+    'dfs.core.windows.net',
+    'dfs.core.usgovcloudapi.net',
+    'dfs.core.chinacloudapi.cn',
+    'dfs.core.cloudapi.de',
+] as const;
+
+/** Host name from a URL authority that may contain user info or a port. */
+export function authorityHostname(authority: string): string {
+    const withoutUser = authority.slice(authority.lastIndexOf('@') + 1);
+    if (withoutUser.startsWith('[')) {
+        const end = withoutUser.indexOf(']');
+        return (end >= 0 ? withoutUser.slice(1, end) : withoutUser).toLowerCase();
+    }
+    return withoutUser.split(':')[0].toLowerCase();
+}
+
+function hasDnsSuffix(host: string, suffixes: readonly string[]): boolean {
+    const normalized = host.toLowerCase().replace(/\.$/, '');
+    return suffixes.some((suffix) => normalized.endsWith(`.${suffix}`));
+}
+
+/** Documented Azure Blob endpoint, including sovereign and private-link forms. */
+export function isAzureBlobHost(host: string): boolean {
+    return hasDnsSuffix(host, AZURE_BLOB_SUFFIXES);
+}
+
+/** Documented Azure Data Lake endpoint, including sovereign and private-link forms. */
+export function isAzureDfsHost(host: string): boolean {
+    return hasDnsSuffix(host, AZURE_DFS_SUFFIXES);
+}
+
+/**
+ * OneLake DFS endpoints supported by ABFS:
+ * global, regional, and workspace-private FQDNs.
+ */
+export function isOneLakeDfsHost(host: string): boolean {
+    const normalized = host.toLowerCase().replace(/\.$/, '');
+    return (
+        /^(?:[a-z0-9-]+-)?onelake\.dfs\.fabric\.microsoft\.com$/.test(normalized)
+        || isOneLakePrivateDfsHost(normalized)
+    );
+}
+
+/** Workspace-private OneLake DFS endpoint. */
+export function isOneLakePrivateDfsHost(host: string): boolean {
+    return /^([0-9a-f]{2})(?:[0-9a-f]{30}|[0-9a-f]{6}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.z\1\.dfs\.fabric\.microsoft\.com$/.test(
+        host.toLowerCase().replace(/\.$/, ''),
+    );
+}
+
 const CLOUD_URL_SCHEMES: ReadonlySet<string> = new Set([
     'abs',
     'wasb',
@@ -87,8 +145,6 @@ const CLOUD_URL_SCHEMES: ReadonlySet<string> = new Set([
     'abfss',
     'azure',
     's3',
-    's3a',
-    's3n',
     'gs',
     'http',
     'https',
@@ -99,37 +155,90 @@ const AZURE_PLACEHOLDER_ACCOUNT = '<storage_account>.dfs.core.windows.net';
 
 /** Default OneLake external data source location. */
 export const FABRIC_DEFAULT_SOURCE_LOCATION =
-    'abfss://<workspace_id>@<tenant>.dfs.fabric.microsoft.com/<lakehouse_id>/Files';
+    'abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/<item_id>/Files';
 
 /** Classify a storage URL, so a platform's reachability can be checked. */
 export function storageUrlKind(storageUrl: string | null | undefined): StorageKind {
     if (storageUrl === null || storageUrl === undefined || storageUrl === '') {
         return 'local';
     }
+
     const normalized = String(storageUrl).trim().replace(/\\/g, '/');
     const parsed = urlparse(normalized);
     const scheme = parsed.scheme;
-    const host = parsed.netloc.toLowerCase();
+    const host = authorityHostname(parsed.netloc);
+    if (
+        (scheme === 'http' || scheme === 'https' || scheme === 's3')
+        && parsed.netloc.includes('@')
+    ) {
+        return 'other';
+    }
 
     if (S3_SCHEMES.has(scheme)) {
-        return 's3';
+        return host && parsed.path.split('/').filter(Boolean).length > 0
+            ? 's3'
+            : 'other';
     }
-    if (host.includes('fabric.microsoft.com') || host.startsWith('onelake.')) {
+    if (
+        ['abfs', 'abfss', 'http', 'https'].includes(scheme)
+        && isOneLakeDfsHost(host)
+    ) {
         return 'onelake';
     }
-    if (AZURE_STORAGE_SCHEMES.has(scheme) || scheme === 'azure') {
+    if (scheme === 'azure') {
+        return 'azure';
+    }
+    if (
+        ['abs', 'wasb', 'wasbs'].includes(scheme)
+        && isAzureBlobHost(host)
+    ) {
+        return 'azure';
+    }
+    if (
+        ['adls', 'abfs', 'abfss'].includes(scheme)
+        && isAzureDfsHost(host)
+    ) {
         return 'azure';
     }
     if (
         (scheme === 'http' || scheme === 'https') &&
-        (host.endsWith('.blob.core.windows.net') || host.endsWith('.dfs.core.windows.net'))
+        (isAzureBlobHost(host) || isAzureDfsHost(host))
     ) {
         return 'azure';
     }
-    if (scheme === 'http' || scheme === 'https' || scheme === 'gs' || scheme === 'ftp') {
+    if (
+        CLOUD_URL_SCHEMES.has(scheme)
+        || scheme === 'ftp'
+        || (scheme.length > 1)
+    ) {
         return 'other';
     }
     return 'local';
+}
+
+/** Whether a real storage URL is supported by the selected SQL platform. */
+export function storageUrlSupportedByPlatform(
+    storageUrl: string | null | undefined,
+    platform: TargetPlatform,
+): boolean {
+    const kind = storageUrlKind(storageUrl);
+    if (kind === 'local') {
+        return true;
+    }
+    if (platform === 'fabric_sql_db') {
+        return kind === 'onelake';
+    }
+    if (platform === 'azure_sql_db' || platform === 'azure_sql_mi') {
+        return kind === 'azure';
+    }
+    if (platform === 'sql_server_2022' || platform === 'sql_server_2025') {
+        return kind === 'azure' || kind === 's3';
+    }
+    if (platform !== 'sql_server_2019' || kind !== 'azure') {
+        return false;
+    }
+    const parsed = urlparse(String(storageUrl).trim().replace(/\\/g, '/'));
+    return isAzureBlobHost(authorityHostname(parsed.netloc)) || parsed.scheme === 'azure';
 }
 
 /** True when the value points at remote object storage. */
@@ -181,7 +290,11 @@ export function sqlServerStorageParts(
         abfss: is2019 ? 'abfss' : 'adls',
     };
 
-    if (scheme in schemeMap && host !== '') {
+    const hostname = authorityHostname(host);
+    const validSchemeHost =
+        (['abs', 'wasb', 'wasbs'].includes(scheme) && isAzureBlobHost(hostname))
+        || (['adls', 'abfs', 'abfss'].includes(scheme) && isAzureDfsHost(hostname));
+    if (scheme in schemeMap && host !== '' && validSchemeHost) {
         const targetScheme = schemeMap[scheme];
         let relativePath = path;
         if (!host.includes('@') && path !== '') {
@@ -196,9 +309,9 @@ export function sqlServerStorageParts(
         const [container, separator, remainder] = partition(path, '/');
         const lowerHost = host.toLowerCase();
         let targetScheme: string;
-        if (lowerHost.endsWith('.dfs.core.windows.net')) {
+        if (isAzureDfsHost(authorityHostname(lowerHost))) {
             targetScheme = is2019 ? 'abfss' : 'adls';
-        } else if (lowerHost.endsWith('.blob.core.windows.net')) {
+        } else if (isAzureBlobHost(authorityHostname(lowerHost))) {
             targetScheme = is2019 ? 'wasbs' : 'abs';
         } else {
             return [defaultLocation, path || fallback];
@@ -253,7 +366,11 @@ export function parseAzureStorageUrl(
     const host = parsed.netloc;
     const path = parsed.path.replace(/^\/+|\/+$/g, '');
 
-    if (AZURE_STORAGE_SCHEMES.has(scheme) && host !== '') {
+    const hostname = authorityHostname(host);
+    const validSchemeHost =
+        (['abs', 'wasb', 'wasbs'].includes(scheme) && isAzureBlobHost(hostname))
+        || (['adls', 'abfs', 'abfss'].includes(scheme) && isAzureDfsHost(hostname));
+    if (AZURE_STORAGE_SCHEMES.has(scheme) && host !== '' && validSchemeHost) {
         if (host.includes('@')) {
             const [container, , account] = partition(host, '@');
             return [
@@ -269,8 +386,8 @@ export function parseAzureStorageUrl(
     const lowerHost = host.toLowerCase();
     if (
         (scheme === 'http' || scheme === 'https') &&
-        (lowerHost.endsWith('.blob.core.windows.net') ||
-            lowerHost.endsWith('.dfs.core.windows.net'))
+        (isAzureBlobHost(authorityHostname(lowerHost)) ||
+            isAzureDfsHost(authorityHostname(lowerHost)))
     ) {
         const [container, separator, remainder] = partition(path, '/');
         return [host, container || '<container>', (separator ? remainder : '') || fallback];
@@ -295,7 +412,7 @@ export function azureBulkStorageParts(
     fileName: string,
 ): [string, string] {
     const [account, container, relativePath] = parseAzureStorageUrl(storageUrl, fileName);
-    const blobHost = account.replace(/\.dfs\.core\.windows\.net$/i, '.blob.core.windows.net');
+    const blobHost = account.replace(/\.dfs\.(core\.[^.]+\.[^.]+)$/i, '.blob.$1');
     return [`https://${blobHost}/${container}`, relativePath];
 }
 
@@ -307,8 +424,8 @@ export function azureVirtualizationParts(
     const [account, container, relativePath] = parseAzureStorageUrl(storageUrl, fileName);
     const lowerAccount = account.toLowerCase();
     const prefix =
-        lowerAccount.endsWith('.dfs.core.windows.net')
-        || lowerAccount.endsWith('.dfs.fabric.microsoft.com')
+        isAzureDfsHost(authorityHostname(lowerAccount))
+        || isOneLakeDfsHost(authorityHostname(lowerAccount))
             ? 'adls'
             : 'abs';
     return [`${prefix}://${container}@${account}`, relativePath];
@@ -349,7 +466,11 @@ export function fabricOnelakeParts(
     const host = parsed.netloc;
     const path = parsed.path.replace(/^\/+|\/+$/g, '');
 
-    if ((scheme === 'abfs' || scheme === 'abfss') && host !== '') {
+    if (
+        (scheme === 'abfs' || scheme === 'abfss')
+        && host !== ''
+        && isOneLakeDfsHost(authorityHostname(host))
+    ) {
         const [root, separator, remainder] = splitOnFilesSegment(path);
         if (!separator) {
             return fallbackPair;
@@ -360,13 +481,18 @@ export function fabricOnelakeParts(
     if (
         (scheme === 'http' || scheme === 'https') &&
         host !== '' &&
-        host.toLowerCase().includes('fabric.microsoft.com')
+        isOneLakeDfsHost(authorityHostname(host))
     ) {
-        const [workspace, separator, remainder] = partition(path, '/');
-        if (!separator) {
+        const privateHost = isOneLakePrivateDfsHost(authorityHostname(host));
+        const [pathWorkspace, separator, remainder] = partition(path, '/');
+        const workspace = privateHost
+            ? authorityHostname(host).split('.')[0]
+            : pathWorkspace;
+        const itemPath = privateHost ? path : remainder;
+        if (!privateHost && !separator) {
             return fallbackPair;
         }
-        const [root, filesSeparator, tail] = splitOnFilesSegment(remainder);
+        const [root, filesSeparator, tail] = splitOnFilesSegment(itemPath);
         if (!filesSeparator) {
             return fallbackPair;
         }

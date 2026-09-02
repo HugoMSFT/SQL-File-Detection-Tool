@@ -50,6 +50,7 @@ src/native/
 |-- preview.ts            bounded tabular previews for every supported format
 |-- analysis/
 |   |-- delimited.ts      shared delimiter/header/type/nullability inference
+|   |-- numeric.ts        lexical BigInt/decimal precision and sample preservation
 |   |-- csv.ts            CSV / TSV / pipe / other delimited text
 |   |-- text.ts           unstructured text
 |   |-- jsonValue.ts      allocation-bounded JSON scanner
@@ -143,6 +144,18 @@ check first. `limits.ts` holds every bound: sample bytes, maximum line length,
 maximum JSON document size, preview rows, Parquet row-group caps, and the ZIP
 entry ceilings used by the XLSX reader. Row counts stream; they never
 materialise the file.
+
+**Type preservation.** CSV and JSON numerics are classified from their source
+tokens with BigInt range checks and decimal precision/scale/exponent arithmetic;
+unsafe preview values remain strings instead of passing through IEEE-754.
+Exponent notation remains text because direct file readers do not normalize it
+before `DECIMAL` conversion.
+Complete CSV, JSON, and NDJSON inputs aggregate every row at bounded schema
+memory, with NDJSON retaining at most 4,096 distinct keys. When a large or
+dynamic-schema input is genuinely sampled, SQL generation defaults to
+`NVARCHAR(MAX)` and surfaces an override warning. Variable-width Parquet, Delta,
+and Iceberg strings also stay `NVARCHAR(MAX)` unless a trustworthy bound exists;
+external-table generation requires an explicit bounded override for LOB types.
 
 **Decompression bombs.** The XLSX reader inspects each ZIP member's declared
 uncompressed size *before* inflating it and rejects three separate ways: an

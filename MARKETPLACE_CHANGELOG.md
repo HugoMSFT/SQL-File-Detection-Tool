@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.7
+
+- Hardened storage host, platform, and authentication recommendations.
+- Removed unsafe CSV fallbacks for ORC, RCFile, and Iceberg.
+- Fixed SQL Server 2019, NDJSON, JSON projection, and complete-script SQL.
+
+## 1.0.6
+
+- Preserved oversized JSON numerics as raw text instead of unsafe INT
+  projections.
+- Replaced impossible 1,025-column typed targets with explicit raw NDJSON
+  preservation guidance across all supported SQL platforms.
+
+## 1.0.5
+
+- Preserved exact numeric and unexpected sampled values in previews, and kept
+  scientific notation loadable as text.
+- Bounded dynamic NDJSON schemas and aligned CSV field-size safety across the
+  extension and Python CLI.
+
+## 1.0.4
+
+- Preserved exact CSV and JSON numerics, aggregated complete inputs beyond the
+  former sample caps, and used safe fallbacks for mixed or truncated data.
+- Prevented unknown-width strings and unsupported external-table LOB columns
+  from generating truncation-prone SQL.
+
 ## 1.0.3
 
 - Added ETL, Data Engineering, Bulk Loading, Data Virtualization, and PolyBase

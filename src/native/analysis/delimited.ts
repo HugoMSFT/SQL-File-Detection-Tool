@@ -6,15 +6,18 @@
  * with the Python backend, including embedded delimiters, embedded newlines,
  * doubled quotes and blank lines.
  *
- * The type inference follows pandas' C parser: a column becomes `int64` only
- * when every value parses as an integer and nothing is missing, `float64` when
- * numeric values are mixed with missing values or decimals, `bool` when every
- * value is a recognised boolean with nothing missing, and `object` otherwise.
+ * Type inference stays lexical so integer boundaries and exact decimal tokens
+ * never pass through JavaScript Number before their SQL type is selected.
  */
 
 import { LimitExceededError } from '../errors';
 import { MAX_COLUMNS, MAX_FIELD_CHARS } from '../limits';
 import type { SampleValue } from '../types';
+import {
+    exactNumericSample,
+    NumericColumnAccumulator,
+    type ExactNumericType,
+} from './numeric';
 
 /** Cell values as pandas would materialise them. */
 export type ParsedCell = string | number | boolean | null;
@@ -222,7 +225,18 @@ function looksNumeric(value: string): boolean {
 }
 
 function looksBoolean(value: string): boolean {
-    return TRUE_LITERALS.has(value) || FALSE_LITERALS.has(value);
+    return parseBooleanToken(value) !== null;
+}
+
+/** Parse a supported boolean token, or return null rather than fabricating false. */
+export function parseBooleanToken(value: string): boolean | null {
+    if (TRUE_LITERALS.has(value)) {
+        return true;
+    }
+    if (FALSE_LITERALS.has(value)) {
+        return false;
+    }
+    return null;
 }
 
 /**
@@ -300,111 +314,100 @@ export function sniffDialect(sample: string, filePath: string): DialectGuess {
     return { delimiter: best, hasHeader: guessHasHeader(rows) };
 }
 
-/** pandas dtype names the inference can produce. */
-export type PandasDtype = 'int64' | 'float64' | 'bool' | 'object';
+/** Detected scalar types produced by lexical delimited-column inference. */
+export type InferredDtype = ExactNumericType | 'bool' | 'object';
 
 /** Result of inferring one column. */
 export interface ColumnInference {
-    dtype: PandasDtype;
+    dtype: InferredDtype;
     values: ParsedCell[];
-    /** Longest `str(value)` across non-missing values, for string columns. */
+    /** Longest source token across non-missing values, for text fallbacks. */
     observedMaxLength: number | null;
 }
 
-function pythonStr(value: ParsedCell): string {
-    if (value === null) {
-        return '';
-    }
-    if (typeof value === 'boolean') {
-        return value ? 'True' : 'False';
-    }
-    return String(value);
+function isMissing(cell: string | null): boolean {
+    return cell === null || PANDAS_NA_VALUES.has(cell);
 }
 
 /**
- * Infer one column the way pandas' C parser would.
- *
- * `raw` holds the textual cells; missing cells are represented by `null`.
+ * Constant-memory evidence for one delimited column.
  */
-export function inferColumn(raw: Array<string | null>): ColumnInference {
-    let hasMissing = false;
-    let allInteger = true;
-    let allNumeric = true;
-    let allBoolean = true;
-    let sawValue = false;
+export class DelimitedColumnAccumulator {
+    private sawValue = false;
+    private allBoolean = true;
+    private allNumeric = true;
+    private maxRawLength = 0;
+    private readonly numeric = new NumericColumnAccumulator();
 
-    for (const cell of raw) {
-        if (cell === null || PANDAS_NA_VALUES.has(cell)) {
-            hasMissing = true;
-            continue;
+    public add(cell: string | null): void {
+        if (isMissing(cell)) {
+            return;
         }
-        sawValue = true;
-        const trimmed = cell.trim();
-        if (!looksBoolean(cell)) {
-            allBoolean = false;
+        const value = cell as string;
+        this.sawValue = true;
+        this.maxRawLength = Math.max(this.maxRawLength, value.length);
+        if (!looksBoolean(value)) {
+            this.allBoolean = false;
         }
-        if (!INTEGER_PATTERN.test(trimmed) || !Number.isSafeInteger(Number(trimmed))) {
-            allInteger = false;
-        }
-        if (!FLOAT_PATTERN.test(trimmed)) {
-            allNumeric = false;
+        if (!this.numeric.add(value.trim())) {
+            this.allNumeric = false;
         }
     }
 
-    if (!sawValue) {
-        // An all-missing column becomes float64 (all NaN) in pandas.
-        return {
-            dtype: 'float64',
-            values: raw.map(() => null),
-            observedMaxLength: null,
-        };
-    }
-
-    if (allBoolean) {
-        const values = raw.map<ParsedCell>((cell) =>
-            cell === null || PANDAS_NA_VALUES.has(cell) ? null : TRUE_LITERALS.has(cell),
-        );
-        if (!hasMissing) {
-            return { dtype: 'bool', values, observedMaxLength: null };
+    public finish(sample: Array<string | null>): ColumnInference {
+        if (!this.sawValue) {
+            return {
+                dtype: 'object',
+                values: sample.map(() => null),
+                observedMaxLength: null,
+            };
         }
-        // Booleans plus missing values degrade to an object column holding
-        // Python bools, whose `str()` length is 4 or 5.
-        let maxLength = 0;
-        for (const value of values) {
-            if (value !== null) {
-                maxLength = Math.max(maxLength, pythonStr(value).length);
+
+        if (this.allBoolean) {
+            return {
+                dtype: 'bool',
+                values: sample.map<ParsedCell>((cell) =>
+                    isMissing(cell) ? null : TRUE_LITERALS.has(cell as string),
+                ),
+                observedMaxLength: null,
+            };
+        }
+
+        if (this.allNumeric) {
+            const dtype = this.numeric.detectedType();
+            if (dtype !== null) {
+                return {
+                    dtype,
+                    values: sample.map<ParsedCell>((cell) =>
+                        isMissing(cell)
+                            ? null
+                            : exactNumericSample((cell as string).trim()),
+                    ),
+                    observedMaxLength: null,
+                };
             }
         }
-        return { dtype: 'object', values, observedMaxLength: maxLength };
-    }
 
-    if (allInteger && !hasMissing) {
         return {
-            dtype: 'int64',
-            values: raw.map((cell) => Number((cell as string).trim())),
-            observedMaxLength: null,
+            dtype: 'object',
+            values: sample.map<ParsedCell>((cell) => (isMissing(cell) ? null : cell)),
+            observedMaxLength: this.maxRawLength,
         };
     }
+}
 
-    if (allNumeric) {
-        return {
-            dtype: 'float64',
-            values: raw.map<ParsedCell>((cell) =>
-                cell === null || PANDAS_NA_VALUES.has(cell) ? null : Number(cell.trim()),
-            ),
-            observedMaxLength: null,
-        };
+/**
+ * Infer one column from a bounded in-memory token list.
+ *
+ * Streaming callers should add every row to {@link DelimitedColumnAccumulator}
+ * and retain only the small preview sample passed to `finish`.
+ */
+export function inferColumn(raw: Array<string | null>): ColumnInference {
+    const accumulator = new DelimitedColumnAccumulator();
+    for (const cell of raw) {
+        accumulator.add(cell);
     }
-
-    let maxLength = 0;
-    const values = raw.map<ParsedCell>((cell) => {
-        if (cell === null || PANDAS_NA_VALUES.has(cell)) {
-            return null;
-        }
-        maxLength = Math.max(maxLength, cell.length);
-        return cell;
-    });
-    return { dtype: 'object', values, observedMaxLength: maxLength };
+    return accumulator.finish(raw);
 }
 
 /** Convert an inferred cell into a JSON-safe sample value. */

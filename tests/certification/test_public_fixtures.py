@@ -106,7 +106,7 @@ def test_a_declared_width_covers_every_wide_text_column():
         for column in shape.wide_text_columns:
             assert column in shape.max_string_lengths, (
                 f'{shape.key}.{column} is wide text but has no declared width, '
-                f'so the generator would size it NVARCHAR(255)'
+                f'so the generator could not emit a bounded external-table type'
             )
             assert shape.max_string_lengths[column] >= 4000
 

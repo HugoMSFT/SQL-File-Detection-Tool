@@ -15,6 +15,7 @@
  */
 
 import { NativeAnalysisError } from '../errors';
+import { exactNumericSample, MAX_NUMERIC_TOKEN_CHARS } from './numeric';
 
 /** A parsed JSON value with its original numeric flavour retained. */
 export type JsonNode =
@@ -169,7 +170,7 @@ export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode;
     const match = NUMBER_PATTERN.exec(text.slice(start));
     if (match) {
         const raw = match[0];
-        const value = Number(raw);
+        const value = raw.length <= MAX_NUMERIC_TOKEN_CHARS ? Number(raw) : Number.NaN;
         const isFloat = Boolean(match[1] || match[2]);
         return {
             node: isFloat ? { kind: 'float', value, raw } : { kind: 'int', value, raw },
@@ -294,8 +295,10 @@ export function pythonRepr(node: JsonNode): string {
             return node.value ? 'True' : 'False';
         case 'int':
             return node.raw.replace(/^\+/, '');
-        case 'float':
-            return pythonFloatRepr(node.value);
+        case 'float': {
+            const exact = exactNumericSample(node.raw);
+            return typeof exact === 'string' ? exact : pythonFloatRepr(exact);
+        }
         case 'string':
             return pythonStringRepr(node.value);
         case 'array':

@@ -4,6 +4,52 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.7]
+
+### Fixed
+
+- Restricted OneLake, S3, Azure Blob, and ADLS recommendations to documented
+  platform and host combinations; lookalike hosts are rejected.
+- Corrected SQL Server 2019 WASBS credentials to use a storage account key and
+  SQL Server S3 credentials to use `S3 ACCESS KEY`.
+- Prevented ORC, RCFile, and Iceberg sources from falling through to executable
+  CSV reads or JSON guidance on unsupported paths.
+- Fixed SQL Server 2019 OPENROWSET syntax, cloud NDJSON framing, unsafe
+  single-object JSON extraction, quick-load option loss, and complete-script
+  storage-source reversion.
+
+## [1.0.6]
+
+### Fixed
+
+- Preserved 257-character and larger JSON numeric tokens as raw text, including
+  fields that also contain ordinary integers, instead of retaining an unsafe INT
+  projection.
+- Kept wide JSON analysis complete while blocking impossible 1,025-column typed
+  targets and runnable scripts; NDJSON now uses line-preserving, codepage-aware
+  raw JSON guidance across all supported SQL platforms.
+
+## [1.0.5]
+
+### Fixed
+
+- Kept scientific-notation fields as text for direct file loading and preserved
+  exact numeric or unexpected late values in the native and Python preview APIs.
+- Bounded NDJSON schema growth, aligned Python's CSV field limit with the
+  native 4 MiB guard, and made oversized or non-ASCII numeric tokens fall back
+  to text without expensive integer conversion.
+
+## [1.0.4]
+
+### Fixed
+
+- Preserved BIGINT boundaries and exact decimal tokens with lexical CSV/JSON
+  inference, full-row aggregation when inputs are completely inspected, and
+  conservative fallbacks for heterogeneous or truncated samples.
+- Mapped unknown variable-width strings to `NVARCHAR(MAX)` and made external
+  tables request a verified bounded override instead of emitting unsupported
+  LOB columns.
+
 ## [1.0.3]
 
 ### Changed

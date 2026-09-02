@@ -28,12 +28,71 @@ class ExternalFileFormatConfig:
 #: never drift between layers. Explicit platform selection is untouched.
 DEFAULT_TARGET_PLATFORM = 'azure_sql_db'
 
+#: Maximum regular columns in a generated SQL target table or typed projection.
+TARGET_TABLE_MAX_COLUMNS = 1024
 
-_S3_SCHEMES = frozenset({'s3', 's3a', 's3n'})
+
+_S3_SCHEMES = frozenset({'s3'})
+_AZURE_STORAGE_SCHEMES = frozenset(
+    {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss'}
+)
+_AZURE_BLOB_SUFFIXES = (
+    'blob.core.windows.net',
+    'blob.core.usgovcloudapi.net',
+    'blob.core.chinacloudapi.cn',
+    'blob.core.cloudapi.de',
+)
+_AZURE_DFS_SUFFIXES = (
+    'dfs.core.windows.net',
+    'dfs.core.usgovcloudapi.net',
+    'dfs.core.chinacloudapi.cn',
+    'dfs.core.cloudapi.de',
+)
 
 # Platforms whose OPENROWSET(BULK ...)/BULK INSERT can reach S3-compatible
 # object storage. SQL Server 2019 and the Azure SQL family cannot.
 S3_BULK_PLATFORMS = frozenset({'sql_server_2022', 'sql_server_2025'})
+
+
+def _authority_hostname(authority: str) -> str:
+    """Return the lower-case hostname from an authority with user info/port."""
+    without_user = str(authority or '').rsplit('@', 1)[-1]
+    if without_user.startswith('['):
+        end = without_user.find(']')
+        return (without_user[1:end] if end >= 0 else without_user).lower()
+    return without_user.split(':', 1)[0].lower().rstrip('.')
+
+
+def _has_dns_suffix(host: str, suffixes: Sequence[str]) -> bool:
+    normalized = str(host or '').lower().rstrip('.')
+    return any(normalized.endswith(f'.{suffix}') for suffix in suffixes)
+
+
+def _is_azure_blob_host(host: str) -> bool:
+    return _has_dns_suffix(host, _AZURE_BLOB_SUFFIXES)
+
+
+def _is_azure_dfs_host(host: str) -> bool:
+    return _has_dns_suffix(host, _AZURE_DFS_SUFFIXES)
+
+
+def _is_onelake_private_dfs_host(host: str) -> bool:
+    return bool(re.fullmatch(
+        r'([0-9a-f]{2})(?:[0-9a-f]{30}|'
+        r'[0-9a-f]{6}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})'
+        r'\.z\1\.dfs\.fabric\.microsoft\.com',
+        str(host or '').lower().rstrip('.'),
+        flags=re.ASCII,
+    ))
+
+
+def _is_onelake_dfs_host(host: str) -> bool:
+    normalized = str(host or '').lower().rstrip('.')
+    return bool(re.fullmatch(
+        r'(?:[a-z0-9-]+-)?onelake\.dfs\.fabric\.microsoft\.com',
+        normalized,
+        flags=re.ASCII,
+    )) or _is_onelake_private_dfs_host(normalized)
 
 
 def _storage_url_kind(storage_url: Optional[str]) -> str:
@@ -49,22 +108,48 @@ def _storage_url_kind(storage_url: Optional[str]) -> str:
     normalized = str(storage_url).strip().replace('\\', '/')
     parsed = urlparse(normalized)
     scheme = parsed.scheme.lower()
-    host = (parsed.netloc or '').lower()
+    host = _authority_hostname(parsed.netloc)
+    if scheme in {'http', 'https', 's3'} and '@' in parsed.netloc:
+        return 'other'
 
     if scheme in _S3_SCHEMES:
-        return 's3'
-    if 'fabric.microsoft.com' in host or host.startswith('onelake.'):
+        return 's3' if host and parsed.path.strip('/') else 'other'
+    if (
+        scheme in {'abfs', 'abfss', 'http', 'https'}
+        and _is_onelake_dfs_host(host)
+    ):
         return 'onelake'
-    if scheme in _AZURE_STORAGE_SCHEMES or scheme == 'azure':
+    if scheme == 'azure':
+        return 'azure'
+    if scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(host):
+        return 'azure'
+    if scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(host):
         return 'azure'
     if scheme in {'http', 'https'} and (
-        host.endswith('.blob.core.windows.net')
-        or host.endswith('.dfs.core.windows.net')
+        _is_azure_blob_host(host) or _is_azure_dfs_host(host)
     ):
         return 'azure'
-    if scheme in {'http', 'https', 'gs', 'ftp'}:
+    if scheme in _CLOUD_URL_SCHEMES or scheme == 'ftp' or len(scheme) > 1:
         return 'other'
     return 'local'
+
+
+def _storage_url_supported_by_platform(storage_url: Optional[str],
+                                       target_platform: str) -> bool:
+    """Return whether a real storage URL is supported by a SQL platform."""
+    kind = _storage_url_kind(storage_url)
+    if kind == 'local':
+        return True
+    if target_platform == 'fabric_sql_db':
+        return kind == 'onelake'
+    if target_platform in {'azure_sql_db', 'azure_sql_mi'}:
+        return kind == 'azure'
+    if target_platform in {'sql_server_2022', 'sql_server_2025'}:
+        return kind in {'azure', 's3'}
+    if target_platform != 'sql_server_2019' or kind != 'azure':
+        return False
+    parsed = urlparse(str(storage_url).strip().replace('\\', '/'))
+    return _is_azure_blob_host(parsed.hostname or '') or parsed.scheme == 'azure'
 
 
 def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
@@ -96,7 +181,13 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
         'abfs': 'abfss' if is_2019 else 'adls',
         'abfss': 'abfss' if is_2019 else 'adls',
     }
-    if scheme in scheme_map and host:
+    hostname = _authority_hostname(host)
+    valid_scheme_host = (
+        scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(hostname)
+    ) or (
+        scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(hostname)
+    )
+    if scheme in scheme_map and host and valid_scheme_host:
         target_scheme = scheme_map[scheme]
         relative_path = path
         if '@' not in host and path:
@@ -110,10 +201,10 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
 
     if scheme == 'https' and host:
         container, separator, remainder = path.partition('/')
-        lower_host = host.lower()
-        if lower_host.endswith('.dfs.core.windows.net'):
+        lower_host = _authority_hostname(host)
+        if _is_azure_dfs_host(lower_host):
             target_scheme = 'abfss' if is_2019 else 'adls'
-        elif lower_host.endswith('.blob.core.windows.net'):
+        elif _is_azure_blob_host(lower_host):
             target_scheme = 'wasbs' if is_2019 else 'abs'
         else:
             return default_location, path or fallback_name
@@ -146,14 +237,9 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
 # ----------------------------------------------------------------------
 
 _AZURE_PLACEHOLDER_ACCOUNT = '<storage_account>.dfs.core.windows.net'
-_AZURE_STORAGE_SCHEMES = frozenset(
-    {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss'}
-)
-
-
 _CLOUD_URL_SCHEMES = frozenset(
     {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss', 'azure',
-     's3', 's3a', 's3n', 'gs', 'http', 'https', 'onelake'}
+     's3', 'gs', 'http', 'https', 'onelake'}
 )
 
 
@@ -188,7 +274,13 @@ def _parse_azure_storage_url(storage_url: Optional[str],
     host = parsed.netloc
     path = parsed.path.strip('/')
 
-    if scheme in _AZURE_STORAGE_SCHEMES and host:
+    hostname = _authority_hostname(host)
+    valid_scheme_host = (
+        scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(hostname)
+    ) or (
+        scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(hostname)
+    )
+    if scheme in _AZURE_STORAGE_SCHEMES and host and valid_scheme_host:
         if '@' in host:
             container, _, account = host.partition('@')
             return (
@@ -203,10 +295,8 @@ def _parse_azure_storage_url(storage_url: Optional[str],
             (remainder if separator else '') or fallback_name,
         )
 
-    lower_host = host.lower()
     if scheme in {'http', 'https'} and (
-        lower_host.endswith('.blob.core.windows.net')
-        or lower_host.endswith('.dfs.core.windows.net')
+        _is_azure_blob_host(hostname) or _is_azure_dfs_host(hostname)
     ):
         container, separator, remainder = path.partition('/')
         return (
@@ -236,8 +326,8 @@ def _azure_bulk_storage_parts(storage_url: Optional[str],
         storage_url, file_name
     )
     blob_host = re.sub(
-        r'\.dfs\.core\.windows\.net$',
-        '.blob.core.windows.net',
+        r'\.dfs\.(core\.[^.]+\.[^.]+)$',
+        r'.blob.\1',
         account,
         flags=re.IGNORECASE,
     )
@@ -255,11 +345,10 @@ def _azure_virtualization_parts(storage_url: Optional[str],
     account, container, relative_path = _parse_azure_storage_url(
         storage_url, file_name
     )
-    lower_account = account.lower()
-    prefix = 'adls' if lower_account.endswith((
-        '.dfs.core.windows.net',
-        '.dfs.fabric.microsoft.com',
-    )) else 'abs'
+    hostname = _authority_hostname(account)
+    prefix = 'adls' if (
+        _is_azure_dfs_host(hostname) or _is_onelake_dfs_host(hostname)
+    ) else 'abs'
     return f'{prefix}://{container}@{account}', relative_path
 
 
@@ -268,8 +357,8 @@ def _azure_virtualization_parts(storage_url: Optional[str],
 # ----------------------------------------------------------------------
 
 FABRIC_DEFAULT_SOURCE_LOCATION = (
-    'abfss://<workspace_id>@<tenant>.dfs.fabric.microsoft.com/'
-    '<lakehouse_id>/Files'
+    'abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/'
+    '<item_id>/Files'
 )
 
 
@@ -292,14 +381,30 @@ def _fabric_onelake_parts(storage_url: Optional[str],
     host = parsed.netloc
     path = parsed.path.strip('/')
 
-    if scheme in {'abfs', 'abfss'} and host:
+    if (
+        scheme in {'abfs', 'abfss'}
+        and host
+        and _is_onelake_dfs_host(_authority_hostname(host))
+    ):
         root, separator, remainder = _split_on_files_segment(path)
         if not separator:
             return default
         return f'abfss://{host}/{root}', remainder or fallback_name
 
-    if scheme in {'http', 'https'} and host and 'fabric.microsoft.com' in host.lower():
-        workspace, separator, remainder = path.partition('/')
+    if (
+        scheme in {'http', 'https'}
+        and host
+        and _is_onelake_dfs_host(_authority_hostname(host))
+    ):
+        private_host = _is_onelake_private_dfs_host(
+            _authority_hostname(host)
+        )
+        if private_host:
+            workspace = _authority_hostname(host).split('.')[0]
+            separator = True
+            remainder = path
+        else:
+            workspace, separator, remainder = path.partition('/')
         if not separator:
             return default
         root, files_separator, tail = _split_on_files_segment(remainder)
@@ -393,6 +498,57 @@ def _temporal_sql_type(lowered: str) -> Optional[str]:
     return None
 
 
+def _target_table_column_count(metadata: Dict[str, Any]) -> int:
+    """Return the detected width a generated target would need to preserve."""
+    schema = metadata.get('schema')
+    schema_count = len(schema) if isinstance(schema, (list, tuple)) else 0
+    declared = metadata.get('column_count')
+    declared_count = (
+        declared
+        if isinstance(declared, int) and not isinstance(declared, bool)
+        and declared > 0
+        else 0
+    )
+    return max(schema_count, declared_count)
+
+
+def _exceeds_target_table_column_limit(metadata: Dict[str, Any]) -> bool:
+    """Return True when an ordinary SQL target cannot represent the schema."""
+    return _target_table_column_count(metadata) > TARGET_TABLE_MAX_COLUMNS
+
+
+def _target_table_column_limit_guidance(
+    metadata: Dict[str, Any],
+    feature_label: str,
+) -> str:
+    """Return comment-only preservation guidance for an impossible target."""
+    count = _target_table_column_count(metadata)
+    lines = [
+        '-- ====================================================================',
+        f'-- {_sql_comment(feature_label)}',
+        '-- NOT GENERATED: RAW DATA PRESERVATION REQUIRED',
+        '-- ====================================================================',
+        f'-- {count:,} detected columns exceed the '
+        f'{TARGET_TABLE_MAX_COLUMNS:,}-column target-table limit.',
+        '-- No analyzed columns were dropped, but typed table and projection SQL',
+        '-- was not generated because it cannot run on SQL Server, Azure SQL,',
+        '-- or Fabric SQL Database.',
+    ]
+    if metadata.get('file_type') == 'json':
+        lines += [
+            '-- Preserve each JSON object or NDJSON line intact as raw JSON in',
+            '-- NVARCHAR(MAX). Inspect it with schemaless OPENJSON ([key], [value],',
+            '-- [type]), then normalize or split it across related tables before',
+            '-- generating a typed projection.',
+        ]
+    else:
+        lines += [
+            '-- Preserve each source record in a raw staging form, then normalize',
+            '-- or split it across related tables before generating a typed load.',
+        ]
+    return '\n'.join(lines)
+
+
 class SQLGenerator:
     """Generates T-SQL statements for CREATE TABLE, BULK INSERT, OPENROWSET, and CREATE EXTERNAL TABLE."""
 
@@ -414,9 +570,9 @@ class SQLGenerator:
         'half_float':    'REAL',
         'bool':          'BIT',
         'boolean':       'BIT',
-        'object':        'NVARCHAR(255)',
-        'str':           'NVARCHAR(255)',
-        'string':        'NVARCHAR(255)',
+        'object':        'NVARCHAR(MAX)',
+        'str':           'NVARCHAR(MAX)',
+        'string':        'NVARCHAR(MAX)',
         'large_string':  'NVARCHAR(MAX)',
         'datetime64[ns]':'DATETIME2(7)',
         'datetime64[us]':'DATETIME2(6)',
@@ -439,7 +595,7 @@ class SQLGenerator:
         'dict':          'NVARCHAR(MAX)',
         'map':           'NVARCHAR(MAX)',
         'union':         'NVARCHAR(MAX)',
-        'null':          'NVARCHAR(255)',
+        'null':          'NVARCHAR(MAX)',
     }
 
     # Delimiter display names for comments
@@ -461,6 +617,7 @@ class SQLGenerator:
     #: Product-wide default platform, mirrored from the module constant so
     #: callers holding a generator instance need not import it separately.
     DEFAULT_PLATFORM = DEFAULT_TARGET_PLATFORM
+    TARGET_TABLE_MAX_COLUMNS = TARGET_TABLE_MAX_COLUMNS
 
     @staticmethod
     def normalize_platform(target_platform: Optional[str]) -> str:
@@ -673,8 +830,8 @@ class SQLGenerator:
         """
         lines = [
             '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
-            '-- Row framing needs the abs:// / adls:// virtualization source. The',
-            '-- https:// BLOB_STORAGE connector rejects FIELDTERMINATOR /',
+            '-- Row framing uses the data-virtualization source. The https://',
+            '-- BLOB_STORAGE connector rejects FIELDTERMINATOR /',
             '-- FIELDQUOTE / ROWTERMINATOR with error 5369.',
             '-- The file is never read whole here: concatenated NDJSON is not one',
             '-- JSON document, so SINGLE_CLOB + OPENJSON would fail on it.',
@@ -686,7 +843,10 @@ class SQLGenerator:
             f"    BULK '{bulk_path}',",
             f"    DATA_SOURCE     = '{source_name}',",
         ]
-        lines += self._json_row_frame_options(row_terminator='0x0a')
+        lines += self._json_row_frame_options(
+            metadata,
+            row_terminator='0x0a',
+        )
         if cols:
             lines += [
                 ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
@@ -701,8 +861,46 @@ class SQLGenerator:
             )
         return lines
 
+    def _ndjson_local_lines(
+        self,
+        metadata: Dict[str, Any],
+        local_path: str,
+    ) -> List[str]:
+        """Read local NDJSON by framing one JSON document per line."""
+        cols = self._generate_openjson_columns(metadata, indent=4)
+        lines = [
+            '-- ---- NDJSON / JSON Lines: one document per row -----------------------',
+            '-- FORMAT = CSV is used only to frame LF-delimited JSON documents.',
+            (
+                'SELECT TOP (100) [j].*'
+                if cols
+                else 'SELECT TOP (100) [src].doc'
+            ),
+            'FROM OPENROWSET(',
+            f"    BULK N'{local_path}',",
+        ]
+        lines += self._json_row_frame_options(
+            metadata,
+            row_terminator='0x0a',
+        )
+        if cols:
+            lines += [
+                ') WITH (doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
+                'CROSS APPLY OPENJSON([src].doc)',
+                'WITH (',
+                ',\n'.join(cols),
+                ') AS [j];',
+            ]
+        else:
+            lines.append(
+                ') WITH (doc NVARCHAR(MAX)) AS [src];  '
+                '-- LF: one document per line'
+            )
+        return lines
+
     @staticmethod
-    def _json_row_frame_options(indent: int = 4,
+    def _json_row_frame_options(metadata: Dict[str, Any],
+                                indent: int = 4,
                                 row_terminator: str = '0x0b') -> List[str]:
         """Options that make the CSV reader return whole JSON text per row.
 
@@ -714,12 +912,20 @@ class SQLGenerator:
         """
         pad = ' ' * indent
         width = SQLGenerator.CSV_OPTION_WIDTH
-        return [
+        lines = [
             f'{pad}{"FORMAT":<{width}} = \'CSV\',',
             f'{pad}{"FIELDTERMINATOR":<{width}} = \'0x0b\',',
             f'{pad}{"FIELDQUOTE":<{width}} = \'0x0b\',',
             f'{pad}{"ROWTERMINATOR":<{width}} = \'{row_terminator}\'',
         ]
+        if row_terminator == '0x0a':
+            codepage = _metadata_text(metadata, 'codepage', '65001')
+            lines[-1] += ','
+            lines.append(
+                f'{pad}{"CODEPAGE":<{width}} = '
+                f'\'{_quote_literal(codepage)}\''
+            )
+        return lines
 
     #: Encodings whose whole-file OPENROWSET read needs ``SINGLE_NCLOB``.
     #: ``SINGLE_CLOB`` fails with error 4806 ("SINGLE_CLOB requires a double-byte
@@ -814,6 +1020,10 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        file_type = _metadata_text(metadata, 'file_type', '')
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'CREATE TABLE')
+
         if not self._supports('create_table', target_platform):
             return self._not_supported_message(
                 'CREATE TABLE', target_platform,
@@ -862,6 +1072,28 @@ class SQLGenerator:
 
         return '\n'.join(lines)
 
+    def _quick_load_openrowset(
+            self, metadata: Dict[str, Any], schema_name: str, table_name: str,
+            bulk_path: str, data_source: str, file_type: str) -> List[str]:
+        """Return a complete commented OPENROWSET shape for quick-load guidance."""
+        reader_options = (
+            self._csv_reader_options(metadata)
+            if file_type in {'csv', 'text'}
+            else [f'    FORMAT          = \'{_format_keyword(file_type)}\'']
+        )
+        with_schema = self._openrowset_with_schema(metadata)
+        return [
+            f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
+            '-- SELECT *',
+            '-- FROM OPENROWSET(',
+            f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
+            f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
+            *[f'-- {line}' for line in reader_options],
+            '-- )',
+            *[f'-- {line}' for line in with_schema],
+            '-- AS src;',
+        ]
+
     def _create_table_quick_load(
             self, metadata: Dict[str, Any], schema_name: str, table_name: str,
             target_platform: str, storage_url: Optional[str],
@@ -902,13 +1134,10 @@ class SQLGenerator:
                     '-- Fabric SQL Database reads Lakehouse Files through an',
                     '-- external data source (Microsoft Entra passthrough).',
                     f'-- Data source location: {_sql_comment(source_location)}',
-                    f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-                    '-- SELECT *',
-                    '-- FROM OPENROWSET(',
-                    f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-                    f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-                    f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-                    '-- ) AS src;',
+                    *self._quick_load_openrowset(
+                        metadata, schema_name, table_name, bulk_path,
+                        data_source, file_type,
+                    ),
                 ]
             return lines + [
                 f'-- {file_type.upper()} is not readable by Fabric SQL Database '
@@ -922,6 +1151,12 @@ class SQLGenerator:
                     '-- Delta is not supported by Azure SQL Managed Instance.',
                     '-- Convert the table to Parquet or CSV before loading.',
                 ]
+            if file_type not in {'csv', 'text', 'parquet', 'delta'}:
+                return lines + [
+                    f'-- {file_type.upper()} is not readable by '
+                    f'{self.PLATFORM_LABELS[target_platform]} OPENROWSET.',
+                    '-- Convert the source to CSV or Parquet before loading.',
+                ]
             source_location, bulk_path = _azure_virtualization_parts(
                 storage_url, file_name
             )
@@ -929,13 +1164,10 @@ class SQLGenerator:
                 '-- Azure SQL data virtualization uses an external data source',
                 '-- whose LOCATION starts with abs:// or adls:// (not https://).',
                 f'-- Data source location: {_sql_comment(source_location)}',
-                f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-                '-- SELECT *',
-                '-- FROM OPENROWSET(',
-                f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-                f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-                f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-                '-- ) AS src;',
+                *self._quick_load_openrowset(
+                    metadata, schema_name, table_name, bulk_path,
+                    data_source, file_type,
+                ),
             ]
 
         if (
@@ -953,13 +1185,10 @@ class SQLGenerator:
             '-- SQL Server object storage uses an external data source whose',
             '-- LOCATION starts with adls://, abs://, or s3:// (not https://).',
             f'-- Data source location: {_sql_comment(source_location)}',
-            f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-            '-- SELECT *',
-            '-- FROM OPENROWSET(',
-            f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-            f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-            f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-            '-- ) AS src;',
+            *self._quick_load_openrowset(
+                metadata, schema_name, table_name, bulk_path,
+                data_source, file_type,
+            ),
         ]
 
     # ------------------------------------------------------------------
@@ -979,6 +1208,33 @@ class SQLGenerator:
         """Generate a BULK INSERT statement (CSV / delimited text files only)."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        file_type = _metadata_text(metadata, 'file_type', '')
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'BULK / TYPED LOAD',
+            )
+
+        if file_type in {'orc', 'rc', 'iceberg'}:
+            alternative = (
+                'Query the table through a catalog-aware engine or use its '
+                'underlying Parquet files.'
+                if file_type == 'iceberg'
+                else 'Use a supported external table path or convert the '
+                'source to Parquet.'
+            )
+            return self._not_supported_message(
+                f'BULK / TYPED LOAD ({file_type.upper()})',
+                target_platform,
+                alternative,
+            )
 
         if not self._supports('bulk_insert', target_platform):
             if target_platform == 'fabric_sql_db':
@@ -1002,7 +1258,6 @@ class SQLGenerator:
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
 
-        file_type = _metadata_text(metadata, 'file_type', '')
         file_name = _metadata_text(metadata, 'file_name', metadata.get('file_path', '<file>'))
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
@@ -1044,7 +1299,9 @@ class SQLGenerator:
             data_source_line = (
                 f'    DATA_SOURCE     = \'{bulk_literal}\','
             )
-            bulk_auth = _resolve_auth_method(auth_method, target_platform)
+            bulk_auth = _bulk_storage_auth_method(
+                auth_method, target_platform, storage_url
+            )
             bulk_cred_clause = _credential_clause(bulk_cred_ident, bulk_auth)
             prereq_lines = ([
                 f'-- BLOB_STORAGE source for this bulk load',
@@ -1156,6 +1413,27 @@ class SQLGenerator:
             ])
 
         if file_type == 'json':
+            openjson_cols = self._generate_openjson_columns(
+                metadata,
+                indent=4,
+            )
+            if not openjson_cols:
+                return '\n'.join(header + [
+                    '-- A typed JSON load is not safe for the analyzed evidence.',
+                    '-- Preserve each JSON object or NDJSON line intact as raw JSON',
+                    '-- in NVARCHAR(MAX), inspect [key], [value], and [type] through',
+                    '-- the OPENROWSET tab, then normalize before loading a table.',
+                ])
+            json_columns = self._column_name_list(metadata)
+            json_select_columns = self._column_name_list(
+                metadata,
+                qualifier='j',
+            )
+            row_terminator = (
+                '0x0a'
+                if metadata.get('json_format') == 'ndjson'
+                else '0x0b'
+            )
             return '\n'.join(header + [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
                 '-- Fabric has no TYPE = BLOB_STORAGE data source, which is what',
@@ -1164,14 +1442,20 @@ class SQLGenerator:
                 '-- value, then parsed with OPENJSON. This also reads NDJSON',
                 '-- correctly, because every line arrives as its own row.',
                 '',
-                f'INSERT INTO [{schema_name}].[{table_name}]',
-                'SELECT j.*',
+                f'INSERT INTO [{schema_name}].[{table_name}] ({json_columns})',
+                f'SELECT {json_select_columns}',
                 'FROM OPENROWSET(',
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
-            ] + self._json_row_frame_options() + [
+            ] + self._json_row_frame_options(
+                metadata,
+                row_terminator=row_terminator
+            ) + [
                 ') WITH (json_doc NVARCHAR(MAX)) AS src',
-                'CROSS APPLY OPENJSON(src.json_doc) AS j;',
+                'CROSS APPLY OPENJSON(src.json_doc)',
+                'WITH (',
+                ',\n'.join(openjson_cols),
+                ') AS j;',
             ])
 
         format_keyword = _format_keyword(file_type)
@@ -1211,10 +1495,15 @@ class SQLGenerator:
         ]
         return '\n'.join(header + body)
 
-    def _column_name_list(self, metadata: Dict[str, Any]) -> str:
-        """Return a bracketed comma-separated column list, or ``*`` if unknown."""
+    def _column_name_list(
+        self,
+        metadata: Dict[str, Any],
+        qualifier: Optional[str] = None,
+    ) -> str:
+        """Return a bracketed column list, optionally qualified by an alias."""
         schema = metadata.get('schema') or []
-        names = [f'[{_escape_identifier(_clean_identifier(name))}]'
+        prefix = f'[{_escape_identifier(qualifier)}].' if qualifier else ''
+        names = [f'{prefix}[{_escape_identifier(name)}]'
                  for name, _ in schema]
         return ', '.join(names) if names else '*'
 
@@ -1234,6 +1523,42 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        file_type = _metadata_text(metadata, 'file_type', 'csv')
+        exceeds_column_limit = _exceeds_target_table_column_limit(metadata)
+        wide_json = exceeds_column_limit and file_type == 'json'
+        if file_type in {'orc', 'rc', 'iceberg'}:
+            alternative = (
+                'Query the Iceberg table through a catalog-aware engine, or '
+                'select its underlying Parquet data files.'
+                if file_type == 'iceberg'
+                else (
+                    'Use a documented external table/file format combination '
+                    'for this platform, or convert the source to Parquet.'
+                    if self._supports('external_table', target_platform)
+                    else 'Convert the source to Parquet before querying it '
+                    'from this platform.'
+                )
+            )
+            return self._not_supported_message(
+                f'OPENROWSET ({file_type.upper()})',
+                target_platform,
+                alternative,
+            )
+        if (
+            exceeds_column_limit
+            and file_type not in {'json', 'parquet', 'delta'}
+        ):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'OPENROWSET TYPED PROJECTION',
+            )
+
         if not self._supports('openrowset', target_platform):
             alts = []
             if self._supports('bulk_insert', target_platform):
@@ -1245,12 +1570,18 @@ class SQLGenerator:
                 'OPENROWSET', target_platform,
                 f'Alternative: {alt_text}')
 
-        file_type = _metadata_text(metadata, 'file_type', 'csv')
         file_name = _metadata_text(metadata, 'file_name', _metadata_text(metadata, 'file_path', ''))
         local_path = _quote_literal(_metadata_text(metadata, 'file_path', '').replace('\\', '/'))
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
-        lines = [
+        lines = (
+            _target_table_column_limit_guidance(
+                metadata,
+                'OPENROWSET RAW-JSON ACCESS',
+            ).splitlines() + ['']
+            if wide_json
+            else []
+        ) + [
             f'-- ====================================================================',
             f'-- OPENROWSET',
             f'-- Source  : {_sql_comment(file_name)}  '
@@ -1372,6 +1703,15 @@ class SQLGenerator:
         ]
 
         if file_type == 'json':
+            if metadata.get('json_format') == 'ndjson':
+                lines += [
+                    '-- NDJSON cannot use SINGLE_CLOB through this BLOB_STORAGE source:',
+                    '-- it would return concatenated documents, while this connector rejects',
+                    '-- the row-framing options needed to separate them. Preserve each line',
+                    '-- as raw NVARCHAR(MAX) JSON by staging the file on a local/UNC path or',
+                    '-- by using a data-virtualization source on a newer/Azure SQL target.',
+                ]
+                return '\n'.join(lines)
             lob = self._single_lob_keyword(metadata)
             lines += [
                 f'-- JSON: a TYPE = BLOB_STORAGE data source accepts {lob},',
@@ -1397,7 +1737,7 @@ class SQLGenerator:
             f'    BULK \'{bulk_path}\',',
             f'    DATA_SOURCE     = \'{bulk_literal}\',',
         ]
-        lines += self._csv_reader_options(metadata, trailing_comma=True)
+        lines += self._csv_reader_options(metadata)
         lines += [')']
         lines += self._openrowset_with_schema(metadata)
         lines += ['AS src;']
@@ -1455,6 +1795,13 @@ class SQLGenerator:
             return '\n'.join(lines)
 
         if file_type == 'json':
+            if metadata.get('json_format') == 'ndjson':
+                lines += self._ndjson_cloud_lines(
+                    metadata,
+                    bulk_path,
+                    source_name,
+                )
+                return '\n'.join(lines)
             lines += [
                 '-- JSON has no OPENROWSET file format on Fabric SQL Database.',
                 '-- Read the document as one text column via the CSV reader,',
@@ -1465,18 +1812,18 @@ class SQLGenerator:
                 f'    BULK \'{bulk_path}\',',
                 f'    DATA_SOURCE     = \'{source_name}\',',
             ]
-            lines += self._json_row_frame_options()
-            lines += [
-                ') WITH (json_doc NVARCHAR(MAX)) AS [src]',
-                'CROSS APPLY OPENJSON(src.json_doc)',
-                'WITH (',
-            ]
+            lines += self._json_row_frame_options(metadata)
             openjson_cols = self._generate_openjson_columns(metadata, indent=4)
-            lines.append(
-                ',\n'.join(openjson_cols) if openjson_cols
-                else '    [data] NVARCHAR(MAX)'
-            )
-            lines += [') AS j;']
+            lines.append(') WITH (json_doc NVARCHAR(MAX)) AS [src]')
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON(src.json_doc)',
+                    'WITH (',
+                    ',\n'.join(openjson_cols),
+                    ') AS j;',
+                ]
+            else:
+                lines.append('CROSS APPLY OPENJSON(src.json_doc) AS j;')
             return '\n'.join(lines)
 
         # CSV / delimited text
@@ -1634,6 +1981,7 @@ class SQLGenerator:
         """Generate OPENROWSET(BULK ...) for on-prem SQL Server using local file paths."""
         file_type = _metadata_text(metadata, 'file_type', 'csv')
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
+        json_format = _metadata_text(metadata, 'json_format', 'array')
         codepage = metadata.get('codepage', '65001')
         delimiter = _metadata_text(metadata, 'delimiter', ',') or ','
         has_header = metadata.get('has_header', True)
@@ -1677,6 +2025,9 @@ class SQLGenerator:
                 f'{self._single_lob_keyword(metadata)}) AS [src];',
             ]
         elif file_type == 'json':
+            if json_format == 'ndjson':
+                lines += self._ndjson_local_lines(metadata, local_path)
+                return '\n'.join(lines)
             lines += [
                 f'-- {_sql_comment(self.PLATFORM_LABELS[target_platform])} does not support',
                 f'-- FORMAT = \'JSON\' or JSON external tables. This workaround',
@@ -1984,6 +2335,18 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'CREATE EXTERNAL TABLE',
+            )
+
         if not self._supports('external_table', target_platform):
             alts = []
             if self._supports('bulk_insert', target_platform):
@@ -2098,11 +2461,45 @@ class SQLGenerator:
                 **explicit_overrides,
             }
 
+        external_lob_columns = []
+        for column_name, detected_type in external_metadata.get('schema') or []:
+            sql_type = self._column_sql_type(
+                external_metadata,
+                column_name,
+                detected_type,
+            )
+            if re.fullmatch(
+                r'(?:(?:N?VARCHAR|VARBINARY)\s*\(\s*MAX\s*\)|'
+                r'N?TEXT|IMAGE|XML)',
+                sql_type,
+                re.IGNORECASE,
+            ):
+                external_lob_columns.append((column_name, sql_type))
+        if external_lob_columns:
+            rendered = ', '.join(
+                f'[{column_name}] ({sql_type})'
+                for column_name, sql_type in external_lob_columns
+            )
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
+                target_platform,
+                'External tables cannot declare these inferred LOB columns '
+                f'directly: {rendered}. After validating the complete source '
+                'width, set explicit bounded SQL type overrides (for example '
+                'NVARCHAR(4000) or VARBINARY(8000)).',
+            )
+
         columns = self._generate_column_definitions(
             external_metadata, include_nullability=False,
         )
         if not columns:
-            columns = ['    [data] NVARCHAR(MAX)']
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE '
+                f'({config.format_type} without a bounded schema)',
+                target_platform,
+                'Provide a schema with explicit bounded SQL type overrides '
+                'before execution.',
+            )
 
         with_options = []
         with_options.append(f'    DATA_SOURCE = [{data_source}]')
@@ -2152,6 +2549,37 @@ class SQLGenerator:
             return _azure_virtualization_parts(storage_url, file_name)
         return _sql_server_storage_parts(storage_url, file_name, target_platform)
 
+    def _storage_compatibility_message(self, storage_url: Optional[str],
+                                       target_platform: str) -> Optional[str]:
+        """Return non-executable guidance for an incompatible supplied URL."""
+        if not storage_url or _storage_url_supported_by_platform(
+                storage_url, target_platform):
+            return None
+        kind = _storage_url_kind(storage_url)
+        label = self.PLATFORM_LABELS.get(target_platform, target_platform)
+        if target_platform == 'fabric_sql_db':
+            supported = 'Fabric OneLake (ABFSS)'
+        elif target_platform == 'sql_server_2019':
+            supported = (
+                'Azure Blob Storage (WASBS external tables or '
+                'TYPE = BLOB_STORAGE bulk access), or SQL Server 2022+ for S3'
+            )
+        elif target_platform in {'sql_server_2022', 'sql_server_2025'}:
+            supported = 'Azure Blob, ADLS Gen2, or S3-compatible storage'
+        else:
+            supported = 'Azure Blob or ADLS Gen2'
+        supplied = {
+            's3': 'S3',
+            'onelake': 'OneLake',
+            'azure': 'this Azure storage service',
+        }.get(kind, 'this storage URL')
+        return self._not_supported_message(
+            'STORAGE LOCATION',
+            target_platform,
+            f'{supplied} is not supported by {label}. Use {supported}; '
+            'the supplied location was not replaced.',
+        )
+
     def _cloud_staging_notice(self, storage_url: Optional[str],
                               target_platform: str,
                               file_name: str) -> List[str]:
@@ -2187,6 +2615,18 @@ class SQLGenerator:
         """Explain COPY INTO availability for the exposed SQL targets."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'COPY INTO / TYPED LOAD',
+            )
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         lines = [
@@ -2244,6 +2684,12 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
         if not self._supports('credential_setup', target_platform):
             return self._not_supported_message(
                 'CREDENTIAL / DATA SOURCE SETUP', target_platform,
@@ -2269,7 +2715,9 @@ class SQLGenerator:
             )
 
         data_source_raw = data_source
-        auth_method = _resolve_auth_method(auth_method, target_platform)
+        auth_method = _storage_auth_method(
+            auth_method, target_platform, storage_url
+        )
         cred_ident = _credential_identifier(data_source_raw, credential_name)
         data_source = _escape_identifier(data_source)
         file_name = metadata.get(
@@ -2414,7 +2862,9 @@ class SQLGenerator:
         if not self._bulk_data_source_supported(target_platform, storage_url):
             return []
 
-        auth_method = _resolve_auth_method(auth_method, target_platform)
+        auth_method = _bulk_storage_auth_method(
+            auth_method, target_platform, storage_url
+        )
         bulk_ident, _, bulk_cred_ident = _bulk_data_source_names(
             data_source_raw, credential_name
         )
@@ -2460,6 +2910,42 @@ class SQLGenerator:
         """
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        if metadata.get('file_type') != 'json':
+            return self._not_supported_message(
+                'JSON FUNCTIONS',
+                target_platform,
+                'Select a JSON or NDJSON source before generating OPENJSON guidance.',
+            )
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'TYPED JSON PROJECTION',
+            )
+
+        if (
+            metadata.get('file_type') == 'json'
+            and metadata.get('json_format') == 'ndjson'
+            and target_platform == 'sql_server_2019'
+            and storage_url
+        ):
+            return '\n'.join([
+                '-- ====================================================================',
+                '-- T-SQL JSON FUNCTIONS',
+                '-- NOT GENERATED: REMOTE NDJSON STAGING REQUIRED',
+                '-- ====================================================================',
+                '-- SQL Server 2019 cannot line-frame remote NDJSON through its',
+                '-- BLOB_STORAGE reader, and SINGLE_CLOB would return invalid',
+                '-- concatenated documents. Stage the file on a local/UNC path or',
+                '-- use an Azure SQL or SQL Server 2022+ data-virtualization source.',
+            ])
 
         if not self._supports('json_openjson', target_platform):
             alts = []
@@ -2528,7 +3014,7 @@ class SQLGenerator:
 
         # ---- Section 1: read the document, then OPENJSON -----------------
         openjson_cols = self._generate_openjson_columns(metadata, indent=8)
-        openjson_with = ',\n'.join(openjson_cols) if openjson_cols else '        [data] NVARCHAR(MAX)'
+        openjson_with = ',\n'.join(openjson_cols)
 
         if json_bulk_source and json_format == 'ndjson':
             # Every line is its own document. Reading the file whole would hand
@@ -2550,13 +3036,26 @@ class SQLGenerator:
             # LF, so each line is its own row. The default 0x0b framing
             # returns the whole file as one row, which is not a JSON document
             # here.
-            lines += self._json_row_frame_options(row_terminator='0x0a')
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator='0x0a',
+            )
+            lines.append(
+                ') WITH (json_doc NVARCHAR(MAX)) AS [src]  '
+                '-- LF: one document per line'
+            )
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON([src].json_doc)',
+                    'WITH (',
+                    openjson_with,
+                    ') AS [j];',
+                ]
+            else:
+                lines.append(
+                    'CROSS APPLY OPENJSON([src].json_doc) AS [j];'
+                )
             lines += [
-                f') WITH (json_doc NVARCHAR(MAX)) AS [src]  -- LF: one document per line',
-                f'CROSS APPLY OPENJSON([src].json_doc)',
-                f'WITH (',
-                openjson_with,
-                f') AS [j];',
                 f'',
                 f'-- The statements below work on one document at a time, so they',
                 f'-- read a single line. Concatenated NDJSON is not one document.',
@@ -2566,7 +3065,10 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options(row_terminator='0x0a')
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator='0x0a',
+            )
             lines += [
                 f') WITH (json_doc NVARCHAR(MAX)) AS [src];  -- LF: one document per line',
                 f'',
@@ -2607,7 +3109,7 @@ class SQLGenerator:
                 f'    BULK \'{file_path_sql}\',',
                 f'    DATA_SOURCE     = \'{json_bulk_source}\',',
             ]
-            lines += self._json_row_frame_options()
+            lines += self._json_row_frame_options(metadata)
             lines += [
                 f') WITH (json_doc NVARCHAR(MAX)) AS j;',
                 f'',
@@ -2646,29 +3148,39 @@ class SQLGenerator:
                 ]
 
         if json_format == 'object':
-            # Single object: direct JSON_VALUE
-            lines += [
-                f'-- Single JSON object — extract individual values',
-                f'SELECT',
-            ]
-            jv = []
-            for col_name, col_type in schema:
-                clean = _escape_identifier(col_name)
-                kind = nesting.get(col_name, 'scalar')
-                if kind in ('object', 'array'):
-                    jv.append(f'    JSON_QUERY(@json, \'{_quote_json_path(col_name)}\') AS [{clean}]')
-                else:
-                    jv.append(f'    JSON_VALUE(@json, \'{_quote_json_path(col_name)}\') AS [{clean}]')
-            lines.append(',\n'.join(jv) + ';' if jv else '    @json;')
+            if not openjson_cols:
+                lines += [
+                    '-- The sampled object is not safe for scalar JSON_VALUE extraction.',
+                    '-- JSON_VALUE is limited to NVARCHAR(4000), so preserve every value',
+                    '-- through schemaless OPENJSON instead.',
+                    'SELECT [key], [value], [type]',
+                    'FROM OPENJSON(@json);',
+                ]
+            else:
+                lines += [
+                    '-- Single JSON object — typed extraction without JSON_VALUE limits',
+                    'SELECT *',
+                    'FROM OPENJSON(@json)',
+                    'WITH (',
+                    openjson_with,
+                    ');',
+                ]
         else:
-            lines += [
-                f'-- Parse the JSON array into rows with typed columns',
-                f'SELECT *',
-                f'FROM OPENJSON(@json)',
-                f'WITH (',
-                openjson_with,
-                f');',
-            ]
+            if openjson_cols:
+                lines += [
+                    f'-- Parse the JSON array into rows with typed columns',
+                    f'SELECT *',
+                    f'FROM OPENJSON(@json)',
+                    f'WITH (',
+                    openjson_with,
+                    f');',
+                ]
+            else:
+                lines += [
+                    f'-- The sampled shape is not safe for a typed projection.',
+                    f'SELECT [key], [value], [type]',
+                    f'FROM OPENJSON(@json);',
+                ]
 
         # ---- Section 2: OPENJSON without schema (key/value/type) ---------
         lines += [
@@ -2765,15 +3277,23 @@ class SQLGenerator:
                 f'FROM OPENROWSET(',
                 f'    BULK \'{blob_path}\',',
                 f'    DATA_SOURCE     = \'{cloud_source}\',',
-                f'    FORMAT          = \'CSV\',',
-                f'    FIELDTERMINATOR = \'0x0b\',',
-                f'    FIELDQUOTE      = \'0x0b\'',
-                f') WITH (json_doc NVARCHAR(MAX)) AS src',
-                f'CROSS APPLY OPENJSON(src.json_doc)',
-                f'WITH (',
             ]
-            lines.append(',\n'.join(openjson_cols) if openjson_cols else '    [data] NVARCHAR(MAX)')
-            lines += [f') AS j;']
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator=(
+                    '0x0a' if json_format == 'ndjson' else '0x0b'
+                ),
+            )
+            lines.append(') WITH (json_doc NVARCHAR(MAX)) AS src')
+            if openjson_cols:
+                lines += [
+                    'CROSS APPLY OPENJSON(src.json_doc)',
+                    'WITH (',
+                    ',\n'.join(openjson_cols),
+                    ') AS j;',
+                ]
+            else:
+                lines.append('CROSS APPLY OPENJSON(src.json_doc) AS j;')
         elif is_on_prem:
             lines += [
                 f'',
@@ -2785,7 +3305,7 @@ class SQLGenerator:
             ]
 
         # ---- Section 8: INSERT parsed JSON into table -------------------
-        if schema:
+        if schema and openjson_cols:
             insert_cols = ', '.join(
                 f'[{_escape_identifier(c)}]'
                 for c, _ in schema
@@ -2820,6 +3340,9 @@ class SQLGenerator:
         """Generate FOR JSON PATH examples for SQL-to-JSON export."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'FOR JSON PATH')
 
         if not self._supports('for_json', target_platform):
             return self._not_supported_message(
@@ -2920,6 +3443,9 @@ class SQLGenerator:
         """Generate a best-practices guide for ingesting / querying this file type."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(metadata, 'BEST PRACTICES')
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
         file_type = _metadata_text(metadata, 'file_type', 'csv')
@@ -3052,6 +3578,12 @@ class SQLGenerator:
         with an explicit schema and table name to have it emitted live - see
         :func:`_owns_load_target` for why both are required.
         """
+        if _exceeds_target_table_column_limit(metadata):
+            return _target_table_column_limit_guidance(
+                metadata,
+                'COMPLETE SCRIPT',
+            ) + '\n'
+
         statements = self.generate_all_statements(
             metadata, table_name, data_source or 'MyDataSource', location,
             schema_name, target_platform=target_platform,
@@ -3171,7 +3703,7 @@ class SQLGenerator:
             else f'ff_{metadata.get("file_type", "csv")}_format'
         )
 
-        return {
+        statements = {
             'create_table': self.generate_create_table(metadata, table_name, schema_name,
                                                        target_platform=target_platform,
                                                        storage_url=storage_url,
@@ -3215,6 +3747,20 @@ class SQLGenerator:
                                                            table_name=table_name,
                                                            schema_name=schema_name),
         }
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            for key in (
+                'bulk_insert',
+                'openrowset',
+                'copy_into',
+                'create_external_table',
+                'json_functions',
+                'credential_setup',
+            ):
+                statements[key] = incompatible_storage
+        return statements
 
     # ------------------------------------------------------------------
     # Sample data comments
@@ -3375,6 +3921,30 @@ class SQLGenerator:
             return 'UTF16'
         return ''
 
+    @staticmethod
+    def _has_incomplete_type_evidence(metadata: Dict[str, Any]) -> bool:
+        return (
+            metadata.get('schema_inference') == 'sampled'
+            and metadata.get('file_type') in {'csv', 'json'}
+        )
+
+    def _column_sql_type(
+        self,
+        metadata: Dict[str, Any],
+        column_name: str,
+        detected_type: Any,
+    ) -> str:
+        overrides = metadata.get('sql_type_overrides') or {}
+        if column_name in overrides:
+            return _safe_sql_type(overrides[column_name])
+        if self._has_incomplete_type_evidence(metadata):
+            return 'NVARCHAR(MAX)'
+        max_lengths = metadata.get('max_string_lengths') or {}
+        return self._map_type_to_sql(
+            detected_type,
+            max_length=max_lengths.get(column_name),
+        )
+
     def _generate_column_definitions(self, metadata: Dict[str, Any],
                                      include_nullability: bool = False,
                                      indent: int = 4) -> List[str]:
@@ -3382,18 +3952,12 @@ class SQLGenerator:
         if not schema:
             return []
         nullable_set = set(metadata.get('nullable_columns') or [])
-        max_lengths = metadata.get('max_string_lengths') or {}
-        sql_type_overrides = metadata.get('sql_type_overrides') or {}
         pad = ' ' * indent
         columns = []
         _validate_unique_column_names(schema)
         for col_name, col_type in schema:
             clean_name = _escape_identifier(col_name)
-            # Use explicit SQL type override if provided by schema editor
-            if col_name in sql_type_overrides:
-                sql_type = _safe_sql_type(sql_type_overrides[col_name])
-            else:
-                sql_type = self._map_type_to_sql(col_type, max_length=max_lengths.get(col_name))
+            sql_type = self._column_sql_type(metadata, col_name, col_type)
             if include_nullability:
                 null_kw = 'NULL' if col_name in nullable_set else 'NOT NULL'
                 columns.append(f'{pad}[{clean_name}] {sql_type:<22} {null_kw}')
@@ -3409,22 +3973,29 @@ class SQLGenerator:
         """
         schema = metadata.get('schema') or []
         nesting = metadata.get('json_nesting') or {}
-        max_lengths = metadata.get('max_string_lengths') or {}
         sql_type_overrides = metadata.get('sql_type_overrides') or {}
         pad = ' ' * indent
         cols: List[str] = []
         _validate_unique_column_names(schema)
+        if (
+            _exceeds_target_table_column_limit(metadata)
+            or metadata.get('json_typed_projection_safe') is False
+            or (
+                self._has_incomplete_type_evidence(metadata)
+                and any(
+                    column_name not in sql_type_overrides
+                    for column_name, _ in schema
+                )
+            )
+        ):
+            return []
         for col_name, col_type in schema:
             clean = _escape_identifier(col_name)
             kind = nesting.get(col_name, 'scalar')
             if kind in ('object', 'array'):
                 cols.append(f'{pad}[{clean}] NVARCHAR(MAX) \'{_quote_json_path(col_name)}\' AS JSON')
             else:
-                if col_name in sql_type_overrides:
-                    sql_type = _safe_sql_type(sql_type_overrides[col_name])
-                else:
-                    sql_type = self._map_type_to_sql(col_type,
-                                                     max_length=max_lengths.get(col_name))
+                sql_type = self._column_sql_type(metadata, col_name, col_type)
                 cols.append(f'{pad}[{clean}] {sql_type} \'{_quote_json_path(col_name)}\'')
         return cols
 
@@ -3488,6 +4059,9 @@ class SQLGenerator:
     def _map_type_to_sql(self, data_type: str, max_length: int = None) -> str:
         """Map a detected Arrow/pandas/Iceberg type name to a SQL Server type."""
         data_type_lower = str(data_type).strip().lower()
+        variable_string_types = {
+            'object', 'str', 'string', 'large_string', 'null',
+        }
 
         # Container types must be serialised as text before anything else, so a
         # nested type such as ``struct<id: int64>`` can never become BIGINT.
@@ -3505,11 +4079,15 @@ class SQLGenerator:
         # Exact match
         if data_type_lower in self.TYPE_MAPPING:
             sql_type = self.TYPE_MAPPING[data_type_lower]
-            # Override NVARCHAR(255) with a smarter size when string length data exists
-            if sql_type == 'NVARCHAR(255)' and max_length is not None:
+            if (
+                data_type_lower in variable_string_types
+                and max_length is not None
+            ):
                 if max_length > 4000:
                     return 'NVARCHAR(MAX)'
-                elif max_length > 200:
+                if max_length <= 200:
+                    return 'NVARCHAR(255)'
+                if max_length > 200:
                     # Round up to a nice boundary
                     size = ((max_length // 50) + 1) * 50
                     return f'NVARCHAR({min(size, 4000)})'
@@ -3523,12 +4101,14 @@ class SQLGenerator:
         # never resolves through the shorter ``string`` key.
         for key in self._substring_type_keys():
             if key in data_type_lower:
+                if key in variable_string_types:
+                    return self._map_type_to_sql(key, max_length=max_length)
                 return self.TYPE_MAPPING[key]
 
         # decimal / numeric without a parseable precision
         if 'decimal' in data_type_lower or 'numeric' in data_type_lower:
-            return 'DECIMAL(18,4)'
-        return 'NVARCHAR(255)'
+            return 'NVARCHAR(MAX)'
+        return 'NVARCHAR(MAX)'
 
     @classmethod
     def _substring_type_keys(cls) -> Tuple[str, ...]:
@@ -4100,6 +4680,28 @@ def _resolve_auth_method(auth_method: Optional[str],
     if target_platform in ('azure_sql_db', 'azure_sql_mi'):
         return 'managed_identity'
     return 'sas'
+
+
+def _storage_auth_method(auth_method: Optional[str], target_platform: str,
+                         storage_url: Optional[str]) -> str:
+    """Derive authentication from the storage connector before defaults."""
+    kind = _storage_url_kind(storage_url)
+    if kind == 's3':
+        return 's3_access_key'
+    if target_platform == 'sql_server_2019':
+        return 'storage_key'
+    return _resolve_auth_method(auth_method, target_platform)
+
+
+def _bulk_storage_auth_method(auth_method: Optional[str], target_platform: str,
+                              storage_url: Optional[str]) -> str:
+    """Resolve auth for BLOB_STORAGE rather than WASBS/HADOOP."""
+    if (
+        target_platform == 'sql_server_2019'
+        and _storage_url_kind(storage_url) == 'azure'
+    ):
+        return 'sas'
+    return _storage_auth_method(auth_method, target_platform, storage_url)
 
 
 def _credential_ddl(cred_ident: str, auth_method: str,

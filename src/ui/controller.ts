@@ -27,9 +27,9 @@ import {
     effectiveStorageUrl,
     generateCredentialSetup,
     inferDataSourceType,
+    inferredColumnSqlType,
     isSqlSourceFile,
     knownStorageLocation,
-    mapTypeToSql,
     nativeAnalysisService,
     NATIVE_SUPPORT_BY_TYPE,
     normalizeDataSourceType,
@@ -102,9 +102,8 @@ export function recommendedSqlTypes(
     metadata: FileMetadata,
 ): Readonly<Record<string, string>> {
     const recommendations: Record<string, string> = {};
-    const lengths = metadata.max_string_lengths ?? {};
     for (const [column, detectedType] of metadata.schema ?? []) {
-        recommendations[column] = mapTypeToSql(detectedType, lengths[column]);
+        recommendations[column] = inferredColumnSqlType(metadata, column, detectedType);
     }
     return recommendations;
 }

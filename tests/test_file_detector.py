@@ -92,6 +92,343 @@ def test_json_metadata_analysis():
         assert len(metadata['schema']) == 3
 
 
+def test_csv_exact_numeric_inference_preserves_boundary_samples(tmp_path):
+    """CSV inference must not route BIGINT or exact decimals through float."""
+    source = tmp_path / 'exact.csv'
+    source.write_text(
+        'small,big,max_big,decimal,over_big,over_precision,scaled,tiny\n'
+        '2147483647,2147483648,9223372036854775807,'
+        '12345678901234.5678,9223372036854775808,'
+        f'{"9" * 39},1.2300e2,1e-4\n',
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    schema = dict(metadata['schema'])
+    assert schema == {
+        'small': 'int32',
+        'big': 'int64',
+        'max_big': 'int64',
+        'decimal': 'decimal(18,4)',
+        'over_big': 'decimal(19,0)',
+        'over_precision': 'decimal(39,0)',
+        'scaled': 'object',
+        'tiny': 'object',
+    }
+    assert metadata['sample_rows'][0][2] == '9223372036854775807'
+    assert metadata['sample_rows'][0][3] == '12345678901234.5678'
+    assert metadata['schema_inference'] == 'full'
+
+
+def test_scientific_notation_stays_text_while_decimals_stay_exact(tmp_path):
+    """Direct CSV loading cannot convert exponent syntax to DECIMAL."""
+    source = tmp_path / 'scientific.csv'
+    source.write_text(
+        'normal,positive_exp,negative_exp\n'
+        '123.4500,1e+7,1e-7\n',
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert dict(metadata['schema']) == {
+        'normal': 'decimal(7,4)',
+        'positive_exp': 'object',
+        'negative_exp': 'object',
+    }
+    assert metadata['sample_rows'][0] == [123.45, '1e+7', '1e-7']
+
+
+def test_csv_and_json_preview_preserve_exact_numeric_text(
+    tmp_path,
+    monkeypatch,
+):
+    """The public preview API must bypass pandas/NumPy numeric coercion."""
+    detector = FileDetector()
+    csv_source = tmp_path / 'exact-preview.csv'
+    csv_source.write_text(
+        'big,decimal,scientific\n'
+        '9223372036854775807,12345678901234.5678,1e-7\n',
+        encoding='utf-8',
+    )
+    csv_preview = detector.get_preview_data(str(csv_source), max_rows=1)
+    assert csv_preview['rows'][0] == [
+        '9223372036854775807',
+        '12345678901234.5678',
+        '1e-7',
+    ]
+
+    json_source = tmp_path / 'exact-preview.json'
+    json_source.write_text(
+        '[{"big":9223372036854775807,'
+        '"decimal":12345678901234.5678,"scientific":1e-7}]',
+        encoding='utf-8',
+    )
+    json_preview = detector.get_preview_data(str(json_source), max_rows=1)
+    assert json_preview['rows'][0] == [
+        '9223372036854775807',
+        '12345678901234.5678',
+        '1e-7',
+    ]
+
+    mixed_source = tmp_path / 'mixed-preview.csv'
+    mixed_source.write_text(
+        'value,label,id\n1,first,10\nlater,second,20\n',
+        encoding='utf-8',
+    )
+    mixed_preview = detector.get_preview_data(str(mixed_source), max_rows=2)
+    assert mixed_preview['rows'] == [
+        ['1', 'first', 10],
+        ['later', 'second', 20],
+    ]
+
+    bool_source = tmp_path / 'sampled-bool-preview.csv'
+    bool_source.write_text(
+        'flag,label,id\nTrue,first,1\nunexpected,second,2\n',
+        encoding='utf-8',
+    )
+    sampled_metadata = detector.analyze_file_metadata(str(bool_source))
+    sampled_metadata['schema'] = [
+        ('flag', 'bool'),
+        ('label', 'object'),
+        ('id', 'int32'),
+    ]
+    monkeypatch.setattr(
+        detector,
+        'analyze_file_metadata',
+        lambda _path: sampled_metadata,
+    )
+    bool_preview = detector.get_preview_data(str(bool_source), max_rows=2)
+    assert bool_preview['rows'] == [
+        [True, 'first', 1],
+        ['unexpected', 'second', 2],
+    ]
+
+    numeric_source = tmp_path / 'sampled-numeric-preview.csv'
+    numeric_source.write_text(
+        'value,label,id\n1,first,1\n  unexpected  ,second,2\n',
+        encoding='utf-8',
+    )
+    numeric_metadata = sampled_metadata.copy()
+    numeric_metadata['schema'] = [
+        ('value', 'int32'),
+        ('label', 'object'),
+        ('id', 'int32'),
+    ]
+    monkeypatch.setattr(
+        detector,
+        'analyze_file_metadata',
+        lambda _path: numeric_metadata,
+    )
+    numeric_preview = detector.get_preview_data(str(numeric_source), max_rows=2)
+    assert numeric_preview['rows'][1][0] == '  unexpected  '
+
+
+def test_csv_complete_scan_aggregates_after_sample_cap(tmp_path):
+    """A small complete file must use evidence after the former 1000-row cap."""
+    source = tmp_path / 'late.csv'
+    rows = [str(index) for index in range(1000)] + ['x' * 5000]
+    source.write_text('value\n' + '\n'.join(rows) + '\n', encoding='utf-8')
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert metadata['schema'] == [('value', 'object')]
+    assert metadata['schema_inference'] == 'full'
+    assert metadata['schema_sample_size'] == 1001
+    assert metadata['observed_max_string_lengths']['value'] == 5000
+
+
+def test_json_aggregates_ranges_and_heterogeneous_families(tmp_path):
+    """All non-null JSON values contribute to range and family inference."""
+    exact = tmp_path / 'exact.json'
+    exact.write_text(
+        '[{"small":2147483647,"big":2147483648,'
+        '"max_big":9223372036854775807,'
+        '"over_big":9223372036854775808,'
+        '"decimal":12345678901234.5678}]',
+        encoding='utf-8',
+    )
+    metadata = FileDetector().analyze_file_metadata(str(exact))
+    schema = dict(metadata['schema'])
+    assert schema['small'] == 'int32'
+    assert schema['big'] == 'int64'
+    assert schema['max_big'] == 'int64'
+    assert schema['over_big'] == 'decimal(19,0)'
+    assert schema['decimal'] == 'decimal(18,4)'
+    assert metadata['json_sample_values']['max_big'] == '9223372036854775807'
+    assert metadata['json_sample_values']['decimal'] == '12345678901234.5678'
+
+    mixed = tmp_path / 'mixed.json'
+    rows = [{'value': index} for index in range(200)]
+    rows.append({'value': 'late'})
+    mixed.write_text(json.dumps(rows), encoding='utf-8')
+    mixed_metadata = FileDetector().analyze_file_metadata(str(mixed))
+    assert mixed_metadata['schema'] == [('value', 'str')]
+    assert mixed_metadata['schema_inference'] == 'full'
+    assert mixed_metadata['schema_sample_size'] == 201
+    assert mixed_metadata['json_typed_projection_safe'] is False
+
+
+def test_ndjson_dynamic_keys_are_bounded_and_marked_unsafe(tmp_path):
+    """A stream cannot grow retained schema state past the column cap."""
+    from external_file_detection.sql_generator import SQLGenerator
+
+    source = tmp_path / 'dynamic.ndjson'
+    source.write_text(
+        ''.join(
+            json.dumps({f'key_{index}': index}) + '\n'
+            for index in range(file_detector_module.JSON_SCHEMA_MAX_COLUMNS + 2)
+        ),
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert len(metadata['schema']) == file_detector_module.JSON_SCHEMA_MAX_COLUMNS
+    assert metadata['column_count'] == file_detector_module.JSON_SCHEMA_MAX_COLUMNS
+    assert (
+        metadata['schema_sample_size']
+        == file_detector_module.JSON_SCHEMA_MAX_COLUMNS + 2
+    )
+    assert metadata['schema_inference'] == 'sampled'
+    assert metadata['analysis_truncated'] is True
+    assert metadata['json_typed_projection_safe'] is False
+    assert 'distinct keys' in metadata['warning']
+    assert (
+        f'key_{file_detector_module.JSON_SCHEMA_MAX_COLUMNS}'
+        not in dict(metadata['schema'])
+    )
+    generator = SQLGenerator()
+    assert generator._generate_openjson_columns(metadata) == []
+    create_table = generator.generate_create_table(
+        metadata,
+        'dynamic',
+    )
+    assert '4,096 detected columns' in create_table
+    assert '1,024-column target-table limit' in create_table
+    assert 'CREATE TABLE [' not in create_table
+
+
+def test_python_csv_field_limit_matches_native_bound(tmp_path):
+    """Python accepts former-128-KiB fields and rejects over 4 MiB."""
+    detector = FileDetector()
+    accepted = tmp_path / 'accepted.csv'
+    accepted.write_text(
+        'id,payload\n1,' + ('x' * 131_073) + '\n',
+        encoding='utf-8',
+    )
+    accepted_metadata = detector.analyze_file_metadata(str(accepted))
+    assert 'error' not in accepted_metadata
+    assert accepted_metadata['observed_max_string_lengths']['payload'] == 131_073
+
+    rejected = tmp_path / 'rejected.csv'
+    rejected.write_text(
+        'id,payload\n1,'
+        + ('x' * (file_detector_module.MAX_FIELD_CHARS + 1))
+        + '\n',
+        encoding='utf-8',
+    )
+    rejected_metadata = detector.analyze_file_metadata(str(rejected))
+    assert 'field larger than field limit' in rejected_metadata['error']
+
+
+def test_huge_numeric_tokens_fall_back_without_integer_conversion(tmp_path):
+    """Over-precision JSON stays raw even where int digit limits differ."""
+    token = '9' * 10_000
+    source = tmp_path / 'huge-number.json'
+    source.write_text(f'[{{"value":{token}}}]', encoding='utf-8')
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert metadata['schema'] == [('value', 'str')]
+    assert metadata['json_sample_values']['value'] == token
+    assert file_detector_module._parse_numeric_token(token) is None
+
+
+def test_json_numeric_token_boundary_and_mixed_oversized_evidence(tmp_path):
+    """The 257th token character switches the whole field to raw text."""
+    from external_file_detection.sql_generator import SQLGenerator
+
+    accepted = '9' * 256
+    boundary = tmp_path / 'numeric-boundary.json'
+    boundary.write_text(f'[{{"value":{accepted}}}]', encoding='utf-8')
+
+    detector = FileDetector()
+    metadata = detector.analyze_file_metadata(str(boundary))
+    assert metadata['schema'] == [('value', 'decimal(256,0)')]
+    assert metadata['json_sample_values']['value'] == accepted
+    assert metadata['json_typed_projection_safe'] is True
+    assert '[value] NVARCHAR(MAX)' in SQLGenerator().generate_create_table(
+        metadata,
+        'numeric_boundary',
+    )
+
+    rejected = '8' * 257
+    over_boundary = tmp_path / 'numeric-over-boundary.json'
+    over_boundary.write_text(f'[{{"value":{rejected}}}]', encoding='utf-8')
+    over_boundary_metadata = detector.analyze_file_metadata(str(over_boundary))
+    assert over_boundary_metadata['schema'] == [('value', 'str')]
+    assert over_boundary_metadata['json_sample_values']['value'] == rejected
+    assert over_boundary_metadata['json_typed_projection_safe'] is False
+
+    oversized = tmp_path / 'oversized-numeric.json'
+    oversized.write_text(
+        f'[{{"value":1}},{{"value":{rejected}}}]',
+        encoding='utf-8',
+    )
+    oversized_metadata = detector.analyze_file_metadata(str(oversized))
+    assert oversized_metadata['schema'] == [('value', 'str')]
+    assert oversized_metadata['json_typed_projection_safe'] is False
+    assert SQLGenerator()._generate_openjson_columns(oversized_metadata) == []
+    assert '[value] NVARCHAR(MAX)' in SQLGenerator().generate_create_table(
+        oversized_metadata,
+        'oversized_numeric',
+    )
+    fabric_load = SQLGenerator().generate_bulk_insert(
+        oversized_metadata,
+        'oversized_numeric',
+        target_platform='fabric_sql_db',
+    )
+    assert 'Preserve each JSON object or NDJSON line' in fabric_load
+    assert 'INSERT INTO [' not in fabric_load
+    assert detector.get_preview_data(str(oversized), max_rows=2)['rows'] == [
+        [1],
+        [rejected],
+    ]
+
+
+def test_unicode_digits_are_text_not_ascii_numerics(tmp_path):
+    """CSV numeric syntax is deliberately restricted to ASCII digits."""
+    source = tmp_path / 'unicode-digits.csv'
+    source.write_text(
+        'arabic_indic,full_width\n١٢٣,１２３\n',
+        encoding='utf-8',
+    )
+
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    assert metadata['schema'] == [
+        ('arabic_indic', 'object'),
+        ('full_width', 'object'),
+    ]
+    assert metadata['sample_rows'] == [['١٢٣', '１２３']]
+
+
+def test_parquet_unbounded_string_uses_max_and_blocks_external_table(tmp_path):
+    """Parquet strings have no declared bound, even when one value is 5000 chars."""
+    from external_file_detection.sql_generator import SQLGenerator
+
+    source = tmp_path / 'wide.parquet'
+    pq.write_table(pa.table({'payload': ['x' * 5000]}), source)
+    metadata = FileDetector().analyze_file_metadata(str(source))
+    generator = SQLGenerator()
+
+    create_table = generator.generate_create_table(metadata, 'wide')
+    assert '[payload] NVARCHAR(MAX)' in create_table
+    external = generator.generate_external_table(
+        metadata,
+        target_platform='azure_sql_db',
+    )
+    assert 'NOT AVAILABLE' in external
+    assert 'explicit bounded SQL type overrides' in external
+    assert 'CREATE EXTERNAL TABLE [' not in external
+
+
 def test_directory_scan():
     """Test directory scanning functionality."""
     detector = FileDetector()
@@ -425,7 +762,7 @@ def test_caches_are_lru_bounded(temp_dir):
 
 
 def test_csv_inference_is_conservatively_nullable(temp_dir):
-    """Sampled rows cannot prove that future values will be non-null."""
+    """Complete type evidence does not weaken conservative nullability."""
     csv_path = os.path.join(temp_dir, 'required-looking.csv')
     with open(csv_path, 'w', newline='', encoding='utf-8') as handle:
         writer = csv.writer(handle)
@@ -436,13 +773,13 @@ def test_csv_inference_is_conservatively_nullable(temp_dir):
 
     assert metadata['nullable_columns'] == ['id', 'description']
     assert metadata['nullability_inference'] == 'conservative'
-    assert metadata['schema_inference'] == 'sampled'
+    assert metadata['schema_inference'] == 'full'
     assert metadata['observed_max_string_lengths']['description'] == 240
     assert metadata['max_string_lengths']['description'] == 300
 
 
 def test_ndjson_analysis_counts_rows_without_retaining_them(temp_dir):
-    """NDJSON analysis should stream the file and bound its schema sample."""
+    """NDJSON analysis streams all rows into constant-memory type evidence."""
     json_path = os.path.join(temp_dir, 'events.ndjson')
     with open(json_path, 'w', encoding='utf-8') as handle:
         for index in range(350):
@@ -452,8 +789,8 @@ def test_ndjson_analysis_counts_rows_without_retaining_them(temp_dir):
 
     assert metadata['json_format'] == 'ndjson'
     assert metadata['row_count'] == 350
-    assert metadata['schema_sample_size'] == 200
-    assert metadata['schema_inference'] == 'sampled'
+    assert metadata['schema_sample_size'] == 350
+    assert metadata['schema_inference'] == 'full'
 
 
 def test_large_json_array_uses_bounded_schema_sample(temp_dir, monkeypatch):

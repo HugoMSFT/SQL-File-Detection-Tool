@@ -12,9 +12,9 @@
  */
 
 import type { GeneratorMetadata, SchemaField, TargetPlatform } from '../types';
+import { TARGET_TABLE_MAX_COLUMNS } from '../limits';
 import {
     escapeIdentifier,
-    cleanIdentifier,
     padRight,
     quoteJsonPath,
     quoteLiteral,
@@ -27,9 +27,10 @@ import {
 } from './escaping';
 import {
     COMPRESSION_CODECS,
+    hasIncompleteTypeEvidence,
+    inferredColumnSqlType,
     NO_EXTERNAL_FORMAT_FILE_TYPES,
     PLATFORM_LABELS,
-    mapTypeToSql,
     type ExternalFormatType,
 } from './typeMapping';
 
@@ -38,6 +39,68 @@ import {
  * only ever need to import from the SQL layer.
  */
 export type { GeneratorMetadata };
+
+/** Number of detected columns a generated target would need to preserve. */
+export function targetTableColumnCount(metadata: GeneratorMetadata): number {
+    const schemaCount = Array.isArray(metadata.schema) ? metadata.schema.length : 0;
+    const declaredCount =
+        typeof metadata.column_count === 'number' &&
+        Number.isFinite(metadata.column_count) &&
+        metadata.column_count > 0
+            ? Math.floor(metadata.column_count)
+            : 0;
+    return Math.max(schemaCount, declaredCount);
+}
+
+/** True when ordinary SQL target tables cannot represent the detected schema. */
+export function exceedsTargetTableColumnLimit(metadata: GeneratorMetadata): boolean {
+    return targetTableColumnCount(metadata) > TARGET_TABLE_MAX_COLUMNS;
+}
+
+/** Comment-only guidance for a schema that cannot become a runnable typed target. */
+export function targetTableColumnLimitGuidance(
+    metadata: GeneratorMetadata,
+    featureLabel: string,
+): string {
+    const count = targetTableColumnCount(metadata);
+    const lines = [
+        '-- ====================================================================',
+        `-- ${sqlComment(featureLabel)}`,
+        '-- NOT GENERATED: RAW DATA PRESERVATION REQUIRED',
+        '-- ====================================================================',
+        `-- ${count.toLocaleString('en-US')} detected columns exceed the ` +
+            `${TARGET_TABLE_MAX_COLUMNS.toLocaleString('en-US')}-column target-table limit.`,
+        '-- No analyzed columns were dropped, but typed table and projection SQL',
+        '-- was not generated because it cannot run on SQL Server, Azure SQL,',
+        '-- or Fabric SQL Database.',
+    ];
+    if (metadata.file_type === 'json') {
+        lines.push(
+            '-- Preserve each JSON object or NDJSON line intact as raw JSON in',
+            '-- NVARCHAR(MAX). Inspect it with schemaless OPENJSON ([key], [value],',
+            '-- [type]), then normalize or split it across related tables before',
+            '-- generating a typed projection.',
+        );
+    } else {
+        lines.push(
+            '-- Preserve each source record in a raw staging form, then normalize',
+            '-- or split it across related tables before generating a typed load.',
+        );
+    }
+    return lines.join('\n');
+}
+
+/** Resolve a column's effective SQL type, with explicit safe overrides first. */
+export function columnSqlType(
+    metadata: GeneratorMetadata,
+    columnName: string,
+    detectedType: unknown,
+): string {
+    const overrides = metadata.sql_type_overrides ?? {};
+    return Object.prototype.hasOwnProperty.call(overrides, columnName)
+        ? safeSqlType(overrides[columnName])
+        : inferredColumnSqlType(metadata, columnName, detectedType);
+}
 
 /** Configuration for `CREATE EXTERNAL FILE FORMAT`. */
 export interface ExternalFileFormatConfig {
@@ -156,17 +219,27 @@ export function csvReaderOptions(
  * framing must go through the virtualization source.
  */
 export function jsonRowFrameOptions(
+    metadata: GeneratorMetadata,
     indent = 4,
     rowTerminator = '0x0b',
 ): string[] {
     const pad = ' '.repeat(indent);
     const width = CSV_OPTION_WIDTH;
-    return [
+    const lines = [
         `${pad}${padRight('FORMAT', width)} = 'CSV',`,
         `${pad}${padRight('FIELDTERMINATOR', width)} = '0x0b',`,
         `${pad}${padRight('FIELDQUOTE', width)} = '0x0b',`,
         `${pad}${padRight('ROWTERMINATOR', width)} = '${rowTerminator}'`,
     ];
+    if (rowTerminator === '0x0a') {
+        const codepage = stringOr(
+            metadata.parser_overrides?.codepage ?? metadata.codepage,
+            '65001',
+        );
+        lines[lines.length - 1] += ',';
+        lines.push(`${pad}${padRight('CODEPAGE', width)} = '${quoteLiteral(codepage)}'`);
+    }
+    return lines;
 }
 
 /**
@@ -242,8 +315,6 @@ export function generateColumnDefinitions(
     const nullableSet = new Set(
         Array.isArray(metadata.nullable_columns) ? metadata.nullable_columns : [],
     );
-    const maxLengths = metadata.max_string_lengths ?? {};
-    const overrides = metadata.sql_type_overrides ?? {};
     const pad = ' '.repeat(indent);
     const columns: string[] = [];
 
@@ -253,9 +324,7 @@ export function generateColumnDefinitions(
         const cleanName = escapeIdentifier(colName);
         // An explicit SQL type from the schema editor always wins, but is still
         // run through the allowlist so it can never inject arbitrary SQL.
-        const sqlType = Object.prototype.hasOwnProperty.call(overrides, colName)
-            ? safeSqlType(overrides[colName])
-            : mapTypeToSql(colType, maxLengths[colName]);
+        const sqlType = columnSqlType(metadata, colName, colType);
         if (includeNullability) {
             const nullKeyword = nullableSet.has(colName) ? 'NULL' : 'NOT NULL';
             columns.push(`${pad}[${cleanName}] ${padRight(sqlType, 22)} ${nullKeyword}`);
@@ -278,12 +347,23 @@ export function generateOpenjsonColumns(
 ): string[] {
     const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
     const nesting = metadata.json_nesting ?? {};
-    const maxLengths = metadata.max_string_lengths ?? {};
     const overrides = metadata.sql_type_overrides ?? {};
     const pad = ' '.repeat(indent);
     const cols: string[] = [];
 
     validateUniqueColumnNames(schema);
+    if (
+        exceedsTargetTableColumnLimit(metadata) ||
+        metadata.json_typed_projection_safe === false ||
+        (
+            hasIncompleteTypeEvidence(metadata) &&
+            schema.some(([columnName]) =>
+                !Object.prototype.hasOwnProperty.call(overrides, columnName)
+            )
+        )
+    ) {
+        return [];
+    }
 
     for (const [colName, colType] of schema) {
         const clean = escapeIdentifier(colName);
@@ -293,9 +373,7 @@ export function generateOpenjsonColumns(
                 `${pad}[${clean}] NVARCHAR(MAX) '${quoteJsonPath(colName)}' AS JSON`,
             );
         } else {
-            const sqlType = Object.prototype.hasOwnProperty.call(overrides, colName)
-                ? safeSqlType(overrides[colName])
-                : mapTypeToSql(colType, maxLengths[colName]);
+            const sqlType = columnSqlType(metadata, colName, colType);
             cols.push(`${pad}[${clean}] ${sqlType} '${quoteJsonPath(colName)}'`);
         }
     }
@@ -322,12 +400,14 @@ export function openrowsetWithSchema(
     return ['WITH (', body, terminator];
 }
 
-/** A bracketed comma-separated column list, or `*` when the schema is unknown. */
-export function columnNameList(metadata: GeneratorMetadata): string {
+/** A bracketed comma-separated column list, optionally qualified by an alias. */
+export function columnNameList(
+    metadata: GeneratorMetadata,
+    qualifier?: string,
+): string {
     const schema = Array.isArray(metadata.schema) ? metadata.schema : [];
-    const names = schema.map(
-        ([name]) => `[${escapeIdentifier(cleanIdentifier(name))}]`,
-    );
+    const prefix = qualifier ? `[${escapeIdentifier(qualifier)}].` : '';
+    const names = schema.map(([name]) => `${prefix}[${escapeIdentifier(name)}]`);
     return names.length > 0 ? names.join(', ') : '*';
 }
 

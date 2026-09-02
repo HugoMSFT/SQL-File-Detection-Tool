@@ -333,6 +333,33 @@ test('analyzing the current file produces metadata, preview and SQL', async () =
     }
 });
 
+test('controller preview preserves exact CSV numerics as source text', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-exact-preview-'));
+    const source = path.join(root, 'exact.csv');
+    fs.writeFileSync(
+        source,
+        'big,decimal,scientific\n' +
+        '9223372036854775807,12345678901234.5678,1e-7\n',
+    );
+    const record = recorder({ workspaceFolders: [root] });
+    const ui = controller(record);
+    try {
+        record.activeFile = source;
+        await ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+
+        assert.deepEqual(snapshot(record).preview?.rows[0], [
+            '9223372036854775807',
+            '12345678901234.5678',
+            '1e-7',
+        ]);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 test('an unsupported editor scheme is reported instead of failing obscurely', async () => {
     const record = recorder();
     const ui = controller(record);
@@ -495,7 +522,11 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
         assert.equal(state.metadata?.file_name, 'sample.parquet');
         assert.equal(state.tableName, 'sample');
         assert.match(state.statements?.create_table ?? '', /\[dbo\]\.\[sample\]/);
-        assert.match(state.statements?.create_external_table ?? '', /\[dbo\]\.\[ext_sample\]/);
+        assert.match(state.statements?.create_external_table ?? '', /NOT AVAILABLE/);
+        assert.match(
+            state.statements?.create_external_table ?? '',
+            /explicit bounded SQL type overrides/i,
+        );
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.equal(record.preferences.get('activeTab'), 'preview');
     } finally {
@@ -1113,6 +1144,19 @@ test('an invalid known URL leaves the previous storage setup intact', async () =
             'https://myaccount.blob.core.windows.net/data/orders.parquet',
         );
         assert.match(snapshot(record).error ?? '', /not a supported/i);
+
+        await ui.handle({
+            type: 'setStorageUrl',
+            value:
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
+                + 'lakehouse.Lakehouse/Files/orders.parquet',
+        });
+        await settle();
+        assert.equal(
+            snapshot(record).storageUrl,
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        );
+        assert.match(snapshot(record).error ?? '', /supported storage services/i);
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1170,12 +1214,12 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
                 platform: 'fabric_sql_db',
                 url:
                     'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
-                    + 'lakehouse/Files/events_250k.parquet',
+                    + 'lakehouse.Lakehouse/Files/events_250k.parquet',
                 source: 'fabric_onelake',
                 connector: 'ABFSS',
                 location:
                     "LOCATION = 'abfss://workspace@onelake.dfs.fabric.microsoft.com/"
-                    + "lakehouse/Files'",
+                    + "lakehouse.Lakehouse/Files'",
             },
         ] as const;
 

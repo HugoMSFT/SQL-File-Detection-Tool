@@ -134,6 +134,8 @@ export interface FileMetadata {
     json_format?: JsonFormat;
     json_nesting?: Record<string, JsonNestingKind>;
     json_sample_values?: Record<string, SampleValue>;
+    /** False when a heterogeneous or truncated shape requires schemaless OPENJSON. */
+    json_typed_projection_safe?: boolean;
     analysis_truncated?: boolean;
     /** Caller-supplied explicit SQL types keyed by column name. */
     sql_type_overrides?: Record<string, string>;

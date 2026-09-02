@@ -221,7 +221,7 @@ EXPECTED_SQL_TYPES = {
     'c_float32': 'FLOAT',
     'c_float64': 'FLOAT',
     'c_bool': 'BIT',
-    'c_string': 'NVARCHAR(255)',
+    'c_string': 'NVARCHAR(MAX)',
     'c_large_string': 'NVARCHAR(MAX)',
     'c_binary': 'VARBINARY(MAX)',
     'c_large_binary': 'VARBINARY(MAX)',
