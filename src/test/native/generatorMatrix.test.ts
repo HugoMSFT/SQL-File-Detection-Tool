@@ -24,6 +24,7 @@ import {
     generateJsonFunctions,
     resolveTableName,
 } from '../../native/sql/generator';
+import { generateOpenrowset } from '../../native/sql/openrowset';
 import {
     DEFAULT_TARGET_PLATFORM,
     PLATFORMS,
@@ -183,6 +184,154 @@ describe('generator matrix: 6 targets x 4 formats x local/remote', () => {
             }
         }
     }
+});
+
+describe('unsupported binary and table formats never fall through to CSV', () => {
+    for (const platform of PLATFORMS) {
+        for (const [fileType, fileName] of [
+            ['orc', 'orders.orc'],
+            ['rc', 'orders.rc'],
+            ['iceberg', 'v1.metadata.json'],
+        ] as const) {
+            for (const storageUrl of Object.values(STORAGE_URLS)) {
+                it(`${platform} / ${fileType} / ${storageUrl ?? 'local'}`, () => {
+                    const metadata = {
+                        ...csvMetadata(),
+                        file_type: fileType,
+                        file_name: fileName,
+                        file_path: `C:/data/${fileName}`,
+                    };
+                    const statements = generateAllStatements(metadata, {
+                        targetPlatform: platform,
+                        storageUrl,
+                    });
+                    for (const key of ['bulk_insert', 'openrowset'] as const) {
+                        const executable = statements[key]
+                            .split('\n')
+                            .filter((line) => !line.trimStart().startsWith('--'))
+                            .join('\n');
+                        assert.ok(!/FORMAT\s*=\s*'CSV'/i.test(executable), statements[key]);
+                        assert.ok(!/\b(BULK INSERT|OPENROWSET)\b/i.test(executable), statements[key]);
+                    }
+                    const allSql = Object.values(statements).join('\n');
+                    assert.ok(!/FORMAT\s*=\s*'CSV'/i.test(allSql), allSql);
+                });
+            }
+        }
+    }
+});
+
+describe('audited generated-SQL regressions', () => {
+    it('does not leave a trailing comma in SQL Server 2019 Blob OPENROWSET', () => {
+        const sql = generateOpenrowset(csvMetadata(), {
+            targetPlatform: 'sql_server_2019',
+            storageUrl: STORAGE_URLS.azure_blob,
+            dataSource: 'AuditDS',
+        });
+        assert.doesNotMatch(sql, /CODEPAGE[^\n]*,\s*--[^\n]*\n\)/);
+        assert.match(sql, /CODEPAGE\s*=\s*'65001'\s+-- UTF-8\n\)/);
+    });
+
+    it('uses schemaless OPENJSON for unsafe single-object values', () => {
+        const metadata: GeneratorMetadata = {
+            ...jsonMetadata(),
+            json_format: 'object',
+            json_typed_projection_safe: false,
+            schema: [['value', 'large_string']],
+        };
+        const sql = generateJsonFunctions(metadata, {
+            targetPlatform: 'sql_server_2022',
+        });
+        assert.match(sql, /JSON_VALUE is limited to NVARCHAR\(4000\)/);
+        assert.match(sql, /SELECT \[key\], \[value\], \[type\]\s+FROM OPENJSON\(@json\)/);
+        assert.doesNotMatch(executableSql(sql), /\bJSON_VALUE\s*\(/i);
+    });
+
+    it('uses typed OPENJSON for object values wider than JSON_VALUE', () => {
+        const metadata: GeneratorMetadata = {
+            ...jsonMetadata(),
+            json_format: 'object',
+            json_typed_projection_safe: true,
+            schema: [['payload', 'string']],
+            max_string_lengths: { payload: 4001 },
+        };
+        const sql = generateJsonFunctions(metadata, {
+            targetPlatform: 'sql_server_2022',
+        });
+        assert.match(sql, /\[payload\]\s+NVARCHAR\(MAX\)/);
+        assert.match(sql, /FROM OPENJSON\(@json\)\s+WITH \(/);
+        assert.doesNotMatch(executableSql(sql), /\bJSON_VALUE\s*\(/i);
+    });
+
+    it('frames every cloud NDJSON read by LF', () => {
+        const sql = generateJsonFunctions(ndjsonMetadata(2), {
+            targetPlatform: 'azure_sql_db',
+            storageUrl: STORAGE_URLS.azure_blob,
+            dataSource: 'AuditDS',
+        });
+        const framedReads = sql
+            .split('FROM OPENROWSET(')
+            .slice(1)
+            .filter((block) => /FORMAT\s*=\s*'CSV'/.test(block));
+        assert.ok(framedReads.length >= 2, sql);
+        for (const block of framedReads) {
+            assert.match(block, /ROWTERMINATOR\s*=\s*'0x0a'/);
+        }
+    });
+
+    it('keeps the effective cloud source in complete DDL', () => {
+        const options = {
+            targetPlatform: 'sql_server_2022' as const,
+            dataSourceType: 'azure_blob' as const,
+            dataSource: 'AuditDS',
+            credentialName: 'AuditCredential',
+            storageUrl: null,
+            authMethod: 'sas',
+        };
+        const document = generateCompleteDdl(csvMetadata(), options);
+        const bulkStart = document.indexOf('BULK INSERT [');
+        const bulk = document.slice(
+            bulkStart,
+            bulkStart + 900,
+        );
+        assert.match(bulk, /DATA_SOURCE\s*=\s*'AuditDS_Bulk'/);
+        assert.doesNotMatch(bulk, /C:\/data/);
+    });
+
+    it('keeps parser format overrides in complete DDL regeneration', () => {
+        const metadata: GeneratorMetadata = {
+            ...csvMetadata(),
+            parser_overrides: { format: 'orc' },
+        };
+        const statements = generateAllStatements(metadata, {
+            targetPlatform: 'sql_server_2022',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        const document = generateCompleteDdl(metadata, {
+            targetPlatform: 'sql_server_2022',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        assert.doesNotMatch(executableSql(statements.bulk_insert), /\bBULK INSERT\b/);
+        assert.doesNotMatch(executableSql(document), /\bBULK INSERT\b/);
+        assert.doesNotMatch(document, /FORMAT\s*=\s*'CSV'/i);
+    });
+
+    it('keeps detected CSV options and schema in quick-load guidance', () => {
+        const sql = generateCreateTable({
+            ...csvMetadata(),
+            delimiter: '\t',
+            codepage: '1200',
+            encoding: 'utf-16-le',
+        }, {
+            targetPlatform: 'azure_sql_db',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        assert.match(sql, /--\s+FIRSTROW\s*=\s*2/);
+        assert.match(sql, /--\s+FIELDTERMINATOR\s*=\s*'\\t'/);
+        assert.match(sql, /--\s+CODEPAGE\s*=\s*'1200'/);
+        assert.match(sql, /-- WITH \(/);
+        assert.match(sql, /--\s+\[id\]\s+BIGINT/);
+    });
 });
 
 describe('target platform capabilities', () => {
@@ -756,7 +905,7 @@ describe('storage authentication and object naming', () => {
             metadata: csvMeta(),
             targetPlatform: 'fabric_sql_db',
             storageUrl:
-                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.csv',
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files/data.csv',
             authMethod: 'user_identity',
         });
         assert.match(setup, /IDENTITY = 'USER IDENTITY'/);
@@ -771,8 +920,8 @@ describe('storage authentication and object naming', () => {
             dataSource: 'S3Lake',
             metadata: csvMeta(),
             targetPlatform: 'sql_server_2022',
-            storageUrl: 's3://bucket/data.csv',
-            authMethod: 's3_access_key',
+            storageUrl: 's3://s3.amazonaws.com/bucket/data.csv',
+            authMethod: 'sas',
         });
         assert.match(setup, /IDENTITY = 'S3 ACCESS KEY'/);
         assert.match(setup, /SECRET\s+= '<access_key_id>:<secret_access_key>'/);
@@ -786,24 +935,109 @@ describe('storage authentication and object naming', () => {
             dataSourceType: 's3',
             authMethod: 's3_access_key',
         });
-        assert.match(statements.credential_setup, /LOCATION = 's3:\/\/<bucket>'/);
-        assert.match(statements.openrowset, /Data source location: s3:\/\/<bucket>/);
+        assert.match(
+            statements.credential_setup,
+            /LOCATION = 's3:\/\/<s3_endpoint>'/,
+        );
+        assert.match(
+            statements.openrowset,
+            /Data source location: s3:\/\/<s3_endpoint>/,
+        );
         assert.match(statements.bulk_insert, /cannot read S3-compatible object storage/);
     });
 
-    it('maps OneLake to ADLS on Azure SQL Database', () => {
+    it('rejects OneLake on Azure SQL Database instead of remapping it', () => {
         const setup = generateCredentialSetup({
             dataSource: 'OneLake',
             metadata: csvMeta(),
             targetPlatform: 'azure_sql_db',
             storageUrl:
-                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.csv',
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files/data.csv',
         });
+        assert.match(setup, /NOT AVAILABLE on Azure SQL Database/);
+        assert.match(setup, /supplied location was not replaced/);
+        assert.ok(!/^\s*CREATE EXTERNAL DATA SOURCE/im.test(setup));
+    });
+
+    it('uses a storage account key for SQL Server 2019 WASBS', () => {
+        const placeholder = generateCredentialSetup({
+            dataSource: 'LegacyBlob',
+            metadata: csvMeta(),
+            targetPlatform: 'sql_server_2019',
+        });
+        assert.match(placeholder, /SECRET\s+= '<storage_account_key>'/);
+        assert.ok(!placeholder.includes('SHARED ACCESS SIGNATURE'));
+
+        const setup = generateCredentialSetup({
+            dataSource: 'LegacyBlob',
+            metadata: csvMeta(),
+            targetPlatform: 'sql_server_2019',
+            storageUrl: STORAGE_URLS['azure_blob'],
+            authMethod: 'sas',
+        });
+        assert.match(setup, /LOCATION = 'wasbs:/i);
+        assert.match(setup, /Database scoped credential: storage account key/i);
+        assert.match(setup, /SECRET\s+= '<storage_account_key>'/);
         assert.match(
             setup,
-            /LOCATION = 'adls:\/\/workspace@onelake\.dfs\.fabric\.microsoft\.com'/,
+            /CREATE DATABASE SCOPED CREDENTIAL \[cred_LegacyBlob_Bulk\][\s\S]*IDENTITY = 'SHARED ACCESS SIGNATURE'/,
         );
-        assert.ok(!setup.includes("LOCATION = 'abs://"));
+    });
+
+    it('canonicalizes workspace-private OneLake without dropping the item', () => {
+        const workspace = 'abcdef0123456789abcdef0123456789';
+        const host = `${workspace}.zab.dfs.fabric.microsoft.com`;
+        const setup = generateCredentialSetup({
+            dataSource: 'PrivateLake',
+            metadata: csvMeta(),
+            targetPlatform: 'fabric_sql_db',
+            storageUrl:
+                `https://${host}/lakehouse.Lakehouse/Files/data.csv`,
+        });
+        assert.ok(
+            setup.includes(
+                `LOCATION = 'abfss://${workspace}@${host}/lakehouse.Lakehouse/Files'`,
+            ),
+            setup,
+        );
+    });
+
+    it('rejects malformed and unsupported authority URLs', () => {
+        for (const storageUrl of [
+            's3a://s3.amazonaws.com/bucket/data.csv',
+            's3n://s3.amazonaws.com/bucket/data.csv',
+            's3://s3.amazonaws.com',
+            'hdfs://namenode/data/file.csv',
+            'hdfs:/namenode/data/file.csv',
+            's3a:/s3.amazonaws.com/bucket/data.csv',
+            'hdfs://workspace@onelake.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files/data.csv',
+            'https://user:password@acct.blob.core.windows.net/raw/data.csv',
+            's3://user:password@s3.amazonaws.com/bucket/data.csv',
+        ]) {
+            const statements = generateAllStatements(csvMeta(), {
+                targetPlatform: 'sql_server_2022',
+                storageUrl,
+            });
+            assert.match(statements.credential_setup, /NOT AVAILABLE/);
+            assert.strictEqual(executableSql(statements.credential_setup), '');
+            assert.strictEqual(executableSql(statements.openrowset), '');
+        }
+    });
+
+    it('does not substitute Azure placeholders for S3 on Azure SQL', () => {
+        const statements = generateAllStatements(csvMeta(), {
+            targetPlatform: 'azure_sql_db',
+            storageUrl: 's3://s3.amazonaws.com/bucket/data.csv',
+        });
+        for (const key of [
+            'bulk_insert',
+            'openrowset',
+            'create_external_table',
+            'credential_setup',
+        ] as const) {
+            assert.match(statements[key], /NOT AVAILABLE on Azure SQL Database/);
+            assert.ok(!/^\s*(CREATE EXTERNAL|BULK INSERT|FROM OPENROWSET)/im.test(statements[key]));
+        }
     });
 
     it('gates managed identity to SQL Server 2025 and explains the Arc requirement', () => {

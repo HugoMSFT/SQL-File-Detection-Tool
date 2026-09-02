@@ -32,11 +32,67 @@ DEFAULT_TARGET_PLATFORM = 'azure_sql_db'
 TARGET_TABLE_MAX_COLUMNS = 1024
 
 
-_S3_SCHEMES = frozenset({'s3', 's3a', 's3n'})
+_S3_SCHEMES = frozenset({'s3'})
+_AZURE_STORAGE_SCHEMES = frozenset(
+    {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss'}
+)
+_AZURE_BLOB_SUFFIXES = (
+    'blob.core.windows.net',
+    'blob.core.usgovcloudapi.net',
+    'blob.core.chinacloudapi.cn',
+    'blob.core.cloudapi.de',
+)
+_AZURE_DFS_SUFFIXES = (
+    'dfs.core.windows.net',
+    'dfs.core.usgovcloudapi.net',
+    'dfs.core.chinacloudapi.cn',
+    'dfs.core.cloudapi.de',
+)
 
 # Platforms whose OPENROWSET(BULK ...)/BULK INSERT can reach S3-compatible
 # object storage. SQL Server 2019 and the Azure SQL family cannot.
 S3_BULK_PLATFORMS = frozenset({'sql_server_2022', 'sql_server_2025'})
+
+
+def _authority_hostname(authority: str) -> str:
+    """Return the lower-case hostname from an authority with user info/port."""
+    without_user = str(authority or '').rsplit('@', 1)[-1]
+    if without_user.startswith('['):
+        end = without_user.find(']')
+        return (without_user[1:end] if end >= 0 else without_user).lower()
+    return without_user.split(':', 1)[0].lower().rstrip('.')
+
+
+def _has_dns_suffix(host: str, suffixes: Sequence[str]) -> bool:
+    normalized = str(host or '').lower().rstrip('.')
+    return any(normalized.endswith(f'.{suffix}') for suffix in suffixes)
+
+
+def _is_azure_blob_host(host: str) -> bool:
+    return _has_dns_suffix(host, _AZURE_BLOB_SUFFIXES)
+
+
+def _is_azure_dfs_host(host: str) -> bool:
+    return _has_dns_suffix(host, _AZURE_DFS_SUFFIXES)
+
+
+def _is_onelake_private_dfs_host(host: str) -> bool:
+    return bool(re.fullmatch(
+        r'([0-9a-f]{2})(?:[0-9a-f]{30}|'
+        r'[0-9a-f]{6}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})'
+        r'\.z\1\.dfs\.fabric\.microsoft\.com',
+        str(host or '').lower().rstrip('.'),
+        flags=re.ASCII,
+    ))
+
+
+def _is_onelake_dfs_host(host: str) -> bool:
+    normalized = str(host or '').lower().rstrip('.')
+    return bool(re.fullmatch(
+        r'(?:[a-z0-9-]+-)?onelake\.dfs\.fabric\.microsoft\.com',
+        normalized,
+        flags=re.ASCII,
+    )) or _is_onelake_private_dfs_host(normalized)
 
 
 def _storage_url_kind(storage_url: Optional[str]) -> str:
@@ -52,22 +108,48 @@ def _storage_url_kind(storage_url: Optional[str]) -> str:
     normalized = str(storage_url).strip().replace('\\', '/')
     parsed = urlparse(normalized)
     scheme = parsed.scheme.lower()
-    host = (parsed.netloc or '').lower()
+    host = _authority_hostname(parsed.netloc)
+    if scheme in {'http', 'https', 's3'} and '@' in parsed.netloc:
+        return 'other'
 
     if scheme in _S3_SCHEMES:
-        return 's3'
-    if 'fabric.microsoft.com' in host or host.startswith('onelake.'):
+        return 's3' if host and parsed.path.strip('/') else 'other'
+    if (
+        scheme in {'abfs', 'abfss', 'http', 'https'}
+        and _is_onelake_dfs_host(host)
+    ):
         return 'onelake'
-    if scheme in _AZURE_STORAGE_SCHEMES or scheme == 'azure':
+    if scheme == 'azure':
+        return 'azure'
+    if scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(host):
+        return 'azure'
+    if scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(host):
         return 'azure'
     if scheme in {'http', 'https'} and (
-        host.endswith('.blob.core.windows.net')
-        or host.endswith('.dfs.core.windows.net')
+        _is_azure_blob_host(host) or _is_azure_dfs_host(host)
     ):
         return 'azure'
-    if scheme in {'http', 'https', 'gs', 'ftp'}:
+    if scheme in _CLOUD_URL_SCHEMES or scheme == 'ftp' or len(scheme) > 1:
         return 'other'
     return 'local'
+
+
+def _storage_url_supported_by_platform(storage_url: Optional[str],
+                                       target_platform: str) -> bool:
+    """Return whether a real storage URL is supported by a SQL platform."""
+    kind = _storage_url_kind(storage_url)
+    if kind == 'local':
+        return True
+    if target_platform == 'fabric_sql_db':
+        return kind == 'onelake'
+    if target_platform in {'azure_sql_db', 'azure_sql_mi'}:
+        return kind == 'azure'
+    if target_platform in {'sql_server_2022', 'sql_server_2025'}:
+        return kind in {'azure', 's3'}
+    if target_platform != 'sql_server_2019' or kind != 'azure':
+        return False
+    parsed = urlparse(str(storage_url).strip().replace('\\', '/'))
+    return _is_azure_blob_host(parsed.hostname or '') or parsed.scheme == 'azure'
 
 
 def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
@@ -99,7 +181,13 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
         'abfs': 'abfss' if is_2019 else 'adls',
         'abfss': 'abfss' if is_2019 else 'adls',
     }
-    if scheme in scheme_map and host:
+    hostname = _authority_hostname(host)
+    valid_scheme_host = (
+        scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(hostname)
+    ) or (
+        scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(hostname)
+    )
+    if scheme in scheme_map and host and valid_scheme_host:
         target_scheme = scheme_map[scheme]
         relative_path = path
         if '@' not in host and path:
@@ -113,10 +201,10 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
 
     if scheme == 'https' and host:
         container, separator, remainder = path.partition('/')
-        lower_host = host.lower()
-        if lower_host.endswith('.dfs.core.windows.net'):
+        lower_host = _authority_hostname(host)
+        if _is_azure_dfs_host(lower_host):
             target_scheme = 'abfss' if is_2019 else 'adls'
-        elif lower_host.endswith('.blob.core.windows.net'):
+        elif _is_azure_blob_host(lower_host):
             target_scheme = 'wasbs' if is_2019 else 'abs'
         else:
             return default_location, path or fallback_name
@@ -149,14 +237,9 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
 # ----------------------------------------------------------------------
 
 _AZURE_PLACEHOLDER_ACCOUNT = '<storage_account>.dfs.core.windows.net'
-_AZURE_STORAGE_SCHEMES = frozenset(
-    {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss'}
-)
-
-
 _CLOUD_URL_SCHEMES = frozenset(
     {'abs', 'wasb', 'wasbs', 'adls', 'abfs', 'abfss', 'azure',
-     's3', 's3a', 's3n', 'gs', 'http', 'https', 'onelake'}
+     's3', 'gs', 'http', 'https', 'onelake'}
 )
 
 
@@ -191,7 +274,13 @@ def _parse_azure_storage_url(storage_url: Optional[str],
     host = parsed.netloc
     path = parsed.path.strip('/')
 
-    if scheme in _AZURE_STORAGE_SCHEMES and host:
+    hostname = _authority_hostname(host)
+    valid_scheme_host = (
+        scheme in {'abs', 'wasb', 'wasbs'} and _is_azure_blob_host(hostname)
+    ) or (
+        scheme in {'adls', 'abfs', 'abfss'} and _is_azure_dfs_host(hostname)
+    )
+    if scheme in _AZURE_STORAGE_SCHEMES and host and valid_scheme_host:
         if '@' in host:
             container, _, account = host.partition('@')
             return (
@@ -206,10 +295,8 @@ def _parse_azure_storage_url(storage_url: Optional[str],
             (remainder if separator else '') or fallback_name,
         )
 
-    lower_host = host.lower()
     if scheme in {'http', 'https'} and (
-        lower_host.endswith('.blob.core.windows.net')
-        or lower_host.endswith('.dfs.core.windows.net')
+        _is_azure_blob_host(hostname) or _is_azure_dfs_host(hostname)
     ):
         container, separator, remainder = path.partition('/')
         return (
@@ -239,8 +326,8 @@ def _azure_bulk_storage_parts(storage_url: Optional[str],
         storage_url, file_name
     )
     blob_host = re.sub(
-        r'\.dfs\.core\.windows\.net$',
-        '.blob.core.windows.net',
+        r'\.dfs\.(core\.[^.]+\.[^.]+)$',
+        r'.blob.\1',
         account,
         flags=re.IGNORECASE,
     )
@@ -258,11 +345,10 @@ def _azure_virtualization_parts(storage_url: Optional[str],
     account, container, relative_path = _parse_azure_storage_url(
         storage_url, file_name
     )
-    lower_account = account.lower()
-    prefix = 'adls' if lower_account.endswith((
-        '.dfs.core.windows.net',
-        '.dfs.fabric.microsoft.com',
-    )) else 'abs'
+    hostname = _authority_hostname(account)
+    prefix = 'adls' if (
+        _is_azure_dfs_host(hostname) or _is_onelake_dfs_host(hostname)
+    ) else 'abs'
     return f'{prefix}://{container}@{account}', relative_path
 
 
@@ -271,8 +357,8 @@ def _azure_virtualization_parts(storage_url: Optional[str],
 # ----------------------------------------------------------------------
 
 FABRIC_DEFAULT_SOURCE_LOCATION = (
-    'abfss://<workspace_id>@<tenant>.dfs.fabric.microsoft.com/'
-    '<lakehouse_id>/Files'
+    'abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/'
+    '<item_id>/Files'
 )
 
 
@@ -295,14 +381,30 @@ def _fabric_onelake_parts(storage_url: Optional[str],
     host = parsed.netloc
     path = parsed.path.strip('/')
 
-    if scheme in {'abfs', 'abfss'} and host:
+    if (
+        scheme in {'abfs', 'abfss'}
+        and host
+        and _is_onelake_dfs_host(_authority_hostname(host))
+    ):
         root, separator, remainder = _split_on_files_segment(path)
         if not separator:
             return default
         return f'abfss://{host}/{root}', remainder or fallback_name
 
-    if scheme in {'http', 'https'} and host and 'fabric.microsoft.com' in host.lower():
-        workspace, separator, remainder = path.partition('/')
+    if (
+        scheme in {'http', 'https'}
+        and host
+        and _is_onelake_dfs_host(_authority_hostname(host))
+    ):
+        private_host = _is_onelake_private_dfs_host(
+            _authority_hostname(host)
+        )
+        if private_host:
+            workspace = _authority_hostname(host).split('.')[0]
+            separator = True
+            remainder = path
+        else:
+            workspace, separator, remainder = path.partition('/')
         if not separator:
             return default
         root, files_separator, tail = _split_on_files_segment(remainder)
@@ -918,6 +1020,7 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        file_type = _metadata_text(metadata, 'file_type', '')
         if _exceeds_target_table_column_limit(metadata):
             return _target_table_column_limit_guidance(metadata, 'CREATE TABLE')
 
@@ -969,6 +1072,28 @@ class SQLGenerator:
 
         return '\n'.join(lines)
 
+    def _quick_load_openrowset(
+            self, metadata: Dict[str, Any], schema_name: str, table_name: str,
+            bulk_path: str, data_source: str, file_type: str) -> List[str]:
+        """Return a complete commented OPENROWSET shape for quick-load guidance."""
+        reader_options = (
+            self._csv_reader_options(metadata)
+            if file_type in {'csv', 'text'}
+            else [f'    FORMAT          = \'{_format_keyword(file_type)}\'']
+        )
+        with_schema = self._openrowset_with_schema(metadata)
+        return [
+            f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
+            '-- SELECT *',
+            '-- FROM OPENROWSET(',
+            f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
+            f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
+            *[f'-- {line}' for line in reader_options],
+            '-- )',
+            *[f'-- {line}' for line in with_schema],
+            '-- AS src;',
+        ]
+
     def _create_table_quick_load(
             self, metadata: Dict[str, Any], schema_name: str, table_name: str,
             target_platform: str, storage_url: Optional[str],
@@ -1009,13 +1134,10 @@ class SQLGenerator:
                     '-- Fabric SQL Database reads Lakehouse Files through an',
                     '-- external data source (Microsoft Entra passthrough).',
                     f'-- Data source location: {_sql_comment(source_location)}',
-                    f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-                    '-- SELECT *',
-                    '-- FROM OPENROWSET(',
-                    f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-                    f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-                    f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-                    '-- ) AS src;',
+                    *self._quick_load_openrowset(
+                        metadata, schema_name, table_name, bulk_path,
+                        data_source, file_type,
+                    ),
                 ]
             return lines + [
                 f'-- {file_type.upper()} is not readable by Fabric SQL Database '
@@ -1029,6 +1151,12 @@ class SQLGenerator:
                     '-- Delta is not supported by Azure SQL Managed Instance.',
                     '-- Convert the table to Parquet or CSV before loading.',
                 ]
+            if file_type not in {'csv', 'text', 'parquet', 'delta'}:
+                return lines + [
+                    f'-- {file_type.upper()} is not readable by '
+                    f'{self.PLATFORM_LABELS[target_platform]} OPENROWSET.',
+                    '-- Convert the source to CSV or Parquet before loading.',
+                ]
             source_location, bulk_path = _azure_virtualization_parts(
                 storage_url, file_name
             )
@@ -1036,13 +1164,10 @@ class SQLGenerator:
                 '-- Azure SQL data virtualization uses an external data source',
                 '-- whose LOCATION starts with abs:// or adls:// (not https://).',
                 f'-- Data source location: {_sql_comment(source_location)}',
-                f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-                '-- SELECT *',
-                '-- FROM OPENROWSET(',
-                f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-                f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-                f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-                '-- ) AS src;',
+                *self._quick_load_openrowset(
+                    metadata, schema_name, table_name, bulk_path,
+                    data_source, file_type,
+                ),
             ]
 
         if (
@@ -1060,13 +1185,10 @@ class SQLGenerator:
             '-- SQL Server object storage uses an external data source whose',
             '-- LOCATION starts with adls://, abs://, or s3:// (not https://).',
             f'-- Data source location: {_sql_comment(source_location)}',
-            f'-- INSERT INTO [{_sql_comment(schema_name)}].[{_sql_comment(table_name)}]',
-            '-- SELECT *',
-            '-- FROM OPENROWSET(',
-            f'--     BULK \'{_sql_comment(_quote_literal(bulk_path))}\',',
-            f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
-            f'--     FORMAT = \'{_format_keyword(file_type)}\'',
-            '-- ) AS src;',
+            *self._quick_load_openrowset(
+                metadata, schema_name, table_name, bulk_path,
+                data_source, file_type,
+            ),
         ]
 
     # ------------------------------------------------------------------
@@ -1087,10 +1209,31 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        file_type = _metadata_text(metadata, 'file_type', '')
         if _exceeds_target_table_column_limit(metadata):
             return _target_table_column_limit_guidance(
                 metadata,
                 'BULK / TYPED LOAD',
+            )
+
+        if file_type in {'orc', 'rc', 'iceberg'}:
+            alternative = (
+                'Query the table through a catalog-aware engine or use its '
+                'underlying Parquet files.'
+                if file_type == 'iceberg'
+                else 'Use a supported external table path or convert the '
+                'source to Parquet.'
+            )
+            return self._not_supported_message(
+                f'BULK / TYPED LOAD ({file_type.upper()})',
+                target_platform,
+                alternative,
             )
 
         if not self._supports('bulk_insert', target_platform):
@@ -1115,7 +1258,6 @@ class SQLGenerator:
         table_name = _escape_identifier(table_name)
         schema_name = _escape_identifier(schema_name)
 
-        file_type = _metadata_text(metadata, 'file_type', '')
         file_name = _metadata_text(metadata, 'file_name', metadata.get('file_path', '<file>'))
         encoding = _metadata_text(metadata, 'encoding', 'utf-8') or 'utf-8'
         codepage = metadata.get('codepage', '65001')
@@ -1157,7 +1299,9 @@ class SQLGenerator:
             data_source_line = (
                 f'    DATA_SOURCE     = \'{bulk_literal}\','
             )
-            bulk_auth = _resolve_auth_method(auth_method, target_platform)
+            bulk_auth = _bulk_storage_auth_method(
+                auth_method, target_platform, storage_url
+            )
             bulk_cred_clause = _credential_clause(bulk_cred_ident, bulk_auth)
             prereq_lines = ([
                 f'-- BLOB_STORAGE source for this bulk load',
@@ -1379,9 +1523,33 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
         file_type = _metadata_text(metadata, 'file_type', 'csv')
         exceeds_column_limit = _exceeds_target_table_column_limit(metadata)
         wide_json = exceeds_column_limit and file_type == 'json'
+        if file_type in {'orc', 'rc', 'iceberg'}:
+            alternative = (
+                'Query the Iceberg table through a catalog-aware engine, or '
+                'select its underlying Parquet data files.'
+                if file_type == 'iceberg'
+                else (
+                    'Use a documented external table/file format combination '
+                    'for this platform, or convert the source to Parquet.'
+                    if self._supports('external_table', target_platform)
+                    else 'Convert the source to Parquet before querying it '
+                    'from this platform.'
+                )
+            )
+            return self._not_supported_message(
+                f'OPENROWSET ({file_type.upper()})',
+                target_platform,
+                alternative,
+            )
         if (
             exceeds_column_limit
             and file_type not in {'json', 'parquet', 'delta'}
@@ -1569,7 +1737,7 @@ class SQLGenerator:
             f'    BULK \'{bulk_path}\',',
             f'    DATA_SOURCE     = \'{bulk_literal}\',',
         ]
-        lines += self._csv_reader_options(metadata, trailing_comma=True)
+        lines += self._csv_reader_options(metadata)
         lines += [')']
         lines += self._openrowset_with_schema(metadata)
         lines += ['AS src;']
@@ -2167,6 +2335,12 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
         if _exceeds_target_table_column_limit(metadata):
             return _target_table_column_limit_guidance(
                 metadata,
@@ -2375,6 +2549,37 @@ class SQLGenerator:
             return _azure_virtualization_parts(storage_url, file_name)
         return _sql_server_storage_parts(storage_url, file_name, target_platform)
 
+    def _storage_compatibility_message(self, storage_url: Optional[str],
+                                       target_platform: str) -> Optional[str]:
+        """Return non-executable guidance for an incompatible supplied URL."""
+        if not storage_url or _storage_url_supported_by_platform(
+                storage_url, target_platform):
+            return None
+        kind = _storage_url_kind(storage_url)
+        label = self.PLATFORM_LABELS.get(target_platform, target_platform)
+        if target_platform == 'fabric_sql_db':
+            supported = 'Fabric OneLake (ABFSS)'
+        elif target_platform == 'sql_server_2019':
+            supported = (
+                'Azure Blob Storage (WASBS external tables or '
+                'TYPE = BLOB_STORAGE bulk access), or SQL Server 2022+ for S3'
+            )
+        elif target_platform in {'sql_server_2022', 'sql_server_2025'}:
+            supported = 'Azure Blob, ADLS Gen2, or S3-compatible storage'
+        else:
+            supported = 'Azure Blob or ADLS Gen2'
+        supplied = {
+            's3': 'S3',
+            'onelake': 'OneLake',
+            'azure': 'this Azure storage service',
+        }.get(kind, 'this storage URL')
+        return self._not_supported_message(
+            'STORAGE LOCATION',
+            target_platform,
+            f'{supplied} is not supported by {label}. Use {supported}; '
+            'the supplied location was not replaced.',
+        )
+
     def _cloud_staging_notice(self, storage_url: Optional[str],
                               target_platform: str,
                               file_name: str) -> List[str]:
@@ -2410,6 +2615,12 @@ class SQLGenerator:
         """Explain COPY INTO availability for the exposed SQL targets."""
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
 
         if _exceeds_target_table_column_limit(metadata):
             return _target_table_column_limit_guidance(
@@ -2473,6 +2684,12 @@ class SQLGenerator:
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
 
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
         if not self._supports('credential_setup', target_platform):
             return self._not_supported_message(
                 'CREDENTIAL / DATA SOURCE SETUP', target_platform,
@@ -2498,7 +2715,9 @@ class SQLGenerator:
             )
 
         data_source_raw = data_source
-        auth_method = _resolve_auth_method(auth_method, target_platform)
+        auth_method = _storage_auth_method(
+            auth_method, target_platform, storage_url
+        )
         cred_ident = _credential_identifier(data_source_raw, credential_name)
         data_source = _escape_identifier(data_source)
         file_name = metadata.get(
@@ -2643,7 +2862,9 @@ class SQLGenerator:
         if not self._bulk_data_source_supported(target_platform, storage_url):
             return []
 
-        auth_method = _resolve_auth_method(auth_method, target_platform)
+        auth_method = _bulk_storage_auth_method(
+            auth_method, target_platform, storage_url
+        )
         bulk_ident, _, bulk_cred_ident = _bulk_data_source_names(
             data_source_raw, credential_name
         )
@@ -2689,6 +2910,19 @@ class SQLGenerator:
         """
         if target_platform not in self.PLATFORMS:
             target_platform = DEFAULT_TARGET_PLATFORM
+
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            return incompatible_storage
+
+        if metadata.get('file_type') != 'json':
+            return self._not_supported_message(
+                'JSON FUNCTIONS',
+                target_platform,
+                'Select a JSON or NDJSON source before generating OPENJSON guidance.',
+            )
 
         if _exceeds_target_table_column_limit(metadata):
             return _target_table_column_limit_guidance(
@@ -2914,20 +3148,23 @@ class SQLGenerator:
                 ]
 
         if json_format == 'object':
-            # Single object: direct JSON_VALUE
-            lines += [
-                f'-- Single JSON object — extract individual values',
-                f'SELECT',
-            ]
-            jv = []
-            for col_name, col_type in schema:
-                clean = _escape_identifier(col_name)
-                kind = nesting.get(col_name, 'scalar')
-                if kind in ('object', 'array'):
-                    jv.append(f'    JSON_QUERY(@json, \'{_quote_json_path(col_name)}\') AS [{clean}]')
-                else:
-                    jv.append(f'    JSON_VALUE(@json, \'{_quote_json_path(col_name)}\') AS [{clean}]')
-            lines.append(',\n'.join(jv) + ';' if jv else '    @json;')
+            if not openjson_cols:
+                lines += [
+                    '-- The sampled object is not safe for scalar JSON_VALUE extraction.',
+                    '-- JSON_VALUE is limited to NVARCHAR(4000), so preserve every value',
+                    '-- through schemaless OPENJSON instead.',
+                    'SELECT [key], [value], [type]',
+                    'FROM OPENJSON(@json);',
+                ]
+            else:
+                lines += [
+                    '-- Single JSON object — typed extraction without JSON_VALUE limits',
+                    'SELECT *',
+                    'FROM OPENJSON(@json)',
+                    'WITH (',
+                    openjson_with,
+                    ');',
+                ]
         else:
             if openjson_cols:
                 lines += [
@@ -3040,11 +3277,14 @@ class SQLGenerator:
                 f'FROM OPENROWSET(',
                 f'    BULK \'{blob_path}\',',
                 f'    DATA_SOURCE     = \'{cloud_source}\',',
-                f'    FORMAT          = \'CSV\',',
-                f'    FIELDTERMINATOR = \'0x0b\',',
-                f'    FIELDQUOTE      = \'0x0b\'',
-                f') WITH (json_doc NVARCHAR(MAX)) AS src',
             ]
+            lines += self._json_row_frame_options(
+                metadata,
+                row_terminator=(
+                    '0x0a' if json_format == 'ndjson' else '0x0b'
+                ),
+            )
+            lines.append(') WITH (json_doc NVARCHAR(MAX)) AS src')
             if openjson_cols:
                 lines += [
                     'CROSS APPLY OPENJSON(src.json_doc)',
@@ -3463,7 +3703,7 @@ class SQLGenerator:
             else f'ff_{metadata.get("file_type", "csv")}_format'
         )
 
-        return {
+        statements = {
             'create_table': self.generate_create_table(metadata, table_name, schema_name,
                                                        target_platform=target_platform,
                                                        storage_url=storage_url,
@@ -3507,6 +3747,20 @@ class SQLGenerator:
                                                            table_name=table_name,
                                                            schema_name=schema_name),
         }
+        incompatible_storage = self._storage_compatibility_message(
+            storage_url, target_platform
+        )
+        if incompatible_storage:
+            for key in (
+                'bulk_insert',
+                'openrowset',
+                'copy_into',
+                'create_external_table',
+                'json_functions',
+                'credential_setup',
+            ):
+                statements[key] = incompatible_storage
+        return statements
 
     # ------------------------------------------------------------------
     # Sample data comments
@@ -4426,6 +4680,28 @@ def _resolve_auth_method(auth_method: Optional[str],
     if target_platform in ('azure_sql_db', 'azure_sql_mi'):
         return 'managed_identity'
     return 'sas'
+
+
+def _storage_auth_method(auth_method: Optional[str], target_platform: str,
+                         storage_url: Optional[str]) -> str:
+    """Derive authentication from the storage connector before defaults."""
+    kind = _storage_url_kind(storage_url)
+    if kind == 's3':
+        return 's3_access_key'
+    if target_platform == 'sql_server_2019':
+        return 'storage_key'
+    return _resolve_auth_method(auth_method, target_platform)
+
+
+def _bulk_storage_auth_method(auth_method: Optional[str], target_platform: str,
+                              storage_url: Optional[str]) -> str:
+    """Resolve auth for BLOB_STORAGE rather than WASBS/HADOOP."""
+    if (
+        target_platform == 'sql_server_2019'
+        and _storage_url_kind(storage_url) == 'azure'
+    ):
+        return 'sas'
+    return _storage_auth_method(auth_method, target_platform, storage_url)
 
 
 def _credential_ddl(cred_ident: str, auth_method: str,

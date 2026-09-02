@@ -28,6 +28,7 @@ import {
     fabricOnelakeParts,
     sqlServerStorageParts,
     storageUrlKind,
+    storageUrlSupportedByPlatform,
 } from './storage';
 import {
     csvReaderOptions,
@@ -75,6 +76,28 @@ export function generateOpenrowset(
     const fileType = stringOr(metadata.file_type, 'csv');
     const exceedsColumnLimit = exceedsTargetTableColumnLimit(metadata);
     const wideJson = exceedsColumnLimit && fileType === 'json';
+
+    if (storageUrl && !storageUrlSupportedByPlatform(storageUrl, targetPlatform)) {
+        return notSupportedMessage(
+            'STORAGE LOCATION',
+            targetPlatform,
+            'The supplied storage location is not supported by this SQL platform and was not replaced.',
+        );
+    }
+
+    if (fileType === 'orc' || fileType === 'rc' || fileType === 'iceberg') {
+        const alternative =
+            fileType === 'iceberg'
+                ? 'Query the Iceberg table through a catalog-aware engine, or select its underlying Parquet data files.'
+                : supports('external_table', targetPlatform)
+                    ? 'Use a documented external table/file format combination for this platform, or convert the source to Parquet.'
+                    : 'Convert the source to Parquet before querying it from this platform.';
+        return notSupportedMessage(
+            `OPENROWSET (${fileType.toUpperCase()})`,
+            targetPlatform,
+            alternative,
+        );
+    }
 
     if (
         exceedsColumnLimit &&
@@ -361,7 +384,7 @@ function openrowsetBlobStorageBulk(
         `    BULK '${bulkPath}',`,
         `    DATA_SOURCE     = '${bulkLiteral}',`,
     );
-    lines.push(...csvReaderOptions(metadata, { trailingComma: true }));
+    lines.push(...csvReaderOptions(metadata));
     lines.push(')');
     lines.push(...openrowsetWithSchema(metadata));
     lines.push('AS src;');

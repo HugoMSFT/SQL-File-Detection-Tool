@@ -1144,6 +1144,19 @@ test('an invalid known URL leaves the previous storage setup intact', async () =
             'https://myaccount.blob.core.windows.net/data/orders.parquet',
         );
         assert.match(snapshot(record).error ?? '', /not a supported/i);
+
+        await ui.handle({
+            type: 'setStorageUrl',
+            value:
+                'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
+                + 'lakehouse.Lakehouse/Files/orders.parquet',
+        });
+        await settle();
+        assert.equal(
+            snapshot(record).storageUrl,
+            'https://myaccount.blob.core.windows.net/data/orders.parquet',
+        );
+        assert.match(snapshot(record).error ?? '', /supported storage services/i);
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1201,12 +1214,12 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
                 platform: 'fabric_sql_db',
                 url:
                     'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
-                    + 'lakehouse/Files/events_250k.parquet',
+                    + 'lakehouse.Lakehouse/Files/events_250k.parquet',
                 source: 'fabric_onelake',
                 connector: 'ABFSS',
                 location:
                     "LOCATION = 'abfss://workspace@onelake.dfs.fabric.microsoft.com/"
-                    + "lakehouse/Files'",
+                    + "lakehouse.Lakehouse/Files'",
             },
         ] as const;
 

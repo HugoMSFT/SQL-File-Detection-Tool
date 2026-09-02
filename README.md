@@ -140,7 +140,7 @@ master key is created.
 Constraints reflected in generated output:
 
 - Sources must resolve to a Lakehouse `Files` path, for example
-  `abfss://<workspace_id>@<tenant>.dfs.fabric.microsoft.com/<lakehouse_id>/Files`.
+  `abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/<item_id>/Files`.
 - CSV and Parquet external tables are supported. JSON is indirect: read as CSV
   and shred with `OPENJSON`.
 - Delta is not supported by Fabric SQL Database `OPENROWSET`.
@@ -161,8 +161,8 @@ tab. Nothing outside the `.vsix` is downloaded or executed.
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-tool-1.0.1.vsix
-code --install-extension dist/sql-file-detection-tool-1.0.1.vsix --force
+npm run package     # writes dist/sql-file-detection-tool-1.0.7.vsix
+code --install-extension dist/sql-file-detection-tool-1.0.7.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -528,7 +528,7 @@ and you can still browse a known account by name.
 
 ## VS Code extension
 
-The repository root is also a VS Code extension, version **1.0.1**. See
+The repository root is also a VS Code extension, version **1.0.7**. See
 [Installation](#vs-code-extension-no-python-required) to build and install it.
 
 The extension is **fully native**. It does not create a virtual environment,
@@ -627,16 +627,16 @@ object names then constrain one another:
 
 | Target | Storage choices | Guided authentication |
 | --- | --- | --- |
-| SQL Server 2019 | Azure Blob, ADLS Gen2 | SAS |
-| SQL Server 2022 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS; S3 access key for S3 |
-| SQL Server 2025 | Azure Blob, ADLS Gen2, OneLake through ADLS, S3 | SAS or user-assigned managed identity; S3 access key for S3 |
-| Azure SQL Database | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity, Microsoft Entra `USER IDENTITY`, or SAS |
-| Azure SQL Managed Instance | Azure Blob, ADLS Gen2, OneLake through ADLS | Managed identity or SAS |
+| SQL Server 2019 | Azure Blob | Storage account key |
+| SQL Server 2022 | Azure Blob, ADLS Gen2, S3 | SAS; S3 access key for S3 |
+| SQL Server 2025 | Azure Blob, ADLS Gen2, S3 | SAS or user-assigned managed identity; S3 access key for S3 |
+| Azure SQL Database | Azure Blob, ADLS Gen2 | Managed identity, Microsoft Entra `USER IDENTITY`, or SAS |
+| Azure SQL Managed Instance | Azure Blob, ADLS Gen2 | Managed identity or SAS |
 | Fabric SQL Database | Fabric OneLake only, using ABFSS | Microsoft Entra `USER IDENTITY` |
 
 SQL Server 2025 managed identity requires an Azure Arc-enabled instance with the
 selected user-assigned identity configured. The wizard never asks for or stores
-a SAS token, S3 access key, or master-key password. It emits clearly marked
+a SAS token, storage account key, S3 access key, or master-key password. It emits clearly marked
 placeholders for secret-bearing methods so the values can be supplied later in
 a secure SQL editor.
 
@@ -649,7 +649,7 @@ and version 2.0.0 removed the last of the backend-lifecycle code: there is no
 `backend.ts`, no `pythonEnv.ts`, no `process.ts` and no port or health-check
 module left in the extension sources.
 
-The two distributions version independently. The extension is at 1.0.1; the
+The two distributions version independently. The extension is at 1.0.7; the
 Python distribution keeps its own version line, because nothing about the CLI
 changed when the extension stopped using it.
 
@@ -856,7 +856,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-tool-1.0.1.vsix
+npm run package        # writes dist/sql-file-detection-tool-1.0.7.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 

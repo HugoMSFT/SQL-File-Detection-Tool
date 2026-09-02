@@ -50,6 +50,136 @@ def csv_meta(**overrides):
     return meta
 
 
+def test_sql_server_2019_blob_openrowset_has_no_trailing_option_comma():
+    sql = SQLGenerator().generate_openrowset(
+        csv_meta(),
+        target_platform='sql_server_2019',
+        storage_url=AZURE_URL,
+        data_source='AuditDS',
+    )
+    assert not re.search(r"CODEPAGE[^\n]*,\s*--[^\n]*\n\)", sql)
+    assert re.search(r"CODEPAGE\s*=\s*'65001'\s+-- UTF-8\n\)", sql)
+
+
+def test_unsafe_single_object_uses_schemaless_openjson():
+    metadata = {
+        'file_type': 'json',
+        'file_path': 'object.json',
+        'file_name': 'object.json',
+        'json_format': 'object',
+        'json_typed_projection_safe': False,
+        'schema': [('value', 'large_string')],
+    }
+    sql = SQLGenerator().generate_json_functions(
+        metadata,
+        target_platform='sql_server_2022',
+    )
+    assert 'JSON_VALUE is limited to NVARCHAR(4000)' in sql
+    assert re.search(
+        r'SELECT \[key\], \[value\], \[type\]\s+FROM OPENJSON\(@json\)',
+        sql,
+    )
+    assert not re.search(r'\bJSON_VALUE\s*\(', code_only(sql), re.IGNORECASE)
+
+
+def test_wide_single_object_uses_typed_openjson_not_json_value():
+    metadata = {
+        'file_type': 'json',
+        'file_path': 'object.json',
+        'file_name': 'object.json',
+        'json_format': 'object',
+        'json_typed_projection_safe': True,
+        'schema': [('payload', 'string')],
+        'max_string_lengths': {'payload': 4001},
+    }
+    sql = SQLGenerator().generate_json_functions(
+        metadata,
+        target_platform='sql_server_2022',
+    )
+    assert re.search(r'\[payload\]\s+NVARCHAR\(MAX\)', sql)
+    assert re.search(r'FROM OPENJSON\(@json\)\s+WITH \(', sql)
+    assert not re.search(r'\bJSON_VALUE\s*\(', code_only(sql), re.IGNORECASE)
+
+
+def test_every_cloud_ndjson_read_uses_lf_framing():
+    metadata = {
+        'file_type': 'json',
+        'file_path': 'orders.jsonl',
+        'file_name': 'orders.jsonl',
+        'json_format': 'ndjson',
+        'json_typed_projection_safe': True,
+        'schema': [('id', 'int32')],
+        'codepage': '65001',
+    }
+    sql = SQLGenerator().generate_json_functions(
+        metadata,
+        target_platform='azure_sql_db',
+        storage_url=AZURE_URL,
+        data_source='AuditDS',
+    )
+    framed_reads = [
+        block for block in sql.split('FROM OPENROWSET(')[1:]
+        if "FORMAT          = 'CSV'" in block
+    ]
+    assert len(framed_reads) >= 2
+    assert all("ROWTERMINATOR   = '0x0a'" in block for block in framed_reads)
+
+
+def test_quick_load_keeps_csv_options_and_explicit_schema():
+    sql = SQLGenerator().generate_create_table(
+        csv_meta(delimiter='\t', codepage='1200', encoding='utf-16-le'),
+        target_platform='azure_sql_db',
+        storage_url=AZURE_URL,
+    )
+    assert re.search(r'--\s+FIRSTROW\s*=\s*2', sql)
+    assert re.search(r"--\s+FIELDTERMINATOR\s*=\s*'\\t'", sql)
+    assert re.search(r"--\s+CODEPAGE\s*=\s*'1200'", sql)
+    assert '-- WITH (' in sql
+    assert re.search(r'--\s+\[id\]\s+BIGINT', sql)
+
+
+def test_private_onelake_keeps_workspace_and_item_in_abfss_root():
+    workspace = 'abcdef0123456789abcdef0123456789'
+    host = f'{workspace}.zab.dfs.fabric.microsoft.com'
+    sql = SQLGenerator().generate_credential_setup(
+        'PrivateLake',
+        metadata=csv_meta(),
+        target_platform='fabric_sql_db',
+        storage_url=(
+            f'https://{host}/lakehouse.Lakehouse/Files/orders.csv'
+        ),
+    )
+    assert (
+        f"LOCATION = 'abfss://{workspace}@{host}/"
+        "lakehouse.Lakehouse/Files'"
+    ) in sql
+
+
+@pytest.mark.parametrize('storage_url', [
+    's3a://s3.amazonaws.com/bucket/data.csv',
+    's3n://s3.amazonaws.com/bucket/data.csv',
+    's3://s3.amazonaws.com',
+    'hdfs://namenode/data/file.csv',
+    'hdfs:/namenode/data/file.csv',
+    's3a:/s3.amazonaws.com/bucket/data.csv',
+    (
+        'hdfs://workspace@onelake.dfs.fabric.microsoft.com/'
+        'lakehouse.Lakehouse/Files/data.csv'
+    ),
+    'https://user:password@acct.blob.core.windows.net/raw/data.csv',
+    's3://user:password@s3.amazonaws.com/bucket/data.csv',
+])
+def test_malformed_or_unsupported_authority_urls_are_non_executable(storage_url):
+    statements = SQLGenerator().generate_all_statements(
+        csv_meta(),
+        target_platform='sql_server_2022',
+        storage_url=storage_url,
+    )
+    assert 'NOT AVAILABLE' in statements['credential_setup']
+    assert code_only(statements['credential_setup']) == ''
+    assert code_only(statements['openrowset']) == ''
+
+
 def ndjson_meta(column_count):
     return {
         'file_type': 'json',
@@ -229,7 +359,10 @@ def test_bulk_insert_s3_never_emits_url_as_path(platform):
 
     assert "FROM 's3://" not in sql
     assert "FROM N's3://" not in sql
-    assert 'cannot read S3-compatible object storage' in sql
+    if platform == 'sql_server_2019':
+        assert 'S3 is not supported by SQL Server 2019' in sql
+    else:
+        assert 'cannot read S3-compatible object storage' in sql
     assert 'DATA_SOURCE' not in code_only(sql)
 
 

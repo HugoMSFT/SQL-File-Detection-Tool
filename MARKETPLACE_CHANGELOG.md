@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7
+
+- Hardened storage host, platform, and authentication recommendations.
+- Removed unsafe CSV fallbacks for ORC, RCFile, and Iceberg.
+- Fixed SQL Server 2019, NDJSON, JSON projection, and complete-script SQL.
+
 ## 1.0.6
 
 - Preserved oversized JSON numerics as raw text instead of unsafe INT

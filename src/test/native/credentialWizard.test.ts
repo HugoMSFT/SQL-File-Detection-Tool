@@ -14,7 +14,7 @@ import {
 test('offers only platform-supported external data sources', () => {
     assert.deepEqual(
         dataSourceOptionsFor('sql_server_2019').map((option) => option.id),
-        ['azure_blob', 'azure_data_lake'],
+        ['azure_blob'],
     );
     assert.deepEqual(
         dataSourceOptionsFor('fabric_sql_db').map((option) => option.id),
@@ -32,6 +32,10 @@ test('normalizes incompatible source and authentication selections', () => {
         normalizeGuidedAuthMethod('sas', 'fabric_sql_db', 'fabric_onelake'),
         'user_identity',
     );
+    assert.equal(
+        normalizeGuidedAuthMethod('sas', 'sql_server_2019', 'azure_blob'),
+        'storage_key',
+    );
 });
 
 test('keeps Fabric SQL Database on OneLake, ABFSS and USER IDENTITY', () => {
@@ -43,14 +47,14 @@ test('keeps Fabric SQL Database on OneLake, ABFSS and USER IDENTITY', () => {
     assert.equal(state.authMethod, 'user_identity');
 });
 
-test('maps OneLake to the ADLS connector outside Fabric SQL Database', () => {
+test('keeps OneLake out of non-Fabric platform choices', () => {
     const state = credentialWizardState(
         'azure_sql_db',
         'fabric_onelake',
         'managed_identity',
     );
-    assert.equal(state.locationPrefix, 'ADLS');
-    assert.match(state.note, /ADLS connector/);
+    assert.equal(state.dataSourceType, 'azure_blob');
+    assert.ok(!state.dataSourceOptions.some((option) => option.id === 'fabric_onelake'));
 });
 
 test('restricts SQL Server 2022 S3 access to S3 access keys', () => {
@@ -86,7 +90,7 @@ test('infers source types and uses safe source-specific placeholders', () => {
     );
     assert.match(
         effectiveStorageUrl('sql_server_2022', 's3', '', 'data.csv'),
-        /^s3:/,
+        /^s3:\/\/<s3_endpoint>\/<bucket>\//,
     );
 });
 
@@ -114,13 +118,25 @@ test('normalizes known storage URLs before they reach generated SQL', () => {
     });
 
     const onelake = knownStorageLocation(
-        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/orders',
+        'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files/orders',
     );
     assert.equal(onelake.dataSourceType, 'fabric_onelake');
     assert.equal(onelake.removedSuffix, false);
     assert.equal(
         knownStorageLocation(
-            'https://onelake.dfs.fabric.microsoft.com/workspace/lakehouse/Files/orders',
+            'https://onelake.dfs.fabric.microsoft.com/workspace/lakehouse.Lakehouse/Files/orders',
+        ).dataSourceType,
+        'fabric_onelake',
+    );
+    assert.equal(
+        knownStorageLocation(
+            'https://westus-onelake.dfs.fabric.microsoft.com/workspace/lakehouse.Lakehouse/Files/orders',
+        ).dataSourceType,
+        'fabric_onelake',
+    );
+    assert.equal(
+        knownStorageLocation(
+            'https://abcdef0123456789abcdef0123456789.zab.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files/orders',
         ).dataSourceType,
         'fabric_onelake',
     );
@@ -148,7 +164,17 @@ test('known storage URLs reject incomplete and unsupported locations', () => {
         'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/data.parquet',
         'abfss://onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.parquet',
         'https://onelake.dfs.fabric.microsoft.com/lakehouse/Files/data.parquet',
+        'https://fabric.microsoft.com.attacker.example/workspace/lakehouse.Lakehouse/Files/data.parquet',
+        'https://onelake.attacker.example/workspace/lakehouse.Lakehouse/Files/data.parquet',
+        'abs://raw@attacker.example/data.csv',
+        'adls://raw@attacker.example/data.parquet',
+        'abs://raw@acct.blob.core.windows.net.attacker.example/data.csv',
+        'adls://raw@acct.dfs.core.windows.net.attacker.example/data.parquet',
         's3:///sales-data/orders.parquet',
+        's3a://s3.amazonaws.com/sales-data/orders.parquet',
+        's3n://s3.amazonaws.com/sales-data/orders.parquet',
+        'https://user:password@acct.blob.core.windows.net/raw/orders.parquet',
+        's3://user:password@s3.amazonaws.com/bucket/orders.parquet',
         '******acct.blob.core.windows.net/raw',
         'ftp://example.com/data.csv',
     ]) {

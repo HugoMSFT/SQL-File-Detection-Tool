@@ -106,8 +106,14 @@ def test_malicious_json_key_cannot_escape_json_path():
         'json_format': 'array',
         'schema': [("a'); DROP TABLE users;--", 'str')],
     }
-    sql = gen.generate_openrowset(metadata, storage_url='https://x/y.json',
-                                  target_platform='fabric_sql_db')
+    sql = gen.generate_openrowset(
+        metadata,
+        storage_url=(
+            'abfss://ws@onelake.dfs.fabric.microsoft.com/'
+            'lh.Lakehouse/Files/y.json'
+        ),
+        target_platform='fabric_sql_db',
+    )
     # The single quote from the key must be doubled; it cannot terminate the
     # surrounding '...' JSON-path literal.
     assert "DROP TABLE users" in sql  # the text survives as data...
@@ -119,7 +125,7 @@ def test_malicious_storage_url_is_escaped_in_literal():
     metadata = {'file_type': 'parquet', 'file_path': 'data.parquet',
                 'schema': [('id', 'int64')]}
     evil_url = (
-        "abfss://ws@tenant.dfs.fabric.microsoft.com/lh/Files/"
+        "abfss://ws@onelake.dfs.fabric.microsoft.com/lh.Lakehouse/Files/"
         "y'; DROP TABLE t;--/data.parquet"
     )
     sql = gen.generate_openrowset(metadata, storage_url=evil_url,
@@ -181,8 +187,14 @@ def test_benign_names_unchanged():
         'json_format': 'array',
         'schema': [('id', 'int'), ('name', 'str')],
     }
-    sql = gen.generate_openrowset(metadata, storage_url='https://x/users.json',
-                                  target_platform='fabric_sql_db')
+    sql = gen.generate_openrowset(
+        metadata,
+        storage_url=(
+            'abfss://ws@onelake.dfs.fabric.microsoft.com/'
+            'lh.Lakehouse/Files/users.json'
+        ),
+        target_platform='fabric_sql_db',
+    )
     assert "'$.id'" in sql
     assert "'$.name'" in sql
 

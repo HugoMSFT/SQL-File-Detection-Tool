@@ -1,5 +1,13 @@
 import type { TargetPlatform } from '../types';
-import { storageUrlKind, urlparse } from './storage';
+import {
+    authorityHostname,
+    isAzureBlobHost,
+    isAzureDfsHost,
+    isOneLakeDfsHost,
+    isOneLakePrivateDfsHost,
+    storageUrlKind,
+    urlparse,
+} from './storage';
 
 export const EXTERNAL_DATA_SOURCE_TYPES = [
     'azure_blob',
@@ -13,6 +21,7 @@ export type ExternalDataSourceType = (typeof EXTERNAL_DATA_SOURCE_TYPES)[number]
 export const GUIDED_AUTH_METHODS = [
     'sas',
     's3_access_key',
+    'storage_key',
     'user_identity',
     'managed_identity',
 ] as const;
@@ -53,8 +62,6 @@ const KNOWN_STORAGE_SCHEMES = new Set([
     'abfs:',
     'abfss:',
     's3:',
-    's3a:',
-    's3n:',
 ]);
 
 /**
@@ -85,6 +92,21 @@ export function knownStorageLocation(value: string): KnownStorageLocation {
     if (!parsed.hostname) {
         throw new Error('The storage URL must include an account or bucket host.');
     }
+    const scheme = parsed.protocol.slice(0, -1).toLowerCase();
+    const host = parsed.hostname.toLowerCase();
+    if (
+        ['abs', 'wasb', 'wasbs'].includes(scheme)
+        && !isAzureBlobHost(host)
+    ) {
+        throw new Error('ABS/WASBS locations must use a documented Azure Blob host.');
+    }
+    if (
+        ['adls', 'abfs', 'abfss'].includes(scheme)
+        && !isAzureDfsHost(host)
+        && !isOneLakeDfsHost(host)
+    ) {
+        throw new Error('ADLS/ABFSS locations must use a documented Azure DFS or OneLake host.');
+    }
     if (parsed.password || (
         (parsed.protocol === 'https:' || parsed.protocol.startsWith('s3'))
         && parsed.username
@@ -114,13 +136,25 @@ export function knownStorageLocation(value: string): KnownStorageLocation {
         const filesIndex = segments.findIndex(
             (segment) => segment.toLowerCase() === 'files',
         );
-        const requiredRootSegments = parsed.protocol === 'https:' ? 2 : 1;
+        const workspaceInHost =
+            parsed.protocol !== 'https:' || isOneLakePrivateDfsHost(host);
+        const requiredRootSegments = workspaceInHost ? 1 : 2;
         if (
             filesIndex < requiredRootSegments
             || (parsed.protocol !== 'https:' && !parsed.username)
         ) {
             throw new Error(
                 'The OneLake URL must include a workspace, item, and Files location.',
+            );
+        }
+        const workspace = workspaceInHost
+            ? (parsed.username || host.split('.')[0])
+            : segments[0];
+        const item = workspaceInHost ? segments[0] : segments[1];
+        const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!item.includes('.') && !(guid.test(workspace) && guid.test(item))) {
+            throw new Error(
+                'The OneLake item must include its item type (for example .Lakehouse) or use workspace and item GUIDs.',
             );
         }
     }
@@ -144,7 +178,7 @@ const SOURCE_OPTIONS: Readonly<
     fabric_onelake: {
         id: 'fabric_onelake',
         label: 'Fabric OneLake',
-        detail: 'Uses ABFSS on Fabric SQL Database and ADLS elsewhere.',
+        detail: 'Uses ABFSS on Fabric SQL Database.',
     },
     s3: {
         id: 's3',
@@ -166,6 +200,11 @@ const AUTH_OPTIONS: Readonly<
         label: 'S3 access key',
         detail: "Generates IDENTITY = 'S3 ACCESS KEY' with access-key placeholders.",
     },
+    storage_key: {
+        id: 'storage_key',
+        label: 'Storage account key',
+        detail: 'Generates the SQL Server 2019 WASBS credential with key placeholders.',
+    },
     user_identity: {
         id: 'user_identity',
         label: 'Microsoft Entra ID',
@@ -179,11 +218,11 @@ const AUTH_OPTIONS: Readonly<
 };
 
 const SOURCE_IDS: Readonly<Record<TargetPlatform, readonly ExternalDataSourceType[]>> = {
-    sql_server_2019: ['azure_blob', 'azure_data_lake'],
-    sql_server_2022: ['azure_blob', 'azure_data_lake', 'fabric_onelake', 's3'],
-    sql_server_2025: ['azure_blob', 'azure_data_lake', 'fabric_onelake', 's3'],
-    azure_sql_db: ['azure_blob', 'azure_data_lake', 'fabric_onelake'],
-    azure_sql_mi: ['azure_blob', 'azure_data_lake', 'fabric_onelake'],
+    sql_server_2019: ['azure_blob'],
+    sql_server_2022: ['azure_blob', 'azure_data_lake', 's3'],
+    sql_server_2025: ['azure_blob', 'azure_data_lake', 's3'],
+    azure_sql_db: ['azure_blob', 'azure_data_lake'],
+    azure_sql_mi: ['azure_blob', 'azure_data_lake'],
     fabric_sql_db: ['fabric_onelake'],
 };
 
@@ -219,6 +258,7 @@ function authIdsFor(
     }
     switch (platform) {
         case 'sql_server_2019':
+            return ['storage_key'];
         case 'sql_server_2022':
             return ['sas'];
         case 'sql_server_2025':
@@ -250,7 +290,7 @@ function locationPrefix(
         return 'ABFSS';
     }
     if (platform === 'sql_server_2019') {
-        return dataSourceType === 'azure_blob' ? 'WASBS' : 'ABFSS';
+        return 'WASBS';
     }
     if (dataSourceType === 'azure_blob') {
         return 'ABS';
@@ -270,10 +310,7 @@ function platformNote(
         return 'Fabric SQL Database supports only Fabric OneLake. The data source uses ABFSS and Microsoft Entra passthrough.';
     }
     if (platform === 'sql_server_2019') {
-        return 'SQL Server 2019 uses legacy WASBS/ABFSS PolyBase locations and requires TYPE = HADOOP.';
-    }
-    if (dataSourceType === 'fabric_onelake') {
-        return 'For this platform, Fabric OneLake is reached through the ADLS connector and emitted with an ADLS prefix.';
+        return 'SQL Server 2019 uses legacy WASBS with a storage account key and TYPE = HADOOP.';
     }
     if (platform === 'sql_server_2025' && authMethod === 'managed_identity') {
         return 'Managed identity on SQL Server 2025 requires an Azure Arc-enabled instance with the selected user-assigned identity configured.';
@@ -330,9 +367,9 @@ export function inferDataSourceType(
         return null;
     }
     const parsed = urlparse(String(storageUrl).trim().replace(/\\/g, '/'));
-    const host = parsed.netloc.toLowerCase();
+    const host = authorityHostname(parsed.netloc);
     return ['adls', 'abfs', 'abfss'].includes(parsed.scheme)
-        || host.endsWith('.dfs.core.windows.net')
+        || isAzureDfsHost(host)
         ? 'azure_data_lake'
         : 'azure_blob';
 }
@@ -344,7 +381,7 @@ export function inferDataSourceType(
  * wizard's source choice visible in the generated connector and URI prefix.
  */
 export function effectiveStorageUrl(
-    _platform: TargetPlatform,
+    platform: TargetPlatform,
     dataSourceType: ExternalDataSourceType,
     storageUrl: string | null | undefined,
     fileName: string,
@@ -352,11 +389,7 @@ export function effectiveStorageUrl(
     const inferred = inferDataSourceType(storageUrl);
     if (
         inferred === dataSourceType
-        || (
-            dataSourceType === 'fabric_onelake'
-            && inferred === 'azure_data_lake'
-            && String(storageUrl).includes('fabric.microsoft.com')
-        )
+        && dataSourceOptionsFor(platform).some((option) => option.id === dataSourceType)
     ) {
         return String(storageUrl);
     }
@@ -367,8 +400,8 @@ export function effectiveStorageUrl(
         case 'azure_data_lake':
             return `https://<storage_account>.dfs.core.windows.net/<container>/${file}`;
         case 'fabric_onelake':
-            return `abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/<lakehouse_id>/Files/${file}`;
+            return `abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/<item_id>/Files/${file}`;
         case 's3':
-            return `s3://<bucket>/${file}`;
+            return `s3://<s3_endpoint>/<bucket>/${file}`;
     }
 }

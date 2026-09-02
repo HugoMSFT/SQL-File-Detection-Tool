@@ -1,5 +1,7 @@
 """Tests for SQL generator functionality."""
 
+import re
+
 from external_file_detection.sql_generator import SQLGenerator
 
 
@@ -265,7 +267,7 @@ def test_create_table_quick_load_uses_relative_adls_path():
 
     assert "BULK 'folder/sample.parquet'" in sql
     assert "DATA_SOURCE = 'LakeDS'" in sql
-    assert "FORMAT = 'PARQUET'" in sql
+    assert re.search(r"FORMAT\s*=\s*'PARQUET'", sql)
     assert 'adls://container@account.dfs.core.windows.net' in sql
     assert "BULK 'https://" not in sql
 
@@ -776,7 +778,7 @@ def test_credential_setup_fabric_uses_user_identity_without_a_secret():
         target_platform='fabric_sql_db',
         storage_url=(
             'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
-            'lakehouse/Files/sample.parquet'
+            'lakehouse.Lakehouse/Files/sample.parquet'
         ),
         auth_method='user_identity',
     )
@@ -794,12 +796,59 @@ def test_credential_setup_sql_server_2022_s3_uses_access_key_placeholders():
         'S3Lake',
         metadata={'file_type': 'parquet', 'file_name': 'sample.parquet'},
         target_platform='sql_server_2022',
-        storage_url='s3://bucket/sample.parquet',
-        auth_method='s3_access_key',
+        storage_url='s3://s3.amazonaws.com/bucket/sample.parquet',
+        auth_method='sas',
     )
     assert "IDENTITY = 'S3 ACCESS KEY'" in sql
     assert "SECRET   = '<access_key_id>:<secret_access_key>'" in sql
     assert 'CREATE MASTER KEY' in sql
+
+
+def test_sql_server_2019_wasbs_uses_storage_account_key():
+    """Legacy WASBS does not accept a SAS credential."""
+    gen = SQLGenerator()
+    placeholder = gen.generate_credential_setup(
+        'LegacyBlob',
+        metadata={'file_type': 'csv', 'file_name': 'sample.csv'},
+        target_platform='sql_server_2019',
+    )
+    assert "SECRET   = '<storage_account_key>'" in placeholder
+    assert 'SHARED ACCESS SIGNATURE' not in placeholder
+
+    sql = gen.generate_credential_setup(
+        'LegacyBlob',
+        metadata={'file_type': 'csv', 'file_name': 'sample.csv'},
+        target_platform='sql_server_2019',
+        storage_url='abs://raw@acct.blob.core.windows.net/sample.csv',
+        auth_method='sas',
+    )
+    assert "LOCATION = 'wasbs://" in sql
+    assert "SECRET   = '<storage_account_key>'" in sql
+    assert re.search(
+        r'CREATE DATABASE SCOPED CREDENTIAL \[cred_LegacyBlob_Bulk\]'
+        r"[\s\S]*IDENTITY = 'SHARED ACCESS SIGNATURE'",
+        sql,
+    )
+
+
+def test_invalid_storage_hosts_are_never_replaced_with_placeholders():
+    """Lookalike and arbitrary connector hosts remain non-executable."""
+    gen = SQLGenerator()
+    metadata = {'file_type': 'csv', 'file_name': 'sample.csv'}
+    for url in (
+        'abs://raw@attacker.example/sample.csv',
+        'adls://raw@attacker.example/sample.csv',
+        'abs://raw@acct.blob.core.windows.net.attacker.example/sample.csv',
+        'https://onelake.attacker.example/ws/lh.Lakehouse/Files/sample.csv',
+    ):
+        statements = gen.generate_all_statements(
+            metadata,
+            target_platform='azure_sql_db',
+            storage_url=url,
+        )
+        assert 'NOT AVAILABLE on Azure SQL Database' in statements['openrowset']
+        assert 'supplied location was not replaced' in statements['credential_setup']
+        assert '<storage_account>' not in statements['credential_setup']
 
 
 def test_managed_identity_requires_sql_server_2025_and_azure_arc():
@@ -825,8 +874,8 @@ def test_managed_identity_requires_sql_server_2025_and_azure_arc():
     assert 'user-assigned' in sql_2025
 
 
-def test_onelake_uses_the_adls_connector_on_azure_sql_database():
-    """OneLake is exposed through ADLS outside Fabric SQL Database."""
+def test_onelake_is_rejected_on_azure_sql_database():
+    """OneLake is a Fabric-only connector in the current platform matrix."""
     gen = SQLGenerator()
     sql = gen.generate_credential_setup(
         'OneLake',
@@ -834,14 +883,14 @@ def test_onelake_uses_the_adls_connector_on_azure_sql_database():
         target_platform='azure_sql_db',
         storage_url=(
             'abfss://workspace@onelake.dfs.fabric.microsoft.com/'
-            'lakehouse/Files/sample.parquet'
+            'lakehouse.Lakehouse/Files/sample.parquet'
         ),
     )
-    assert (
-        "LOCATION = 'adls://workspace@onelake.dfs.fabric.microsoft.com'"
-        in sql
+    assert 'NOT AVAILABLE on Azure SQL Database' in sql
+    assert 'supplied location was not replaced' in sql
+    assert 'CREATE EXTERNAL DATA SOURCE' not in '\n'.join(
+        line for line in sql.splitlines() if not line.lstrip().startswith('--')
     )
-    assert "LOCATION = 'abs://" not in sql
 
 
 def test_credential_name_override_is_propagated():
@@ -1612,7 +1661,8 @@ def test_openrowset_sql_server_2019_remote_gives_staging_guidance():
     sql = gen.generate_openrowset(
         meta, storage_url='s3://bucket/landing/orders.csv',
         target_platform='sql_server_2019')
-    assert 'cannot read this object storage URL' in sql
+    assert 'S3 is not supported by SQL Server 2019' in sql
+    assert 'supplied location was not replaced' in sql
     assert "BULK N'https://" not in sql
     assert "BULK 's3://" not in sql
     assert 'SQL Server 2022' in sql

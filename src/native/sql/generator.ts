@@ -70,6 +70,7 @@ import {
     looksLikeCloudUrl,
     sqlServerStorageParts,
     storageUrlKind,
+    storageUrlSupportedByPlatform,
 } from './storage';
 import {
     csvReaderOptions,
@@ -93,6 +94,7 @@ import {
     singleLobKeyword,
     splitextRoot,
     targetTableColumnLimitGuidance,
+    type AuthMethod,
 } from './generatorHelpers';
 import {
     bestPracticesCsv,
@@ -140,10 +142,40 @@ function bulkDataSourceSupported(
     if (AZURE_SQL_PLATFORMS.has(targetPlatform)) {
         return true;
     }
+
     if (targetPlatform.startsWith('sql_server_')) {
         return storageUrlKind(storageUrl) === 'azure';
     }
+
     return false;
+}
+
+/** Derive authentication from the storage connector before platform defaults. */
+function storageAuthMethod(
+    authMethod: string | null | undefined,
+    targetPlatform: TargetPlatform,
+    storageUrl: string | null,
+): AuthMethod {
+    const kind = storageUrlKind(storageUrl);
+    if (kind === 's3') {
+        return 's3_access_key';
+    }
+    if (targetPlatform === 'sql_server_2019') {
+        return 'storage_key';
+    }
+    return resolveAuthMethod(authMethod, targetPlatform);
+}
+
+/** BLOB_STORAGE has different SQL Server 2019 auth than WASBS/HADOOP. */
+function bulkStorageAuthMethod(
+    authMethod: string | null | undefined,
+    targetPlatform: TargetPlatform,
+    storageUrl: string | null,
+): AuthMethod {
+    if (targetPlatform === 'sql_server_2019' && storageUrlKind(storageUrl) === 'azure') {
+        return 'sas';
+    }
+    return storageAuthMethod(authMethod, targetPlatform, storageUrl);
 }
 
 /** Resolve `[external data source location, relative path]` per platform. */
@@ -155,10 +187,45 @@ function externalSourceParts(
     if (targetPlatform === 'fabric_sql_db') {
         return fabricOnelakeParts(storageUrl, fileName);
     }
+
     if (AZURE_SQL_PLATFORMS.has(targetPlatform)) {
         return azureVirtualizationParts(storageUrl, fileName);
     }
+
     return sqlServerStorageParts(storageUrl, fileName, targetPlatform);
+}
+
+/** Explain an incompatible supplied storage location without substituting one. */
+function storageCompatibilityMessage(
+    storageUrl: string | null,
+    targetPlatform: TargetPlatform,
+): string | null {
+    if (!storageUrl || storageUrlSupportedByPlatform(storageUrl, targetPlatform)) {
+        return null;
+    }
+    const kind = storageUrlKind(storageUrl);
+    const label = PLATFORM_LABELS[targetPlatform] ?? targetPlatform;
+    const supported =
+        targetPlatform === 'fabric_sql_db'
+            ? 'Fabric OneLake (ABFSS)'
+            : targetPlatform === 'sql_server_2019'
+                ? 'Azure Blob Storage (WASBS external tables or TYPE = BLOB_STORAGE bulk access), or SQL Server 2022+ for S3'
+                : targetPlatform === 'sql_server_2022' || targetPlatform === 'sql_server_2025'
+                    ? 'Azure Blob, ADLS Gen2, or S3-compatible storage'
+                    : 'Azure Blob or ADLS Gen2';
+    const supplied =
+        kind === 's3'
+            ? 'S3'
+            : kind === 'onelake'
+                ? 'OneLake'
+                : kind === 'azure'
+                    ? 'this Azure storage service'
+                    : 'this storage URL';
+    return notSupportedMessage(
+        'STORAGE LOCATION',
+        targetPlatform,
+        `${supplied} is not supported by ${label}. Use ${supported}; the supplied location was not replaced.`,
+    );
 }
 
 /**
@@ -208,6 +275,33 @@ export interface StatementOptions {
     filePathOverride?: string | null;
 }
 
+/** Complete commented OPENROWSET shape for CREATE TABLE quick-load guidance. */
+function quickLoadOpenrowset(
+    metadata: GeneratorMetadata,
+    schemaName: string,
+    tableName: string,
+    bulkPath: string,
+    dataSource: string,
+    fileType: string,
+): string[] {
+    const options =
+        fileType === 'csv' || fileType === 'text'
+            ? csvReaderOptions(metadata)
+            : [`    FORMAT          = '${formatKeyword(fileType)}'`];
+    const schema = openrowsetWithSchema(metadata);
+    return [
+        `-- INSERT INTO [${sqlComment(schemaName)}].[${sqlComment(tableName)}]`,
+        '-- SELECT *',
+        '-- FROM OPENROWSET(',
+        `--     BULK '${sqlComment(quoteLiteral(bulkPath))}',`,
+        `--     DATA_SOURCE = '${sqlComment(quoteLiteral(dataSource))}',`,
+        ...options.map((line) => `-- ${line}`),
+        '-- )',
+        ...schema.map((line) => `-- ${line}`),
+        '-- AS src;',
+    ];
+}
+
 /** Build platform-specific quick-load guidance appended to CREATE TABLE. */
 function createTableQuickLoad(
     metadata: GeneratorMetadata,
@@ -253,13 +347,14 @@ function createTableQuickLoad(
                 '-- Fabric SQL Database reads Lakehouse Files through an',
                 '-- external data source (Microsoft Entra passthrough).',
                 `-- Data source location: ${sqlComment(sourceLocation)}`,
-                `-- INSERT INTO [${sqlComment(schemaName)}].[${sqlComment(tableName)}]`,
-                '-- SELECT *',
-                '-- FROM OPENROWSET(',
-                `--     BULK '${sqlComment(quoteLiteral(bulkPath))}',`,
-                `--     DATA_SOURCE = '${sqlComment(quoteLiteral(dataSource))}',`,
-                `--     FORMAT = '${formatKeyword(fileType)}'`,
-                '-- ) AS src;',
+                ...quickLoadOpenrowset(
+                    metadata,
+                    schemaName,
+                    tableName,
+                    bulkPath,
+                    dataSource,
+                    fileType,
+                ),
             ]);
         }
         return lines.concat([
@@ -276,18 +371,30 @@ function createTableQuickLoad(
                 '-- Convert the table to Parquet or CSV before loading.',
             ]);
         }
+        if (
+            fileType !== 'csv'
+            && fileType !== 'text'
+            && fileType !== 'parquet'
+            && fileType !== 'delta'
+        ) {
+            return lines.concat([
+                `-- ${fileType.toUpperCase()} is not readable by ${PLATFORM_LABELS[targetPlatform]} OPENROWSET.`,
+                '-- Convert the source to CSV or Parquet before loading.',
+            ]);
+        }
         const [sourceLocation, bulkPath] = azureVirtualizationParts(storageUrl, fileName);
         return lines.concat([
             '-- Azure SQL data virtualization uses an external data source',
             '-- whose LOCATION starts with abs:// or adls:// (not https://).',
             `-- Data source location: ${sqlComment(sourceLocation)}`,
-            `-- INSERT INTO [${sqlComment(schemaName)}].[${sqlComment(tableName)}]`,
-            '-- SELECT *',
-            '-- FROM OPENROWSET(',
-            `--     BULK '${sqlComment(quoteLiteral(bulkPath))}',`,
-            `--     DATA_SOURCE = '${sqlComment(quoteLiteral(dataSource))}',`,
-            `--     FORMAT = '${formatKeyword(fileType)}'`,
-            '-- ) AS src;',
+            ...quickLoadOpenrowset(
+                metadata,
+                schemaName,
+                tableName,
+                bulkPath,
+                dataSource,
+                fileType,
+            ),
         ]);
     }
 
@@ -313,13 +420,14 @@ function createTableQuickLoad(
         '-- SQL Server object storage uses an external data source whose',
         '-- LOCATION starts with adls://, abs://, or s3:// (not https://).',
         `-- Data source location: ${sqlComment(sourceLocation)}`,
-        `-- INSERT INTO [${sqlComment(schemaName)}].[${sqlComment(tableName)}]`,
-        '-- SELECT *',
-        '-- FROM OPENROWSET(',
-        `--     BULK '${sqlComment(quoteLiteral(bulkPath))}',`,
-        `--     DATA_SOURCE = '${sqlComment(quoteLiteral(dataSource))}',`,
-        `--     FORMAT = '${formatKeyword(fileType)}'`,
-        '-- ) AS src;',
+        ...quickLoadOpenrowset(
+            metadata,
+            schemaName,
+            tableName,
+            bulkPath,
+            dataSource,
+            fileType,
+        ),
     ]);
 }
 
@@ -537,9 +645,24 @@ export function generateBulkInsert(
     const dataSource = options.dataSource ?? 'MyDataSource';
     const includePrereq = options.includePrereq ?? true;
     const rawSchemaName = options.schemaName ?? 'dbo';
+    const fileType = stringOr(metadata.file_type, '');
+    const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
+    if (incompatibleStorage) {
+        return incompatibleStorage;
+    }
 
     if (exceedsTargetTableColumnLimit(metadata)) {
         return targetTableColumnLimitGuidance(metadata, 'BULK / TYPED LOAD');
+    }
+
+    if (fileType === 'orc' || fileType === 'rc' || fileType === 'iceberg') {
+        return notSupportedMessage(
+            `BULK / TYPED LOAD (${fileType.toUpperCase()})`,
+            targetPlatform,
+            fileType === 'iceberg'
+                ? 'Query the table through a catalog-aware engine or use its underlying Parquet files.'
+                : 'Use a supported external table path or convert the source to Parquet.',
+        );
     }
 
     if (!supports('bulk_insert', targetPlatform)) {
@@ -575,7 +698,6 @@ export function generateBulkInsert(
     );
     const schemaName = escapeIdentifier(rawSchemaName);
 
-    const fileType = stringOr(metadata.file_type, '');
     const fileName = displayFileName(metadata);
     const encoding = stringOr(metadata.encoding, 'utf-8');
     const codepage = stringOr(metadata.codepage, '65001');
@@ -609,7 +731,11 @@ export function generateBulkInsert(
             dataSource,
             options.credentialName,
         );
-        const bulkAuth = resolveAuthMethod(options.authMethod, targetPlatform);
+        const bulkAuth = bulkStorageAuthMethod(
+            options.authMethod,
+            targetPlatform,
+            storageUrl,
+        );
         const bulkCredClause = credentialClause(bulkCredIdent, bulkAuth);
         const [sourceRoot, relativePath] = azureBulkStorageParts(storageUrl, fileName);
         fromPath = quoteLiteral(relativePath);
@@ -846,6 +972,10 @@ export function generateExternalTable(
 ): string {
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
+    const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
+    if (incompatibleStorage) {
+        return incompatibleStorage;
+    }
 
     if (exceedsTargetTableColumnLimit(metadata)) {
         return targetTableColumnLimitGuidance(metadata, 'CREATE EXTERNAL TABLE');
@@ -1108,7 +1238,7 @@ function bulkDataSourceBlock(
     if (!bulkDataSourceSupported(targetPlatform, storageUrl)) {
         return [];
     }
-    const resolvedAuth = resolveAuthMethod(authMethod, targetPlatform);
+    const resolvedAuth = bulkStorageAuthMethod(authMethod, targetPlatform, storageUrl);
     const [bulkIdent, , bulkCredIdent] = bulkDataSourceNames(
         dataSourceRaw,
         credentialName,
@@ -1157,8 +1287,12 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
     const dataSourceRaw = options.dataSource ?? 'MyDataSource';
-    const authMethod = resolveAuthMethod(options.authMethod, targetPlatform);
+    const authMethod = storageAuthMethod(options.authMethod, targetPlatform, storageUrl);
     const credIdent = credentialIdentifier(dataSourceRaw, options.credentialName);
+    const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
+    if (incompatibleStorage) {
+        return incompatibleStorage;
+    }
 
     if (!supports('credential_setup', targetPlatform)) {
         return notSupportedMessage(
@@ -1317,6 +1451,18 @@ export function generateJsonFunctions(
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
     const dataSource = options.dataSource ?? 'MyDataSource';
+    const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
+    if (incompatibleStorage) {
+        return incompatibleStorage;
+    }
+
+    if (metadata.file_type !== 'json') {
+        return notSupportedMessage(
+            'JSON FUNCTIONS',
+            targetPlatform,
+            'Select a JSON or NDJSON source before generating OPENJSON guidance.',
+        );
+    }
 
     if (exceedsTargetTableColumnLimit(metadata)) {
         return targetTableColumnLimitGuidance(metadata, 'TYPED JSON PROJECTION');
@@ -1537,19 +1683,24 @@ export function generateJsonFunctions(
     }
 
     if (jsonFormat === 'object') {
-        // Single object: direct JSON_VALUE
-        lines.push('-- Single JSON object — extract individual values', 'SELECT');
-        const jv: string[] = [];
-        for (const [colName] of schema) {
-            const clean = escapeIdentifier(colName);
-            const kind = nesting[colName] ?? 'scalar';
-            if (kind === 'object' || kind === 'array') {
-                jv.push(`    JSON_QUERY(@json, '${quoteJsonPath(colName)}') AS [${clean}]`);
-            } else {
-                jv.push(`    JSON_VALUE(@json, '${quoteJsonPath(colName)}') AS [${clean}]`);
-            }
+        if (openjsonCols.length === 0) {
+            lines.push(
+                '-- The sampled object is not safe for scalar JSON_VALUE extraction.',
+                '-- JSON_VALUE is limited to NVARCHAR(4000), so preserve every value',
+                '-- through schemaless OPENJSON instead.',
+                'SELECT [key], [value], [type]',
+                'FROM OPENJSON(@json);',
+            );
+        } else {
+            lines.push(
+                '-- Single JSON object — typed extraction without JSON_VALUE limits',
+                'SELECT *',
+                'FROM OPENJSON(@json)',
+                'WITH (',
+                openjsonWith,
+                ');',
+            );
         }
-        lines.push(jv.length > 0 ? `${jv.join(',\n')};` : '    @json;');
     } else {
         if (openjsonCols.length > 0) {
             lines.push(
@@ -1669,9 +1820,13 @@ export function generateJsonFunctions(
             'FROM OPENROWSET(',
             `    BULK '${blobPath}',`,
             `    DATA_SOURCE     = '${cloudSource}',`,
-            "    FORMAT          = 'CSV',",
-            "    FIELDTERMINATOR = '0x0b',",
-            "    FIELDQUOTE      = '0x0b'",
+        );
+        lines.push(
+            ...jsonRowFrameOptions(
+                metadata,
+                4,
+                jsonFormat === 'ndjson' ? '0x0a' : '0x0b',
+            ),
             ') WITH (json_doc NVARCHAR(MAX)) AS src',
         );
         if (openjsonCols.length > 0) {
@@ -2013,6 +2168,7 @@ export function generateAllStatements(
     const schemaName = options.schemaName ?? 'dbo';
     const dataSource = options.dataSource || 'MyDataSource';
     const tableName = resolveTableName(effectiveMetadata, options.tableName);
+    const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
     const selectedSourceType = options.dataSourceType
         ? normalizeDataSourceType(options.dataSourceType, targetPlatform)
         : null;
@@ -2043,7 +2199,7 @@ export function generateAllStatements(
         dataSource,
     };
 
-    return {
+    const statements: GeneratedStatements = {
         create_table: generateCreateTable(effectiveMetadata, shared),
         bulk_insert: generateBulkInsert(effectiveMetadata, {
             ...shared,
@@ -2081,6 +2237,18 @@ export function generateAllStatements(
             authMethod: options.authMethod,
         }),
         best_practices: generateBestPractices(effectiveMetadata, shared),
+    };
+    if (!incompatibleStorage) {
+        return statements;
+    }
+    return {
+        ...statements,
+        bulk_insert: incompatibleStorage,
+        openrowset: incompatibleStorage,
+        copy_into: incompatibleStorage,
+        create_external_table: incompatibleStorage,
+        json_functions: incompatibleStorage,
+        credential_setup: incompatibleStorage,
     };
 }
 
@@ -2392,16 +2560,27 @@ export function generateCompleteDdl(
     metadata: GeneratorMetadata,
     options: GenerateAllOptions = {},
 ): string {
-    if (exceedsTargetTableColumnLimit(metadata)) {
-        return `${targetTableColumnLimitGuidance(metadata, 'COMPLETE SCRIPT')}\n`;
+    const effectiveMetadata: GeneratorMetadata = metadata.parser_overrides?.format
+        ? { ...metadata, file_type: metadata.parser_overrides.format }
+        : metadata;
+    if (exceedsTargetTableColumnLimit(effectiveMetadata)) {
+        return `${targetTableColumnLimitGuidance(effectiveMetadata, 'COMPLETE SCRIPT')}\n`;
     }
 
     const dataSource = options.dataSource || 'MyDataSource';
     const targetPlatform = normalizePlatform(options.targetPlatform);
     const storageUrl = options.storageUrl ?? null;
     const schemaName = options.schemaName ?? 'dbo';
+    const effectiveBulkStorageUrl = options.dataSourceType
+        ? effectiveStorageUrl(
+            targetPlatform,
+            normalizeDataSourceType(options.dataSourceType, targetPlatform),
+            storageUrl,
+            displayFileName(effectiveMetadata),
+        )
+        : storageUrl;
 
-    const statements = generateAllStatements(metadata, {
+    const statements = generateAllStatements(effectiveMetadata, {
         ...options,
         dataSource,
         targetPlatform,
@@ -2424,11 +2603,11 @@ export function generateCompleteDdl(
             `CREATE EXTERNAL DATA SOURCE [${bulkIdent}]`,
         )
     ) {
-        statements.bulk_insert = generateBulkInsert(metadata, {
-            tableName: resolveTableName(metadata, options.tableName),
+        statements.bulk_insert = generateBulkInsert(effectiveMetadata, {
+            tableName: resolveTableName(effectiveMetadata, options.tableName),
             schemaName,
             targetPlatform,
-            storageUrl,
+            storageUrl: effectiveBulkStorageUrl,
             dataSource,
             includePrereq: false,
             credentialName: options.credentialName,
@@ -2439,7 +2618,7 @@ export function generateCompleteDdl(
     const parts: string[] = [];
     const targetTable =
         `[${escapeIdentifier(schemaName)}].` +
-        `[${escapeIdentifier(resolveTableName(metadata, options.tableName))}]`;
+        `[${escapeIdentifier(resolveTableName(effectiveMetadata, options.tableName))}]`;
     let truncated = false;
     const truncateActive =
         Boolean(options.rerunTruncate) &&

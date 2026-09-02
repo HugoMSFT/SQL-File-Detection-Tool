@@ -4,6 +4,20 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.7]
+
+### Fixed
+
+- Restricted OneLake, S3, Azure Blob, and ADLS recommendations to documented
+  platform and host combinations; lookalike hosts are rejected.
+- Corrected SQL Server 2019 WASBS credentials to use a storage account key and
+  SQL Server S3 credentials to use `S3 ACCESS KEY`.
+- Prevented ORC, RCFile, and Iceberg sources from falling through to executable
+  CSV reads or JSON guidance on unsupported paths.
+- Fixed SQL Server 2019 OPENROWSET syntax, cloud NDJSON framing, unsafe
+  single-object JSON extraction, quick-load option loss, and complete-script
+  storage-source reversion.
+
 ## [1.0.6]
 
 ### Fixed
