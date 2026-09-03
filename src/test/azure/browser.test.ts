@@ -286,6 +286,47 @@ test('superseded unresolved authentication cannot block reconciliation after its
     assert.equal(subject.snapshot.identity, null);
 });
 
+test('non-interactive loading revokes unresolved interactive auth suppression', async () => {
+    let resolveStorageAuth: ((session: AuthenticationSession) => void) | undefined;
+    let notifyStorageAuth: (() => void) | undefined;
+    const storageAuthStarted = new Promise<void>((resolve) => {
+        notifyStorageAuth = resolve;
+    });
+    let managementSignedIn = true;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            if (scopes.includes(STORAGE_SCOPE)) {
+                if (options.silent) {
+                    return undefined;
+                }
+                notifyStorageAuth?.();
+                return new Promise<AuthenticationSession>((resolve) => {
+                    resolveStorageAuth = resolve;
+                });
+            }
+            return managementSignedIn ? SESSION : undefined;
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    await subject.connect();
+    const denied = await subject.selectAccount(ACCOUNT_ID);
+    assert.equal(denied.phase, 'error');
+
+    const staleRetry = subject.retry();
+    await storageAuthStarted;
+    const superseding = await subject.selectSubscription(SUBSCRIPTION);
+    assert.equal(superseding.phase, 'ready');
+    managementSignedIn = false;
+
+    const signedOut = await subject.authenticationChanged();
+    assert.equal(signedOut.phase, 'signedOut');
+    assert.equal(signedOut.identity, null);
+    resolveStorageAuth?.(SESSION);
+    await staleRetry;
+    assert.equal(subject.snapshot.phase, 'signedOut');
+});
+
 test('genuine sign-out during ARM discovery is reconciled when the flow settles', async () => {
     let releaseTenants: (() => void) | undefined;
     let notifyTenants: (() => void) | undefined;

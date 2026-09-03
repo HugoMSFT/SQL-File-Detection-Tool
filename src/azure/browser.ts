@@ -54,6 +54,7 @@ export interface AzureBrowserDeps {
 interface InteractiveOperation {
     readonly id: number;
     readonly lifecycle: number;
+    ownerGeneration: number;
     providerChangePending: boolean;
 }
 
@@ -85,6 +86,7 @@ export class AzureBrowser {
     private abortController: AbortController | undefined;
     private generation = 0;
     private interactiveOperation: InteractiveOperation | undefined;
+    private pendingAuthenticationChangeLifecycle: number | undefined;
     private interactiveOperationId = 0;
     private lifecycle = 0;
 
@@ -102,10 +104,15 @@ export class AzureBrowser {
         // created by this operation is authoritative until its full discovery
         // chain settles; later provider events still revalidate normally.
         const interactive = this.interactiveOperation;
-        if (this.state.open && interactive?.lifecycle === this.lifecycle) {
+        if (
+            this.state.open
+            && interactive?.lifecycle === this.lifecycle
+            && interactive.ownerGeneration === this.generation
+        ) {
             interactive.providerChangePending = true;
             return this.state;
         }
+        this.pendingAuthenticationChangeLifecycle = undefined;
         return this.revalidateAuthentication();
     }
 
@@ -156,15 +163,23 @@ export class AzureBrowser {
             return this.fail(new AzureBrowserError('invalidResponse', 'That Azure tenant is no longer available.'));
         }
         this.retryOperation = 'tenant';
-        const generation = this.loading('Loading subscriptions…', {
-            selectedTenantId: tenantId,
-            subscriptions: [],
-            selectedSubscriptionId: null,
-            accounts: [],
-            selectedAccountId: null,
-            path: [],
-            entries: [],
-        });
+        const generation = this.loading(
+            'Loading subscriptions…',
+            {
+                selectedTenantId: tenantId,
+                subscriptions: [],
+                selectedSubscriptionId: null,
+                accounts: [],
+                selectedAccountId: null,
+                path: [],
+                entries: [],
+            },
+            this.interactiveOwner(interactive),
+        );
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.session(ARM_SCOPE, tenantId, interactive);
             if (!this.isCurrent(generation)) {
@@ -214,13 +229,21 @@ export class AzureBrowser {
             );
         }
         this.retryOperation = 'subscription';
-        const generation = this.loading('Loading Storage accounts…', {
-            selectedSubscriptionId: subscriptionId,
-            accounts: [],
-            selectedAccountId: null,
-            path: [],
-            entries: [],
-        });
+        const generation = this.loading(
+            'Loading Storage accounts…',
+            {
+                selectedSubscriptionId: subscriptionId,
+                accounts: [],
+                selectedAccountId: null,
+                path: [],
+                entries: [],
+            },
+            this.interactiveOwner(interactive),
+        );
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.session(ARM_SCOPE, subscription.tenantId, interactive);
             if (!this.isCurrent(generation)) {
@@ -268,13 +291,21 @@ export class AzureBrowser {
         this.prefix = '';
         this.continuationToken = undefined;
         this.entryRegistry.clear();
-        const generation = this.loading('Loading containers…', {
-            selectedAccountId: accountId,
-            path: [],
-            entries: [],
-            selectedEntryId: null,
-            hasMore: false,
-        });
+        const generation = this.loading(
+            'Loading containers…',
+            {
+                selectedAccountId: accountId,
+                path: [],
+                entries: [],
+                selectedEntryId: null,
+                hasMore: false,
+            },
+            this.interactiveOwner(interactive),
+        );
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.session(STORAGE_SCOPE, tenantId, interactive);
             if (!this.isCurrent(generation)) {
@@ -359,6 +390,7 @@ export class AzureBrowser {
     close(): AzureBrowserState {
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
+        this.pendingAuthenticationChangeLifecycle = undefined;
         this.cancel();
         this.state = { ...this.state, open: false, phase: 'closed' };
         return this.state;
@@ -367,6 +399,7 @@ export class AzureBrowser {
     disconnect(): AzureBrowserState {
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
+        this.pendingAuthenticationChangeLifecycle = undefined;
         this.cancel();
         this.account = undefined;
         this.entryRegistry.clear();
@@ -378,7 +411,18 @@ export class AzureBrowser {
         return this.state;
     }
 
-    cancel(): void {
+    cancel(preserveInteractiveOperationId?: number): void {
+        const interactive = this.interactiveOperation;
+        if (interactive && interactive.id !== preserveInteractiveOperationId) {
+            this.interactiveOperation = undefined;
+            if (
+                interactive.providerChangePending
+                && interactive.lifecycle === this.lifecycle
+                && this.state.open
+            ) {
+                this.pendingAuthenticationChangeLifecycle = this.lifecycle;
+            }
+        }
         this.abortController?.abort();
         this.abortController = undefined;
         this.generation += 1;
@@ -386,7 +430,15 @@ export class AzureBrowser {
 
     private async discover(interactive: boolean): Promise<AzureBrowserState> {
         this.retryOperation = 'discover';
-        const generation = this.loading('Connecting to Azure…');
+        const generation = this.loading(
+            'Connecting to Azure…',
+            {},
+            this.interactiveOwner(interactive),
+        );
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.deps.authentication.acquire(
                 ARM_SCOPE,
@@ -444,7 +496,12 @@ export class AzureBrowser {
             append
                 ? { path: this.locationPath() }
                 : { path: this.locationPath(), entries: [], selectedEntryId: null },
+            this.interactiveOwner(interactive),
         );
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.session(STORAGE_SCOPE, tenantId, interactive);
             if (!this.isCurrent(generation)) {
@@ -480,6 +537,10 @@ export class AzureBrowser {
             return this.state;
         }
         const generation = this.loading('Loading more containers…');
+        const supersededAuthentication = this.reconcileSupersededAuthentication();
+        if (supersededAuthentication) {
+            return supersededAuthentication;
+        }
         try {
             const session = await this.session(STORAGE_SCOPE, tenantId, false);
             if (!this.isCurrent(generation)) {
@@ -590,10 +651,15 @@ export class AzureBrowser {
         const operation: InteractiveOperation = {
             id: ++this.interactiveOperationId,
             lifecycle: this.lifecycle,
+            ownerGeneration: this.generation,
             providerChangePending:
-                previous?.lifecycle === this.lifecycle
-                && previous.providerChangePending,
+                (
+                    previous?.lifecycle === this.lifecycle
+                    && previous.providerChangePending
+                )
+                || this.pendingAuthenticationChangeLifecycle === this.lifecycle,
         };
+        this.pendingAuthenticationChangeLifecycle = undefined;
         this.interactiveOperation = operation;
         try {
             let result = await action();
@@ -682,8 +748,9 @@ export class AzureBrowser {
     private loading(
         message: string,
         patch: Partial<AzureBrowserState> = {},
+        interactiveOperationId?: number,
     ): number {
-        this.cancel();
+        this.cancel(interactiveOperationId);
         this.abortController = new AbortController();
         this.state = {
             ...this.state,
@@ -693,7 +760,27 @@ export class AzureBrowser {
             errorKind: null,
             message,
         };
+        const interactive = this.interactiveOperation;
+        if (interactive && interactive.id === interactiveOperationId) {
+            interactive.ownerGeneration = this.generation;
+        }
         return this.generation;
+    }
+
+    private interactiveOwner(interactive: boolean): number | undefined {
+        return interactive ? this.interactiveOperation?.id : undefined;
+    }
+
+    private reconcileSupersededAuthentication(): Promise<AzureBrowserState> | undefined {
+        if (
+            this.pendingAuthenticationChangeLifecycle !== this.lifecycle
+            || !this.state.open
+            || this.interactiveOperation
+        ) {
+            return undefined;
+        }
+        this.pendingAuthenticationChangeLifecycle = undefined;
+        return this.revalidateAuthentication();
     }
 
     private signal(): AbortSignal {
