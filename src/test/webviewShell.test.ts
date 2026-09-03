@@ -128,6 +128,7 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     for (const action of [
         'openFileDialog',
         'openFolderDialog',
+        'openAzureBrowser',
         'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
@@ -140,7 +141,11 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
             `${action} is not reachable`,
         );
     }
-    assert.doesNotMatch(script, /azureConnect|azureList|azureSetAccount|azureAnalyzeBlob/);
+    assert.match(script, /Connect with Microsoft/);
+    assert.match(script, /Storage Blob Data Reader/);
+    assert.match(script, /Phase 1 does not download or analyze/);
+    assert.match(script, /azure\.phase === 'error' && !selectedAccount/);
+    assert.doesNotMatch(script, /azureAnalyzeBlob/);
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {

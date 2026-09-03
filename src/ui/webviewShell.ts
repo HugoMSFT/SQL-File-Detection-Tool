@@ -82,6 +82,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <span class="toolbar-title">Sources &amp; files</span>
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
+      <button type="button" class="btn" data-action="openAzureBrowser">Browse Azure</button>
       <button type="button" class="btn" data-source-tab="credential_setup">Storage setup</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
@@ -104,7 +105,9 @@ export function buildWebviewHtml(options: ShellOptions): string {
     <button type="button" class="btn subtle" id="dismiss" data-action="dismissNotice" hidden>Dismiss</button>
   </div>
 
-  <div class="layout">
+  <section id="azure-browser" class="azure-browser" aria-labelledby="azure-browser-title" hidden></section>
+
+  <div class="layout" id="standard-layout">
     <nav class="file-pane" aria-labelledby="file-pane-title">
       <div class="explorer-heading">
         <h2 id="file-pane-title">Explorer</h2>

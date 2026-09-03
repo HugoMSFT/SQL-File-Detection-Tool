@@ -83,6 +83,7 @@ const AZURE_BLOB_SUFFIXES = [
     'blob.core.usgovcloudapi.net',
     'blob.core.chinacloudapi.cn',
     'blob.core.cloudapi.de',
+    'blob.storage.azure.net',
 ] as const;
 
 const AZURE_DFS_SUFFIXES = [
@@ -90,6 +91,7 @@ const AZURE_DFS_SUFFIXES = [
     'dfs.core.usgovcloudapi.net',
     'dfs.core.chinacloudapi.cn',
     'dfs.core.cloudapi.de',
+    'dfs.storage.azure.net',
 ] as const;
 
 /** Host name from a URL authority that may contain user info or a port. */

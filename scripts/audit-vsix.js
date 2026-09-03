@@ -117,8 +117,9 @@ const REQUIRED_PATHS = [
 /**
  * Strings that would betray a re-introduced Python or server runtime.
  *
- * Authentication and storage-browser symbols are included as release blockers:
- * Credential setup is URL-only and must not regain an interactive sign-in path.
+ * Azure browsing is permitted only through VS Code's Microsoft provider. Bespoke
+ * application credentials and command-line credential fallbacks remain release
+ * blockers.
  */
 const FORBIDDEN_BUNDLE_STRINGS = [
     [/\bflask\b/i, 'Flask'],
@@ -131,8 +132,10 @@ const FORBIDDEN_BUNDLE_STRINGS = [
     [/\/api\/health\b/, 'a backend health endpoint'],
     [/\bsetupBackend|startBackend|stopBackend\b/i, 'a backend lifecycle command'],
     [/\bsimpleBrowser\b/i, 'the Simple Browser'],
-    [/\bvscode\.authentication\b|authentication\.getSession\b/, 'VS Code authentication'],
-    [/\b(?:azureConnect|NativeAzureBridge|connectAzureStorage)\b/, 'storage sign-in code'],
+    [
+        /\b(?:ClientSecretCredential|AzureCliCredential|AzurePowerShellCredential)\b/,
+        'a bespoke or command-line Azure credential',
+    ],
 ];
 
 /**

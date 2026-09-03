@@ -123,6 +123,9 @@ test('the native module graph reaches the whole product surface', () => {
         'ui/webviewShell.js',
         'appState.js',
         'protocol.js',
+        'azure/browser.js',
+        'azure/armClient.js',
+        'azure/storageClient.js',
         'native/index.js',
     ]) {
         assert.ok(files.has(expected), `${expected} should be reachable from activation`);
@@ -144,7 +147,7 @@ test('nothing reachable from activation can spawn a process', () => {
     }
 });
 
-test('removed backend and storage-browser modules are not reachable from activation', () => {
+test('removed backend and legacy storage-browser modules are not reachable from activation', () => {
     const files = new Set(graph.nodes.map((node) => relative(node.file)));
     for (const legacy of [
         'backend.js',

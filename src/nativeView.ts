@@ -24,6 +24,8 @@ import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
 import { buildWebviewHtml, createNonce } from './ui/webviewShell';
 import { redact } from './util';
+import { MicrosoftAuthentication } from './azure/auth';
+import { AzureBrowser } from './azure/browser';
 
 export const SIDEBAR_VIEW_ID = 'sqlFileDetectionTool.sidebar';
 export const PANEL_VIEW_TYPE = 'sqlFileDetectionTool.panel';
@@ -283,7 +285,12 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
                 .getConfiguration('sqlFileDetectionTool')
                 .get<string>('defaultPlatform', 'azure_sql_db') as never,
         });
-        this.controller = new UiController(this.host, this.store);
+        const azure = new AzureBrowser({
+            authentication: new MicrosoftAuthentication((providerId, scopes, options) =>
+                Promise.resolve(vscode.authentication.getSession(providerId, scopes, options)),
+            ),
+        });
+        this.controller = new UiController(this.host, this.store, { azure });
         this.disposables.push(
             vscode.workspace.onDidChangeWorkspaceFolders(() => {
                 this.controller.refreshWorkspace();

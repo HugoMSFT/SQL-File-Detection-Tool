@@ -64,6 +64,7 @@ import {
 import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
+import { AzureBrowser } from '../azure/browser';
 
 /** Files the extension will analyse in one "Export All" pass. */
 export const MAX_EXPORT_FILES = 100;
@@ -76,6 +77,7 @@ export interface ControllerDeps {
     /** Injected so debounce is deterministic under test. */
     readonly setTimeoutImpl?: (fn: () => void, ms: number) => unknown;
     readonly clearTimeoutImpl?: (handle: unknown) => void;
+    readonly azure?: AzureBrowser;
 }
 
 /**
@@ -120,6 +122,7 @@ export class UiController {
     private disposed = false;
     /** Benchmark instrumentation: only the first analysis is timed in the log. */
     private firstAnalysisLogged = false;
+    private readonly azure: AzureBrowser | undefined;
 
     constructor(
         private readonly host: UiHost,
@@ -127,6 +130,7 @@ export class UiController {
         private readonly deps: ControllerDeps = {},
     ) {
         this.service = deps.service ?? nativeAnalysisService;
+        this.azure = deps.azure;
         this.store.setWorkspaceFolders(this.host.workspaceFolders());
         this.store.update({
             formats: this.service.listFormats(),
@@ -231,6 +235,49 @@ export class UiController {
                 return this.queue(() => this.browse(false));
             case 'openFolderDialog':
                 return this.queue(() => this.browse(true));
+            case 'openAzureBrowser':
+                return this.runAzure(() => this.requireAzure().open());
+            case 'azureConnect':
+                return this.runAzure(() => this.requireAzure().connect());
+            case 'azureDisconnect': {
+                const azure = this.requireAzure();
+                azure.disconnect();
+                this.store.update({ azure: azure.snapshot });
+                return;
+            }
+            case 'azureClose': {
+                const azure = this.requireAzure();
+                azure.close();
+                this.store.update({ azure: azure.snapshot });
+                return;
+            }
+            case 'azureRetry':
+                return this.runAzure(() => this.requireAzure().retry());
+            case 'azureSelectTenant':
+                return this.runAzure(() =>
+                    this.requireAzure().selectTenant(request.tenantId),
+                );
+            case 'azureSelectSubscription':
+                return this.runAzure(() =>
+                    this.requireAzure().selectSubscription(request.subscriptionId),
+                );
+            case 'azureSelectAccount':
+                return this.runAzure(() =>
+                    this.requireAzure().selectAccount(request.accountId),
+                );
+            case 'azureOpenEntry':
+                return this.runAzure(() =>
+                    this.requireAzure().openEntry(request.entryId),
+                );
+            case 'azureNavigate':
+                return this.runAzure(() =>
+                    this.requireAzure().navigate(request.depth),
+                );
+            case 'azureLoadMore':
+                return this.runAzure(() => this.requireAzure().loadMore());
+            case 'azureUseSelectedFile':
+                this.useSelectedAzureFile();
+                return;
             case 'analyzeCurrentFile':
                 return this.queue(() => this.analyzeCurrentFile());
             case 'setTableName':
@@ -419,6 +466,64 @@ export class UiController {
     private cancelActive(): void {
         this.tokenSource?.cancel();
         this.tokenSource = undefined;
+        this.azure?.cancel();
+    }
+
+    private requireAzure(): AzureBrowser {
+        if (!this.azure) {
+            throw new Error('Azure browsing is unavailable in this host.');
+        }
+        return this.azure;
+    }
+
+    private async runAzure(operation: () => Promise<unknown>): Promise<void> {
+        const pending = operation();
+        const azure = this.requireAzure();
+        this.store.update({ azure: azure.snapshot, error: null });
+        await pending;
+        this.store.update({ azure: azure.snapshot });
+    }
+
+    private useSelectedAzureFile(): void {
+        const azure = this.requireAzure();
+        const value = azure.selectedUrl();
+        if (!value) {
+            this.store.update({ azure: azure.snapshot });
+            return;
+        }
+        const location = knownStorageLocation(value);
+        const dataSourceType = normalizeDataSourceType(
+            location.dataSourceType,
+            this.store.state.platform,
+        );
+        if (dataSourceType !== location.dataSourceType) {
+            this.store.update({
+                error: 'The selected SQL platform does not support this Azure Storage connector.',
+            });
+            return;
+        }
+        const authMethod = normalizeGuidedAuthMethod(
+            this.store.state.authMethod === 'public'
+                ? null
+                : this.store.state.authMethod,
+            this.store.state.platform,
+            dataSourceType,
+        );
+        azure.close();
+        this.store.update({
+            azure: azure.snapshot,
+            activeTab: 'credential_setup',
+            sourceKind: 'azure',
+            storageUrl: location.storageUrl,
+            dataSourceType,
+            authMethod,
+            error: null,
+            notice:
+                'Azure source location selected. Phase 1 does not download or analyze remote bytes; Credential Setup now uses this URL.',
+        });
+        void this.host.setPreference('activeTab', 'credential_setup');
+        this.refreshQuickAnalyze();
+        this.generateNow();
     }
 
     /** True when *generation* is still the newest request. */
@@ -1027,6 +1132,7 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
+        this.azure?.disconnect();
     }
 }
 

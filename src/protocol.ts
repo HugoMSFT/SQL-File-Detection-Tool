@@ -42,6 +42,7 @@ import type {
     QuickAnalyzeState,
     SourceKind,
 } from './quickAnalyze';
+import type { AzureBrowserState } from './azure/types';
 import {
     GUIDED_AUTH_METHODS,
     type CredentialWizardState,
@@ -107,6 +108,21 @@ export type WebviewRequest =
     | (Base & { readonly type: 'selectFile'; readonly fileId: string })
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
+    | (Base & { readonly type: 'openAzureBrowser' })
+    | (Base & { readonly type: 'azureConnect' })
+    | (Base & { readonly type: 'azureDisconnect' })
+    | (Base & { readonly type: 'azureClose' })
+    | (Base & { readonly type: 'azureRetry' })
+    | (Base & { readonly type: 'azureLoadMore' })
+    | (Base & { readonly type: 'azureUseSelectedFile' })
+    | (Base & { readonly type: 'azureSelectTenant'; readonly tenantId: string })
+    | (Base & {
+          readonly type: 'azureSelectSubscription';
+          readonly subscriptionId: string;
+      })
+    | (Base & { readonly type: 'azureSelectAccount'; readonly accountId: string })
+    | (Base & { readonly type: 'azureOpenEntry'; readonly entryId: string })
+    | (Base & { readonly type: 'azureNavigate'; readonly depth: number })
     | (Base & { readonly type: 'analyzeCurrentFile' })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
@@ -209,6 +225,7 @@ export interface AppStateSnapshot {
     readonly formats: readonly SupportedFormat[];
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
+    readonly azure: AzureBrowserState;
 }
 
 export type HostMessage =
@@ -321,11 +338,40 @@ const BUILDERS: Record<string, Builder> = {
     dismissNotice: () => ({ type: 'dismissNotice' }),
     openFileDialog: () => ({ type: 'openFileDialog' }),
     openFolderDialog: () => ({ type: 'openFolderDialog' }),
+    openAzureBrowser: () => ({ type: 'openAzureBrowser' }),
+    azureConnect: () => ({ type: 'azureConnect' }),
+    azureDisconnect: () => ({ type: 'azureDisconnect' }),
+    azureClose: () => ({ type: 'azureClose' }),
+    azureRetry: () => ({ type: 'azureRetry' }),
+    azureLoadMore: () => ({ type: 'azureLoadMore' }),
+    azureUseSelectedFile: () => ({ type: 'azureUseSelectedFile' }),
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
+    azureSelectTenant: (source) => {
+        const tenantId = text(source, 'tenantId', 128);
+        return tenantId ? { type: 'azureSelectTenant', tenantId } : undefined;
+    },
+    azureSelectSubscription: (source) => {
+        const subscriptionId = text(source, 'subscriptionId', 128);
+        return subscriptionId
+            ? { type: 'azureSelectSubscription', subscriptionId }
+            : undefined;
+    },
+    azureSelectAccount: (source) => {
+        const accountId = text(source, 'accountId', MAX_TEXT_LENGTH);
+        return accountId ? { type: 'azureSelectAccount', accountId } : undefined;
+    },
+    azureOpenEntry: (source) => {
+        const entryId = text(source, 'entryId', 64);
+        return entryId ? { type: 'azureOpenEntry', entryId } : undefined;
+    },
+    azureNavigate: (source) => {
+        const depth = boundedInteger(source, 'depth', 0, 100);
+        return depth === undefined ? undefined : { type: 'azureNavigate', depth };
+    },
     openDocumentation: (source) => {
         const id = member(source, 'id', DOCUMENTATION_IDS);
         return id === undefined ? undefined : { type: 'openDocumentation', id };

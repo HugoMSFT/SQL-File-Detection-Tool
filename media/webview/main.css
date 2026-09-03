@@ -1023,3 +1023,299 @@ body.surface-sidebar .panel-only {
 body.surface-panel [data-action='openInEditor'] {
   display: none;
 }
+
+/* ------------------------------------------------------- Azure browser --- */
+
+.azure-browser {
+  min-height: 460px;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  background: var(--vscode-editor-background);
+}
+
+.azure-state-card {
+  max-width: 650px;
+  margin: 48px auto;
+  padding: 28px;
+  text-align: center;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
+}
+
+.azure-state-card h2 {
+  margin: 8px 0;
+  font-size: 1.15em;
+}
+
+.azure-state-card p {
+  color: var(--vscode-descriptionForeground);
+}
+
+.azure-state-card .btn {
+  margin: 5px 3px 0;
+}
+
+.azure-cloud-mark {
+  margin: auto;
+  font-size: 2.2em;
+  color: var(--vscode-textLink-foreground);
+}
+
+.azure-privacy-copy {
+  font-size: 0.85em;
+}
+
+.azure-identity-bar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+  background: var(--vscode-sideBar-background);
+}
+
+.azure-identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 200px;
+  margin-right: auto;
+}
+
+.azure-identity h2,
+.azure-identity p {
+  margin: 0;
+}
+
+.azure-identity p {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8em;
+}
+
+.azure-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+.azure-identity-field {
+  min-width: 150px;
+}
+
+.azure-identity-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.azure-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
+  min-height: 410px;
+}
+
+.azure-accounts-pane {
+  padding: 12px;
+  border-right: 1px solid var(--vscode-panel-border, transparent);
+  background: var(--vscode-sideBar-background);
+}
+
+.azure-pane-heading,
+.azure-browse-heading,
+.azure-badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.azure-count,
+.azure-badge {
+  padding: 2px 7px;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 10px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.78em;
+}
+
+#azure-account-search,
+#azure-entry-search {
+  width: 100%;
+  margin: 6px 0;
+}
+
+.azure-account-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.azure-account-card {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 9px;
+  text-align: left;
+  color: var(--vscode-foreground);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.azure-account-card:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.azure-account-card[aria-pressed='true'] {
+  color: var(--vscode-list-activeSelectionForeground);
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
+.azure-account-kind,
+.azure-account-meta,
+.azure-entry-meta {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8em;
+}
+
+.azure-account-card[aria-pressed='true'] .azure-account-kind,
+.azure-account-card[aria-pressed='true'] .azure-account-meta {
+  color: inherit;
+}
+
+.azure-browse-pane {
+  min-width: 0;
+  padding: 14px;
+}
+
+.azure-eyebrow {
+  margin: 0 0 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.78em;
+  text-transform: uppercase;
+}
+
+.azure-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0;
+  overflow-x: auto;
+}
+
+.azure-breadcrumb {
+  padding: 1px 3px;
+  color: var(--vscode-textLink-foreground);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.azure-breadcrumb:disabled {
+  color: var(--vscode-foreground);
+  cursor: default;
+}
+
+.azure-breadcrumb-separator {
+  color: var(--vscode-descriptionForeground);
+}
+
+.azure-entry-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+
+.azure-entry-list {
+  display: grid;
+  gap: 2px;
+  max-height: 45vh;
+  overflow: auto;
+  margin-bottom: 8px;
+}
+
+.azure-entry {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 7px 8px;
+  text-align: left;
+  color: var(--vscode-foreground);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.azure-entry:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.azure-entry[aria-pressed='true'] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-inactiveSelectionBackground);
+}
+
+.azure-entry-icon {
+  flex: 0 0 20px;
+  color: var(--vscode-textLink-foreground);
+  text-align: center;
+}
+
+.azure-entry-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.azure-entry-copy strong,
+.azure-entry-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.azure-empty,
+.azure-loading {
+  padding: 16px 8px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+.azure-selection {
+  margin-top: 10px;
+  padding: 10px;
+  border-left: 3px solid var(--vscode-textLink-foreground);
+  background: var(--vscode-sideBar-background);
+}
+
+.azure-selection p {
+  margin: 3px 0 8px;
+  color: var(--vscode-descriptionForeground);
+}
+
+@media (max-width: 760px) {
+  .azure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .azure-accounts-pane {
+    max-height: 230px;
+    overflow: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--vscode-panel-border, transparent);
+  }
+
+  .azure-entry-filters {
+    grid-template-columns: 1fr;
+  }
+}
