@@ -112,9 +112,6 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
         fireAuthenticationSessionsChange: (providerId): void => {
             const event = {
                 provider: { id: providerId, label: providerId },
-                added: [],
-                removed: [],
-                changed: [],
             };
             for (const listener of authenticationSessionListeners) {
                 listener(event);

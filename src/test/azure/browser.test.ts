@@ -154,39 +154,172 @@ test('disconnect prevents an in-flight authentication result from reopening the 
     assert.equal(subject.snapshot.identity, null);
 });
 
-test('authentication changes cancel stale work and silently reset the open browser', async () => {
-    let resolveFirstSession: ((session: AuthenticationSession | undefined) => void) | undefined;
-    const firstSession = new Promise<AuthenticationSession | undefined>((resolve) => {
-        resolveFirstSession = resolve;
+test('provider change before interactive auth resolves does not cancel its session', async () => {
+    let resolveInteractive: ((session: AuthenticationSession) => void) | undefined;
+    let interactiveStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+        interactiveStarted = resolve;
     });
-    let authenticationCalls = 0;
-    let armCalls = 0;
-    class CountingArm extends FakeArm {
+    const pendingInteractive = new Promise<AuthenticationSession>((resolve) => {
+        resolveInteractive = resolve;
+    });
+    let signedIn = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
+            if (options.silent) {
+                return signedIn ? SESSION : undefined;
+            }
+            interactiveStarted?.();
+            const session = await pendingInteractive;
+            signedIn = true;
+            return session;
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+
+    const connecting = subject.connect();
+    await started;
+    const providerChange = subject.authenticationChanged();
+    resolveInteractive?.(SESSION);
+    const [connected] = await Promise.all([connecting, providerChange]);
+
+    assert.equal(connected.phase, 'ready');
+    assert.equal(subject.snapshot.identity?.id, SESSION.account.id);
+    assert.equal(subject.snapshot.accounts[0].id, ACCOUNT_ID);
+});
+
+test('provider change just after interactive auth resolves does not discard its session', async () => {
+    let resolveInteractive: ((session: AuthenticationSession) => void) | undefined;
+    let signedIn = false;
+    let interactiveStarted: (() => void) | undefined;
+    let tenantsStarted: (() => void) | undefined;
+    let releaseTenants: (() => void) | undefined;
+    const authStarted = new Promise<void>((resolve) => {
+        interactiveStarted = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+        tenantsStarted = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+        releaseTenants = resolve;
+    });
+    class BlockingArm extends FakeArm {
         override async listTenants(): Promise<readonly { id: string; label: string }[]> {
-            armCalls += 1;
-            return [];
+            tenantsStarted?.();
+            await release;
+            return super.listTenants();
         }
     }
     const subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
-            authenticationCalls += 1;
-            assert.equal(options.createIfNone, undefined);
-            return authenticationCalls === 1 ? firstSession : undefined;
+            if (options.silent) {
+                return signedIn ? SESSION : undefined;
+            }
+            interactiveStarted?.();
+            return new Promise<AuthenticationSession>((resolve) => {
+                resolveInteractive = (session) => {
+                    signedIn = true;
+                    resolve(session);
+                };
+            });
         }),
-        arm: new CountingArm(),
+        arm: new BlockingArm(),
         storage: new FakeStorage(),
     });
 
-    const opening = subject.open();
-    const refreshing = subject.authenticationChanged();
-    resolveFirstSession?.(SESSION);
-    await Promise.all([opening, refreshing]);
+    const connecting = subject.connect();
+    await authStarted;
+    resolveInteractive?.(SESSION);
+    await started;
+    const providerChange = await subject.authenticationChanged();
+    assert.notEqual(providerChange.phase, 'signedOut');
+    releaseTenants?.();
+    const connected = await connecting;
 
-    assert.equal(authenticationCalls, 2);
-    assert.equal(armCalls, 0, 'the stale session must not start an ARM request');
-    assert.equal(subject.snapshot.open, true);
+    assert.equal(connected.phase, 'ready');
+    assert.equal(subject.snapshot.identity?.id, SESSION.account.id);
+    assert.equal(subject.snapshot.accounts[0].id, ACCOUNT_ID);
+});
+
+test('provider change remains coalesced until all overlapping interactive operations settle', async () => {
+    const interactiveResolvers: Array<(session: AuthenticationSession) => void> = [];
+    let notifyInteractive: (() => void) | undefined;
+    let signedIn = false;
+    const interactiveStarted = (): Promise<void> =>
+        new Promise((resolve) => {
+            notifyInteractive = resolve;
+        });
+    let started = interactiveStarted();
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
+            if (options.silent) {
+                return signedIn ? SESSION : undefined;
+            }
+            return new Promise<AuthenticationSession>((resolve) => {
+                interactiveResolvers.push((session) => {
+                    signedIn = true;
+                    resolve(session);
+                });
+                notifyInteractive?.();
+            });
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+
+    const first = subject.connect();
+    await started;
+    started = interactiveStarted();
+    const second = subject.connect();
+    await started;
+    interactiveResolvers[1](SESSION);
+    await second;
+    assert.equal(subject.snapshot.phase, 'ready');
+
+    const providerChange = await subject.authenticationChanged();
+    assert.equal(providerChange.phase, 'ready');
+    interactiveResolvers[0](SESSION);
+    await first;
+    assert.equal(subject.snapshot.phase, 'ready');
+    assert.equal(subject.snapshot.identity?.id, SESSION.account.id);
+});
+
+test('cancelled authentication from an old browser lifecycle cannot suppress sign-out', async () => {
+    let resolveInteractive: ((session: AuthenticationSession) => void) | undefined;
+    let notifyInteractive: (() => void) | undefined;
+    const interactiveStarted = new Promise<void>((resolve) => {
+        notifyInteractive = resolve;
+    });
+    let available = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
+            if (options.silent) {
+                return available ? SESSION : undefined;
+            }
+            return new Promise<AuthenticationSession>((resolve) => {
+                resolveInteractive = resolve;
+                notifyInteractive?.();
+            });
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+
+    const staleConnect = subject.connect();
+    await interactiveStarted;
+    subject.close();
+    available = true;
+    const reopened = await subject.open();
+    assert.equal(reopened.phase, 'ready');
+    available = false;
+
+    const signedOut = await subject.authenticationChanged();
+    assert.equal(signedOut.phase, 'signedOut');
+    assert.equal(signedOut.identity, null);
+    resolveInteractive?.(SESSION);
+    await staleConnect;
     assert.equal(subject.snapshot.phase, 'signedOut');
-    assert.equal(subject.snapshot.identity, null);
 });
 
 test('authentication revalidation is not pinned to a removed account', async () => {
@@ -206,6 +339,51 @@ test('authentication revalidation is not pinned to a removed account', async () 
     assert.equal(options[beforeRefresh].silent, true);
     assert.equal(refreshed.phase, 'ready');
     assert.equal(refreshed.identity?.id, SESSION.account.id);
+});
+
+test('later external sign-out clears stale Azure identity and resources', async () => {
+    let signedIn = true;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) =>
+            options.silent && signedIn ? SESSION : undefined,
+        ),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    const connected = await subject.connect();
+    assert.equal(connected.accounts[0].id, ACCOUNT_ID);
+    signedIn = false;
+
+    const signedOut = await subject.authenticationChanged();
+
+    assert.equal(signedOut.phase, 'signedOut');
+    assert.equal(signedOut.identity, null);
+    assert.deepEqual(signedOut.tenants, []);
+    assert.deepEqual(signedOut.subscriptions, []);
+    assert.deepEqual(signedOut.accounts, []);
+    assert.deepEqual(signedOut.entries, []);
+    assert.ok(!JSON.stringify(signedOut).includes(SESSION.accessToken));
+});
+
+test('external sign-out clears retained resources after the browser is closed', async () => {
+    let signedIn = true;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) =>
+            options.silent && signedIn ? SESSION : undefined,
+        ),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    await subject.connect();
+    const closed = subject.close();
+    assert.equal(closed.open, false);
+    assert.equal(closed.identity?.id, SESSION.account.id);
+    signedIn = false;
+
+    const cleared = await subject.authenticationChanged();
+    assert.equal(cleared.phase, 'closed');
+    assert.equal(cleared.identity, null);
+    assert.deepEqual(cleared.accounts, []);
 });
 
 test('retry preserves the failed folder location', async () => {

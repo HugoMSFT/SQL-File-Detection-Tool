@@ -78,6 +78,9 @@ export class AzureBrowser {
     private retryOperation: RetryOperation = 'discover';
     private abortController: AbortController | undefined;
     private generation = 0;
+    private readonly interactiveOperations = new Map<number, number>();
+    private interactiveOperationId = 0;
+    private lifecycle = 0;
 
     constructor(private readonly deps: AzureBrowserDeps) {
         this.arm = deps.arm ?? new ArmClient();
@@ -89,6 +92,21 @@ export class AzureBrowser {
     }
 
     async authenticationChanged(): Promise<AzureBrowserState> {
+        // VS Code reports only the provider, not the affected session. A session
+        // created by this operation is authoritative until its full discovery
+        // chain settles; later provider events still revalidate normally.
+        if (
+            this.state.open
+            && [...this.interactiveOperations.values()].some(
+                (operationLifecycle) => operationLifecycle === this.lifecycle,
+            )
+        ) {
+            return this.state;
+        }
+        return this.revalidateAuthentication();
+    }
+
+    private async revalidateAuthentication(): Promise<AzureBrowserState> {
         const wasOpen = this.state.open;
         this.cancel();
         this.account = undefined;
@@ -98,6 +116,7 @@ export class AzureBrowser {
         this.prefix = '';
         this.retryOperation = 'discover';
         if (!wasOpen) {
+            this.state = CLOSED_AZURE_BROWSER_STATE;
             return this.state;
         }
         this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
@@ -112,10 +131,14 @@ export class AzureBrowser {
 
     connect(): Promise<AzureBrowserState> {
         this.retryOperation = 'discover';
-        return this.discover(true);
+        return this.runInteractive(() => this.discover(true));
     }
 
-    async retry(): Promise<AzureBrowserState> {
+    retry(): Promise<AzureBrowserState> {
+        return this.runInteractive(() => this.retryInteractive());
+    }
+
+    private async retryInteractive(): Promise<AzureBrowserState> {
         switch (this.retryOperation) {
             case 'tenant':
                 return this.selectTenant(this.state.selectedTenantId ?? '', true);
@@ -337,12 +360,14 @@ export class AzureBrowser {
     }
 
     close(): AzureBrowserState {
+        this.lifecycle += 1;
         this.cancel();
         this.state = { ...this.state, open: false, phase: 'closed' };
         return this.state;
     }
 
     disconnect(): AzureBrowserState {
+        this.lifecycle += 1;
         this.cancel();
         this.account = undefined;
         this.entryRegistry.clear();
@@ -557,6 +582,18 @@ export class AzureBrowser {
         interactive: boolean,
     ): Promise<AuthenticationSession | undefined> {
         return this.deps.authentication.acquire(scope, tenantId, this.account, interactive);
+    }
+
+    private async runInteractive(
+        action: () => Promise<AzureBrowserState>,
+    ): Promise<AzureBrowserState> {
+        const operationId = ++this.interactiveOperationId;
+        this.interactiveOperations.set(operationId, this.lifecycle);
+        try {
+            return await action();
+        } finally {
+            this.interactiveOperations.delete(operationId);
+        }
     }
 
     private loading(
