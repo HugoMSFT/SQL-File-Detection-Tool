@@ -51,6 +51,12 @@ export interface AzureBrowserDeps {
     readonly storage?: StorageBrowserClient;
 }
 
+interface InteractiveOperation {
+    readonly id: number;
+    readonly lifecycle: number;
+    providerChangePending: boolean;
+}
+
 export function azureStorageUrl(
     account: Pick<AzureStorageAccount, 'name' | 'hns'> &
         Partial<Pick<AzureStorageAccount, 'blobHost' | 'dfsHost'>>,
@@ -78,7 +84,7 @@ export class AzureBrowser {
     private retryOperation: RetryOperation = 'discover';
     private abortController: AbortController | undefined;
     private generation = 0;
-    private readonly interactiveOperations = new Map<number, number>();
+    private interactiveOperation: InteractiveOperation | undefined;
     private interactiveOperationId = 0;
     private lifecycle = 0;
 
@@ -95,12 +101,9 @@ export class AzureBrowser {
         // VS Code reports only the provider, not the affected session. A session
         // created by this operation is authoritative until its full discovery
         // chain settles; later provider events still revalidate normally.
-        if (
-            this.state.open
-            && [...this.interactiveOperations.values()].some(
-                (operationLifecycle) => operationLifecycle === this.lifecycle,
-            )
-        ) {
+        const interactive = this.interactiveOperation;
+        if (this.state.open && interactive?.lifecycle === this.lifecycle) {
+            interactive.providerChangePending = true;
             return this.state;
         }
         return this.revalidateAuthentication();
@@ -108,13 +111,7 @@ export class AzureBrowser {
 
     private async revalidateAuthentication(): Promise<AzureBrowserState> {
         const wasOpen = this.state.open;
-        this.cancel();
-        this.account = undefined;
-        this.entryRegistry.clear();
-        this.continuationToken = undefined;
-        this.container = undefined;
-        this.prefix = '';
-        this.retryOperation = 'discover';
+        this.clearAuthenticationState();
         if (!wasOpen) {
             this.state = CLOSED_AZURE_BROWSER_STATE;
             return this.state;
@@ -361,6 +358,7 @@ export class AzureBrowser {
 
     close(): AzureBrowserState {
         this.lifecycle += 1;
+        this.interactiveOperation = undefined;
         this.cancel();
         this.state = { ...this.state, open: false, phase: 'closed' };
         return this.state;
@@ -368,6 +366,7 @@ export class AzureBrowser {
 
     disconnect(): AzureBrowserState {
         this.lifecycle += 1;
+        this.interactiveOperation = undefined;
         this.cancel();
         this.account = undefined;
         this.entryRegistry.clear();
@@ -587,13 +586,97 @@ export class AzureBrowser {
     private async runInteractive(
         action: () => Promise<AzureBrowserState>,
     ): Promise<AzureBrowserState> {
-        const operationId = ++this.interactiveOperationId;
-        this.interactiveOperations.set(operationId, this.lifecycle);
+        const previous = this.interactiveOperation;
+        const operation: InteractiveOperation = {
+            id: ++this.interactiveOperationId,
+            lifecycle: this.lifecycle,
+            providerChangePending:
+                previous?.lifecycle === this.lifecycle
+                && previous.providerChangePending,
+        };
+        this.interactiveOperation = operation;
         try {
-            return await action();
+            let result = await action();
+            if (this.interactiveOperation?.id === operation.id) {
+                this.interactiveOperation = undefined;
+                if (operation.providerChangePending && operation.lifecycle === this.lifecycle) {
+                    result = await this.reconcileDeferredAuthentication(operation.lifecycle);
+                }
+            }
+            return result;
         } finally {
-            this.interactiveOperations.delete(operationId);
+            if (this.interactiveOperation?.id === operation.id) {
+                this.interactiveOperation = undefined;
+            }
         }
+    }
+
+    private async reconcileDeferredAuthentication(
+        operationLifecycle: number,
+    ): Promise<AzureBrowserState> {
+        const account = this.account;
+        const generation = this.generation;
+        if (!account || !this.state.open || operationLifecycle !== this.lifecycle) {
+            return this.state;
+        }
+        let session: AuthenticationSession | undefined;
+        try {
+            session = await this.deps.authentication.acquire(
+                ARM_SCOPE,
+                undefined,
+                account,
+                false,
+            );
+        } catch {
+            if (
+                generation !== this.generation
+                || operationLifecycle !== this.lifecycle
+                || !this.state.open
+            ) {
+                return this.state;
+            }
+            this.clearAuthenticationState();
+            this.state = {
+                ...CLOSED_AZURE_BROWSER_STATE,
+                open: true,
+                phase: 'signedOut',
+                message: 'The Microsoft session could not be revalidated. Connect again.',
+            };
+            return this.state;
+        }
+        if (
+            generation !== this.generation
+            || operationLifecycle !== this.lifecycle
+            || !this.state.open
+        ) {
+            return this.state;
+        }
+        if (session) {
+            this.account = session.account;
+            this.state = {
+                ...this.state,
+                identity: this.deps.authentication.identity(session),
+            };
+            return this.state;
+        }
+        this.clearAuthenticationState();
+        this.state = {
+            ...CLOSED_AZURE_BROWSER_STATE,
+            open: true,
+            phase: 'signedOut',
+            message: 'The Microsoft session changed. Connect again to browse Azure.',
+        };
+        return this.state;
+    }
+
+    private clearAuthenticationState(): void {
+        this.cancel();
+        this.account = undefined;
+        this.entryRegistry.clear();
+        this.continuationToken = undefined;
+        this.container = undefined;
+        this.prefix = '';
+        this.retryOperation = 'discover';
     }
 
     private loading(

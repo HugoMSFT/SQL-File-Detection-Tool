@@ -242,7 +242,7 @@ test('provider change just after interactive auth resolves does not discard its 
     assert.equal(subject.snapshot.accounts[0].id, ACCOUNT_ID);
 });
 
-test('provider change remains coalesced until all overlapping interactive operations settle', async () => {
+test('superseded unresolved authentication cannot block reconciliation after its winner', async () => {
     const interactiveResolvers: Array<(session: AuthenticationSession) => void> = [];
     let notifyInteractive: (() => void) | undefined;
     let signedIn = false;
@@ -277,12 +277,105 @@ test('provider change remains coalesced until all overlapping interactive operat
     await second;
     assert.equal(subject.snapshot.phase, 'ready');
 
+    signedIn = false;
     const providerChange = await subject.authenticationChanged();
-    assert.equal(providerChange.phase, 'ready');
+    assert.equal(providerChange.phase, 'signedOut');
     interactiveResolvers[0](SESSION);
     await first;
-    assert.equal(subject.snapshot.phase, 'ready');
-    assert.equal(subject.snapshot.identity?.id, SESSION.account.id);
+    assert.equal(subject.snapshot.phase, 'signedOut');
+    assert.equal(subject.snapshot.identity, null);
+});
+
+test('genuine sign-out during ARM discovery is reconciled when the flow settles', async () => {
+    let releaseTenants: (() => void) | undefined;
+    let notifyTenants: (() => void) | undefined;
+    const tenantsStarted = new Promise<void>((resolve) => {
+        notifyTenants = resolve;
+    });
+    const tenantsReleased = new Promise<void>((resolve) => {
+        releaseTenants = resolve;
+    });
+    class BlockingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            notifyTenants?.();
+            await tenantsReleased;
+            return super.listTenants();
+        }
+    }
+    let initialSilent = true;
+    let providerChanged = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            if (!options.silent) {
+                return SESSION;
+            }
+            if (initialSilent && scopes.length === 1 && !options.account) {
+                initialSilent = false;
+                return undefined;
+            }
+            if (providerChanged && scopes.length === 1) {
+                return undefined;
+            }
+            return SESSION;
+        }),
+        arm: new BlockingArm(),
+        storage: new FakeStorage(),
+    });
+
+    const connecting = subject.connect();
+    await tenantsStarted;
+    providerChanged = true;
+    await subject.authenticationChanged();
+    releaseTenants?.();
+    const reconciled = await connecting;
+
+    assert.equal(reconciled.phase, 'signedOut');
+    assert.equal(reconciled.identity, null);
+    assert.deepEqual(reconciled.tenants, []);
+    assert.deepEqual(reconciled.subscriptions, []);
+    assert.deepEqual(reconciled.accounts, []);
+});
+
+test('failed deferred session revalidation clears authenticated resources', async () => {
+    let notifyTenants: (() => void) | undefined;
+    let releaseTenants: (() => void) | undefined;
+    const tenantsStarted = new Promise<void>((resolve) => {
+        notifyTenants = resolve;
+    });
+    const tenantsReleased = new Promise<void>((resolve) => {
+        releaseTenants = resolve;
+    });
+    class BlockingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            notifyTenants?.();
+            await tenantsReleased;
+            return super.listTenants();
+        }
+    }
+    let revalidationFails = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            if (revalidationFails && options.silent && scopes.length === 1) {
+                throw new Error('provider cache failure');
+            }
+            return SESSION;
+        }),
+        arm: new BlockingArm(),
+        storage: new FakeStorage(),
+    });
+
+    const connecting = subject.connect();
+    await tenantsStarted;
+    await subject.authenticationChanged();
+    revalidationFails = true;
+    releaseTenants?.();
+    const reconciled = await connecting;
+
+    assert.equal(reconciled.phase, 'signedOut');
+    assert.equal(reconciled.identity, null);
+    assert.deepEqual(reconciled.tenants, []);
+    assert.deepEqual(reconciled.accounts, []);
+    assert.doesNotMatch(JSON.stringify(reconciled), /provider cache failure|bearer-token/);
 });
 
 test('cancelled authentication from an old browser lifecycle cannot suppress sign-out', async () => {
