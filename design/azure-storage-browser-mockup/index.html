@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta
+        http-equiv="Content-Security-Policy"
+        content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    >
+    <title>Azure Storage browser concept | SQL File Detection Tool</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="../../media/webview/main.css">
+    <link rel="stylesheet" href="./mockup.css">
+    <script src="./mockup.js" defer></script>
+</head>
+<body class="surface-panel">
+    <a class="skip-link" href="#main-content">Skip to Azure Storage browser</a>
+
+    <div class="mockup-shell">
+        <header class="mockup-header app-header">
+            <div class="brand-lockup">
+                <span class="product-mark" aria-hidden="true">SQL</span>
+                <div class="title-copy">
+                    <p class="eyebrow">SQL File Detection Tool</p>
+                    <h1>Browse a file in Azure Storage</h1>
+                    <p>Choose a supported source, then continue into the existing analysis experience.</p>
+                </div>
+            </div>
+            <div class="header-context" aria-label="Prototype context">
+                <span class="header-context-label">Editor tab</span>
+                <span class="header-context-value">Azure Storage browser</span>
+            </div>
+        </header>
+
+        <div class="concept-banner" role="note">
+            <span class="concept-icon" aria-hidden="true">i</span>
+            <div>
+                <strong>Concept mockup — no Azure requests are made</strong>
+                <span>Every identity, subscription, account, folder, and file shown here is sample data.</span>
+            </div>
+        </div>
+
+        <main id="main-content">
+            <section id="signed-out-view" class="signed-out-view" aria-labelledby="connect-heading">
+                <div class="connect-card">
+                    <div class="connect-intro">
+                        <span class="entra-mark" aria-hidden="true">
+                            <span></span><span></span><span></span>
+                        </span>
+                        <div>
+                            <p class="eyebrow">Microsoft Entra ID</p>
+                            <h2 id="connect-heading">Connect to discover your Azure data</h2>
+                            <p>
+                                This concept separates subscription discovery from file access, so you can
+                                understand what would be read before connecting.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="connect-actions">
+                        <button id="connect-button" class="btn primary connect-button" type="button">
+                            <span class="microsoft-mark" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span>
+                            </span>
+                            Connect with Microsoft
+                        </button>
+                        <p class="privacy-copy">
+                            Read-only concept. It would not request write access, store tokens, or upload file data.
+                        </p>
+                        <div id="connect-progress" class="inline-progress" role="status" aria-live="polite" hidden>
+                            <span class="spinner" aria-hidden="true"></span>
+                            Simulating Microsoft Entra sign-in…
+                        </div>
+                    </div>
+
+                    <div class="permission-grid" aria-label="Proposed read permissions">
+                        <article class="permission-card">
+                            <div class="permission-heading">
+                                <span class="step-number" aria-hidden="true">1</span>
+                                <div>
+                                    <span class="scope-badge">Control plane</span>
+                                    <h3>Subscription discovery</h3>
+                                </div>
+                            </div>
+                            <p>
+                                Lists the subscriptions and Azure Storage account metadata visible to the
+                                signed-in identity. This alone does not grant access to containers or blobs.
+                            </p>
+                            <span class="permission-level">Read subscription and resource metadata</span>
+                        </article>
+
+                        <article class="permission-card">
+                            <div class="permission-heading">
+                                <span class="step-number" aria-hidden="true">2</span>
+                                <div>
+                                    <span class="scope-badge data-scope">Data plane</span>
+                                    <h3>File access</h3>
+                                </div>
+                            </div>
+                            <p>
+                                <strong>Storage Blob Data Reader</strong> is assigned separately through Azure
+                                RBAC on an account or container. It permits read-only browsing and file reads,
+                                not uploads, edits, or deletes.
+                            </p>
+                            <span class="permission-level">Read only when the data role is already assigned</span>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="signed-in-view" class="signed-in-view" aria-labelledby="browser-heading" hidden>
+                <header class="identity-bar">
+                    <div class="identity-profile">
+                        <span class="avatar" aria-hidden="true">AM</span>
+                        <div>
+                            <div class="identity-name-row">
+                                <h2>Avery Morgan</h2>
+                                <span class="simulated-badge">Simulated identity</span>
+                            </div>
+                            <p>avery.morgan@fabrikam.example</p>
+                        </div>
+                    </div>
+
+                    <label class="field identity-field" for="tenant-select">
+                        <span>Tenant</span>
+                        <select id="tenant-select" aria-describedby="identity-help"></select>
+                    </label>
+
+                    <label class="field identity-field" for="subscription-select">
+                        <span>Subscription</span>
+                        <select id="subscription-select" aria-describedby="identity-help"></select>
+                    </label>
+
+                    <button id="disconnect-button" class="btn subtle disconnect-button" type="button">
+                        Disconnect
+                    </button>
+                    <p id="identity-help" class="sr-only">
+                        Changing tenant or subscription replaces the mocked storage account list.
+                    </p>
+                </header>
+
+                <section class="demo-controls" aria-labelledby="demo-controls-heading">
+                    <div class="demo-controls-copy">
+                        <span class="lab-icon" aria-hidden="true">◇</span>
+                        <div>
+                            <h2 id="demo-controls-heading">UX state preview</h2>
+                            <p>Switch states to inspect realistic outcomes. These controls never contact Azure.</p>
+                        </div>
+                    </div>
+                    <label class="field demo-state-field" for="demo-state-select">
+                        <span>Browser state</span>
+                        <select id="demo-state-select">
+                            <option value="ready">Ready</option>
+                            <option value="loading">Loading</option>
+                            <option value="empty">Empty search</option>
+                            <option value="denied">Access denied</option>
+                            <option value="error">Retryable error</option>
+                        </select>
+                    </label>
+                    <button id="reset-demo-button" class="btn subtle" type="button">Reset demo</button>
+                </section>
+
+                <div class="browser-layout">
+                    <aside class="account-pane" aria-labelledby="accounts-heading">
+                        <div class="pane-heading">
+                            <div>
+                                <p class="pane-eyebrow">Selected subscription</p>
+                                <h2 id="accounts-heading">Storage accounts</h2>
+                            </div>
+                            <span id="account-count" class="count-badge">0</span>
+                        </div>
+
+                        <label class="search-field" for="account-search">
+                            <span class="sr-only">Search storage accounts</span>
+                            <span class="search-icon" aria-hidden="true"></span>
+                            <input
+                                id="account-search"
+                                type="search"
+                                aria-label="Search storage accounts"
+                                placeholder="Name, resource group, or region"
+                                autocomplete="off"
+                            >
+                            <kbd aria-hidden="true">⌘K</kbd>
+                        </label>
+
+                        <div
+                            id="account-list"
+                            class="account-list"
+                            role="list"
+                            aria-label="Mocked Azure Storage accounts"
+                        ></div>
+                        <div
+                            id="account-empty"
+                            class="side-empty"
+                            role="region"
+                            aria-live="polite"
+                            aria-label="Storage account search status"
+                            hidden
+                        >
+                            <span class="empty-search-icon" aria-hidden="true"></span>
+                            <strong>No storage accounts match</strong>
+                            <span>Try a different name, resource group, or region.</span>
+                            <button id="clear-account-search" class="btn subtle" type="button">Clear search</button>
+                        </div>
+                    </aside>
+
+                    <section class="browse-pane" aria-labelledby="browser-heading">
+                        <div class="browse-header">
+                            <div class="browse-title-row">
+                                <div>
+                                    <p id="account-resource-group" class="pane-eyebrow">Resource group</p>
+                                    <h2 id="browser-heading">Select a storage account</h2>
+                                </div>
+                                <div class="account-tags" aria-label="Selected account properties">
+                                    <span id="account-kind-badge" class="type-badge"></span>
+                                    <span id="account-region-badge" class="region-badge"></span>
+                                </div>
+                            </div>
+
+                            <nav id="breadcrumbs" class="breadcrumbs" aria-label="Storage path"></nav>
+
+                            <div class="browse-toolbar">
+                                <button
+                                    id="back-button"
+                                    class="icon-button"
+                                    type="button"
+                                    aria-label="Go back one level"
+                                    title="Go back one level"
+                                >
+                                    <span aria-hidden="true">←</span>
+                                </button>
+                                <label class="search-field file-search-field" for="file-search">
+                                    <span class="sr-only">Filter this location by file name</span>
+                                    <span class="search-icon" aria-hidden="true"></span>
+                                    <input
+                                        id="file-search"
+                                        type="search"
+                                        aria-label="Filter files by name"
+                                        placeholder="Filter by file name"
+                                        autocomplete="off"
+                                    >
+                                </label>
+                                <label class="format-field" for="format-filter">
+                                    <span class="sr-only">Filter by file format</span>
+                                    <select id="format-filter">
+                                        <option value="all">All supported formats</option>
+                                        <option value="CSV">CSV</option>
+                                        <option value="TSV">TSV</option>
+                                        <option value="JSON">JSON</option>
+                                        <option value="NDJSON">NDJSON</option>
+                                        <option value="Parquet">Parquet</option>
+                                        <option value="ORC">ORC</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="browse-content" class="browse-content">
+                            <div class="column-labels" aria-hidden="true">
+                                <span>Name</span>
+                                <span>Format</span>
+                                <span>Size</span>
+                                <span>Modified</span>
+                            </div>
+                            <div
+                                id="entry-list"
+                                class="entry-list"
+                                role="list"
+                                aria-label="Containers, folders, and supported data files"
+                            ></div>
+                            <div
+                                id="browse-state"
+                                class="browse-state"
+                                role="region"
+                                aria-live="polite"
+                                aria-label="Storage browser status"
+                                hidden
+                            ></div>
+                        </div>
+                    </section>
+
+                    <aside class="details-pane" aria-labelledby="source-details-heading">
+                        <div class="pane-heading details-heading">
+                            <div>
+                                <p class="pane-eyebrow">Next input</p>
+                                <h2 id="source-details-heading">Source details</h2>
+                            </div>
+                            <span class="read-only-badge">Read only</span>
+                        </div>
+
+                        <div id="details-placeholder" class="details-placeholder">
+                            <span class="document-illustration" aria-hidden="true"></span>
+                            <h3>Select a supported data file</h3>
+                            <p>
+                                Its metadata and SQL-friendly Azure location will appear here before you continue.
+                            </p>
+                        </div>
+
+                        <div id="source-details" class="source-details" hidden>
+                            <div class="selected-file-heading">
+                                <span class="selected-file-icon" aria-hidden="true"></span>
+                                <div>
+                                    <span class="selection-label">Selected file</span>
+                                    <h3 id="selected-file-name"></h3>
+                                </div>
+                            </div>
+
+                            <dl class="source-metadata">
+                                <div>
+                                    <dt>Account</dt>
+                                    <dd id="selected-account"></dd>
+                                </div>
+                                <div>
+                                    <dt>Container</dt>
+                                    <dd id="selected-container"></dd>
+                                </div>
+                                <div>
+                                    <dt>Format</dt>
+                                    <dd id="selected-format"></dd>
+                                </div>
+                                <div>
+                                    <dt>Size</dt>
+                                    <dd id="selected-size"></dd>
+                                </div>
+                                <div>
+                                    <dt>Modified</dt>
+                                    <dd id="selected-modified"></dd>
+                                </div>
+                            </dl>
+
+                            <label class="field location-field" for="scheme-select">
+                                <span>Location syntax</span>
+                                <select id="scheme-select"></select>
+                            </label>
+
+                            <div class="location-preview">
+                                <div class="location-heading">
+                                    <span>Safe source location</span>
+                                    <span class="no-secret-badge">No secrets</span>
+                                </div>
+                                <code id="source-location"></code>
+                                <p>
+                                    No SAS parameters, account keys, or credentials are included in this value.
+                                </p>
+                            </div>
+
+                            <button id="use-file-button" class="btn primary use-file-button" type="button">
+                                Use selected file
+                            </button>
+                            <p class="mock-action-note">Mock action only — no file is opened or downloaded.</p>
+
+                            <div id="selection-confirmation" class="selection-confirmation" role="status" hidden>
+                                <span class="success-icon" aria-hidden="true">✓</span>
+                                <div>
+                                    <strong>Selection confirmed for this mockup</strong>
+                                    <span id="confirmation-copy"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mockup-footer">
+            <span>SQL File Detection Tool</span>
+            <span aria-hidden="true">•</span>
+            <span>Local visual prototype</span>
+            <span class="footer-spacer"></span>
+            <span>No tokens, secrets, or network calls</span>
+        </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
