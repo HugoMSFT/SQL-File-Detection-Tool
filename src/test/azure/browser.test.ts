@@ -419,6 +419,105 @@ test('failed deferred session revalidation clears authenticated resources', asyn
     assert.doesNotMatch(JSON.stringify(reconciled), /provider cache failure|bearer-token/);
 });
 
+function blockedDeferredReconciliation() {
+    let notifyTenants: (() => void) | undefined;
+    let releaseTenants: (() => void) | undefined;
+    let notifyRevalidation: (() => void) | undefined;
+    let resolveRevalidation: ((session: AuthenticationSession | undefined) => void) | undefined;
+    const tenantsStarted = new Promise<void>((resolve) => {
+        notifyTenants = resolve;
+    });
+    const tenantsReleased = new Promise<void>((resolve) => {
+        releaseTenants = resolve;
+    });
+    const revalidationStarted = new Promise<void>((resolve) => {
+        notifyRevalidation = resolve;
+    });
+    class BlockingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            notifyTenants?.();
+            await tenantsReleased;
+            return super.listTenants();
+        }
+    }
+    let initialSilent = true;
+    let providerChanged = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            if (!options.silent) {
+                return SESSION;
+            }
+            if (initialSilent && scopes.length === 1 && !options.account) {
+                initialSilent = false;
+                return undefined;
+            }
+            if (providerChanged && scopes.length === 1) {
+                if (!options.account) {
+                    return undefined;
+                }
+                notifyRevalidation?.();
+                return new Promise<AuthenticationSession | undefined>((resolve) => {
+                    resolveRevalidation = resolve;
+                });
+            }
+            return SESSION;
+        }),
+        arm: new BlockingArm(),
+        storage: new FakeStorage(),
+    });
+    return {
+        subject,
+        tenantsStarted,
+        revalidationStarted,
+        markProviderChanged: (): void => {
+            providerChanged = true;
+        },
+        releaseTenants: (): void => releaseTenants?.(),
+        resolveRevalidation: (session?: AuthenticationSession): void =>
+            resolveRevalidation?.(session),
+    };
+}
+
+test('loading supersession transfers blocked deferred reconciliation', async () => {
+    const setup = blockedDeferredReconciliation();
+    const connecting = setup.subject.connect();
+    await setup.tenantsStarted;
+    setup.markProviderChanged();
+    await setup.subject.authenticationChanged();
+    setup.releaseTenants();
+    await setup.revalidationStarted;
+
+    const superseded = await setup.subject.selectSubscription(SUBSCRIPTION);
+    assert.equal(superseded.phase, 'signedOut');
+    assert.equal(superseded.identity, null);
+    setup.resolveRevalidation(undefined);
+    await connecting;
+    assert.equal(setup.subject.snapshot.phase, 'signedOut');
+    assert.deepEqual(setup.subject.snapshot.accounts, []);
+});
+
+test('close during blocked reconciliation clears state across reopen', async () => {
+    const setup = blockedDeferredReconciliation();
+    const connecting = setup.subject.connect();
+    await setup.tenantsStarted;
+    setup.markProviderChanged();
+    await setup.subject.authenticationChanged();
+    setup.releaseTenants();
+    await setup.revalidationStarted;
+
+    const closed = setup.subject.close();
+    assert.equal(closed.phase, 'closed');
+    assert.equal(closed.identity, null);
+    assert.deepEqual(closed.accounts, []);
+    const reopened = await setup.subject.open();
+    assert.equal(reopened.phase, 'signedOut');
+    assert.equal(reopened.identity, null);
+    setup.resolveRevalidation(SESSION);
+    await connecting;
+    assert.equal(setup.subject.snapshot.phase, 'signedOut');
+    assert.equal(setup.subject.snapshot.identity, null);
+});
+
 test('cancelled authentication from an old browser lifecycle cannot suppress sign-out', async () => {
     let resolveInteractive: ((session: AuthenticationSession) => void) | undefined;
     let notifyInteractive: (() => void) | undefined;

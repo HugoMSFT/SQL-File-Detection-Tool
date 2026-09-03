@@ -58,6 +58,11 @@ interface InteractiveOperation {
     providerChangePending: boolean;
 }
 
+interface AuthenticationReconciliation {
+    readonly id: number;
+    readonly lifecycle: number;
+}
+
 export function azureStorageUrl(
     account: Pick<AzureStorageAccount, 'name' | 'hns'> &
         Partial<Pick<AzureStorageAccount, 'blobHost' | 'dfsHost'>>,
@@ -88,6 +93,8 @@ export class AzureBrowser {
     private interactiveOperation: InteractiveOperation | undefined;
     private pendingAuthenticationChangeLifecycle: number | undefined;
     private interactiveOperationId = 0;
+    private authenticationReconciliation: AuthenticationReconciliation | undefined;
+    private authenticationReconciliationId = 0;
     private lifecycle = 0;
 
     constructor(private readonly deps: AzureBrowserDeps) {
@@ -388,10 +395,23 @@ export class AzureBrowser {
     }
 
     close(): AzureBrowserState {
+        const authenticationPending =
+            this.pendingAuthenticationChangeLifecycle === this.lifecycle
+            || this.authenticationReconciliation?.lifecycle === this.lifecycle
+            || (
+                this.interactiveOperation?.lifecycle === this.lifecycle
+                && this.interactiveOperation.providerChangePending
+            );
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
+        this.authenticationReconciliation = undefined;
         this.cancel();
+        if (authenticationPending) {
+            this.dropAuthenticationState();
+            this.state = CLOSED_AZURE_BROWSER_STATE;
+            return this.state;
+        }
         this.state = { ...this.state, open: false, phase: 'closed' };
         return this.state;
     }
@@ -400,6 +420,7 @@ export class AzureBrowser {
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
+        this.authenticationReconciliation = undefined;
         this.cancel();
         this.account = undefined;
         this.entryRegistry.clear();
@@ -421,6 +442,22 @@ export class AzureBrowser {
                 && this.state.open
             ) {
                 this.pendingAuthenticationChangeLifecycle = this.lifecycle;
+            }
+        }
+        const reconciliation = this.authenticationReconciliation;
+        if (reconciliation?.lifecycle === this.lifecycle) {
+            this.authenticationReconciliation = undefined;
+            if (this.state.open) {
+                const owner = this.interactiveOperation;
+                if (
+                    owner
+                    && owner.id === preserveInteractiveOperationId
+                    && owner.lifecycle === this.lifecycle
+                ) {
+                    owner.providerChangePending = true;
+                } else {
+                    this.pendingAuthenticationChangeLifecycle = this.lifecycle;
+                }
             }
         }
         this.abortController?.abort();
@@ -685,6 +722,11 @@ export class AzureBrowser {
         if (!account || !this.state.open || operationLifecycle !== this.lifecycle) {
             return this.state;
         }
+        const reconciliation: AuthenticationReconciliation = {
+            id: ++this.authenticationReconciliationId,
+            lifecycle: operationLifecycle,
+        };
+        this.authenticationReconciliation = reconciliation;
         let session: AuthenticationSession | undefined;
         try {
             session = await this.deps.authentication.acquire(
@@ -698,9 +740,11 @@ export class AzureBrowser {
                 generation !== this.generation
                 || operationLifecycle !== this.lifecycle
                 || !this.state.open
+                || this.authenticationReconciliation?.id !== reconciliation.id
             ) {
                 return this.state;
             }
+            this.authenticationReconciliation = undefined;
             this.clearAuthenticationState();
             this.state = {
                 ...CLOSED_AZURE_BROWSER_STATE,
@@ -714,9 +758,11 @@ export class AzureBrowser {
             generation !== this.generation
             || operationLifecycle !== this.lifecycle
             || !this.state.open
+            || this.authenticationReconciliation?.id !== reconciliation.id
         ) {
             return this.state;
         }
+        this.authenticationReconciliation = undefined;
         if (session) {
             this.account = session.account;
             this.state = {
@@ -737,6 +783,10 @@ export class AzureBrowser {
 
     private clearAuthenticationState(): void {
         this.cancel();
+        this.dropAuthenticationState();
+    }
+
+    private dropAuthenticationState(): void {
         this.account = undefined;
         this.entryRegistry.clear();
         this.continuationToken = undefined;
