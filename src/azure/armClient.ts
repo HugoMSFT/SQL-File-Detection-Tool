@@ -51,10 +51,9 @@ function storageEndpointHost(
     value: unknown,
     accountName: string,
     service: 'blob' | 'dfs',
-): string {
-    const fallback = `${accountName}.${service}.core.windows.net`;
-    if (value === undefined) {
-        return fallback;
+): string | undefined {
+    if (value === undefined || value === null) {
+        return undefined;
     }
     const raw = requiredString(value, `${service} endpoint`);
     let endpoint: URL;
@@ -173,6 +172,20 @@ export class ArmClient {
                 const primaryEndpoints = isRecord(properties.primaryEndpoints)
                     ? properties.primaryEndpoints
                     : {};
+                const kind = optionalString(item.kind) ?? 'Storage account';
+                if (
+                    kind === 'FileStorage'
+                    && (primaryEndpoints.blob === undefined || primaryEndpoints.blob === null)
+                ) {
+                    return undefined;
+                }
+                const blobHost = storageEndpointHost(primaryEndpoints.blob, name, 'blob');
+                if (!blobHost) {
+                    throw new AzureBrowserError(
+                        'invalidResponse',
+                        'Azure returned a Blob-capable Storage account without a Blob endpoint.',
+                    );
+                }
                 const resourceGroupMatch = /\/resourceGroups\/([^/]+)\//i.exec(id);
                 if (!resourceGroupMatch) {
                     throw new AzureBrowserError(
@@ -181,10 +194,20 @@ export class ArmClient {
                     );
                 }
                 const hns = properties.isHnsEnabled;
-                if (hns !== undefined && typeof hns !== 'boolean') {
+                if (hns !== undefined && hns !== null && typeof hns !== 'boolean') {
                     throw new AzureBrowserError(
                         'invalidResponse',
                         'Azure returned an invalid hierarchical namespace value.',
+                    );
+                }
+                const isHnsEnabled = hns === true;
+                const dfsHost = isHnsEnabled
+                    ? storageEndpointHost(primaryEndpoints.dfs, name, 'dfs')
+                    : undefined;
+                if (isHnsEnabled && !dfsHost) {
+                    throw new AzureBrowserError(
+                        'invalidResponse',
+                        'Azure returned an HNS-enabled Storage account without a DFS endpoint.',
                     );
                 }
                 return {
@@ -192,10 +215,10 @@ export class ArmClient {
                     name,
                     resourceGroup: decodeURIComponent(resourceGroupMatch[1]),
                     location: optionalString(item.location) ?? 'Unknown region',
-                    kind: optionalString(item.kind) ?? 'Storage account',
-                    hns: hns === true,
-                    blobHost: storageEndpointHost(primaryEndpoints.blob, name, 'blob'),
-                    dfsHost: storageEndpointHost(primaryEndpoints.dfs, name, 'dfs'),
+                    kind,
+                    hns: isHnsEnabled,
+                    blobHost,
+                    dfsHost: dfsHost ?? null,
                 };
             },
             signal,
@@ -205,10 +228,11 @@ export class ArmClient {
     private async listPaged<T>(
         initialUrl: string,
         accessToken: string,
-        mapItem: (item: Record<string, unknown>) => T,
+        mapItem: (item: Record<string, unknown>) => T | undefined,
         signal?: AbortSignal,
     ): Promise<readonly T[]> {
         const items: T[] = [];
+        let rawItemCount = 0;
         let next: string | undefined = validateManagementUrl(initialUrl);
         for (let page = 0; next && page < MAX_ARM_PAGES; page += 1) {
             const body = await this.request(next, accessToken, signal);
@@ -219,13 +243,17 @@ export class ArmClient {
                 if (!isRecord(raw)) {
                     throw new AzureBrowserError('invalidResponse', 'Azure returned an invalid list item.');
                 }
-                if (items.length >= MAX_ARM_ITEMS) {
+                if (rawItemCount >= MAX_ARM_ITEMS) {
                     throw new AzureBrowserError(
                         'invalidResponse',
                         `Azure returned more than the ${MAX_ARM_ITEMS}-item safety limit.`,
                     );
                 }
-                items.push(mapItem(raw));
+                rawItemCount += 1;
+                const mapped = mapItem(raw);
+                if (mapped !== undefined) {
+                    items.push(mapped);
+                }
             }
             const rawNext = body.nextLink;
             if (rawNext !== undefined && typeof rawNext !== 'string') {

@@ -30,7 +30,7 @@ export interface AzureStorageAccount {
     readonly kind: string;
     readonly hns: boolean;
     readonly blobHost: string;
-    readonly dfsHost: string;
+    readonly dfsHost: string | null;
 }
 
 export type AzureEntryKind = 'container' | 'folder' | 'file';

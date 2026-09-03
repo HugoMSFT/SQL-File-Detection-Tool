@@ -64,7 +64,13 @@ test('ARM maps tenants, subscriptions, and Storage account HNS metadata', async 
                     name: 'lake001',
                     location: 'westus2',
                     kind: 'StorageV2',
-                    properties: { isHnsEnabled: true },
+                    properties: {
+                        isHnsEnabled: true,
+                        primaryEndpoints: {
+                            blob: 'https://lake001.blob.core.windows.net/',
+                            dfs: 'https://lake001.dfs.core.windows.net/',
+                        },
+                    },
                 },
             ],
         });
@@ -134,6 +140,144 @@ test('ARM accepts only authoritative public-cloud standard or DNS-zone endpoints
         hostile.listStorageAccounts('token', '11111111-1111-1111-1111-111111111111'),
         /outside Azure public cloud/,
     );
+});
+
+test('ARM skips inapplicable FileStorage accounts without hiding usable Blob accounts', async () => {
+        const client = new ArmClient(async () =>
+            response(200, {
+                value: [
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/files001',
+                        name: 'files001',
+                        kind: 'FileStorage',
+                        properties: {
+                            isHnsEnabled: null,
+                            primaryEndpoints: {
+                                file: 'https://files001.file.core.windows.net/',
+                                blob: null,
+                                dfs: null,
+                            },
+                        },
+                    },
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/blob001',
+                        name: 'blob001',
+                        kind: 'BlobStorage',
+                        properties: {
+                            isHnsEnabled: false,
+                            primaryEndpoints: {
+                                blob: 'https://blob001.blob.core.windows.net/',
+                                dfs: null,
+                            },
+                        },
+                    },
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/lake001',
+                        name: 'lake001',
+                        kind: 'StorageV2',
+                        properties: {
+                            isHnsEnabled: true,
+                            primaryEndpoints: {
+                                blob: 'https://lake001.blob.core.windows.net/',
+                                dfs: 'https://lake001.dfs.core.windows.net/',
+                            },
+                        },
+                    },
+                ],
+            }),
+        );
+        const accounts = await client.listStorageAccounts(
+            'token',
+            '11111111-1111-1111-1111-111111111111',
+        );
+        assert.deepEqual(accounts.map((account) => account.name), ['blob001', 'lake001']);
+});
+
+test('ARM treats nullable HNS as false and does not require DFS for Blob accounts', async () => {
+        const client = new ArmClient(async () =>
+            response(200, {
+                value: [
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/blob001',
+                        name: 'blob001',
+                        kind: 'StorageV2',
+                        properties: {
+                            isHnsEnabled: null,
+                            primaryEndpoints: {
+                                blob: 'https://blob001.blob.core.windows.net/',
+                                dfs: null,
+                            },
+                        },
+                    },
+                ],
+            }),
+        );
+        const accounts = await client.listStorageAccounts(
+            'token',
+            '11111111-1111-1111-1111-111111111111',
+        );
+        assert.equal(accounts[0].hns, false);
+        assert.equal(accounts[0].blobHost, 'blob001.blob.core.windows.net');
+        assert.equal(accounts[0].dfsHost, null);
+});
+
+test('ARM rejects an HNS-enabled account without a validated DFS endpoint', async () => {
+        const client = new ArmClient(async () =>
+            response(200, {
+                value: [
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/lake001',
+                        name: 'lake001',
+                        kind: 'StorageV2',
+                        properties: {
+                            isHnsEnabled: true,
+                            primaryEndpoints: {
+                                blob: 'https://lake001.blob.core.windows.net/',
+                                dfs: null,
+                            },
+                        },
+                    },
+                ],
+            }),
+        );
+        await assert.rejects(
+            client.listStorageAccounts('token', '11111111-1111-1111-1111-111111111111'),
+            /without a DFS endpoint/,
+        );
+});
+
+test('ARM rejects Blob-capable account data without a validated Blob endpoint', async () => {
+        const client = new ArmClient(async () =>
+            response(200, {
+                value: [
+                    {
+                        id:
+                            '/subscriptions/11111111-1111-1111-1111-111111111111/' +
+                            'resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/blob001',
+                        name: 'blob001',
+                        kind: 'StorageV2',
+                        properties: {
+                            isHnsEnabled: false,
+                            primaryEndpoints: { blob: null },
+                        },
+                    },
+                ],
+            }),
+        );
+        await assert.rejects(
+            client.listStorageAccounts('token', '11111111-1111-1111-1111-111111111111'),
+            /without a Blob endpoint/,
+        );
 });
 
 test('ARM rejects hostile nextLinks, oversized responses, denied access, and page overflow', async () => {
