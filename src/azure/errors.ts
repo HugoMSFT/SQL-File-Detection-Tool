@@ -29,7 +29,7 @@ export function classifyStorageError(error: unknown): AzureBrowserError {
         if (statusCode === 401 || statusCode === 403) {
             return new AzureBrowserError(
                 'dataAccess',
-                'This account is visible, but its containers are not. Storage Blob Data Reader is required on the account or container.',
+                'This account is visible, but its containers are not. Account-level Storage Blob Data Reader is required for Phase 1 browsing.',
                 statusCode,
             );
         }
@@ -46,4 +46,3 @@ export function classifyStorageError(error: unknown): AzureBrowserError {
         'Azure Storage could not list this location. Retry or choose another account.',
     );
 }
-

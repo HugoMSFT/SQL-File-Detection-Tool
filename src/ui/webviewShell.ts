@@ -10,8 +10,7 @@
  * The policy the CSP encodes:
  *
  *   * `default-src 'none'` — nothing loads unless it is explicitly allowed.
- *   * scripts and styles only from the extension's own `cspSource`, and the
- *     script additionally requires the per-render nonce.
+ *   * scripts and styles only from the extension's own `cspSource`.
  *   * no `unsafe-inline`, no `unsafe-eval`, no remote origin, no `connect-src`,
  *     so the renderer cannot make a network request of its own even if a script
  *     injection were somehow achieved.
@@ -22,15 +21,7 @@
  * webview URIs.
  */
 
-import * as crypto from 'crypto';
-
-/** A fresh, unguessable per-render nonce. */
-export function createNonce(): string {
-    return crypto.randomBytes(16).toString('base64').replace(/[^A-Za-z0-9]/g, '');
-}
-
 export interface ShellOptions {
-    readonly nonce: string;
     readonly cspSource: string;
     readonly scriptUri: string;
     readonly styleUri: string;
@@ -40,29 +31,29 @@ export interface ShellOptions {
 }
 
 /** The Content-Security-Policy the webview runs under. */
-export function contentSecurityPolicy(nonce: string, cspSource: string): string {
+export function contentSecurityPolicy(cspSource: string): string {
     return [
         "default-src 'none'",
         `img-src ${cspSource} data:`,
         `style-src ${cspSource}`,
         `font-src ${cspSource}`,
-        `script-src 'nonce-${nonce}'`,
+        `script-src ${cspSource}`,
     ].join('; ');
 }
 
 /**
  * Build the shell document.
  *
- * Only `nonce`, `cspSource` and the two extension-owned URIs are interpolated,
- * and all four are produced by the host rather than by any user input.
+ * Only `cspSource` and extension-owned URIs are interpolated, and all are
+ * produced by the host rather than by any user input.
  */
 export function buildWebviewHtml(options: ShellOptions): string {
-    const { nonce, cspSource, scriptUri, styleUri, surface } = options;
+    const { cspSource, scriptUri, styleUri, surface } = options;
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy(nonce, cspSource)}">
+<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy(cspSource)}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SQL File Detection Tool</title>
 <link rel="stylesheet" href="${styleUri}">
@@ -167,7 +158,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
     </tr>
   </template>
 
-<script nonce="${nonce}" src="${scriptUri}"></script>
+<script src="${scriptUri}"></script>
 </body>
 </html>`;
 }

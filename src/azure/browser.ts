@@ -88,6 +88,22 @@ export class AzureBrowser {
         return this.state;
     }
 
+    async authenticationChanged(): Promise<AzureBrowserState> {
+        const wasOpen = this.state.open;
+        this.cancel();
+        this.account = undefined;
+        this.entryRegistry.clear();
+        this.continuationToken = undefined;
+        this.container = undefined;
+        this.prefix = '';
+        this.retryOperation = 'discover';
+        if (!wasOpen) {
+            return this.state;
+        }
+        this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
+        return this.discover(false);
+    }
+
     async open(): Promise<AzureBrowserState> {
         this.disconnect();
         this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
@@ -247,7 +263,7 @@ export class AzureBrowser {
             if (!session) {
                 throw new AzureBrowserError(
                     'dataAccess',
-                    'Retry to approve the Azure Storage data scope. Storage Blob Data Reader is also required on the account or container.',
+                    'Retry to approve the Azure Storage data scope. Account-level Storage Blob Data Reader is also required for Phase 1 browsing.',
                 );
             }
             const page = await this.storage.listContainers(
@@ -413,7 +429,7 @@ export class AzureBrowser {
             if (!session) {
                 throw new AzureBrowserError(
                     'dataAccess',
-                    'Retry to approve the Azure Storage data scope. Storage Blob Data Reader is also required.',
+                    'Retry to approve the Azure Storage data scope. Account-level Storage Blob Data Reader is also required for Phase 1 browsing.',
                 );
             }
             const page = await this.storage.listBlobs(

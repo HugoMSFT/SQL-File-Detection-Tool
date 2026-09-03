@@ -6,6 +6,7 @@ import {
     STORAGE_SCOPE,
     MicrosoftAuthentication,
     type AuthenticationSession,
+    type SessionOptions,
 } from '../../azure/auth';
 import { ArmClient } from '../../azure/armClient';
 import { AzureBrowser, azureStorageUrl } from '../../azure/browser';
@@ -151,6 +152,60 @@ test('disconnect prevents an in-flight authentication result from reopening the 
     assert.equal(subject.snapshot.phase, 'closed');
     assert.equal(subject.snapshot.open, false);
     assert.equal(subject.snapshot.identity, null);
+});
+
+test('authentication changes cancel stale work and silently reset the open browser', async () => {
+    let resolveFirstSession: ((session: AuthenticationSession | undefined) => void) | undefined;
+    const firstSession = new Promise<AuthenticationSession | undefined>((resolve) => {
+        resolveFirstSession = resolve;
+    });
+    let authenticationCalls = 0;
+    let armCalls = 0;
+    class CountingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            armCalls += 1;
+            return [];
+        }
+    }
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
+            authenticationCalls += 1;
+            assert.equal(options.createIfNone, undefined);
+            return authenticationCalls === 1 ? firstSession : undefined;
+        }),
+        arm: new CountingArm(),
+        storage: new FakeStorage(),
+    });
+
+    const opening = subject.open();
+    const refreshing = subject.authenticationChanged();
+    resolveFirstSession?.(SESSION);
+    await Promise.all([opening, refreshing]);
+
+    assert.equal(authenticationCalls, 2);
+    assert.equal(armCalls, 0, 'the stale session must not start an ARM request');
+    assert.equal(subject.snapshot.open, true);
+    assert.equal(subject.snapshot.phase, 'signedOut');
+    assert.equal(subject.snapshot.identity, null);
+});
+
+test('authentication revalidation is not pinned to a removed account', async () => {
+    const options: SessionOptions[] = [];
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, requested) => {
+            options.push(requested);
+            return SESSION;
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    await subject.connect();
+    const beforeRefresh = options.length;
+    const refreshed = await subject.authenticationChanged();
+    assert.equal(options[beforeRefresh].account, undefined);
+    assert.equal(options[beforeRefresh].silent, true);
+    assert.equal(refreshed.phase, 'ready');
+    assert.equal(refreshed.identity?.id, SESSION.account.id);
 });
 
 test('retry preserves the failed folder location', async () => {

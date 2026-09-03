@@ -138,6 +138,18 @@ export class UiController {
         this.generateNow();
     }
 
+    async authenticationSessionsChanged(): Promise<void> {
+        if (!this.azure || this.disposed) {
+            return;
+        }
+        const refresh = this.azure.authenticationChanged();
+        this.store.update({ azure: this.azure.snapshot });
+        await refresh;
+        if (!this.disposed) {
+            this.store.update({ azure: this.azure.snapshot });
+        }
+    }
+
     // -- message entry point -------------------------------------------------
 
     /**

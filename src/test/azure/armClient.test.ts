@@ -180,6 +180,9 @@ test('ARM stops streaming a response as soon as the byte cap is crossed', async 
         status: 200,
         headers: { get: () => null },
         body: {
+            cancel: async () => {
+                cancelled = true;
+            },
             getReader: () => ({
                 read: async () =>
                     chunks.length > 0
@@ -194,4 +197,58 @@ test('ARM stops streaming a response as soon as the byte cap is crossed', async 
     }));
     await assert.rejects(client.listTenants('secret'), /larger than the safety limit/);
     assert.equal(cancelled, true);
+});
+
+test('ARM aborts response bodies before rejecting early responses', async () => {
+    const cases = [
+        { status: 200, declared: MAX_ARM_RESPONSE_BYTES + 1, message: /larger than/ },
+        { status: 403, declared: 0, message: /access was denied/ },
+        { status: 500, declared: 0, message: /HTTP 500/ },
+    ] as const;
+    for (const item of cases) {
+        let cancelled = false;
+        let requestAborted = false;
+        const client = new ArmClient(async (_url, init) => {
+            init.signal.addEventListener('abort', () => {
+                requestAborted = true;
+            });
+            return {
+                ...response(item.status, {}, { 'content-length': String(item.declared) }),
+                body: {
+                    cancel: async () => {
+                        cancelled = true;
+                    },
+                    getReader: () => ({
+                        read: async () => ({ done: true }),
+                        cancel: async () => undefined,
+                    }),
+                },
+            };
+        });
+        await assert.rejects(client.listTenants('secret'), item.message);
+        assert.equal(cancelled, true, `HTTP ${item.status} body was not cancelled`);
+        assert.equal(requestAborted, true, `HTTP ${item.status} request was not aborted`);
+    }
+});
+
+test('ARM preserves classified errors when response-body cancellation fails', async () => {
+    const client = new ArmClient(async () => ({
+        ...response(403, {}),
+        body: {
+            cancel: async () => {
+                throw new Error('stream already errored');
+            },
+            getReader: () => ({
+                read: async () => ({ done: true }),
+                cancel: async () => undefined,
+            }),
+        },
+    }));
+    await assert.rejects(
+        client.listTenants('secret'),
+        (error: unknown) =>
+            error instanceof AzureBrowserError
+            && error.kind === 'controlAccess'
+            && error.statusCode === 403,
+    );
 });

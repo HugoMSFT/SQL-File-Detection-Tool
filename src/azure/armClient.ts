@@ -12,6 +12,7 @@ interface FetchResponse {
     readonly status: number;
     readonly headers: { get(name: string): string | null };
     readonly body?: {
+        cancel(): Promise<unknown>;
         getReader(): {
             read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
             cancel(): Promise<unknown>;
@@ -264,23 +265,35 @@ export class ArmClient {
             });
             const declared = Number(response.headers.get('content-length'));
             if (Number.isFinite(declared) && declared > MAX_ARM_RESPONSE_BYTES) {
-                throw new AzureBrowserError(
-                    'invalidResponse',
-                    'Azure returned a management response larger than the safety limit.',
+                return this.rejectResponse(
+                    response,
+                    controller,
+                    new AzureBrowserError(
+                        'invalidResponse',
+                        'Azure returned a management response larger than the safety limit.',
+                    ),
                 );
             }
             if (response.status === 401 || response.status === 403) {
-                throw new AzureBrowserError(
-                    'controlAccess',
-                    'Azure management access was denied. Reader access is required to list subscriptions and Storage accounts.',
-                    response.status,
+                return this.rejectResponse(
+                    response,
+                    controller,
+                    new AzureBrowserError(
+                        'controlAccess',
+                        'Azure management access was denied. Reader access is required to list subscriptions and Storage accounts.',
+                        response.status,
+                    ),
                 );
             }
             if (!response.ok) {
-                throw new AzureBrowserError(
-                    'temporary',
-                    `Azure management returned HTTP ${response.status}. Retry the request.`,
-                    response.status,
+                return this.rejectResponse(
+                    response,
+                    controller,
+                    new AzureBrowserError(
+                        'temporary',
+                        `Azure management returned HTTP ${response.status}. Retry the request.`,
+                        response.status,
+                    ),
                 );
             }
             const bytes = await this.readBoundedBody(response, controller);
@@ -311,6 +324,22 @@ export class ArmClient {
         }
     }
 
+    private async rejectResponse(
+        response: FetchResponse,
+        controller: AbortController,
+        error: AzureBrowserError,
+    ): Promise<never> {
+        if (response.body) {
+            try {
+                await response.body.cancel();
+            } catch {
+                // Cleanup failures must not replace the classified service error.
+            }
+        }
+        controller.abort();
+        throw error;
+    }
+
     private async readBoundedBody(
         response: FetchResponse,
         controller: AbortController,
@@ -336,8 +365,12 @@ export class ArmClient {
             }
             total += chunk.value.byteLength;
             if (total > MAX_ARM_RESPONSE_BYTES) {
+                try {
+                    await reader.cancel();
+                } catch {
+                    // Cleanup failures must not replace the response-size error.
+                }
                 controller.abort();
-                await reader.cancel();
                 throw new AzureBrowserError(
                     'invalidResponse',
                     'Azure returned a management response larger than the safety limit.',

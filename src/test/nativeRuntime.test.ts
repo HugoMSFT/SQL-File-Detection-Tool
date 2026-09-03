@@ -301,6 +301,24 @@ test('activation registers the native view and never touches a backend', async (
                 'the editor panel replaces the primary sidebar',
             );
 
+            await panel.receive({ type: 'openAzureBrowser' });
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.equal(mock.state.authenticationSessionCalls.length, 1);
+            mock.state.fireAuthenticationSessionsChange('github');
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.equal(
+                mock.state.authenticationSessionCalls.length,
+                1,
+                'non-Microsoft authentication changes are ignored',
+            );
+            mock.state.fireAuthenticationSessionsChange('microsoft');
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.equal(
+                mock.state.authenticationSessionCalls.length,
+                2,
+                'Microsoft authentication changes silently revalidate the open browser',
+            );
+
             // A real analysis, driven the way a user would drive it, still with
             // child_process sabotaged.
             mock.state.activeEditorPath = path.join(
@@ -344,6 +362,13 @@ test('activation registers the native view and never touches a backend', async (
             assert.ok(serialised.includes('employees.csv'), 'the analysis reached the renderer');
 
             extension.deactivate();
+            mock.state.fireAuthenticationSessionsChange('microsoft');
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.equal(
+                mock.state.authenticationSessionCalls.length,
+                2,
+                'the Microsoft session listener is disposed during deactivation',
+            );
         } finally {
             Module._load = load;
         }

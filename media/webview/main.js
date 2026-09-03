@@ -983,7 +983,7 @@
                 element(
                     'p',
                     'azure-privacy-copy',
-                    'Subscription Reader access lists accounts; Storage Blob Data Reader separately permits container and blob browsing.',
+                    'Subscription Reader access lists accounts; account-level Storage Blob Data Reader is required for Phase 1 container and blob browsing.',
                 ),
             );
             signedOut.appendChild(actionButton('Back', 'azureClose', 'btn subtle'));

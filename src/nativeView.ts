@@ -22,7 +22,7 @@ import * as vscode from 'vscode';
 import { AppStateStore } from './appState';
 import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
-import { buildWebviewHtml, createNonce } from './ui/webviewShell';
+import { buildWebviewHtml } from './ui/webviewShell';
 import { redact } from './util';
 import { MicrosoftAuthentication } from './azure/auth';
 import { AzureBrowser } from './azure/browser';
@@ -65,7 +65,6 @@ function renderHtml(
 ): string {
     const media = vscode.Uri.joinPath(extensionUri, 'media', 'webview');
     return buildWebviewHtml({
-        nonce: createNonce(),
         cspSource: webview.cspSource,
         scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'main.js')).toString(),
         styleUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'main.css')).toString(),
@@ -294,6 +293,11 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
         this.disposables.push(
             vscode.workspace.onDidChangeWorkspaceFolders(() => {
                 this.controller.refreshWorkspace();
+            }),
+            vscode.authentication.onDidChangeSessions((event) => {
+                if (event.provider.id === 'microsoft') {
+                    void this.controller.authenticationSessionsChanged();
+                }
             }),
         );
     }

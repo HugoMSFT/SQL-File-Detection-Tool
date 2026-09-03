@@ -1,10 +1,11 @@
 import { BlobServiceClient } from '@azure/storage-blob';
 
 import type { AuthenticationSession } from './auth';
-import { classifyStorageError } from './errors';
+import { AzureBrowserError, classifyStorageError } from './errors';
 
 export const STORAGE_PAGE_SIZE = 100;
 export const MAX_STORAGE_ITEMS = 1_000;
+export const STORAGE_TIMEOUT_MS = 15_000;
 
 export interface StorageContainerItem {
     readonly kind: 'container';
@@ -50,7 +51,43 @@ function serviceClient(blobHost: string, session: AuthenticationSession): BlobSe
     );
 }
 
+export async function runStorageRequest<T>(
+    callerSignal: AbortSignal | undefined,
+    timeoutMs: number,
+    operation: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+    const controller = new AbortController();
+    let rejectCancellation: ((error: AzureBrowserError) => void) | undefined;
+    const cancellation = new Promise<never>((_resolve, reject) => {
+        rejectCancellation = reject;
+    });
+    const cancel = (message: string): void => {
+        controller.abort();
+        rejectCancellation?.(new AzureBrowserError('temporary', message));
+    };
+    const cancelFromCaller = (): void => {
+        cancel('The Azure Storage request was cancelled.');
+    };
+    if (callerSignal?.aborted) {
+        cancelFromCaller();
+    } else {
+        callerSignal?.addEventListener('abort', cancelFromCaller, { once: true });
+    }
+    const timer = setTimeout(
+        () => cancel('The Azure Storage request timed out. Retry the request.'),
+        timeoutMs,
+    );
+    try {
+        return await Promise.race([operation(controller.signal), cancellation]);
+    } finally {
+        clearTimeout(timer);
+        callerSignal?.removeEventListener('abort', cancelFromCaller);
+    }
+}
+
 export class StorageBrowserClient {
+    constructor(private readonly timeoutMs = STORAGE_TIMEOUT_MS) {}
+
     async listContainers(
         blobHost: string,
         session: AuthenticationSession,
@@ -58,10 +95,16 @@ export class StorageBrowserClient {
         abortSignal?: AbortSignal,
     ): Promise<StoragePage> {
         try {
-            const iterator = serviceClient(blobHost, session)
-                .listContainers({ abortSignal })
-                .byPage({ continuationToken, maxPageSize: STORAGE_PAGE_SIZE });
-            const result = await iterator.next();
+            const result = await runStorageRequest(
+                abortSignal,
+                this.timeoutMs,
+                async (requestSignal) => {
+                    const iterator = serviceClient(blobHost, session)
+                        .listContainers({ abortSignal: requestSignal })
+                        .byPage({ continuationToken, maxPageSize: STORAGE_PAGE_SIZE });
+                    return iterator.next();
+                },
+            );
             if (result.done || !result.value) {
                 return { items: [], continuationToken: undefined };
             }
@@ -87,11 +130,17 @@ export class StorageBrowserClient {
         abortSignal?: AbortSignal,
     ): Promise<StoragePage> {
         try {
-            const iterator = serviceClient(blobHost, session)
-                .getContainerClient(containerName)
-                .listBlobsByHierarchy('/', { prefix, abortSignal })
-                .byPage({ continuationToken, maxPageSize: STORAGE_PAGE_SIZE });
-            const result = await iterator.next();
+            const result = await runStorageRequest(
+                abortSignal,
+                this.timeoutMs,
+                async (requestSignal) => {
+                    const iterator = serviceClient(blobHost, session)
+                        .getContainerClient(containerName)
+                        .listBlobsByHierarchy('/', { prefix, abortSignal: requestSignal })
+                        .byPage({ continuationToken, maxPageSize: STORAGE_PAGE_SIZE });
+                    return iterator.next();
+                },
+            );
             if (result.done || !result.value) {
                 return { items: [], continuationToken: undefined };
             }

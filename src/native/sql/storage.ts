@@ -414,7 +414,10 @@ export function azureBulkStorageParts(
     fileName: string,
 ): [string, string] {
     const [account, container, relativePath] = parseAzureStorageUrl(storageUrl, fileName);
-    const blobHost = account.replace(/\.dfs\.(core\.[^.]+\.[^.]+)$/i, '.blob.$1');
+    const blobHost = account.replace(
+        /\.dfs\.(core\.[^.]+\.[^.]+|storage\.azure\.net)$/i,
+        '.blob.$1',
+    );
     return [`https://${blobHost}/${container}`, relativePath];
 }
 

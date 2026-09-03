@@ -52,7 +52,7 @@ export class MicrosoftAuthentication {
                 detail:
                     resourceScope === ARM_SCOPE
                         ? 'Read Azure tenants, subscriptions, and Storage account metadata.'
-                        : 'Read containers and blobs you already have permission to access.',
+                        : 'Read containers and blobs in accounts where you have account-level data access.',
             },
             ...(account ? { account } : {}),
         });
@@ -62,4 +62,3 @@ export class MicrosoftAuthentication {
         return { id: session.account.id, label: session.account.label };
     }
 }
-

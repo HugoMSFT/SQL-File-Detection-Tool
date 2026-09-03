@@ -8,6 +8,7 @@ import {
     PLATFORMS,
 } from '../../native/sql/typeMapping';
 import {
+    azureBulkStorageParts,
     storageUrlSupportedByPlatform,
 } from '../../native/sql/storage';
 import type {
@@ -120,6 +121,29 @@ const LOCATIONS: ReadonlyArray<{
         storageUrl: 'abs://raw@acct.blob.core.windows.net.attacker.example/orders',
     },
 ];
+
+test('DNS-zone ADLS URLs generate Blob endpoints for BLOB_STORAGE SQL', () => {
+    const storageUrl =
+        'abfss://raw@lake001.z19.dfs.storage.azure.net/landing/orders.csv';
+    assert.deepEqual(azureBulkStorageParts(storageUrl, 'orders.csv'), [
+        'https://lake001.z19.blob.storage.azure.net/raw',
+        'landing/orders.csv',
+    ]);
+    const statements = generateAllStatements(metadata('csv', 'orders.csv'), {
+        targetPlatform: 'sql_server_2022',
+        storageUrl,
+        dataSource: 'AuditDS',
+        credentialName: 'AuditCredential',
+    });
+    assert.match(
+        statements.credential_setup,
+        /LOCATION = 'https:\/\/lake001\.z19\.blob\.storage\.azure\.net\/raw'/,
+    );
+    assert.doesNotMatch(
+        statements.credential_setup,
+        /LOCATION = 'https:\/\/lake001\.z19\.dfs\.storage\.azure\.net\/raw'/,
+    );
+});
 
 function shouldSupport(platform: TargetPlatform, storageUrl: string | null): boolean {
     return storageUrlSupportedByPlatform(storageUrl, platform);
