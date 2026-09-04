@@ -440,11 +440,11 @@
    "schema": [
     [
      "sku",
-     "str"
+     "object"
     ],
     [
      "description",
-     "str"
+     "object"
     ],
     [
      "on_hand",
@@ -460,7 +460,7 @@
     ],
     [
      "last_counted",
-     "datetime64[us]"
+     "datetime64[ns]"
     ]
    ],
    "schema_inference": "sampled",
@@ -38162,7 +38162,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38322,7 +38322,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38395,7 +38395,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38555,7 +38555,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38628,7 +38628,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38788,7 +38788,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -38863,7 +38863,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39063,7 +39063,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39261,7 +39261,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39421,7 +39421,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39494,7 +39494,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39654,7 +39654,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39727,7 +39727,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39887,7 +39887,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -39962,7 +39962,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40162,7 +40162,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40362,7 +40362,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40562,7 +40562,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40738,7 +40738,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ],
      [
       "[sku]",
@@ -40762,7 +40762,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40817,7 +40817,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -40977,7 +40977,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41024,7 +41024,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ],
      [
       "[sku]",
@@ -41048,7 +41048,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41103,7 +41103,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41263,7 +41263,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41334,7 +41334,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41537,7 +41537,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41741,7 +41741,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41904,7 +41904,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -41978,7 +41978,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42182,7 +42182,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42391,7 +42391,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42595,7 +42595,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42755,7 +42755,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42828,7 +42828,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -42988,7 +42988,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43061,7 +43061,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43259,7 +43259,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43457,7 +43457,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43617,7 +43617,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43686,7 +43686,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43846,7 +43846,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -43919,7 +43919,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -44079,7 +44079,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -44152,7 +44152,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -44350,7 +44350,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -44548,7 +44548,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
@@ -44708,7 +44708,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(6)"
+      "DATETIME2(7)"
      ]
     ],
     "go_batches": 0,
