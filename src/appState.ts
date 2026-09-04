@@ -42,7 +42,6 @@ import {
     credentialWizardState,
     normalizeDataSourceType,
 } from './native';
-import { CLOSED_AZURE_BROWSER_STATE } from './azure/types';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -128,7 +127,6 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         limitation: null,
         formats: options.formats ?? [],
         lastAnalysisMs: null,
-        azure: CLOSED_AZURE_BROWSER_STATE,
     };
 }
 

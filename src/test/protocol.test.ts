@@ -33,6 +33,8 @@ test('unknown message types are dropped', () => {
         'spawn',
         'setupBackend',
         'setDataSourceType',
+        'azureConnect',
+        'azureDisconnect',
         'azureListSubscriptions',
         'azureListAccounts',
         'azureSetAccount',
@@ -155,41 +157,6 @@ test('enumerated fields accept only their own members', () => {
             type: 'openDocumentation',
             id: 'https://example.com/steal',
         }),
-        undefined,
-    );
-});
-
-test('Azure browser requests accept only bounded opaque selections', () => {
-    for (const type of [
-        'openAzureBrowser',
-        'azureConnect',
-        'azureDisconnect',
-        'azureClose',
-        'azureRetry',
-        'azureLoadMore',
-        'azureUseSelectedFile',
-    ]) {
-        assert.deepEqual(parseWebviewRequest({ type }), { type });
-    }
-    assert.deepEqual(
-        parseWebviewRequest({ type: 'azureSelectTenant', tenantId: 'tenant-1', token: 'secret' }),
-        { type: 'azureSelectTenant', tenantId: 'tenant-1' },
-    );
-    assert.deepEqual(
-        parseWebviewRequest({ type: 'azureSelectSubscription', subscriptionId: 'sub-1' }),
-        { type: 'azureSelectSubscription', subscriptionId: 'sub-1' },
-    );
-    assert.deepEqual(
-        parseWebviewRequest({ type: 'azureOpenEntry', entryId: 'opaque-entry' }),
-        { type: 'azureOpenEntry', entryId: 'opaque-entry' },
-    );
-    assert.deepEqual(parseWebviewRequest({ type: 'azureNavigate', depth: 2 }), {
-        type: 'azureNavigate',
-        depth: 2,
-    });
-    assert.equal(parseWebviewRequest({ type: 'azureNavigate', depth: -1 }), undefined);
-    assert.equal(
-        parseWebviewRequest({ type: 'azureSelectAccount', accountId: 'x'.repeat(2049) }),
         undefined,
     );
 });

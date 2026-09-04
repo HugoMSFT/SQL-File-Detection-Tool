@@ -77,15 +77,14 @@ test('activation is scoped to the Activity Bar view, never to startup', () => {
     assert.deepEqual(manifest.activationEvents, ['onView:sqlFileDetectionTool.sidebar']);
 });
 
-test('runtime dependencies are the native readers and official Azure Blob SDK', () => {
+test('runtime dependencies are the four the native core needs', () => {
     assert.deepEqual(Object.keys(manifest.dependencies).sort(), [
-        '@azure/storage-blob',
         'chardet',
         'fflate',
         'hyparquet',
         'iconv-lite',
     ]);
-    assert.ok(!Object.keys(manifest.devDependencies).some((name) => name === '@azure/storage-blob'));
+    assert.ok(!Object.keys(manifest.devDependencies).some((name) => name.startsWith('@azure/')));
 });
 
 test('.vscodeignore excludes everything and then allows the payload back', () => {

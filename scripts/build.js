@@ -39,18 +39,11 @@ function verifyBundle() {
     // A surviving bare `require("hyparquet")` would mean the ESM-only package
     // was left external and the extension would throw ERR_REQUIRE_ESM on first
     // Parquet analysis.
-    for (const bare of [
-        '@azure/storage-blob',
-        'hyparquet',
-        'chardet',
-        'iconv-lite',
-        'fflate',
-    ]) {
+    for (const bare of ['hyparquet', 'chardet', 'iconv-lite', 'fflate']) {
         const pattern = new RegExp(`require\\((["'])${bare.replace('/', '\\/')}\\1\\)`);
         if (pattern.test(code)) {
             problems.push(`${bare} was not bundled`);
         }
-
     }
     if (!/require\((["'])vscode\1\)/.test(code)) {
         problems.push('the vscode module should stay external');
@@ -65,30 +58,6 @@ function verifyBundle() {
         throw new Error(`bundle verification failed: ${problems.join('; ')}`);
     }
     return Buffer.byteLength(code);
-}
-
-/**
- * The official Blob SDK carries Azurite's well-known public development
- * connection string in its Node bundle. This extension never accepts connection
- * strings and only constructs TokenCredential clients, so remove that dormant
- * emulator fixture from the artifact rather than shipping account-key-shaped
- * text that would weaken the credential audit.
- */
-function removeAzuriteDevelopmentCredential() {
-    const code = fs.readFileSync(outfile, 'utf8');
-    const pattern =
-        /DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=[A-Za-z0-9+/=]{20,};BlobEndpoint=http:\/\/127\.0\.0\.1:10000\/devstoreaccount1;/g;
-    const matches = code.match(pattern) ?? [];
-    if (matches.length !== 1) {
-        throw new Error(
-            `expected one bundled Azurite development credential, found ${matches.length}`,
-        );
-    }
-    fs.writeFileSync(
-        outfile,
-        code.replace(pattern, 'DevelopmentStorageCredentialRemoved=true'),
-        'utf8',
-    );
 }
 
 const options = {
@@ -126,7 +95,6 @@ async function main() {
         return;
     }
     await esbuild.build(options);
-    removeAzuriteDevelopmentCredential();
     const bytes = verifyBundle();
     // eslint-disable-next-line no-console
     console.log(`bundled ${path.relative(repoRoot, outfile)} (${(bytes / 1024).toFixed(1)} KiB)`);
@@ -135,7 +103,7 @@ async function main() {
 // Exported so `scripts/generate-notices.js` measures the dependency graph of
 // the bundle that actually ships, rather than re-declaring the options and
 // silently diverging from them.
-module.exports = { options, outfile, repoRoot, verifyBundle, removeAzuriteDevelopmentCredential };
+module.exports = { options, outfile, repoRoot, verifyBundle };
 
 if (require.main === module) {
     main().catch((error) => {

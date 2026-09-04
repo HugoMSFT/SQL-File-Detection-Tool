@@ -2,8 +2,9 @@
  * Tests for the webview document shell and the bundled renderer assets.
  *
  * The shell is the security envelope for everything the user sees, so the CSP,
- * the extension-only script origin and the absence of any inline or remote
- * execution path are asserted directly.
+ * the nonce and the absence of any inline or remote execution path are asserted
+ * directly, and the bundled script is scanned for the APIs it has promised not
+ * to use.
  */
 
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { buildWebviewHtml, contentSecurityPolicy } from '../ui/webviewShell';
+import { buildWebviewHtml, contentSecurityPolicy, createNonce } from '../ui/webviewShell';
 
 const mediaDir = path.join(__dirname, '..', '..', 'media', 'webview');
 const script = fs.readFileSync(path.join(mediaDir, 'main.js'), 'utf8');
@@ -29,6 +30,7 @@ const scriptCode = script
 
 function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     return buildWebviewHtml({
+        nonce: 'TESTNONCE123',
         cspSource: 'vscode-webview://abc',
         scriptUri: 'vscode-webview://abc/media/webview/main.js',
         styleUri: 'vscode-webview://abc/media/webview/main.css',
@@ -36,10 +38,21 @@ function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     });
 }
 
+test('nonces are random, long enough and alphanumeric', () => {
+    const seen = new Set<string>();
+    for (let index = 0; index < 200; index += 1) {
+        const nonce = createNonce();
+        assert.match(nonce, /^[A-Za-z0-9]+$/);
+        assert.ok(nonce.length >= 16, `nonce too short: ${nonce}`);
+        assert.ok(!seen.has(nonce), 'nonces must not repeat');
+        seen.add(nonce);
+    }
+});
+
 test('the CSP denies everything by default and allows no inline or remote code', () => {
-    const policy = contentSecurityPolicy('vscode-webview://abc');
+    const policy = contentSecurityPolicy('N0NCE', 'vscode-webview://abc');
     assert.match(policy, /default-src 'none'/);
-    assert.match(policy, /script-src vscode-webview:\/\/abc/);
+    assert.match(policy, /script-src 'nonce-N0NCE'/);
     assert.match(policy, /style-src vscode-webview:\/\/abc/);
     assert.ok(!policy.includes('unsafe-inline'));
     assert.ok(!policy.includes('unsafe-eval'));
@@ -52,13 +65,13 @@ test('the CSP denies everything by default and allows no inline or remote code',
     );
 });
 
-test('the document carries the CSP and permits only its local script', () => {
+test('the document carries the CSP and the nonce on its only script', () => {
     const html = render();
     assert.match(html, /<meta http-equiv="Content-Security-Policy"/);
-    assert.match(html, /script-src vscode-webview:\/\/abc/);
+    assert.match(html, /script-src 'nonce-TESTNONCE123'/);
     const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]);
     assert.equal(scripts.length, 1, 'exactly one script tag');
-    assert.doesNotMatch(scripts[0], /nonce=/);
+    assert.match(scripts[0], /nonce="TESTNONCE123"/);
     assert.match(scripts[0], /src="vscode-webview:\/\/abc\/media\/webview\/main\.js"/);
 });
 
@@ -115,7 +128,6 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     for (const action of [
         'openFileDialog',
         'openFolderDialog',
-        'openAzureBrowser',
         'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
@@ -128,12 +140,7 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
             `${action} is not reachable`,
         );
     }
-    assert.match(script, /Connect with Microsoft/);
-    assert.match(script, /account-level Storage Blob Data Reader/);
-    assert.doesNotMatch(script, /Storage Blob Data Reader[^.]*account or container/i);
-    assert.match(script, /Phase 1 does not download or analyze/);
-    assert.match(script, /azure\.phase === 'error' && !selectedAccount/);
-    assert.doesNotMatch(script, /azureAnalyzeBlob/);
+    assert.doesNotMatch(script, /azureConnect|azureList|azureSetAccount|azureAnalyzeBlob/);
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {

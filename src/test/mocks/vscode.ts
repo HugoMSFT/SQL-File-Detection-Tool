@@ -45,11 +45,9 @@ export interface MockState {
     readonly secrets: Map<string, string>;
     readonly globalState: Map<string, unknown>;
     readonly workspaceState: Map<string, unknown>;
-    readonly authenticationSessionCalls: unknown[];
     activeEditorPath: string | undefined;
     workspaceRoot: string | undefined;
     makeView(): MockView;
-    fireAuthenticationSessionsChange(providerId: string): void;
 }
 
 function disposable(): { dispose(): void } {
@@ -92,8 +90,6 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
     const secrets = new Map<string, string>();
     const globalState = new Map<string, unknown>();
     const workspaceState = new Map<string, unknown>();
-    const authenticationSessionCalls: unknown[] = [];
-    const authenticationSessionListeners = new Set<(event: unknown) => void>();
     const storage = path.join(os.tmpdir(), `sqlfdt-mock-${process.pid}`);
     const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
@@ -106,17 +102,8 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
         secrets,
         globalState,
         workspaceState,
-        authenticationSessionCalls,
         activeEditorPath: undefined,
         workspaceRoot: undefined,
-        fireAuthenticationSessionsChange: (providerId): void => {
-            const event = {
-                provider: { id: providerId, label: providerId },
-            };
-            for (const listener of authenticationSessionListeners) {
-                listener(event);
-            }
-        },
         context: {
             subscriptions: [] as Array<{ dispose(): void }>,
             extensionUri: MockUri.file(repoRoot),
@@ -334,18 +321,8 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
             },
         },
         authentication: {
-            getSession: async (...args: unknown[]): Promise<undefined> => {
-                authenticationSessionCalls.push(args);
-                return undefined;
-            },
-            onDidChangeSessions: (listener: (event: unknown) => void) => {
-                authenticationSessionListeners.add(listener);
-                return {
-                    dispose: (): void => {
-                        authenticationSessionListeners.delete(listener);
-                    },
-                };
-            },
+            getSession: async (): Promise<undefined> => undefined,
+            onDidChangeSessions: () => disposable(),
         },
         CancellationTokenSource: class {
             readonly token = {
