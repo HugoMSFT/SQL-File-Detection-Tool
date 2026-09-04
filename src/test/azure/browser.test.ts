@@ -478,7 +478,47 @@ function blockedDeferredReconciliation() {
     };
 }
 
-test('loading supersession transfers blocked deferred reconciliation', async () => {
+test('granting a scope keeps the selection instead of resetting to the root', async () => {
+    // Granting the Storage scope creates a session, so VS Code fires a provider
+    // change caused by this very operation. Reconciling it must not throw away
+    // the account and container the user just reached.
+    let storageGranted = false;
+    let providerChange: Promise<unknown> | undefined;
+    const holder: { subject?: AzureBrowser } = {};
+    holder.subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            if (scopes.includes(STORAGE_SCOPE)) {
+                if (!storageGranted) {
+                    if (options.silent) {
+                        return undefined;
+                    }
+                    storageGranted = true;
+                    providerChange = holder.subject?.authenticationChanged();
+                    return SESSION;
+                }
+                return SESSION;
+            }
+            return SESSION;
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    const subject = holder.subject;
+
+    await subject.connect();
+    const denied = await subject.selectAccount(ACCOUNT_ID);
+    assert.equal(denied.phase, 'error');
+
+    const granted = await subject.retry();
+    await providerChange;
+
+    assert.equal(granted.phase, 'ready');
+    assert.equal(granted.selectedAccountId, ACCOUNT_ID);
+    assert.equal(granted.identity?.id, SESSION.account.id);
+    assert.ok(granted.entries.length > 0);
+});
+
+test('a deferred provider change survives being superseded mid-proof', async () => {
     const setup = blockedDeferredReconciliation();
     const connecting = setup.subject.connect();
     await setup.tenantsStarted;
@@ -487,13 +527,17 @@ test('loading supersession transfers blocked deferred reconciliation', async () 
     setup.releaseTenants();
     await setup.revalidationStarted;
 
-    const superseded = await setup.subject.selectSubscription(SUBSCRIPTION);
-    assert.equal(superseded.phase, 'signedOut');
-    assert.equal(superseded.identity, null);
+    // Supersede while the deferred change is still being proved.
+    await setup.subject.selectSubscription(SUBSCRIPTION);
     setup.resolveRevalidation(undefined);
     await connecting;
-    assert.equal(setup.subject.snapshot.phase, 'signedOut');
-    assert.deepEqual(setup.subject.snapshot.accounts, []);
+
+    // The change must not be silently consumed: closing now still drops every
+    // authenticated resource rather than retaining them for the next open.
+    const closed = setup.subject.close();
+    assert.equal(closed.identity, null);
+    assert.deepEqual(closed.accounts, []);
+    assert.deepEqual(closed.subscriptions, []);
 });
 
 test('close during blocked reconciliation clears state across reopen', async () => {
@@ -555,7 +599,7 @@ test('cancelled authentication from an old browser lifecycle cannot suppress sig
     assert.equal(subject.snapshot.phase, 'signedOut');
 });
 
-test('authentication revalidation is not pinned to a removed account', async () => {
+test('authentication revalidation proves the account in use before any other', async () => {
     const options: SessionOptions[] = [];
     const subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, _scopes, requested) => {
@@ -568,10 +612,89 @@ test('authentication revalidation is not pinned to a removed account', async () 
     await subject.connect();
     const beforeRefresh = options.length;
     const refreshed = await subject.authenticationChanged();
-    assert.equal(options[beforeRefresh].account, undefined);
+    // A stale account must never be able to displace the session in use, so the
+    // retained account is proved first rather than asking for any session.
+    assert.equal(options[beforeRefresh].account?.id, SESSION.account.id);
     assert.equal(options[beforeRefresh].silent, true);
     assert.equal(refreshed.phase, 'ready');
     assert.equal(refreshed.identity?.id, SESSION.account.id);
+});
+
+test('revalidation falls back to another account once the pinned one is removed', async () => {
+    const replacement: AuthenticationSession = {
+        accessToken: 'replacement-token',
+        account: { id: 'account-2', label: 'second@example.com' },
+    };
+    const options: SessionOptions[] = [];
+    let pinnedRemoved = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, requested) => {
+            options.push(requested);
+            if (!pinnedRemoved) {
+                return SESSION;
+            }
+            return requested.account?.id === SESSION.account.id ? undefined : replacement;
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+    await subject.connect();
+    pinnedRemoved = true;
+    const beforeRefresh = options.length;
+    const refreshed = await subject.authenticationChanged();
+
+    assert.equal(options[beforeRefresh].account?.id, SESSION.account.id);
+    assert.equal(options[beforeRefresh + 1].account, undefined);
+    assert.equal(refreshed.phase, 'ready');
+    assert.equal(refreshed.identity?.id, replacement.account.id);
+});
+
+test('a deferred change to a different account rebuilds every listing', async () => {
+    const replacement: AuthenticationSession = {
+        accessToken: 'replacement-token',
+        account: { id: 'account-2', label: 'second@example.com' },
+    };
+    let releaseTenants: (() => void) | undefined;
+    let notifyTenants: (() => void) | undefined;
+    const tenantsStarted = new Promise<void>((resolve) => {
+        notifyTenants = resolve;
+    });
+    const tenantsReleased = new Promise<void>((resolve) => {
+        releaseTenants = resolve;
+    });
+    let tenantCalls = 0;
+    let blockTenants = true;
+    class BlockingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            tenantCalls += 1;
+            if (blockTenants) {
+                blockTenants = false;
+                notifyTenants?.();
+                await tenantsReleased;
+            }
+            return super.listTenants();
+        }
+    }
+    let switched = false;
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) =>
+            switched && options.silent ? replacement : SESSION),
+        arm: new BlockingArm(),
+        storage: new FakeStorage(),
+    });
+
+    const connecting = subject.connect();
+    await tenantsStarted;
+    await subject.authenticationChanged();
+    switched = true;
+    releaseTenants?.();
+    const reconciled = await connecting;
+
+    // The account behind the deferred change is not the one in use, so the
+    // browser must rediscover rather than keep listings it can no longer vouch
+    // for on the strength of a single token.
+    assert.equal(reconciled.identity?.id, replacement.account.id);
+    assert.ok(tenantCalls >= 2);
 });
 
 test('later external sign-out clears stale Azure identity and resources', async () => {

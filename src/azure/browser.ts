@@ -58,11 +58,6 @@ interface InteractiveOperation {
     providerChangePending: boolean;
 }
 
-interface AuthenticationReconciliation {
-    readonly id: number;
-    readonly lifecycle: number;
-}
-
 export function azureStorageUrl(
     account: Pick<AzureStorageAccount, 'name' | 'hns'> &
         Partial<Pick<AzureStorageAccount, 'blobHost' | 'dfsHost'>>,
@@ -92,9 +87,8 @@ export class AzureBrowser {
     private generation = 0;
     private interactiveOperation: InteractiveOperation | undefined;
     private pendingAuthenticationChangeLifecycle: number | undefined;
+    private reconcilingLifecycle: number | undefined;
     private interactiveOperationId = 0;
-    private authenticationReconciliation: AuthenticationReconciliation | undefined;
-    private authenticationReconciliationId = 0;
     private lifecycle = 0;
 
     constructor(private readonly deps: AzureBrowserDeps) {
@@ -123,15 +117,25 @@ export class AzureBrowser {
         return this.revalidateAuthentication();
     }
 
+    /**
+     * Re-establish authentication after a provider change.
+     *
+     * The account in use is captured before state is dropped so rediscovery can
+     * prove that account is still usable before any other signed-in account is
+     * considered. Clearing is synchronous and every listing is refetched through
+     * live scoped calls, so a superseding operation can only interrupt the
+     * optional recovery - never leave authenticated resources on screen.
+     */
     private async revalidateAuthentication(): Promise<AzureBrowserState> {
         const wasOpen = this.state.open;
+        const pinned = this.account;
         this.clearAuthenticationState();
         if (!wasOpen) {
             this.state = CLOSED_AZURE_BROWSER_STATE;
             return this.state;
         }
         this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
-        return this.discover(false);
+        return this.discover(false, pinned);
     }
 
     async open(): Promise<AzureBrowserState> {
@@ -397,7 +401,7 @@ export class AzureBrowser {
     close(): AzureBrowserState {
         const authenticationPending =
             this.pendingAuthenticationChangeLifecycle === this.lifecycle
-            || this.authenticationReconciliation?.lifecycle === this.lifecycle
+            || this.reconcilingLifecycle === this.lifecycle
             || (
                 this.interactiveOperation?.lifecycle === this.lifecycle
                 && this.interactiveOperation.providerChangePending
@@ -405,7 +409,7 @@ export class AzureBrowser {
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
-        this.authenticationReconciliation = undefined;
+        this.reconcilingLifecycle = undefined;
         this.cancel();
         if (authenticationPending) {
             this.dropAuthenticationState();
@@ -420,7 +424,7 @@ export class AzureBrowser {
         this.lifecycle += 1;
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
-        this.authenticationReconciliation = undefined;
+        this.reconcilingLifecycle = undefined;
         this.cancel();
         this.account = undefined;
         this.entryRegistry.clear();
@@ -444,28 +448,15 @@ export class AzureBrowser {
                 this.pendingAuthenticationChangeLifecycle = this.lifecycle;
             }
         }
-        const reconciliation = this.authenticationReconciliation;
-        if (reconciliation?.lifecycle === this.lifecycle) {
-            this.authenticationReconciliation = undefined;
-            if (this.state.open) {
-                const owner = this.interactiveOperation;
-                if (
-                    owner
-                    && owner.id === preserveInteractiveOperationId
-                    && owner.lifecycle === this.lifecycle
-                ) {
-                    owner.providerChangePending = true;
-                } else {
-                    this.pendingAuthenticationChangeLifecycle = this.lifecycle;
-                }
-            }
-        }
         this.abortController?.abort();
         this.abortController = undefined;
         this.generation += 1;
     }
 
-    private async discover(interactive: boolean): Promise<AzureBrowserState> {
+    private async discover(
+        interactive: boolean,
+        pinned: AuthenticationAccount | undefined = this.account,
+    ): Promise<AzureBrowserState> {
         this.retryOperation = 'discover';
         const generation = this.loading(
             'Connecting to Azure…',
@@ -477,12 +468,7 @@ export class AzureBrowser {
             return supersededAuthentication;
         }
         try {
-            const session = await this.deps.authentication.acquire(
-                ARM_SCOPE,
-                undefined,
-                this.account,
-                interactive,
-            );
+            const session = await this.acquireDiscoverySession(pinned, interactive);
             if (!this.isCurrent(generation)) {
                 return this.state;
             }
@@ -681,6 +667,42 @@ export class AzureBrowser {
         return this.deps.authentication.acquire(scope, tenantId, this.account, interactive);
     }
 
+    /**
+     * Acquire the discovery session, preferring the account already in use.
+     *
+     * VS Code reports only that the Microsoft provider changed, never which
+     * account. An account-agnostic silent lookup can therefore return a
+     * different, stale account and discard the session the user just
+     * established - the failure this browser originally shipped with. Proving
+     * the retained account first makes that impossible, and the fallback still
+     * recovers when that account was genuinely removed. An interactive request
+     * keeps its existing prompt rather than silently adopting another account.
+     */
+    private async acquireDiscoverySession(
+        pinned: AuthenticationAccount | undefined,
+        interactive: boolean,
+    ): Promise<AuthenticationSession | undefined> {
+        if (!pinned) {
+            return this.deps.authentication.acquire(ARM_SCOPE, undefined, undefined, interactive);
+        }
+        if (interactive) {
+            return this.deps.authentication.acquire(ARM_SCOPE, undefined, pinned, true);
+        }
+        const retained = await this.deps.authentication.acquire(
+            ARM_SCOPE,
+            undefined,
+            pinned,
+            false,
+        );
+        if (retained) {
+            return retained;
+        }
+        // Only a resolved "no session" proves the account is gone. A provider
+        // failure propagates instead, because it must never license adopting a
+        // different - possibly stale - account.
+        return this.deps.authentication.acquire(ARM_SCOPE, undefined, undefined, false);
+    }
+
     private async runInteractive(
         action: () => Promise<AzureBrowserState>,
     ): Promise<AzureBrowserState> {
@@ -714,19 +736,30 @@ export class AzureBrowser {
         }
     }
 
+    /**
+     * Apply a provider change that was deferred while an interactive operation
+     * owned the browser.
+     *
+     * Granting a scope creates a session, so the common deferred change is the
+     * operation's own sign-in. When the account in use is still the same account
+     * that is a no-op for the user's position, and resetting them to the root -
+     * losing the container, folder and file they just chose - would be a bug.
+     * Anything else (a different account, or one that is gone) is a real
+     * identity change and rebuilds every listing from live scoped calls.
+     */
     private async reconcileDeferredAuthentication(
         operationLifecycle: number,
     ): Promise<AzureBrowserState> {
-        const account = this.account;
-        const generation = this.generation;
-        if (!account || !this.state.open || operationLifecycle !== this.lifecycle) {
+        if (!this.state.open || operationLifecycle !== this.lifecycle) {
             return this.state;
         }
-        const reconciliation: AuthenticationReconciliation = {
-            id: ++this.authenticationReconciliationId,
-            lifecycle: operationLifecycle,
-        };
-        this.authenticationReconciliation = reconciliation;
+        const account = this.account;
+        if (!account) {
+            return this.revalidateAuthentication();
+        }
+        const generation = this.generation;
+        const reconcilingLifecycle = operationLifecycle;
+        this.reconcilingLifecycle = reconcilingLifecycle;
         let session: AuthenticationSession | undefined;
         try {
             session = await this.deps.authentication.acquire(
@@ -736,15 +769,21 @@ export class AzureBrowser {
                 false,
             );
         } catch {
+            if (this.reconcilingLifecycle === reconcilingLifecycle) {
+                this.reconcilingLifecycle = undefined;
+            }
             if (
                 generation !== this.generation
                 || operationLifecycle !== this.lifecycle
                 || !this.state.open
-                || this.authenticationReconciliation?.id !== reconciliation.id
             ) {
+                if (this.state.open && operationLifecycle === this.lifecycle) {
+                    // A newer operation already owns the browser. Defer rather
+                    // than overwrite a result that was proved after this one.
+                    this.pendingAuthenticationChangeLifecycle = this.lifecycle;
+                }
                 return this.state;
             }
-            this.authenticationReconciliation = undefined;
             this.clearAuthenticationState();
             this.state = {
                 ...CLOSED_AZURE_BROWSER_STATE,
@@ -754,16 +793,22 @@ export class AzureBrowser {
             };
             return this.state;
         }
+        if (this.reconcilingLifecycle === reconcilingLifecycle) {
+            this.reconcilingLifecycle = undefined;
+        }
         if (
             generation !== this.generation
             || operationLifecycle !== this.lifecycle
             || !this.state.open
-            || this.authenticationReconciliation?.id !== reconciliation.id
         ) {
+            if (this.state.open && operationLifecycle === this.lifecycle) {
+                // Superseded before this could be applied. Leave it pending so
+                // the next operation reconciles it instead of dropping it.
+                this.pendingAuthenticationChangeLifecycle = this.lifecycle;
+            }
             return this.state;
         }
-        this.authenticationReconciliation = undefined;
-        if (session) {
+        if (session && session.account.id === account.id) {
             this.account = session.account;
             this.state = {
                 ...this.state,
@@ -771,14 +816,7 @@ export class AzureBrowser {
             };
             return this.state;
         }
-        this.clearAuthenticationState();
-        this.state = {
-            ...CLOSED_AZURE_BROWSER_STATE,
-            open: true,
-            phase: 'signedOut',
-            message: 'The Microsoft session changed. Connect again to browse Azure.',
-        };
-        return this.state;
+        return this.revalidateAuthentication();
     }
 
     private clearAuthenticationState(): void {
