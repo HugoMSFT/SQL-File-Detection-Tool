@@ -345,6 +345,15 @@ body.surface-sidebar .file-pane {
   font-size: 0.9em;
 }
 
+.file-filter-row {
+  padding: 6px 10px 2px;
+}
+
+.file-filter {
+  width: 100%;
+  font-size: 0.9em;
+}
+
 .file-list:empty {
   display: none;
 }

@@ -49,6 +49,9 @@
     const pendingEdits = new Map();
     const debounceTimers = new Map();
     const collapsedFolders = new Set();
+    /** Renderer-only view state: the Explorer filter query and its source. */
+    let fileFilter = '';
+    let lastSourceLabel = null;
 
     // -- helpers -------------------------------------------------------------
 
@@ -253,7 +256,41 @@
         const scrollTop = list.scrollTop;
         clear(list);
         byId('source-label').textContent = state.sourceLabel || '';
-        byId('file-empty').hidden = state.files.length > 0;
+
+        // A new source starts with a clean filter: a leftover query that hides
+        // every file in a folder the user just chose reads as "nothing found".
+        if (state.sourceLabel !== lastSourceLabel) {
+            lastSourceLabel = state.sourceLabel;
+            fileFilter = '';
+        }
+        const filterRow = byId('file-filter-row');
+        const filterInput = byId('file-filter');
+        filterRow.hidden = state.files.length === 0;
+        if (filterInput.value !== fileFilter) {
+            filterInput.value = fileFilter;
+        }
+
+        const query = fileFilter.trim().toLowerCase();
+        const matches = query
+            ? state.files.filter(function (file) {
+                  return (
+                      String(file.label || '').toLowerCase().indexOf(query) > -1
+                      || String(file.fileType || '').toLowerCase().indexOf(query) > -1
+                      || String(file.folderLabel || '').toLowerCase().indexOf(query) > -1
+                  );
+              })
+            : state.files;
+
+        const empty = byId('file-empty');
+        if (state.files.length === 0) {
+            empty.hidden = false;
+            empty.textContent = 'Select a file, folder, or URL to begin.';
+        } else if (matches.length === 0) {
+            empty.hidden = false;
+            empty.textContent = 'No files match this filter.';
+        } else {
+            empty.hidden = true;
+        }
 
         function treeNode() {
             return { folders: new Map(), files: [] };
@@ -288,7 +325,7 @@
         function renderFolder(parent, name, node, folderPath) {
             const item = element('li', 'tree-folder');
             item.setAttribute('role', 'treeitem');
-            const expanded = !collapsedFolders.has(folderPath);
+            const expanded = query ? true : !collapsedFolders.has(folderPath);
             item.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 
             const button = element('button', 'tree-folder-label');
@@ -328,7 +365,7 @@
         }
 
         const root = treeNode();
-        state.files.forEach(function (file) {
+        matches.forEach(function (file) {
             let node = root;
             String(file.folderLabel || '')
                 .split('/')
@@ -1061,6 +1098,11 @@
 
     document.addEventListener('input', function (event) {
         const target = event.target;
+        if (target instanceof Element && target.id === 'file-filter') {
+            fileFilter = target.value;
+            renderFiles();
+            return;
+        }
         if (
             !(target instanceof Element) ||
             !target.dataset ||

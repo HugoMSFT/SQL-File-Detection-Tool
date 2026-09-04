@@ -24,6 +24,8 @@ import {
     CancellationError,
     SimpleCancellationTokenSource,
     describeError,
+    DIRECTORY_SCAN_MAX_DEPTH,
+    DIRECTORY_SCAN_MAX_FILES,
     effectiveStorageUrl,
     generateCredentialSetup,
     inferDataSourceType,
@@ -490,7 +492,8 @@ export class UiController {
             const result = await this.service.analyzeDirectory({
                 filePath: directory,
                 allowedRoot: directory,
-                maxDepth: 1,
+                maxDepth: DIRECTORY_SCAN_MAX_DEPTH,
+                maxFiles: DIRECTORY_SCAN_MAX_FILES,
                 token: token.token,
             });
             if (!this.isCurrent(generation)) {
@@ -515,6 +518,8 @@ export class UiController {
                 notice:
                     result.files.length === 0
                         ? 'No supported data files were found in that folder.'
+                        : result.truncated
+                        ? `Showing the first ${DIRECTORY_SCAN_MAX_FILES} data files found in that folder.`
                         : null,
             });
             this.refreshQuickAnalyze();

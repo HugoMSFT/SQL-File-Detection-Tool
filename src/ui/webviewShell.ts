@@ -110,6 +110,9 @@ export function buildWebviewHtml(options: ShellOptions): string {
         <h2 id="file-pane-title">Explorer</h2>
         <p class="source" id="source-label"></p>
       </div>
+      <div class="file-filter-row" id="file-filter-row" hidden>
+        <input type="search" id="file-filter" class="file-filter" placeholder="Filter files" aria-label="Filter files by name, folder or format" autocomplete="off" spellcheck="false">
+      </div>
       <ul class="file-list" id="file-list" role="tree" aria-labelledby="file-pane-title" tabindex="0"></ul>
       <p class="empty" id="file-empty">Select a file, folder, or URL to begin.</p>
     </nav>

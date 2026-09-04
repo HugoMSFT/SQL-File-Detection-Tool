@@ -404,7 +404,7 @@ test('choosing a folder lists files and selects the first', async () => {
     }
 });
 
-test('folder scans stop after one child level and skip non-SQL files', async () => {
+test('folder scans reach partitioned layouts and skip non-SQL files', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-tree-'));
     fs.mkdirSync(path.join(root, 'year', 'month'), { recursive: true });
     fs.writeFileSync(path.join(root, 'top.csv'), 'id,name\n1,top\n');
@@ -420,15 +420,21 @@ test('folder scans stop after one child level and skip non-SQL files', async () 
         await settle();
 
         const state = snapshot(record);
+        // Lake layouts nest, so a file below the first level must still be
+        // found, and its folder path must stay distinct rather than collapsing
+        // onto the folder name alone.
         assert.deepEqual(
             state.files.map((entry) => entry.label).sort(),
-            ['direct.csv', 'top.csv'],
+            ['deep.csv', 'direct.csv', 'top.csv'],
         );
         assert.equal(
             state.files.find((entry) => entry.label === 'direct.csv')?.folderLabel,
             'year',
         );
-        assert.ok(!state.files.some((entry) => entry.label === 'deep.csv'));
+        assert.equal(
+            state.files.find((entry) => entry.label === 'deep.csv')?.folderLabel,
+            'year/month',
+        );
 
         await ui.loadFiles([path.join(root, 'script.py')]);
         assert.equal(snapshot(record).files.length, 0);

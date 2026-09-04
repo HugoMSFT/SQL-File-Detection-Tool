@@ -305,6 +305,17 @@ test('the explorer gives the filename its own readable row', () => {
     assert.match(script, /name\.title = file\.label/);
 });
 
+test('the explorer offers a filter that narrows the listing', () => {
+    const html = render();
+    assert.match(html, /id="file-filter"/);
+    assert.match(html, /aria-label="Filter files by name, folder or format"/);
+    // The filter is renderer-only view state: narrowing a listing must not
+    // become a new message the host has to validate.
+    assert.doesNotMatch(script, /type:\s*'setFileFilter'/);
+    assert.match(script, /fileFilter/);
+    assert.match(script, /No files match this filter/);
+});
+
 test('the renderer keeps the keyboard workflow', () => {
     assert.ok(script.includes("'ArrowDown'"));
     assert.ok(script.includes("'ArrowUp'"));

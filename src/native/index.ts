@@ -16,6 +16,7 @@ export {
     type ProgressReport,
     type ProgressReporter,
 } from './cancellation';
+export { DIRECTORY_SCAN_MAX_DEPTH, DIRECTORY_SCAN_MAX_FILES } from './limits';
 export {
     NativeAnalysisService,
     nativeAnalysisService,

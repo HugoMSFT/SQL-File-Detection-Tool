@@ -401,6 +401,7 @@ export async function scanDirectory(
     reference: StorageReference,
     token?: CancellationToken,
     maxDepth = Number.POSITIVE_INFINITY,
+    maxFiles = Number.POSITIVE_INFINITY,
 ): Promise<FileMetadata[]> {
     if (!reference.isDirectory) {
         throw new NativeAnalysisError(
@@ -412,6 +413,12 @@ export async function scanDirectory(
         throw new NativeAnalysisError(
             'malformed_input',
             'Directory scan depth must be a non-negative integer.',
+        );
+    }
+    if (maxFiles !== Number.POSITIVE_INFINITY && (!Number.isInteger(maxFiles) || maxFiles < 1)) {
+        throw new NativeAnalysisError(
+            'malformed_input',
+            'Directory scan file limit must be a positive integer.',
         );
     }
     if (
@@ -428,6 +435,9 @@ export async function scanDirectory(
     const visited = new Set<string>();
 
     while (queue.length > 0) {
+        if (results.length >= maxFiles) {
+            break;
+        }
         const currentItem = queue.shift() as { reference: StorageReference; depth: number };
         const current = currentItem.reference;
         if (visited.has(current.realPath)) {
@@ -451,6 +461,9 @@ export async function scanDirectory(
                     (await isDeltaTableDirectory(entry.realPath)) ||
                     (await isIcebergTableDirectory(entry.realPath))
                 ) {
+                    if (results.length >= maxFiles) {
+                        break;
+                    }
                     results.push(await analyzeFileMetadata(entry, token));
                 } else {
                     directories.push(entry);
@@ -461,6 +474,9 @@ export async function scanDirectory(
         for (const entry of entries) {
             if (entry.isDirectory) {
                 continue;
+            }
+            if (results.length >= maxFiles) {
+                break;
             }
             if (sqlSourceFileType(entry.realPath) !== undefined) {
                 results.push(await analyzeFileMetadata(entry, token));

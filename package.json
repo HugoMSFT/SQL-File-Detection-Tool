@@ -193,6 +193,14 @@
           }
         ]
       }
+    ],
+    "keybindings": [
+      {
+        "command": "sqlFileDetectionTool.analyzeCurrentFile",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus"
+      }
     ]
   },
   "scripts": {
