@@ -75,6 +75,7 @@ export {
     PLATFORM_LABELS,
     TYPE_MAPPING,
     hasIncompleteTypeEvidence,
+    externalTableRecommendedSqlType,
     inferredColumnSqlType,
     mapTypeToSql,
     normalizePlatform,

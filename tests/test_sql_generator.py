@@ -632,8 +632,8 @@ def test_unknown_string_width_and_incomplete_samples_preserve_data():
     assert '[id] BIGINT' in gen.generate_create_table(sampled, 'sample')
 
 
-def test_external_table_lob_requires_bounded_override():
-    """External tables must not present inferred MAX columns as executable."""
+def test_external_table_lob_gets_bounded_parquet_fallback():
+    """Parquet LOB columns get a bounded external-table fallback."""
     gen = SQLGenerator()
     metadata = {
         'file_type': 'parquet',
@@ -641,12 +641,13 @@ def test_external_table_lob_requires_bounded_override():
         'file_name': 'wide.parquet',
         'schema': [('payload', 'string')],
     }
-    blocked = gen.generate_external_table(
+    generated = gen.generate_external_table(
         metadata,
         target_platform='azure_sql_db',
     )
-    assert 'NOT AVAILABLE' in blocked
-    assert 'explicit bounded SQL type overrides' in blocked
+    assert 'CREATE EXTERNAL TABLE [' in generated
+    assert '[payload] NVARCHAR(4000)' in generated
+    assert 'NOT AVAILABLE on Azure SQL Database' not in generated
 
     metadata['sql_type_overrides'] = {'payload': 'NVARCHAR(4000)'}
     allowed = gen.generate_external_table(
@@ -655,6 +656,37 @@ def test_external_table_lob_requires_bounded_override():
     )
     assert 'CREATE EXTERNAL TABLE [' in allowed
     assert '[payload] NVARCHAR(4000)' in allowed
+
+
+def test_external_table_lob_gets_bounded_delta_fallback():
+    gen = SQLGenerator()
+    sql = gen.generate_external_table(
+        {
+            'file_type': 'delta',
+            'file_path': 'events',
+            'schema': [('payload', 'string')],
+        },
+        target_platform='azure_sql_db',
+    )
+    assert 'CREATE EXTERNAL TABLE [' in sql
+    assert '[payload] NVARCHAR(4000)' in sql
+    assert 'NOT AVAILABLE on Azure SQL Database' not in sql
+
+
+def test_external_table_does_not_truncate_known_wide_parquet_string():
+    gen = SQLGenerator()
+    sql = gen.generate_external_table(
+        {
+            'file_type': 'parquet',
+            'file_path': 'wide.parquet',
+            'schema': [('payload', 'string')],
+            'max_string_lengths': {'payload': 5001},
+        },
+        target_platform='azure_sql_db',
+    )
+    assert 'BOUNDED SQL TYPE OVERRIDE REQUIRED' in sql
+    assert 'CREATE EXTERNAL TABLE [' not in sql
+    assert 'NOT AVAILABLE on Azure SQL Database' not in sql
 
 
 def test_best_practices_render_tab_delimiter_visibly():
