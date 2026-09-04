@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+- Marked the extension as a **Preview/beta** release so its maturity is stated
+  on the Marketplace rather than assumed.
+- Folder scans now reach nested, partitioned layouts such as
+  `year=2026/month=09/day=02/` instead of stopping at the first level, bounded
+  by depth, file and directory ceilings that report when they withhold work.
+- Added an Explorer filter over file name, folder and format.
+- Added a keybinding for **Analyze Current File**.
+- Recognised DNS-zone storage endpoints (`*.dfs.storage.azure.net`) and
+  converted them correctly for generated `BLOB_STORAGE` SQL.
+
 ## 1.0.9
 
 - Replaced the walkthrough GIF with a current capture of the editor-first UI.

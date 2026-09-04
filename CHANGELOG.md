@@ -4,6 +4,23 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.1.0]
+
+### Changed
+
+- Published as a Marketplace **Preview** so the extension's beta maturity is
+  stated rather than assumed.
+- Folder scans reach nested partitioned layouts instead of stopping one level
+  down, bounded by depth, file and directory ceilings that report when they
+  withhold work rather than truncating silently.
+
+### Added
+
+- An Explorer filter over file name, folder path and format.
+- A keybinding for **Analyze Current File**.
+- Recognition of DNS-zone storage endpoints, converted correctly to Blob
+  endpoints for generated `BLOB_STORAGE` SQL.
+
 ## [1.0.9]
 
 ### Changed

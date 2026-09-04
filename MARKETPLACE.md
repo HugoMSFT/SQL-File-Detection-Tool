@@ -1,5 +1,10 @@
 # SQL File Detection Tool
 
+> **Beta.** This extension is published as a **Preview**. It is usable day to
+> day, but the interface and the generated SQL are still changing, and it has
+> not yet been exercised against every SQL platform on real hardware. Review
+> generated statements before running them, and please report anything wrong.
+
 Preview data files and generate platform-aware T-SQL without leaving VS Code.
 
 > **Independent project:** This is a personal open-source project by Hugo
