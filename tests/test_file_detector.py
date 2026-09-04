@@ -409,8 +409,8 @@ def test_unicode_digits_are_text_not_ascii_numerics(tmp_path):
     assert metadata['sample_rows'] == [['١٢٣', '１２３']]
 
 
-def test_parquet_unbounded_string_uses_max_and_blocks_external_table(tmp_path):
-    """Parquet strings have no declared bound, even when one value is 5000 chars."""
+def test_parquet_unbounded_string_uses_max_and_bounds_external_table(tmp_path):
+    """Parquet strings use MAX for regular tables and a bounded external type."""
     from external_file_detection.sql_generator import SQLGenerator
 
     source = tmp_path / 'wide.parquet'
@@ -424,9 +424,9 @@ def test_parquet_unbounded_string_uses_max_and_blocks_external_table(tmp_path):
         metadata,
         target_platform='azure_sql_db',
     )
-    assert 'NOT AVAILABLE' in external
-    assert 'explicit bounded SQL type overrides' in external
-    assert 'CREATE EXTERNAL TABLE [' not in external
+    assert 'CREATE EXTERNAL TABLE [' in external
+    assert '[payload] NVARCHAR(4000)' in external
+    assert 'NOT AVAILABLE on Azure SQL Database' not in external
 
 
 def test_directory_scan():

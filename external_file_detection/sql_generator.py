@@ -2419,7 +2419,7 @@ class SQLGenerator:
         external_type_mapping_notes = {}
         physical_types = metadata.get('parquet_physical_types') or {}
         explicit_overrides = metadata.get('sql_type_overrides') or {}
-        if metadata.get('file_type') == 'parquet':
+        if metadata.get('file_type') in {'parquet', 'delta', 'orc', 'rc'}:
             for column_name, detected_type in metadata.get('schema') or []:
                 if (
                     column_name not in explicit_overrides
@@ -2453,6 +2453,24 @@ class SQLGenerator:
                     external_type_mapping_notes[column_name] = (
                         'Parquet timezone timestamp physical INT64'
                     )
+                if column_name not in explicit_overrides:
+                    inferred = self._column_sql_type(
+                        metadata, column_name, detected_type,
+                    )
+                    bounded = inferred
+                    max_length = (metadata.get('max_string_lengths') or {}).get(column_name)
+                    if max_length is not None and max_length > 4000:
+                        bounded = inferred
+                    elif re.fullmatch(r'NVARCHAR\s*\(\s*MAX\s*\)', inferred, re.IGNORECASE):
+                        bounded = 'NVARCHAR(4000)'
+                    elif re.fullmatch(r'VARBINARY\s*\(\s*MAX\s*\)', inferred, re.IGNORECASE):
+                        bounded = 'VARBINARY(8000)'
+                    if inferred != bounded:
+                        external_type_overrides[column_name] = bounded
+                        external_type_mapping_notes[column_name] = (
+                            f'{inferred} bounded for external table; '
+                            'validate source width'
+                        )
         external_metadata = metadata
         if external_type_overrides:
             external_metadata = dict(metadata)
@@ -2480,14 +2498,16 @@ class SQLGenerator:
                 f'[{column_name}] ({sql_type})'
                 for column_name, sql_type in external_lob_columns
             )
-            return self._not_supported_message(
-                f'CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
-                target_platform,
-                'External tables cannot declare these inferred LOB columns '
-                f'directly: {rendered}. After validating the complete source '
-                'width, set explicit bounded SQL type overrides (for example '
-                'NVARCHAR(4000) or VARBINARY(8000)).',
-            )
+            return '\n'.join([
+                '-- ====================================================================',
+                f'-- CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
+                '-- BOUNDED SQL TYPE OVERRIDE REQUIRED',
+                '-- ====================================================================',
+                '-- External tables are supported on this platform, but cannot declare',
+                f'-- these inferred LOB columns directly: {rendered}.',
+                '-- Validate the source width and set explicit bounded SQL type overrides',
+                '-- (for example NVARCHAR(4000) or VARBINARY(8000)) before execution.',
+            ])
 
         columns = self._generate_column_definitions(
             external_metadata, include_nullability=False,

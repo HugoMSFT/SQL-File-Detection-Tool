@@ -50,6 +50,7 @@ import {
     DDL_ONLY_CERTIFIED_FORMATS,
     FORMATS_READ_WITHOUT_FILE_FORMAT,
     DEFAULT_TARGET_PLATFORM,
+    externalTableRecommendedSqlType,
     externalFormatPlatforms,
     FIRST_ROW_FORMAT_PLATFORMS,
     HADOOP_EXTERNAL_SOURCE_PLATFORMS,
@@ -1053,7 +1054,8 @@ export function generateExternalTable(
     const externalTypeOverrides: Record<string, string> = {};
     const externalTypeMappingNotes: Record<string, string> = {};
     const physicalTypes = metadata.parquet_physical_types ?? {};
-    if (metadata.file_type === 'parquet' && Array.isArray(metadata.schema)) {
+    const boundableExternalFileTypes = new Set(['parquet', 'delta', 'orc', 'rc']);
+    if (boundableExternalFileTypes.has(metadata.file_type ?? '') && Array.isArray(metadata.schema)) {
         for (const [columnName, detectedType] of metadata.schema) {
             if (
                 !Object.prototype.hasOwnProperty.call(metadata.sql_type_overrides ?? {}, columnName)
@@ -1078,6 +1080,19 @@ export function generateExternalTable(
                 );
                 externalTypeMappingNotes[columnName] =
                     'Parquet timezone timestamp physical INT64';
+            }
+            if (!Object.prototype.hasOwnProperty.call(metadata.sql_type_overrides ?? {}, columnName)) {
+                const inferred = columnSqlType(metadata, columnName, detectedType);
+                const bounded = externalTableRecommendedSqlType(
+                    metadata,
+                    columnName,
+                    detectedType,
+                );
+                if (inferred !== bounded) {
+                    externalTypeOverrides[columnName] = bounded;
+                    externalTypeMappingNotes[columnName] =
+                        `${inferred} bounded for external table; validate source width`;
+                }
             }
         }
     }
@@ -1107,13 +1122,16 @@ export function generateExternalTable(
         const rendered = externalLobColumns
             .map(({ columnName, sqlType }) => `[${columnName}] (${sqlType})`)
             .join(', ');
-        return notSupportedMessage(
-            `CREATE EXTERNAL TABLE (${config.format_type} with LOB columns)`,
-            targetPlatform,
-            `External tables cannot declare these inferred LOB columns directly: ${rendered}. ` +
-            'After validating the complete source width, set explicit bounded SQL type ' +
-            'overrides (for example NVARCHAR(4000) or VARBINARY(8000)).',
-        );
+        return [
+            '-- ====================================================================',
+            `-- CREATE EXTERNAL TABLE (${config.format_type} with LOB columns)`,
+            '-- BOUNDED SQL TYPE OVERRIDE REQUIRED',
+            '-- ====================================================================',
+            '-- External tables are supported on this platform, but cannot declare',
+            `-- these inferred LOB columns directly: ${rendered}.`,
+            '-- Validate the source width and set explicit bounded SQL type overrides',
+            '-- (for example NVARCHAR(4000) or VARBINARY(8000)) before execution.',
+        ].join('\n');
     }
 
     const columns = generateColumnDefinitions(externalMetadata, { includeNullability: false });

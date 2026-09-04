@@ -562,17 +562,18 @@ describe('type mapping edge cases', () => {
         );
     });
 
-    it('requires bounded overrides for external-table LOB columns', () => {
+    it('bounds inferred Parquet LOB columns for external tables', () => {
         const metadata: GeneratorMetadata = {
             ...parquetMetadata(),
             schema: [['payload', 'string']],
         };
-        const blocked = generateExternalTable(metadata, {
+        const generated = generateExternalTable(metadata, {
             targetPlatform: 'azure_sql_db',
         });
-        assert.match(blocked, /NOT AVAILABLE/);
-        assert.match(blocked, /explicit bounded SQL type overrides/i);
-        assert.doesNotMatch(blocked, /CREATE EXTERNAL TABLE \[/);
+        assert.match(generated, /CREATE EXTERNAL TABLE \[/);
+        assert.match(generated, /\[payload\]\s+NVARCHAR\(4000\)/);
+        assert.match(generated, /bounded for external table/i);
+        assert.doesNotMatch(generated, /NOT AVAILABLE on Azure SQL Database/);
 
         const overridden = generateExternalTable({
             ...metadata,
@@ -582,6 +583,32 @@ describe('type mapping edge cases', () => {
         });
         assert.match(overridden, /CREATE EXTERNAL TABLE \[/);
         assert.match(overridden, /\[payload\]\s+NVARCHAR\(4000\)/);
+    });
+
+    it('bounds complete Delta schemas without labeling Azure SQL unavailable', () => {
+        const sql = generateExternalTable({
+            ...parquetMetadata(),
+            file_type: 'delta',
+            schema: [['payload', 'string']],
+        }, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(sql, /CREATE EXTERNAL TABLE \[/);
+        assert.match(sql, /\[payload\]\s+NVARCHAR\(4000\)/);
+        assert.doesNotMatch(sql, /NOT AVAILABLE on Azure SQL Database/);
+    });
+
+    it('does not truncate a known Parquet string wider than NVARCHAR(4000)', () => {
+        const sql = generateExternalTable({
+            ...parquetMetadata(),
+            schema: [['payload', 'string']],
+            max_string_lengths: { payload: 5001 },
+        }, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(sql, /BOUNDED SQL TYPE OVERRIDE REQUIRED/);
+        assert.doesNotMatch(sql, /CREATE EXTERNAL TABLE \[/);
+        assert.doesNotMatch(sql, /NOT AVAILABLE on Azure SQL Database/);
     });
 
     it('handles negative decimal scale without emitting invalid SQL', () => {

@@ -449,3 +449,33 @@ export function inferredColumnSqlType(
     }
     return mapTypeToSql(detectedType, metadata.max_string_lengths?.[columnName]);
 }
+
+/**
+ * Recommend bounded types for Parquet columns used by external tables.
+ *
+ * External-table schemas do not accept MAX LOB types. Parquet metadata provides
+ * a complete logical schema, but not a declared maximum string width, so use
+ * conservative SQL Server bounds and leave larger sources to an explicit
+ * override after validation.
+ */
+export function externalTableRecommendedSqlType(
+    metadata: GeneratorMetadata,
+    columnName: string,
+    detectedType: unknown,
+): string {
+    const inferred = inferredColumnSqlType(metadata, columnName, detectedType);
+    if (!new Set(['parquet', 'delta', 'orc', 'rc']).has(metadata.file_type ?? '')) {
+        return inferred;
+    }
+    if (metadata.max_string_lengths?.[columnName] !== undefined &&
+        metadata.max_string_lengths[columnName]! > 4000) {
+        return inferred;
+    }
+    if (/^NVARCHAR\(MAX\)$/i.test(inferred)) {
+        return 'NVARCHAR(4000)';
+    }
+    if (/^VARBINARY\(MAX\)$/i.test(inferred)) {
+        return 'VARBINARY(8000)';
+    }
+    return inferred;
+}

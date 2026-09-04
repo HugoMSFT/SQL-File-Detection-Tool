@@ -70988,11 +70988,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -71358,11 +71417,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -71728,11 +71846,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/all_types.orc"
     ]
    },
    "create_table": {
@@ -76790,11 +76967,71 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv",
+     "\\bREJECT_TYPE\\s*=\\s*(\\w+)=>VALUE"
     ]
    },
    "create_table": {
@@ -77163,11 +77400,71 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/all_types.orc",
+     "\\bREJECT_TYPE\\s*=\\s*(\\w+)=>VALUE"
     ]
    },
    "create_table": {
@@ -80071,11 +80368,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -80440,11 +80796,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -80809,11 +81224,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/all_types.orc"
     ]
    },
    "create_table": {
@@ -81534,11 +82008,70 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[c_int8]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int16]",
+      "SMALLINT"
+     ],
+     [
+      "[c_int32]",
+      "INT"
+     ],
+     [
+      "[c_int64]",
+      "BIGINT"
+     ],
+     [
+      "[c_float32]",
+      "FLOAT"
+     ],
+     [
+      "[c_float64]",
+      "FLOAT"
+     ],
+     [
+      "[c_bool]",
+      "BIT"
+     ],
+     [
+      "[c_string]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_binary]",
+      "VARBINARY(8000)"
+     ],
+     [
+      "[c_date32]",
+      "DATE"
+     ],
+     [
+      "[c_decimal]",
+      "DECIMAL(18,4)"
+     ],
+     [
+      "[c_list_int32]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_struct]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[c_map]",
+      "NVARCHAR(4000)"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -103250,11 +103783,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -103492,11 +104052,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -103734,11 +104321,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/sales.parquet"
     ]
    },
    "create_table": {
@@ -104436,11 +105050,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -104678,11 +105319,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -104920,11 +105588,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/sales.parquet"
     ]
    },
    "create_table": {
@@ -106136,11 +106831,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/sales.parquet"
     ]
    },
    "create_table": {
@@ -106426,11 +107148,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>f"
     ]
    },
    "create_table": {
@@ -107935,11 +108684,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -108173,11 +108949,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -108411,11 +109214,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/sales.parquet"
     ]
    },
    "create_table": {
@@ -108874,11 +109704,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -109107,11 +109964,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -109345,11 +110229,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -109583,11 +110494,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/sales.parquet"
     ]
    },
    "create_table": {
@@ -110046,11 +110984,38 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[order_id]",
+      "BIGINT"
+     ],
+     [
+      "[customer]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[quantity]",
+      "INT"
+     ],
+     [
+      "[amount]",
+      "FLOAT"
+     ],
+     [
+      "[is_paid]",
+      "BIT"
+     ],
+     [
+      "[order_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_sales]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -110281,11 +111246,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -110497,11 +111485,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -110713,11 +111724,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/events_delta"
     ]
    },
    "create_table": {
@@ -114143,11 +115177,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -114358,11 +115415,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -114573,11 +115653,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/events_delta"
     ]
    },
    "create_table": {
@@ -114990,11 +116093,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -115200,11 +116326,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -115415,11 +116564,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
@@ -115630,11 +116802,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/events_delta"
     ]
    },
    "create_table": {
@@ -116047,11 +117242,34 @@
     ]
    },
    "create_external_table": {
-    "columns": [],
+    "columns": [
+     [
+      "[event_id]",
+      "BIGINT"
+     ],
+     [
+      "[event_name]",
+      "NVARCHAR(4000)"
+     ],
+     [
+      "[event_value]",
+      "FLOAT"
+     ],
+     [
+      "[is_test]",
+      "BIT"
+     ],
+     [
+      "[event_date]",
+      "DATE"
+     ]
+    ],
     "go_batches": 0,
-    "has_sql": false,
+    "has_sql": true,
     "markers": [
-     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
+     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_events_delta]",
+     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
     ]
    },
    "create_table": {
