@@ -1054,7 +1054,8 @@ export function generateExternalTable(
     const externalTypeOverrides: Record<string, string> = {};
     const externalTypeMappingNotes: Record<string, string> = {};
     const physicalTypes = metadata.parquet_physical_types ?? {};
-    if (metadata.file_type === 'parquet' && Array.isArray(metadata.schema)) {
+    const boundableExternalFileTypes = new Set(['parquet', 'delta', 'orc', 'rc']);
+    if (boundableExternalFileTypes.has(metadata.file_type ?? '') && Array.isArray(metadata.schema)) {
         for (const [columnName, detectedType] of metadata.schema) {
             if (
                 !Object.prototype.hasOwnProperty.call(metadata.sql_type_overrides ?? {}, columnName)

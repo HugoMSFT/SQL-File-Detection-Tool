@@ -2,7 +2,7 @@
   "name": "sql-file-detection",
   "displayName": "SQL File Detection Tool",
   "description": "Preview CSV, JSON, Parquet, Delta, and Iceberg data, map schemas to SQL types, and generate T-SQL for SQL Server, Azure SQL, and Fabric.",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "publisher": "hvbqueiroz",
   "license": "MIT",
   "icon": "media/icon.png",
