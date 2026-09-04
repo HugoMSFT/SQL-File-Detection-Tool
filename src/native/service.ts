@@ -65,6 +65,7 @@ export interface PreviewRequest extends AnalysisRequest {
 export interface DirectoryAnalysisRequest extends AnalysisRequest {
     readonly maxDepth?: number;
     readonly maxFiles?: number;
+    readonly maxDirectories?: number;
 }
 
 /** Options for the SQL generation entry points. */
@@ -105,7 +106,7 @@ export interface MultiFileRequest {
 export interface DirectoryAnalysis {
     readonly root: string;
     readonly files: FileMetadata[];
-    /** True when the scan stopped at its file limit rather than finishing. */
+    /** True when a ceiling withheld work rather than the scan finishing. */
     readonly truncated: boolean;
 }
 
@@ -163,11 +164,17 @@ export class NativeAnalysisService {
         reportProgress(request.progress, 'Resolving directory');
         const reference = await this.resolve(request);
         reportProgress(request.progress, 'Scanning directory');
-        const files = await scanDirectory(reference, token, request.maxDepth, request.maxFiles);
+        const scan = await scanDirectory(
+            reference,
+            token,
+            request.maxDepth,
+            request.maxFiles,
+            request.maxDirectories,
+        );
         return {
             root: reference.realPath,
-            files,
-            truncated: request.maxFiles !== undefined && files.length >= request.maxFiles,
+            files: scan.files,
+            truncated: scan.truncated,
         };
     }
 

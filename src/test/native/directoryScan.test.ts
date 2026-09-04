@@ -108,6 +108,94 @@ test('a scan that fits under its ceiling is not reported as truncated', async ()
     }
 });
 
+test('a folder holding exactly the file ceiling is not called truncated', async () => {
+    const root = tree();
+    try {
+        for (let index = 0; index < 3; index += 1) {
+            fs.writeFileSync(path.join(root, `part-${index}.csv`), 'id\n1\n');
+        }
+
+        const result = await nativeAnalysisService.analyzeDirectory({
+            filePath: root,
+            allowedRoot: root,
+            maxDepth: DIRECTORY_SCAN_MAX_DEPTH,
+            maxFiles: 3,
+        });
+
+        assert.equal(result.files.length, 3);
+        // Nothing was withheld, so claiming truncation here would be a lie.
+        assert.equal(result.truncated, false);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('directories left unvisited by the depth ceiling are reported', async () => {
+    const root = tree();
+    try {
+        fs.mkdirSync(path.join(root, 'a', 'b'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'a', 'near.csv'), 'id\n1\n');
+        fs.writeFileSync(path.join(root, 'a', 'b', 'far.csv'), 'id\n2\n');
+
+        const result = await nativeAnalysisService.analyzeDirectory({
+            filePath: root,
+            allowedRoot: root,
+            maxDepth: 1,
+            maxFiles: DIRECTORY_SCAN_MAX_FILES,
+        });
+
+        assert.deepEqual(
+            result.files.map((file: { file_path: string }) => path.basename(file.file_path)),
+            ['near.csv'],
+        );
+        assert.equal(result.truncated, true);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('the directory ceiling bounds a wide tree that holds no data files', async () => {
+    const root = tree();
+    try {
+        // Directories without a supported file never advance the file count, so
+        // only a directory ceiling can bound this walk.
+        for (let index = 0; index < 12; index += 1) {
+            fs.mkdirSync(path.join(root, `empty-${index}`), { recursive: true });
+        }
+
+        const result = await nativeAnalysisService.analyzeDirectory({
+            filePath: root,
+            allowedRoot: root,
+            maxDepth: DIRECTORY_SCAN_MAX_DEPTH,
+            maxFiles: DIRECTORY_SCAN_MAX_FILES,
+            maxDirectories: 4,
+        });
+
+        assert.equal(result.files.length, 0);
+        assert.equal(result.truncated, true);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('a malformed directory ceiling is rejected rather than silently ignored', async () => {
+    const root = tree();
+    try {
+        fs.writeFileSync(path.join(root, 'only.csv'), 'id\n1\n');
+        await assert.rejects(
+            () =>
+                nativeAnalysisService.analyzeDirectory({
+                    filePath: root,
+                    allowedRoot: root,
+                    maxDirectories: 0,
+                }),
+            /positive integer/i,
+        );
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
 test('a malformed file ceiling is rejected rather than silently ignored', async () => {
     const root = tree();
     try {

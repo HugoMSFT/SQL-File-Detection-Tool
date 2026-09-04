@@ -1000,6 +1000,13 @@
 
         const folder = target.closest('[data-folder-path]');
         if (folder && folder.dataset.folderPath) {
+            // While filtering, every folder is force-expanded so matches stay
+            // visible. Recording a toggle here would apply to state the user
+            // cannot see and would surface later as folders they never
+            // collapsed, so the click is ignored instead.
+            if (fileFilter.trim() !== '') {
+                return;
+            }
             const folderPath = folder.dataset.folderPath;
             if (collapsedFolders.has(folderPath)) {
                 collapsedFolders.delete(folderPath);
