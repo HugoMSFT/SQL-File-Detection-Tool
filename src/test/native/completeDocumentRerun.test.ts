@@ -84,6 +84,12 @@ describe('the default complete document is not destructive', () => {
     it('still creates the table it needs', () => {
         assert.ok(document().includes('CREATE TABLE [dbo].[orders]'));
     });
+
+    it('guards external tables with their ET catalog type', () => {
+        const text = document();
+        assert.ok(text.includes("OBJECT_ID(N'[dbo].[ext_orders]', N'ET') IS NULL"));
+        assert.ok(!text.includes("OBJECT_ID(N'[dbo].[ext_orders]', N'U') IS NULL"));
+    });
 });
 
 describe('the truncate is opt-in and refuses the default schema', () => {
@@ -138,6 +144,22 @@ describe('an apostrophe in a column name cannot break the batches', () => {
             .split(/\r?\n/)
             .filter((line) => /^\s+GO\s*$/.test(line));
         assert.deepStrictEqual(indented, []);
+    });
+});
+
+describe('escaped closing brackets stay in rerun guard names', () => {
+    it('uses the complete catalog name rather than truncating at the escape', () => {
+        const document = generateCompleteDdl(ordersCsv(), {
+            dataSource: 'Lake]One',
+        });
+        assert.ok(
+            document.includes(
+                "IF NOT EXISTS (SELECT 1 FROM sys.external_data_sources " +
+                    "WHERE name = N'Lake]One')",
+            ),
+            document,
+        );
+        assert.ok(document.includes('CREATE EXTERNAL DATA SOURCE [Lake]]One]'));
     });
 });
 

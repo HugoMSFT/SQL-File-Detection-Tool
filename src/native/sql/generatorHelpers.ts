@@ -476,7 +476,12 @@ export function formatSampleRows(metadata: GeneratorMetadata): string[] {
 function externalFormatEncoding(rawEncoding: string): string {
     const encoding = rawEncoding.toUpperCase();
     const normalised = encoding.split('-').join('').split('_').join('');
-    if (normalised === 'UTF8' || normalised === 'UTF8SIG') {
+    if (
+        normalised === 'UTF8' ||
+        normalised === 'UTF8SIG' ||
+        normalised === 'ASCII' ||
+        normalised === 'USASCII'
+    ) {
         return 'UTF8';
     }
     if (normalised.startsWith('UTF16')) {

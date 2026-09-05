@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.13
+
+- Fixed complete-script reruns for external tables and escaped bracket names.
+- Corrected short AWS S3 locations for SQL Server's endpoint grammar.
+- Prevented unsupported legacy-encoding and unverified ORC external tables from
+  being emitted as executable SQL.
+
 ## 1.0.9
 
 - Replaced the walkthrough GIF with a current capture of the editor-first UI.
