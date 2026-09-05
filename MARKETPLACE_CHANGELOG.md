@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.1
+
+- Parquet, Delta, ORC and RCFile external tables now emit bounded column types
+  on supported platforms instead of reporting `NOT AVAILABLE`.
+- Complete scripts rerun cleanly for external tables and escaped bracket names.
+- Short AWS S3 locations are converted to SQL Server's documented endpoint form.
+- Unsupported legacy encodings and unverified ORC read paths produce guidance
+  instead of SQL that looks runnable.
+- Excel timestamp inference and text-column metadata stay consistent across
+  platforms.
+
 ## 1.1.0
 
 - Marked the extension as a **Preview/beta** release so its maturity is stated
@@ -11,6 +22,23 @@
 - Added a keybinding for **Analyze Current File**.
 - Recognised DNS-zone storage endpoints (`*.dfs.storage.azure.net`) and
   converted them correctly for generated `BLOB_STORAGE` SQL.
+
+## 1.0.15
+
+- Kept Excel text-column metadata consistent with the Python analyzer across
+  platforms.
+
+## 1.0.14
+
+- Kept Excel timestamp inference and generated `DATETIME2(6)` columns
+  consistent across platforms.
+
+## 1.0.13
+
+- Fixed complete-script reruns for external tables and escaped bracket names.
+- Corrected short AWS S3 locations for SQL Server's endpoint grammar.
+- Prevented unsupported legacy-encoding and unverified ORC external tables from
+  being emitted as executable SQL.
 
 ## 1.0.9
 

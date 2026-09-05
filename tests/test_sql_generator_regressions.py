@@ -155,6 +155,49 @@ def test_private_onelake_keeps_workspace_and_item_in_abfss_root():
     ) in sql
 
 
+def test_short_aws_s3_url_uses_a_sql_server_endpoint():
+    sql = SQLGenerator().generate_credential_setup(
+        'LakeDS', metadata=csv_meta(), target_platform='sql_server_2025',
+        storage_url='s3://audit-bucket/landing/orders.csv')
+    assert "LOCATION = 's3://s3.amazonaws.com/audit-bucket'" in sql
+
+
+@pytest.mark.parametrize('generator_method', [
+    'generate_external_file_format',
+    'generate_external_table',
+])
+def test_non_utf_external_objects_are_guidance_only(generator_method):
+    metadata = csv_meta(encoding='cp932', codepage='932')
+    sql = getattr(SQLGenerator(), generator_method)(
+        metadata, target_platform='sql_server_2025')
+    assert 'cp932 encoding' in sql.lower()
+    assert 'CODEPAGE' in sql
+    assert not code_only(sql).strip()
+
+
+def test_ascii_external_format_remains_utf8_compatible():
+    sql = SQLGenerator().generate_external_file_format(
+        csv_meta(encoding='ascii', codepage='65001'),
+        target_platform='sql_server_2025',
+    )
+    assert "ENCODING = 'UTF8'" in sql
+    assert 'CREATE EXTERNAL FILE FORMAT' in code_only(sql)
+
+
+def test_orc_external_table_is_not_emitted_from_ddl_only_evidence():
+    sql = SQLGenerator().generate_external_table(
+        {
+            'file_type': 'orc',
+            'file_name': 'data.orc',
+            'schema': [('id', 'int64')],
+        },
+        target_platform='sql_server_2025',
+        storage_url='abs://raw@acct.blob.core.windows.net/data.orc',
+    )
+    assert 'data path is not supported' in sql
+    assert not code_only(sql).strip()
+
+
 @pytest.mark.parametrize('storage_url', [
     's3a://s3.amazonaws.com/bucket/data.csv',
     's3n://s3.amazonaws.com/bucket/data.csv',
@@ -656,6 +699,24 @@ def test_deduplicate_does_not_split_on_go_inside_identifier():
     gen = SQLGenerator()
     script = "SELECT [GO_STATUS], 'GO' AS x FROM [dbo].[t];\n"
     assert gen.deduplicate_shared_prerequisites(script) == script.strip()
+
+
+def test_deduplicate_keeps_distinct_escaped_bracket_names():
+    gen = SQLGenerator()
+    seen = set()
+    first = gen.deduplicate_shared_prerequisites(
+        'CREATE EXTERNAL DATA SOURCE [Lake]]One] '
+        "WITH (LOCATION = 'abs://one@example.blob.core.windows.net');",
+        seen,
+    )
+    second = gen.deduplicate_shared_prerequisites(
+        'CREATE EXTERNAL DATA SOURCE [Lake]]Two] '
+        "WITH (LOCATION = 'abs://two@example.blob.core.windows.net');",
+        seen,
+    )
+    assert 'CREATE EXTERNAL DATA SOURCE [Lake]]One]' in first
+    assert 'CREATE EXTERNAL DATA SOURCE [Lake]]Two]' in second
+    assert 'Skipped:' not in second
 
 
 # ---------------------------------------------------------------------------

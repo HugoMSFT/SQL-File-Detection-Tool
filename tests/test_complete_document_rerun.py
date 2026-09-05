@@ -111,6 +111,17 @@ class CompleteDocumentIsRerunnable(unittest.TestCase):
         self.assertIn(
             "IF OBJECT_ID(N'[cert_schema].[cert_iris]', N'U') IS NULL", document,
         )
+        external_document = complete(csv_metadata(
+            max_string_lengths={'species': 100},
+        ))
+        self.assertIn(
+            "IF OBJECT_ID(N'[cert_schema].[ext_cert_iris]', N'ET') IS NULL",
+            external_document,
+        )
+        self.assertNotIn(
+            "IF OBJECT_ID(N'[cert_schema].[ext_cert_iris]', N'U') IS NULL",
+            external_document,
+        )
 
     def test_the_guard_uses_the_unbracketed_name_for_catalog_lookups(self):
         # sys.external_data_sources.name holds cert_src, not [cert_src]: a guard
@@ -118,6 +129,15 @@ class CompleteDocumentIsRerunnable(unittest.TestCase):
         # would run every time, which is the bug it exists to prevent.
         document = complete()
         self.assertNotIn("WHERE name = N'[cert_src]'", document)
+
+    def test_the_guard_keeps_an_escaped_closing_bracket_in_the_name(self):
+        document = complete(data_source='Lake]One')
+        self.assertIn(
+            "IF NOT EXISTS (SELECT 1 FROM sys.external_data_sources "
+            "WHERE name = N'Lake]One')",
+            document,
+        )
+        self.assertIn('CREATE EXTERNAL DATA SOURCE [Lake]]One]', document)
 
     def test_the_load_target_is_emptied_before_the_load(self):
         document = complete()

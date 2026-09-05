@@ -562,17 +562,18 @@ describe('type mapping edge cases', () => {
         );
     });
 
-    it('requires bounded overrides for external-table LOB columns', () => {
+    it('bounds inferred Parquet LOB columns for external tables', () => {
         const metadata: GeneratorMetadata = {
             ...parquetMetadata(),
             schema: [['payload', 'string']],
         };
-        const blocked = generateExternalTable(metadata, {
+        const generated = generateExternalTable(metadata, {
             targetPlatform: 'azure_sql_db',
         });
-        assert.match(blocked, /NOT AVAILABLE/);
-        assert.match(blocked, /explicit bounded SQL type overrides/i);
-        assert.doesNotMatch(blocked, /CREATE EXTERNAL TABLE \[/);
+        assert.match(generated, /CREATE EXTERNAL TABLE \[/);
+        assert.match(generated, /\[payload\]\s+NVARCHAR\(4000\)/);
+        assert.match(generated, /bounded for external table/i);
+        assert.doesNotMatch(generated, /NOT AVAILABLE on Azure SQL Database/);
 
         const overridden = generateExternalTable({
             ...metadata,
@@ -582,6 +583,32 @@ describe('type mapping edge cases', () => {
         });
         assert.match(overridden, /CREATE EXTERNAL TABLE \[/);
         assert.match(overridden, /\[payload\]\s+NVARCHAR\(4000\)/);
+    });
+
+    it('bounds complete Delta schemas without labeling Azure SQL unavailable', () => {
+        const sql = generateExternalTable({
+            ...parquetMetadata(),
+            file_type: 'delta',
+            schema: [['payload', 'string']],
+        }, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(sql, /CREATE EXTERNAL TABLE \[/);
+        assert.match(sql, /\[payload\]\s+NVARCHAR\(4000\)/);
+        assert.doesNotMatch(sql, /NOT AVAILABLE on Azure SQL Database/);
+    });
+
+    it('does not truncate a known Parquet string wider than NVARCHAR(4000)', () => {
+        const sql = generateExternalTable({
+            ...parquetMetadata(),
+            schema: [['payload', 'string']],
+            max_string_lengths: { payload: 5001 },
+        }, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(sql, /BOUNDED SQL TYPE OVERRIDE REQUIRED/);
+        assert.doesNotMatch(sql, /CREATE EXTERNAL TABLE \[/);
+        assert.doesNotMatch(sql, /NOT AVAILABLE on Azure SQL Database/);
     });
 
     it('handles negative decimal scale without emitting invalid SQL', () => {
@@ -742,6 +769,61 @@ describe('table name resolution', () => {
     });
 });
 
+describe('external storage and format safety', () => {
+    it('converts a short AWS S3 URL to a SQL Server endpoint', () => {
+        const sql = generateCredentialSetup({
+            metadata: csvMetadata(),
+            targetPlatform: 'sql_server_2025',
+            dataSource: 'LakeDS',
+            storageUrl: 's3://audit-bucket/landing/orders.csv',
+        });
+        assert.match(sql, /LOCATION = 's3:\/\/s3\.amazonaws\.com\/audit-bucket'/);
+    });
+
+    it('does not emit external objects that would decode CP932 as UTF-8', () => {
+        const metadata: GeneratorMetadata = {
+            ...csvMetadata(),
+            encoding: 'cp932',
+            codepage: '932',
+        };
+        for (const sql of [
+            generateExternalFileFormat(metadata, { targetPlatform: 'sql_server_2025' }),
+            generateExternalTable(metadata, { targetPlatform: 'sql_server_2025' }),
+        ]) {
+            assert.match(sql, /CP932 encoding/i);
+            assert.match(sql, /CODEPAGE/);
+            assert.strictEqual(executableSql(sql), '');
+        }
+    });
+
+    it('keeps ASCII input eligible for UTF-8 external formats', () => {
+        const sql = generateExternalFileFormat(
+            { ...csvMetadata(), encoding: 'ascii', codepage: '65001' },
+            { targetPlatform: 'sql_server_2025' },
+        );
+        assert.match(sql, /ENCODING = 'UTF8'/);
+        assert.match(executableSql(sql), /CREATE EXTERNAL FILE FORMAT/);
+    });
+
+    it('does not turn ORC DDL-only evidence into an executable external table', () => {
+        const sql = generateExternalTable(
+            {
+                file_type: 'orc',
+                file_name: 'data.orc',
+                file_path: 'data.orc',
+                schema: [['id', 'int64']],
+                nullable_columns: [],
+            },
+            {
+                targetPlatform: 'sql_server_2025',
+                storageUrl: 'abs://raw@acct.blob.core.windows.net/data.orc',
+            },
+        );
+        assert.match(sql, /data path is not supported/i);
+        assert.strictEqual(executableSql(sql), '');
+    });
+});
+
 describe('multi-file export deduplication', () => {
     it('creates shared prerequisites once across files', () => {
         const first = generateCompleteDdl(csvMetadata(), {
@@ -799,6 +881,21 @@ describe('multi-file export deduplication', () => {
         const combined = scripts.join('\n\n');
         assert.ok(/\[dbo\]\.\[a\]/i.test(combined), combined);
         assert.ok(/\[dbo\]\.\[b\]/i.test(combined), combined);
+    });
+
+    it('keeps distinct shared objects whose names contain escaped brackets', () => {
+        const seen = new Set<string>();
+        const first = deduplicateSharedPrerequisites(
+            "CREATE EXTERNAL DATA SOURCE [Lake]]One] WITH (LOCATION = 'abs://one@example.blob.core.windows.net');",
+            seen,
+        );
+        const second = deduplicateSharedPrerequisites(
+            "CREATE EXTERNAL DATA SOURCE [Lake]]Two] WITH (LOCATION = 'abs://two@example.blob.core.windows.net');",
+            seen,
+        );
+        assert.ok(first.includes('CREATE EXTERNAL DATA SOURCE [Lake]]One]'), first);
+        assert.ok(second.includes('CREATE EXTERNAL DATA SOURCE [Lake]]Two]'), second);
+        assert.ok(!second.includes('Skipped:'), second);
     });
 });
 

@@ -31,6 +31,17 @@ DEFAULT_TARGET_PLATFORM = 'azure_sql_db'
 #: Maximum regular columns in a generated SQL target table or typed projection.
 TARGET_TABLE_MAX_COLUMNS = 1024
 
+# T-SQL escapes a closing bracket inside a bracketed identifier as ``]]``.
+# Keep this grammar shared by rerun guards and multi-file deduplication so an
+# identifier such as ``[Lake]]One]`` is never truncated to ``[Lake]``.
+_BRACKETED_IDENTIFIER_PATTERN = r'\[(?:[^\]]|\]\])+\]'
+_SHARED_OBJECT_NAME_PATTERN = rf'({_BRACKETED_IDENTIFIER_PATTERN}|\S+)'
+_ONE_OR_TWO_PART_NAME_PATTERN = (
+    rf'{_BRACKETED_IDENTIFIER_PATTERN}'
+    rf'(?:\.{_BRACKETED_IDENTIFIER_PATTERN})?'
+    rf'|[^\s(;]+'
+)
+
 
 _S3_SCHEMES = frozenset({'s3'})
 _AZURE_STORAGE_SCHEMES = frozenset(
@@ -215,6 +226,15 @@ def _sql_server_storage_parts(storage_url: Optional[str], file_name: str,
         )
 
     if scheme == 's3' and host and not is_2019:
+        # ``s3://bucket/key`` is the standard AWS SDK spelling, but SQL
+        # Server needs an endpoint plus bucket. Convert an unambiguous short
+        # bucket name to the documented path-style AWS endpoint form.
+        if (
+            '.' not in _authority_hostname(host)
+            and ':' not in host
+            and not (host.startswith('<') and host.endswith('>'))
+        ):
+            return f's3://s3.amazonaws.com/{host}', path or fallback_name
         return f's3://{host}', path or fallback_name
 
     if scheme == 'azure' and host:
@@ -2216,6 +2236,15 @@ class SQLGenerator:
                 target_platform,
                 self._no_external_format_guidance(_metadata_text(metadata, 'file_type', '')),
             )
+        if config.format_type == 'DELIMITEDTEXT' and not config.encoding:
+            encoding = _metadata_text(metadata, 'encoding', 'unknown')
+            return self._not_supported_message(
+                f'CREATE EXTERNAL FILE FORMAT ({encoding} encoding)',
+                target_platform,
+                'External file formats accept UTF8 or UTF16 only. Use '
+                'OPENROWSET or BULK INSERT with the detected CODEPAGE, or '
+                'convert the source to UTF-8 first.',
+            )
         supported_platforms = self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
         )
@@ -2289,7 +2318,10 @@ class SQLGenerator:
                     + '\n    )'
                 )
 
-        if config.format_type in self.DDL_ONLY_CERTIFIED_FORMATS:
+        if (
+            config.format_type in self.DDL_ONLY_CERTIFIED_FORMATS
+            and target_platform != 'sql_server_2019'
+        ):
             trailing_notes.append(
                 f'-- {config.format_type} is accepted as DDL on this platform, but '
                 f'reading data through it was not certified. Verify a query against '
@@ -2365,6 +2397,15 @@ class SQLGenerator:
                 target_platform,
                 self._no_external_format_guidance(_metadata_text(metadata, 'file_type', '')),
             )
+        if config.format_type == 'DELIMITEDTEXT' and not config.encoding:
+            encoding = _metadata_text(metadata, 'encoding', 'unknown')
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE ({encoding} encoding)',
+                target_platform,
+                'External file formats accept UTF8 or UTF16 only. Use '
+                'OPENROWSET or BULK INSERT with the detected CODEPAGE, or '
+                'convert the source to UTF-8 first.',
+            )
         if target_platform not in self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
         ):
@@ -2377,6 +2418,17 @@ class SQLGenerator:
                 f'CREATE EXTERNAL TABLE ({config.format_type})',
                 target_platform,
                 alternative,
+            )
+        if (
+            config.format_type in self.DDL_ONLY_CERTIFIED_FORMATS
+            and target_platform != 'sql_server_2019'
+        ):
+            return self._not_supported_message(
+                f'CREATE EXTERNAL TABLE ({config.format_type})',
+                target_platform,
+                f'{config.format_type} file-format DDL is accepted, but its '
+                'data path is not supported here. Convert the source to '
+                'Parquet before creating an external table.',
             )
         nested_parquet_columns = (
             [
@@ -2419,7 +2471,7 @@ class SQLGenerator:
         external_type_mapping_notes = {}
         physical_types = metadata.get('parquet_physical_types') or {}
         explicit_overrides = metadata.get('sql_type_overrides') or {}
-        if metadata.get('file_type') == 'parquet':
+        if metadata.get('file_type') in {'parquet', 'delta', 'orc', 'rc'}:
             for column_name, detected_type in metadata.get('schema') or []:
                 if (
                     column_name not in explicit_overrides
@@ -2453,6 +2505,24 @@ class SQLGenerator:
                     external_type_mapping_notes[column_name] = (
                         'Parquet timezone timestamp physical INT64'
                     )
+                if column_name not in explicit_overrides:
+                    inferred = self._column_sql_type(
+                        metadata, column_name, detected_type,
+                    )
+                    bounded = inferred
+                    max_length = (metadata.get('max_string_lengths') or {}).get(column_name)
+                    if max_length is not None and max_length > 4000:
+                        bounded = inferred
+                    elif re.fullmatch(r'NVARCHAR\s*\(\s*MAX\s*\)', inferred, re.IGNORECASE):
+                        bounded = 'NVARCHAR(4000)'
+                    elif re.fullmatch(r'VARBINARY\s*\(\s*MAX\s*\)', inferred, re.IGNORECASE):
+                        bounded = 'VARBINARY(8000)'
+                    if inferred != bounded:
+                        external_type_overrides[column_name] = bounded
+                        external_type_mapping_notes[column_name] = (
+                            f'{inferred} bounded for external table; '
+                            'validate source width'
+                        )
         external_metadata = metadata
         if external_type_overrides:
             external_metadata = dict(metadata)
@@ -2480,14 +2550,16 @@ class SQLGenerator:
                 f'[{column_name}] ({sql_type})'
                 for column_name, sql_type in external_lob_columns
             )
-            return self._not_supported_message(
-                f'CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
-                target_platform,
-                'External tables cannot declare these inferred LOB columns '
-                f'directly: {rendered}. After validating the complete source '
-                'width, set explicit bounded SQL type overrides (for example '
-                'NVARCHAR(4000) or VARBINARY(8000)).',
-            )
+            return '\n'.join([
+                '-- ====================================================================',
+                f'-- CREATE EXTERNAL TABLE ({config.format_type} with LOB columns)',
+                '-- BOUNDED SQL TYPE OVERRIDE REQUIRED',
+                '-- ====================================================================',
+                '-- External tables are supported on this platform, but cannot declare',
+                f'-- these inferred LOB columns directly: {rendered}.',
+                '-- Validate the source width and set explicit bounded SQL type overrides',
+                '-- (for example NVARCHAR(4000) or VARBINARY(8000)) before execution.',
+            ])
 
         columns = self._generate_column_definitions(
             external_metadata, include_nullability=False,
@@ -3915,7 +3987,10 @@ class SQLGenerator:
         graceful fallback.
         """
         normalised = (encoding or 'utf-8').upper()
-        if normalised in ('UTF-8', 'UTF_8', 'UTF8-SIG', 'UTF-8-SIG', 'UTF8'):
+        if normalised in (
+            'UTF-8', 'UTF_8', 'UTF8-SIG', 'UTF-8-SIG', 'UTF8',
+            'ASCII', 'US-ASCII', 'US_ASCII',
+        ):
             return 'UTF8'
         if normalised.replace('-', '').replace('_', '').startswith('UTF16'):
             return 'UTF16'
@@ -4007,11 +4082,14 @@ class SQLGenerator:
     # therefore be created only once.
     SHARED_OBJECT_PATTERNS = (
         re.compile(r'^\s*CREATE\s+MASTER\s+KEY\b', re.IGNORECASE | re.MULTILINE),
-        re.compile(r'^\s*CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+(\[[^\]]*\]|\S+)',
+        re.compile(r'^\s*CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+' +
+                   _SHARED_OBJECT_NAME_PATTERN,
                    re.IGNORECASE | re.MULTILINE),
-        re.compile(r'^\s*CREATE\s+EXTERNAL\s+DATA\s+SOURCE\s+(\[[^\]]*\]|\S+)',
+        re.compile(r'^\s*CREATE\s+EXTERNAL\s+DATA\s+SOURCE\s+' +
+                   _SHARED_OBJECT_NAME_PATTERN,
                    re.IGNORECASE | re.MULTILINE),
-        re.compile(r'^\s*CREATE\s+EXTERNAL\s+FILE\s+FORMAT\s+(\[[^\]]*\]|\S+)',
+        re.compile(r'^\s*CREATE\s+EXTERNAL\s+FILE\s+FORMAT\s+' +
+                   _SHARED_OBJECT_NAME_PATTERN,
                    re.IGNORECASE | re.MULTILINE),
     )
 
@@ -4378,14 +4456,14 @@ _GUARDED_CREATES: Tuple[Tuple[str, str, str], ...] = (
     (r'CREATE\s+EXTERNAL\s+FILE\s+FORMAT', 'catalog', 'sys.external_file_formats'),
     (r'CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL', 'catalog',
      'sys.database_scoped_credentials'),
-    (r'CREATE\s+EXTERNAL\s+TABLE', 'object_id', 'U'),
+    (r'CREATE\s+EXTERNAL\s+TABLE', 'object_id', 'ET'),
     (r'CREATE\s+TABLE', 'object_id', 'U'),
 )
 
 _GUARD_RE = re.compile(
     r'^(?P<indent>[ \t]*)(?P<head>' +
     '|'.join(pattern for pattern, _kind, _arg in _GUARDED_CREATES) +
-    r')\s+(?P<name>\[[^\]]+\](?:\.\[[^\]]+\])?|[^\s(;]+)',
+    r')\s+(?P<name>' + _ONE_OR_TWO_PART_NAME_PATTERN + r')',
     re.IGNORECASE,
 )
 

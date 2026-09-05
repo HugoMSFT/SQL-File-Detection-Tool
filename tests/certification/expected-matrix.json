@@ -90,9 +90,11 @@
       "statement": "CREATE EXTERNAL FILE FORMAT accepts only UTF8 and UTF16 as ENCODING.",
       "expect": {
         "allowed_encodings": ["UTF8", "UTF16"],
-        "generated_code_excludes": ["ENCODING = 'CP932'", "ENCODING = 'SHIFT_JIS'"]
+        "generated_code_excludes": ["ENCODING = 'CP932'", "ENCODING = 'SHIFT_JIS'"],
+        "external_objects_for_other_encodings": false,
+        "alternative": "OPENROWSET or BULK INSERT with CODEPAGE"
       },
-      "why": "Emitting the detected codepage name produced an invalid keyword."
+      "why": "Emitting the detected codepage name is invalid, while omitting ENCODING silently selects UTF8."
     },
     {
       "id": "R05",
@@ -207,6 +209,7 @@
         "ddl_accepted": true,
         "data_path_certified": false,
         "native_parser": "unsupported_native",
+        "modern_external_table_generated": false,
         "guidance_must_not_say": "fully supported"
       }
     },
@@ -300,6 +303,19 @@
         "setup_must_not_contain": "CREATE EXTERNAL FILE FORMAT"
       },
       "why": "A remote JSON cell whose data source nobody created fails with error 12703 / 46501. That reads exactly like a generator defect and is not one: it means the prerequisite was never emitted. Live run v4 produced a run of such failures."
+    },
+    {
+      "id": "R20",
+      "hypothesis": "H3",
+      "evidence": "static",
+      "rule": "aws_s3_endpoint_shape",
+      "statement": "A short SDK-style s3://bucket/key input must be translated into SQL Server's path-style AWS endpoint plus a relative key.",
+      "expect": {
+        "input": "s3://audit-bucket/landing/orders.csv",
+        "data_source_location": "s3://s3.amazonaws.com/audit-bucket",
+        "relative_path": "landing/orders.csv"
+      },
+      "why": "SQL Server S3 locations identify an endpoint and bucket; s3://audit-bucket alone treats the bucket name as a network host."
     }
   ]
 }
