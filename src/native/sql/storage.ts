@@ -324,6 +324,16 @@ export function sqlServerStorageParts(
     }
 
     if (scheme === 's3' && host !== '' && !is2019) {
+        // `s3://bucket/key` is the standard AWS SDK spelling, but SQL Server
+        // needs an endpoint plus bucket. Convert an unambiguous short bucket
+        // name to the documented path-style AWS endpoint form.
+        if (
+            !authorityHostname(host).includes('.') &&
+            !host.includes(':') &&
+            !(host.startsWith('<') && host.endsWith('>'))
+        ) {
+            return [`s3://s3.amazonaws.com/${host}`, path || fallback];
+        }
         return [`s3://${host}`, path || fallback];
     }
 

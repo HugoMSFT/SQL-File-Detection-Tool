@@ -854,6 +854,16 @@ export function generateExternalFileFormat(
             noExternalFormatGuidance(metadata.file_type ?? ''),
         );
     }
+    if (config.format_type === 'DELIMITEDTEXT' && !config.encoding) {
+        const encoding = stringOr(metadata.encoding, 'unknown');
+        return notSupportedMessage(
+            `CREATE EXTERNAL FILE FORMAT (${encoding} encoding)`,
+            targetPlatform,
+            'External file formats accept UTF8 or UTF16 only. Use OPENROWSET ' +
+                'or BULK INSERT with the detected CODEPAGE, or convert the source ' +
+                'to UTF-8 first.',
+        );
+    }
     const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
@@ -925,7 +935,10 @@ export function generateExternalFileFormat(
         }
     }
 
-    if (DDL_ONLY_CERTIFIED_FORMATS.has(config.format_type)) {
+    if (
+        DDL_ONLY_CERTIFIED_FORMATS.has(config.format_type) &&
+        targetPlatform !== 'sql_server_2019'
+    ) {
         trailingNotes.push(
             `-- ${config.format_type} is accepted as DDL on this platform, but reading `
                 + `data through it was not certified. Verify a query against a real `
@@ -1007,6 +1020,16 @@ export function generateExternalTable(
             noExternalFormatGuidance(metadata.file_type ?? ''),
         );
     }
+    if (config.format_type === 'DELIMITEDTEXT' && !config.encoding) {
+        const encoding = stringOr(metadata.encoding, 'unknown');
+        return notSupportedMessage(
+            `CREATE EXTERNAL TABLE (${encoding} encoding)`,
+            targetPlatform,
+            'External file formats accept UTF8 or UTF16 only. Use OPENROWSET ' +
+                'or BULK INSERT with the detected CODEPAGE, or convert the source ' +
+                'to UTF-8 first.',
+        );
+    }
     const supportedPlatforms = externalFormatPlatforms(config.format_type);
     if (!supportedPlatforms || !supportedPlatforms.has(targetPlatform)) {
         const alternative =
@@ -1017,6 +1040,18 @@ export function generateExternalTable(
             `CREATE EXTERNAL TABLE (${config.format_type})`,
             targetPlatform,
             alternative,
+        );
+    }
+    if (
+        DDL_ONLY_CERTIFIED_FORMATS.has(config.format_type) &&
+        targetPlatform !== 'sql_server_2019'
+    ) {
+        return notSupportedMessage(
+            `CREATE EXTERNAL TABLE (${config.format_type})`,
+            targetPlatform,
+            `${config.format_type} file-format DDL is accepted, but its data ` +
+                'path is not supported here. Convert the source to Parquet before ' +
+                'creating an external table.',
         );
     }
     const nestedParquetColumns =
@@ -2274,6 +2309,15 @@ export function generateAllStatements(
 // Rerun safety for the complete document
 // ---------------------------------------------------------------------------
 
+// T-SQL escapes a closing bracket inside a bracketed identifier as `]]`.
+// Reuse this grammar for guards and multi-file deduplication so names such as
+// `[Lake]]One]` are never truncated to `[Lake]`.
+const BRACKETED_IDENTIFIER_SOURCE = '\\[(?:[^\\]]|\\]\\])+\\]';
+const SHARED_OBJECT_NAME_SOURCE = `(${BRACKETED_IDENTIFIER_SOURCE}|\\S+)`;
+const ONE_OR_TWO_PART_NAME_SOURCE =
+    `${BRACKETED_IDENTIFIER_SOURCE}(?:\\.${BRACKETED_IDENTIFIER_SOURCE})?` +
+    '|[^\\s(;]+';
+
 /**
  * Each guardable CREATE, with the existence test that makes re-running it safe.
  * `catalog` names a catalog view keyed by object name; `objectId` uses
@@ -2299,13 +2343,13 @@ const GUARDED_CREATES: ReadonlyArray<{
         kind: 'catalog',
         argument: 'sys.database_scoped_credentials',
     },
-    { source: 'CREATE\\s+EXTERNAL\\s+TABLE', kind: 'objectId', argument: 'U' },
+    { source: 'CREATE\\s+EXTERNAL\\s+TABLE', kind: 'objectId', argument: 'ET' },
     { source: 'CREATE\\s+TABLE', kind: 'objectId', argument: 'U' },
 ];
 
 const GUARD_RE = new RegExp(
     `^([ \\t]*)(${GUARDED_CREATES.map((entry) => entry.source).join('|')})` +
-        '\\s+(\\[[^\\]]+\\](?:\\.\\[[^\\]]+\\])?|[^\\s(;]+)',
+        `\\s+(${ONE_OR_TWO_PART_NAME_SOURCE})`,
     'i',
 );
 
@@ -2671,16 +2715,31 @@ export function generateCompleteDdl(
 const SHARED_OBJECT_PATTERNS: ReadonlyArray<{ source: string; regex: RegExp }> = [
     { source: '^\\s*CREATE\\s+MASTER\\s+KEY\\b', regex: /^\s*CREATE\s+MASTER\s+KEY\b/gim },
     {
-        source: '^\\s*CREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\]|\\S+)',
-        regex: /^\s*CREATE\s+DATABASE\s+SCOPED\s+CREDENTIAL\s+(\[[^\]]*\]|\S+)/gim,
+        source: '^\\s*CREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+' +
+            SHARED_OBJECT_NAME_SOURCE,
+        regex: new RegExp(
+            '^\\s*CREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+' +
+                SHARED_OBJECT_NAME_SOURCE,
+            'gim',
+        ),
     },
     {
-        source: '^\\s*CREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\]|\\S+)',
-        regex: /^\s*CREATE\s+EXTERNAL\s+DATA\s+SOURCE\s+(\[[^\]]*\]|\S+)/gim,
+        source: '^\\s*CREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+' +
+            SHARED_OBJECT_NAME_SOURCE,
+        regex: new RegExp(
+            '^\\s*CREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+' +
+                SHARED_OBJECT_NAME_SOURCE,
+            'gim',
+        ),
     },
     {
-        source: '^\\s*CREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\]|\\S+)',
-        regex: /^\s*CREATE\s+EXTERNAL\s+FILE\s+FORMAT\s+(\[[^\]]*\]|\S+)/gim,
+        source: '^\\s*CREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+' +
+            SHARED_OBJECT_NAME_SOURCE,
+        regex: new RegExp(
+            '^\\s*CREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+' +
+                SHARED_OBJECT_NAME_SOURCE,
+            'gim',
+        ),
     },
 ];
 

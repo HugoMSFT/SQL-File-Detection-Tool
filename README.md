@@ -87,11 +87,14 @@ the code actually does.
 
 ORC and RCFile are **recognised, not parsed**. The extension identifies the
 format, reports it, and generates the correct external file format and
-`OPENROWSET`/external-table guidance for it - but it cannot read an ORC file's
-embedded schema, so it cannot tell you the column names and types the way it can
-for Parquet or CSV. There is no pure-JavaScript ORC reader worth shipping, and
-bundling a native one would reintroduce exactly the platform-specific install
-step version 2.0 exists to remove.
+external-table guidance for it. ORC external tables are emitted only for the
+legacy SQL Server 2019 Hadoop path; on newer targets, accepting
+`FORMAT_TYPE = ORC` as DDL does not establish a working reader, so the tool
+recommends converting the source to Parquet. The extension cannot read an ORC
+file's embedded schema, so it cannot tell you the column names and types the way
+it can for Parquet or CSV. There is no pure-JavaScript ORC reader worth shipping,
+and bundling a native one would reintroduce exactly the platform-specific
+install step version 2.0 exists to remove.
 
 The optional Python CLI has the same limitation by default. If you need ORC
 schema extraction, use the CLI with `pip install ".[spark]"`, which reads ORC
@@ -163,8 +166,8 @@ Marketplace ID: `hvbqueiroz.sql-file-detection`
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-1.0.9.vsix
-code --install-extension dist/sql-file-detection-1.0.9.vsix --force
+npm run package     # writes dist/sql-file-detection-1.0.15.vsix
+code --install-extension dist/sql-file-detection-1.0.15.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -274,18 +277,27 @@ Behaviour worth knowing when you consume `generate_complete_ddl` or the
   are exported into one `.sql` file, master keys, database scoped credentials,
   external data sources and external file formats are created once. Later
   repeats are replaced with a comment naming the file that already created
-  them, so file 2 onwards no longer fails with "already exists".
+  them, so file 2 onwards no longer fails with "already exists". Escaped closing
+  brackets in object names remain part of the deduplication key.
 - **Remote CSV bulk loads never use an absolute URL as a local path.** For
   Azure Blob / ADLS input the script creates a dedicated
   `TYPE = BLOB_STORAGE` data source named `<data_source>_Bulk` and emits a
   relative `FROM 'container-relative/path.csv'` plus `DATA_SOURCE`. The
   `abs://`/`adls://` source is kept separately for external tables, which
-  cannot be backed by a `BLOB_STORAGE` source. S3 bulk access is emitted only
-  for SQL Server 2022/2025.
+  cannot be backed by a `BLOB_STORAGE` source. S3 `OPENROWSET` access is emitted
+  only for SQL Server 2022/2025.
 - **`storage_url` is what the SQL engine sees.** Pass the full location
   (`abs://`, `adls://`, `abfss://`, `wasbs://`, `s3://` or an `https://`
   storage URL). Omit it for local input; Azure SQL and Fabric cannot read a
   local path, so the file must be staged in reachable storage first.
+- **Short AWS S3 URLs are translated for SQL Server.** An SDK-style
+  `s3://bucket/key` input becomes the documented path-style SQL endpoint
+  `s3://s3.amazonaws.com/bucket` plus the relative key. Explicit endpoint URLs
+  such as `s3://s3.us-west-2.amazonaws.com/bucket/key` remain unchanged.
+- **Legacy text encodings stay on CODEPAGE-aware readers.** External file
+  formats accept UTF8 or UTF16. A detected CP932, Windows-1252, or other legacy
+  encoding therefore produces `OPENROWSET`/`BULK INSERT` guidance instead of an
+  external table that would silently fall back to UTF-8.
 - **`resolve_table_name(metadata, table_name)`** returns the regular table name
   a call will actually use: blank derives it from the file name, a supplied
   value is cleaned but preserved. `/api/sql_ddl` returns both
@@ -357,9 +369,9 @@ What the live runs settled:
   source by the shape of the JSON.
 - **ORC**: `CREATE EXTERNAL FILE FORMAT ... FORMAT_TYPE = ORC` is accepted and
   dropped cleanly. The canonical ORC fixture is published, but the production
-  path does not execute ORC row reads, so that data path is **not verified**.
-  This is separate from the native reader, which recognises ORC without parsing
-  it.
+  path does not execute ORC row reads, so that data path is **not verified** and
+  the generator does not emit a modern ORC external table. This is separate
+  from the native reader, which recognises ORC without parsing it.
 - **RCFile** is rejected outright (error 46506), and there is no JSON external
   file format (error 102) - both as expected.
 - **Excel and Iceberg** never fall through to a `DELIMITEDTEXT` format. They

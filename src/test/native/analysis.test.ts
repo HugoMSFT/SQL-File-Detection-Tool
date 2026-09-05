@@ -93,6 +93,16 @@ describe('format matrix', () => {
         });
     }
 
+    it('matches pandas precision for Excel timestamps', async () => {
+        const metadata = await analyze('data sample/excel/inventory.xlsx');
+        const schema = Object.fromEntries(metadata.schema ?? []);
+
+        assert.strictEqual(schema.sku, 'str');
+        assert.strictEqual(schema.description, 'str');
+        assert.strictEqual(schema.last_counted, 'datetime64[us]');
+        assert.match(generateCreateTable(metadata), /\[last_counted\]\s+DATETIME2\(6\)/);
+    });
+
     it('advertises the same support level it delivers', async () => {
         const advertised = new Map(
             listSupportedFormats().map((format) => [format.fileType, format.support]),

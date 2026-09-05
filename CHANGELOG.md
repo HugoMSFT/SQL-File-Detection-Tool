@@ -4,6 +4,33 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.15]
+
+### Fixed
+
+- Aligned native Excel text-column metadata with pandas so cross-platform
+  parity reports `str` consistently.
+
+## [1.0.14]
+
+### Fixed
+
+- Aligned native Excel timestamp inference with pandas microsecond precision so
+  generated columns consistently use `DATETIME2(6)` across platforms.
+
+## [1.0.13]
+
+### Fixed
+
+- Guarded external tables with SQL Server object type `ET`, so complete scripts
+  no longer retry `CREATE EXTERNAL TABLE` on every run.
+- Preserved doubled closing brackets while generating rerun guards and
+  deduplicating shared prerequisites.
+- Converted short AWS `s3://bucket/key` inputs to SQL Server's documented
+  path-style endpoint form.
+- Replaced runnable-looking external objects with explicit guidance when a
+  detected text encoding is not UTF8/UTF16 or an ORC read path is unverified.
+
 ## [1.0.9]
 
 ### Changed

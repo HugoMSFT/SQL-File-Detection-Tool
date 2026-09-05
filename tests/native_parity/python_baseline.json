@@ -440,11 +440,11 @@
    "schema": [
     [
      "sku",
-     "object"
+     "str"
     ],
     [
      "description",
-     "object"
+     "str"
     ],
     [
      "on_hand",
@@ -460,7 +460,7 @@
     ],
     [
      "last_counted",
-     "datetime64[ns]"
+     "datetime64[us]"
     ]
    ],
    "schema_inference": "sampled",
@@ -11457,7 +11457,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -13579,7 +13579,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -23597,7 +23597,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -25719,7 +25719,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -35737,7 +35737,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -37859,7 +37859,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -38162,7 +38162,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38322,7 +38322,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38395,7 +38395,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38555,7 +38555,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38628,7 +38628,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38788,7 +38788,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -38863,7 +38863,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39063,7 +39063,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39261,7 +39261,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39421,7 +39421,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39494,7 +39494,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39654,7 +39654,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39727,7 +39727,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39887,7 +39887,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -39962,7 +39962,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40162,7 +40162,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40362,7 +40362,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40562,7 +40562,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40738,7 +40738,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ],
      [
       "[sku]",
@@ -40762,7 +40762,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40817,7 +40817,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -40977,7 +40977,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41024,7 +41024,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ],
      [
       "[sku]",
@@ -41048,7 +41048,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41103,7 +41103,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41263,7 +41263,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41334,7 +41334,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41537,7 +41537,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41741,7 +41741,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41904,7 +41904,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -41978,7 +41978,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42182,7 +42182,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42391,7 +42391,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42595,7 +42595,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42755,7 +42755,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42828,7 +42828,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -42988,7 +42988,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43061,7 +43061,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43259,7 +43259,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43457,7 +43457,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43617,7 +43617,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43686,7 +43686,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43846,7 +43846,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -43919,7 +43919,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -44079,7 +44079,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -44152,7 +44152,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -44350,7 +44350,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -44548,7 +44548,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -44708,7 +44708,7 @@
      ],
      [
       "[last_counted]",
-      "DATETIME2(7)"
+      "DATETIME2(6)"
      ]
     ],
     "go_batches": 0,
@@ -51625,7 +51625,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -53073,7 +53073,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -60542,7 +60542,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -62156,7 +62156,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -69325,7 +69325,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -70773,7 +70773,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -70988,70 +70988,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -71417,70 +71358,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -71846,70 +71728,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/all_types.orc"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -80368,70 +80191,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -80796,70 +80560,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -81224,70 +80929,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/all_types.orc"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -82008,70 +81654,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[c_int8]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(8000)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(4000)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(4000)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_all_types]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -82146,7 +81733,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -99728,7 +99315,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -103300,7 +102887,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -109801,7 +109388,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -111081,7 +110668,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -116178,7 +115765,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -117327,7 +116914,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -126254,7 +125841,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -126840,7 +126427,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -133219,7 +132806,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -134581,7 +134168,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -134777,30 +134364,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -134867,15 +134435,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "for_json": {
@@ -135039,30 +134601,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -135129,15 +134672,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "for_json": {
@@ -135301,30 +134838,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "create_table": {
@@ -135391,15 +134909,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "for_json": {
@@ -135614,15 +135126,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "for_json": {
@@ -135810,15 +135316,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Database"
     ]
    },
    "for_json": {
@@ -135955,30 +135455,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "create_table": {
@@ -136045,14 +135526,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "for_json": {
@@ -136216,30 +135692,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "create_table": {
@@ -136306,14 +135763,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "for_json": {
@@ -136477,30 +135929,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "create_table": {
@@ -136567,14 +136000,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "for_json": {
@@ -136789,14 +136217,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "for_json": {
@@ -136984,14 +136407,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Azure SQL Managed Instance"
     ]
    },
    "for_json": {
@@ -137179,15 +136597,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "for_json": {
@@ -137375,15 +136787,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "for_json": {
@@ -137556,30 +136962,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "create_table": {
@@ -137641,15 +137028,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "for_json": {
@@ -137845,30 +137226,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>f"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "create_table": {
@@ -137930,15 +137292,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "for_json": {
@@ -138149,15 +137505,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>Microsoft Fabric SQL Database"
     ]
    },
    "for_json": {
@@ -138328,14 +137678,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "for_json": {
@@ -138474,31 +137819,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv",
-     "\\bREJECT_TYPE\\s*=\\s*(\\w+)=>VALUE"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "create_table": {
@@ -138546,14 +137871,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "for_json": {
@@ -138712,31 +138032,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv",
-     "\\bREJECT_TYPE\\s*=\\s*(\\w+)=>VALUE"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "create_table": {
@@ -138779,14 +138079,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "for_json": {
@@ -138987,14 +138282,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "for_json": {
@@ -139169,14 +138459,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2019"
     ]
    },
    "for_json": {
@@ -139315,30 +138600,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "create_table": {
@@ -139404,15 +138670,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "for_json": {
@@ -139574,30 +138834,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "create_table": {
@@ -139663,15 +138904,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "for_json": {
@@ -139827,30 +139062,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "create_table": {
@@ -139911,15 +139127,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "for_json": {
@@ -140133,15 +139343,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "for_json": {
@@ -140270,30 +139474,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "create_table": {
@@ -140347,22 +139532,16 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2022"
     ]
    },
    "for_json": {
@@ -140520,30 +139699,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -140609,15 +139769,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "for_json": {
@@ -140779,30 +139933,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -140868,15 +140003,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "for_json": {
@@ -141032,30 +140161,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=><path>/japanese_cp932.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -141116,15 +140226,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "for_json": {
@@ -141338,15 +140442,9 @@
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "for_json": {
@@ -141475,30 +140573,11 @@
     ]
    },
    "create_external_table": {
-    "columns": [
-     [
-      "[row_id]",
-      "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
-     ]
-    ],
+    "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+TABLE\\s+(\\[[^\\]]*\\]\\.\\[[^\\]]*\\])=>[dbo].[ext_japanese_cp932]",
-     "\\bDATA_SOURCE\\s*=\\s*(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>folder/file.csv"
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "create_table": {
@@ -141552,22 +140631,16 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
    "external_file_format": {
     "columns": [],
     "go_batches": 0,
-    "has_sql": true,
+    "has_sql": false,
     "markers": [
-     "\\bCREATE\\s+EXTERNAL\\s+FILE\\s+FORMAT\\s+(\\[[^\\]]*\\])=>[ff_csv_format]",
-     "\\bFORMAT_TYPE\\s*=\\s*(\\w+)=>DELIMITEDTEXT",
-     "\\bFIELD_TERMINATOR\\s*=\\s*\\'([^\\']*)\\'=>,",
-     "\\bFIRST_ROW\\s*=\\s*(\\d+)=>2",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bUSE_TYPE_DEFAULT\\s*=\\s*(TRUE|FALSE)\\b=>FALSE",
-     "\\bSTRING_DELIMITER\\s*=\\s*\\'([^\\']*)\\'=>\""
+     "\\bNOT\\s+AVAILABLE\\s+on\\s+(.+)$=>SQL Server 2025"
     ]
    },
    "for_json": {
@@ -148009,7 +147082,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -149371,7 +148444,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -155849,7 +154922,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -157211,7 +156284,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -163689,7 +162762,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -165051,7 +164124,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -171529,7 +170602,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
@@ -172891,7 +171964,7 @@
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://bucket",
+     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>s3://s3.amazonaws.com/bucket",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>S3 ACCESS KEY"
     ]
    },
