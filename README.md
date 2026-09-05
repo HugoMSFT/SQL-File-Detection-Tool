@@ -166,8 +166,8 @@ Marketplace ID: `hvbqueiroz.sql-file-detection`
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-1.0.13.vsix
-code --install-extension dist/sql-file-detection-1.0.13.vsix --force
+npm run package     # writes dist/sql-file-detection-1.0.14.vsix
+code --install-extension dist/sql-file-detection-1.0.14.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the

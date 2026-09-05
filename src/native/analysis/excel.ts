@@ -347,7 +347,7 @@ function firstSheetPath(
 }
 
 /** pandas dtypes an Excel column can take. */
-type ExcelDtype = 'int64' | 'float64' | 'bool' | 'datetime64[ns]' | 'object';
+type ExcelDtype = 'int64' | 'float64' | 'bool' | 'datetime64[us]' | 'object';
 
 interface ExcelColumnInference {
     dtype: ExcelDtype;
@@ -390,7 +390,7 @@ function inferExcelColumn(values: ExcelCell[]): ExcelColumnInference {
     };
 
     if (present > 0 && dates === present) {
-        return { dtype: 'datetime64[ns]', values: values.map(render), observedMaxLength: null };
+        return { dtype: 'datetime64[us]', values: values.map(render), observedMaxLength: null };
     }
     if (present > 0 && booleans === present && !hasMissing) {
         return { dtype: 'bool', values: values.map(render), observedMaxLength: null };

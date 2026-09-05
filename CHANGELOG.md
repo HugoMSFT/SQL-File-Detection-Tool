@@ -4,6 +4,13 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.14]
+
+### Fixed
+
+- Aligned native Excel timestamp inference with pandas microsecond precision so
+  generated columns consistently use `DATETIME2(6)` across platforms.
+
 ## [1.0.13]
 
 ### Fixed

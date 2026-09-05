@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.14
+
+- Kept Excel timestamp inference and generated `DATETIME2(6)` columns
+  consistent across platforms.
+
 ## 1.0.13
 
 - Fixed complete-script reruns for external tables and escaped bracket names.
