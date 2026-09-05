@@ -4,6 +4,13 @@ All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
 
+## [1.0.15]
+
+### Fixed
+
+- Aligned native Excel text-column metadata with pandas so cross-platform
+  parity reports `str` consistently.
+
 ## [1.0.14]
 
 ### Fixed

@@ -347,7 +347,7 @@ function firstSheetPath(
 }
 
 /** pandas dtypes an Excel column can take. */
-type ExcelDtype = 'int64' | 'float64' | 'bool' | 'datetime64[us]' | 'object';
+type ExcelDtype = 'int64' | 'float64' | 'bool' | 'datetime64[us]' | 'str';
 
 interface ExcelColumnInference {
     dtype: ExcelDtype;
@@ -416,7 +416,7 @@ function inferExcelColumn(values: ExcelCell[]): ExcelColumnInference {
                     : String(value);
         maxLength = Math.max(maxLength, text.length);
     }
-    return { dtype: 'object', values: values.map(render), observedMaxLength: maxLength };
+    return { dtype: 'str', values: values.map(render), observedMaxLength: maxLength };
 }
 
 /** Analyse an XLSX workbook, mirroring the Python `_analyze_excel` keys. */

@@ -97,6 +97,8 @@ describe('format matrix', () => {
         const metadata = await analyze('data sample/excel/inventory.xlsx');
         const schema = Object.fromEntries(metadata.schema ?? []);
 
+        assert.strictEqual(schema.sku, 'str');
+        assert.strictEqual(schema.description, 'str');
         assert.strictEqual(schema.last_counted, 'datetime64[us]');
         assert.match(generateCreateTable(metadata), /\[last_counted\]\s+DATETIME2\(6\)/);
     });

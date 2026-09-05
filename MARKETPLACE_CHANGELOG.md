@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.15
+
+- Kept Excel text-column metadata consistent with the Python analyzer across
+  platforms.
+
 ## 1.0.14
 
 - Kept Excel timestamp inference and generated `DATETIME2(6)` columns
