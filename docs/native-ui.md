@@ -176,7 +176,14 @@ Disconnect clears only the extension's in-memory state; it does not remove the
 user's Microsoft session from VS Code. There is no storage-browser command in
 the manifest and no storage SDK in the dependency graph.
 
-Authentication and ARM calls begin only after **Connect to Azure** or **Retry**.
+Authentication and ARM calls begin only after **Connect to Azure**, **Retry**,
+or **Refresh**. Concurrent Connect/Retry actions share one in-flight request.
+Transient network failures, HTTP 408/429, and selected 5xx responses receive at
+most two cancellation-aware retries with bounded backoff. Successful tenant
+lists are cached in memory for at most two minutes. Refresh bypasses that cache;
+if its retries fail transiently, an unexpired previous list remains visible and
+is marked cached. The cache is never persisted and is cleared on provider
+changes, Disconnect, authorization failure, or disposal.
 The ARM client permits only HTTPS requests to the fixed public-cloud
 `management.azure.com/tenants` endpoint and its validated continuation links,
 with hard limits for time, pages, items, and response bytes. Authentication

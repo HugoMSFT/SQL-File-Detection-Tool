@@ -50,7 +50,12 @@ test('unknown message types are dropped', () => {
 });
 
 test('Azure connection actions are explicit zero-field capabilities', () => {
-    for (const type of ['azureConnect', 'azureRetry', 'azureDisconnect'] as const) {
+    for (const type of [
+        'azureConnect',
+        'azureRetry',
+        'azureRefresh',
+        'azureDisconnect',
+    ] as const) {
         assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
             type,
         });

@@ -5,6 +5,7 @@ export class AzureConnectionError extends Error {
         readonly kind: AzureConnectionErrorKind,
         message: string,
         readonly status?: number,
+        readonly retryAfterMs?: number,
     ) {
         super(message);
         this.name = 'AzureConnectionError';

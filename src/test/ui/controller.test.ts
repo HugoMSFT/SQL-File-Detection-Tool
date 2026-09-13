@@ -135,6 +135,7 @@ test('Azure connection requests reach only the injected connection service', asy
         phase: 'disconnected',
         identity: null,
         tenants: [],
+        stale: false,
         errorKind: null,
         message: 'Disconnected.',
     };
@@ -146,6 +147,10 @@ test('Azure connection requests reach only the injected connection service', asy
         },
         retry: async () => {
             calls.push('retry');
+            return disconnected;
+        },
+        refresh: async () => {
+            calls.push('refresh');
             return disconnected;
         },
         disconnect: () => {
@@ -164,14 +169,22 @@ test('Azure connection requests reach only the injected connection service', asy
     try {
         await ui.handle({ type: 'azureConnect' });
         await ui.handle({ type: 'azureRetry' });
+        await ui.handle({ type: 'azureRefresh' });
         await ui.handle({ type: 'azureDisconnect' });
         await ui.authenticationChanged();
-        assert.deepEqual(calls, ['connect', 'retry', 'disconnect', 'changed']);
+        assert.deepEqual(calls, ['connect', 'retry', 'refresh', 'disconnect', 'changed']);
     } finally {
         await ui.dispose();
         cleanup(record);
     }
-    assert.deepEqual(calls, ['connect', 'retry', 'disconnect', 'changed', 'dispose']);
+    assert.deepEqual(calls, [
+        'connect',
+        'retry',
+        'refresh',
+        'disconnect',
+        'changed',
+        'dispose',
+    ]);
 });
 
 test('the controller applies and resets parser overrides per selected file', async () => {

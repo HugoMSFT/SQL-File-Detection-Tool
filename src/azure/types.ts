@@ -3,6 +3,9 @@ export type AzureConnectionPhase = 'disconnected' | 'connecting' | 'connected' |
 export type AzureConnectionErrorKind =
     | 'signIn'
     | 'controlAccess'
+    | 'rateLimited'
+    | 'timeout'
+    | 'cancelled'
     | 'temporary'
     | 'invalidResponse';
 
@@ -25,6 +28,7 @@ export interface AzureConnectionState {
     readonly phase: AzureConnectionPhase;
     readonly identity: AzureIdentity | null;
     readonly tenants: readonly AzureTenant[];
+    readonly stale: boolean;
     readonly errorKind: AzureConnectionErrorKind | null;
     readonly message: string;
 }
@@ -33,6 +37,7 @@ export const DISCONNECTED_AZURE_CONNECTION_STATE: AzureConnectionState = Object.
     phase: 'disconnected',
     identity: null,
     tenants: Object.freeze([]),
+    stale: false,
     errorKind: null,
     message:
         'Connect with Microsoft to verify Azure access and list accessible directories (tenants).',
@@ -42,6 +47,7 @@ export interface AzureConnectionService {
     readonly state: AzureConnectionState;
     connect(): Promise<AzureConnectionState>;
     retry(): Promise<AzureConnectionState>;
+    refresh(): Promise<AzureConnectionState>;
     disconnect(): AzureConnectionState;
     authenticationChanged(): Promise<AzureConnectionState>;
     dispose(): void;

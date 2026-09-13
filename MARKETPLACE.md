@@ -23,8 +23,9 @@ PolyBase
 - Maps detected columns to recommended SQL data types.
 - Generates `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, and external-table SQL.
 - Targets SQL Server, Azure SQL Database, Azure SQL Managed Instance, and Fabric
-- Verifies Azure sign-in and accessible directories through VS Code's built-in Microsoft authentication
   SQL Database.
+- Verifies Azure sign-in and accessible directories through VS Code's built-in
+  Microsoft authentication, with explicit Refresh and bounded transient retries.
 - Detects ABS, ADLS, or ABFSS from a storage URL and generates credential and
   external-data-source setup.
 

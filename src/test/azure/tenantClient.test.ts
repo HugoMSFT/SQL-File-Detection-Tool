@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+    ARM_RETRY_BASE_DELAY_MS,
     ARM_TENANTS_API_VERSION,
     MAX_ARM_ITEMS,
     MAX_ARM_PAGES,
     MAX_ARM_RESPONSE_BYTES,
+    MAX_ARM_RETRIES,
+    MAX_ARM_RETRY_DELAY_MS,
     AzureTenantClient,
     validateTenantManagementUrl,
     type FetchLike,
@@ -166,22 +169,26 @@ test('tenant discovery cancels denied and failed response bodies', async () => {
     for (const status of [401, 403, 500]) {
         let cancelled = false;
         let aborted = false;
-        const client = new AzureTenantClient(async (_url, init) => {
-            init.signal.addEventListener('abort', () => {
-                aborted = true;
-            });
-            return {
-                ...response(status, {}),
-                body: {
-                    cancel: async () => {
-                        cancelled = true;
+        const client = new AzureTenantClient(
+            async (_url, init) => {
+                init.signal.addEventListener('abort', () => {
+                    aborted = true;
+                });
+                return {
+                    ...response(status, {}),
+                    body: {
+                        cancel: async () => {
+                            cancelled = true;
+                        },
+                        getReader: () => {
+                            throw new Error('body must not be read');
+                        },
                     },
-                    getReader: () => {
-                        throw new Error('body must not be read');
-                    },
-                },
-            };
-        });
+                };
+            },
+            50,
+            { sleep: async () => undefined },
+        );
         await assert.rejects(client.listTenants('secret'), AzureConnectionError);
         assert.equal(cancelled, true, `body was not cancelled for HTTP ${status}`);
         assert.equal(aborted, true, `request was not aborted for HTTP ${status}`);
@@ -200,6 +207,7 @@ test('tenant discovery has a real request timeout and honors caller cancellation
                 });
             },
             5,
+            { sleep: async () => undefined },
         );
         const pending = client.listTenants('secret', parent.signal);
         if (callerCancellation) {
@@ -211,6 +219,128 @@ test('tenant discovery has a real request timeout and honors caller cancellation
         );
         assert.equal(requestSignal?.aborted, true);
     }
+});
+
+test('tenant discovery retries transient failures with bounded backoff', async () => {
+    const delays: number[] = [];
+    let calls = 0;
+    const client = new AzureTenantClient(
+        async () => {
+            calls += 1;
+            return calls <= MAX_ARM_RETRIES
+                ? response(503, {}, { 'retry-after': '10' })
+                : response(200, { value: [{ tenantId: TENANT_ID }] });
+        },
+        50,
+        {
+            sleep: async (milliseconds) => {
+                delays.push(milliseconds);
+            },
+            random: () => 0,
+        },
+    );
+
+    assert.deepEqual(await client.listTenants('secret'), [
+        { id: TENANT_ID, label: TENANT_ID },
+    ]);
+    assert.equal(calls, MAX_ARM_RETRIES + 1);
+    assert.deepEqual(delays, [MAX_ARM_RETRY_DELAY_MS, MAX_ARM_RETRY_DELAY_MS]);
+});
+
+test('tenant discovery uses jittered backoff without Retry-After', async () => {
+    const delays: number[] = [];
+    let calls = 0;
+    const client = new AzureTenantClient(
+        async () => {
+            calls += 1;
+            return calls === 1
+                ? response(500, {})
+                : response(200, { value: [] });
+        },
+        50,
+        {
+            sleep: async (milliseconds) => {
+                delays.push(milliseconds);
+            },
+            random: () => 0,
+        },
+    );
+
+    await client.listTenants('secret');
+    assert.deepEqual(delays, [Math.round(ARM_RETRY_BASE_DELAY_MS * 0.8)]);
+});
+
+test('tenant discovery retries network, timeout, and rate-limit failures', async () => {
+    for (const failure of ['network', 408, 429] as const) {
+        const delays: number[] = [];
+        let calls = 0;
+        const client = new AzureTenantClient(
+            async () => {
+                calls += 1;
+                if (calls === 1) {
+                    if (failure === 'network') {
+                        throw new Error('private provider detail');
+                    }
+                    return response(failure, {}, { 'retry-after': '1' });
+                }
+                return response(200, { value: [] });
+            },
+            50,
+            {
+                sleep: async (milliseconds) => {
+                    delays.push(milliseconds);
+                },
+                random: () => 0,
+            },
+        );
+
+        await client.listTenants('secret');
+        assert.equal(calls, 2, `${failure} was not retried once`);
+        assert.deepEqual(
+            delays,
+            [failure === 'network' ? Math.round(ARM_RETRY_BASE_DELAY_MS * 0.8) : 1_000],
+        );
+    }
+});
+
+test('tenant discovery never retries authorization or invalid requests', async () => {
+    for (const status of [400, 401, 403, 501]) {
+        let calls = 0;
+        const client = new AzureTenantClient(
+            async () => {
+                calls += 1;
+                return response(status, {});
+            },
+            50,
+            { sleep: async () => assert.fail('non-retryable response was retried') },
+        );
+        await assert.rejects(client.listTenants('secret'), AzureConnectionError);
+        assert.equal(calls, 1);
+    }
+});
+
+test('caller cancellation during retry backoff prevents another request', async () => {
+    const parent = new AbortController();
+    let calls = 0;
+    const client = new AzureTenantClient(
+        async () => {
+            calls += 1;
+            return response(503, {});
+        },
+        50,
+        {
+            sleep: async () => {
+                parent.abort();
+                throw new AzureConnectionError(
+                    'cancelled',
+                    'The Azure request was cancelled.',
+                );
+            },
+        },
+    );
+
+    await assert.rejects(client.listTenants('secret', parent.signal), /cancelled/);
+    assert.equal(calls, 1);
 });
 
 test('tenant errors never disclose bearer tokens or response bodies', async () => {

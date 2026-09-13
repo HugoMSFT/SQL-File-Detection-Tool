@@ -98,6 +98,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
     <div class="azure-actions">
       <button type="button" class="btn primary" id="azure-connect" data-action="azureConnect">Connect to Azure</button>
       <button type="button" class="btn" id="azure-retry" data-action="azureRetry" hidden>Retry</button>
+      <button type="button" class="btn" id="azure-refresh" data-action="azureRefresh" hidden>Refresh</button>
       <button type="button" class="btn subtle" id="azure-disconnect" data-action="azureDisconnect" hidden>Disconnect</button>
     </div>
   </section>

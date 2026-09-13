@@ -7,6 +7,9 @@ export const MAX_ARM_PAGES = 10;
 export const MAX_ARM_ITEMS = 200;
 export const MAX_ARM_RESPONSE_BYTES = 1024 * 1024;
 export const ARM_TIMEOUT_MS = 15_000;
+export const MAX_ARM_RETRIES = 2;
+export const MAX_ARM_RETRY_DELAY_MS = 5_000;
+export const ARM_RETRY_BASE_DELAY_MS = 250;
 
 interface FetchResponse {
     readonly ok: boolean;
@@ -31,6 +34,12 @@ export type FetchLike = (
         readonly signal: AbortSignal;
     },
 ) => Promise<FetchResponse>;
+
+export interface RetryOptions {
+    readonly sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+    readonly random?: () => number;
+    readonly now?: () => number;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -95,10 +104,19 @@ export function validateTenantManagementUrl(value: string): string {
 }
 
 export class AzureTenantClient {
+    private readonly sleep: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+    private readonly random: () => number;
+    private readonly now: () => number;
+
     constructor(
         private readonly fetchImpl: FetchLike = (input, init) => globalThis.fetch(input, init),
         private readonly timeoutMs = ARM_TIMEOUT_MS,
-    ) {}
+        retryOptions: RetryOptions = {},
+    ) {
+        this.sleep = retryOptions.sleep ?? cancellableDelay;
+        this.random = retryOptions.random ?? Math.random;
+        this.now = retryOptions.now ?? Date.now;
+    }
 
     async listTenants(
         accessToken: string,
@@ -109,7 +127,7 @@ export class AzureTenantClient {
             `https://${ARM_HOST}/tenants?api-version=${ARM_TENANTS_API_VERSION}`,
         );
         for (let page = 0; next && page < MAX_ARM_PAGES; page += 1) {
-            const body = await this.request(next, accessToken, parentSignal);
+            const body = await this.requestWithRetry(next, accessToken, parentSignal);
             if (!Array.isArray(body.value)) {
                 throw new AzureConnectionError(
                     'invalidResponse',
@@ -149,6 +167,33 @@ export class AzureTenantClient {
             );
         }
         return tenants;
+    }
+
+    private async requestWithRetry(
+        url: string,
+        accessToken: string,
+        parentSignal?: AbortSignal,
+    ): Promise<Record<string, unknown>> {
+        for (let attempt = 0; ; attempt += 1) {
+            try {
+                return await this.request(url, accessToken, parentSignal);
+            } catch (error) {
+                if (
+                    !(error instanceof AzureConnectionError)
+                    || !this.retryable(error, parentSignal)
+                    || attempt >= MAX_ARM_RETRIES
+                ) {
+                    throw error;
+                }
+                const exponential = ARM_RETRY_BASE_DELAY_MS * (2 ** attempt);
+                const jittered = Math.round(exponential * (0.8 + this.random() * 0.4));
+                const delay = Math.min(
+                    MAX_ARM_RETRY_DELAY_MS,
+                    error.retryAfterMs ?? jittered,
+                );
+                await this.sleep(delay, parentSignal);
+            }
+        }
     }
 
     private async request(
@@ -197,12 +242,36 @@ export class AzureTenantClient {
                     response.status,
                 );
             }
-            if (!response.ok) {
+            if (response.status === 408) {
                 await this.cancelResponse(response, controller);
                 throw new AzureConnectionError(
-                    'temporary',
-                    `Azure management returned HTTP ${response.status}. Retry the request.`,
+                    'timeout',
+                    'Azure management timed out. Retry the request.',
                     response.status,
+                    retryAfterMilliseconds(response.headers, this.now()),
+                );
+            }
+            if (response.status === 429) {
+                await this.cancelResponse(response, controller);
+                throw new AzureConnectionError(
+                    'rateLimited',
+                    'Azure management is rate limiting requests. Retry shortly.',
+                    response.status,
+                    retryAfterMilliseconds(response.headers, this.now()),
+                );
+            }
+            if (!response.ok) {
+                await this.cancelResponse(response, controller);
+                const retryable = response.status >= 500 && response.status <= 599;
+                throw new AzureConnectionError(
+                    retryable ? 'temporary' : 'invalidResponse',
+                    retryable
+                        ? `Azure management returned HTTP ${response.status}. Retry the request.`
+                        : `Azure management rejected the request with HTTP ${response.status}.`,
+                    response.status,
+                    retryable
+                        ? retryAfterMilliseconds(response.headers, this.now())
+                        : undefined,
                 );
             }
             const bytes = await this.readBoundedBody(response, controller);
@@ -228,7 +297,7 @@ export class AzureTenantClient {
             }
             if (controller.signal.aborted) {
                 throw new AzureConnectionError(
-                    'temporary',
+                    parentSignal?.aborted ? 'cancelled' : 'timeout',
                     parentSignal?.aborted
                         ? 'The Azure management request was cancelled.'
                         : 'The Azure management request timed out.',
@@ -242,6 +311,28 @@ export class AzureTenantClient {
             clearTimeout(timer);
             parentSignal?.removeEventListener('abort', cancel);
         }
+    }
+
+    private retryable(
+        error: AzureConnectionError,
+        parentSignal?: AbortSignal,
+    ): boolean {
+        if (parentSignal?.aborted || error.kind === 'cancelled') {
+            return false;
+        }
+        if (error.kind === 'rateLimited' || error.kind === 'timeout') {
+            return true;
+        }
+        return (
+            error.kind === 'temporary'
+            && (
+                error.status === undefined
+                || error.status === 500
+                || error.status === 502
+                || error.status === 503
+                || error.status === 504
+            )
+        );
     }
 
     private async readBoundedBody(
@@ -275,7 +366,11 @@ export class AzureTenantClient {
                 total += chunk.byteLength;
                 if (total > MAX_ARM_RESPONSE_BYTES) {
                     controller.abort();
-                    await reader.cancel();
+                    try {
+                        await reader.cancel();
+                    } catch {
+                        // The request is already aborted; cancellation is best effort.
+                    }
                     throw new AzureConnectionError(
                         'invalidResponse',
                         'Azure returned a management response larger than the safety limit.',
@@ -309,4 +404,43 @@ export class AzureTenantClient {
             // The request is already aborted; body cancellation is best effort.
         }
     }
+
+}
+
+function retryAfterMilliseconds(
+    headers: { get(name: string): string | null },
+    now: number,
+): number | undefined {
+    const value = headers.get('retry-after');
+    if (!value) {
+        return undefined;
+    }
+    if (/^\d{1,5}$/.test(value)) {
+        return Math.min(MAX_ARM_RETRY_DELAY_MS, Number(value) * 1_000);
+    }
+    const date = Date.parse(value);
+    if (!Number.isFinite(date)) {
+        return undefined;
+    }
+    return Math.min(MAX_ARM_RETRY_DELAY_MS, Math.max(0, date - now));
+}
+
+function cancellableDelay(milliseconds: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(new AzureConnectionError('cancelled', 'The Azure request was cancelled.'));
+            return;
+        }
+        const timer = setTimeout(done, milliseconds);
+        const cancel = (): void => {
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', cancel);
+            reject(new AzureConnectionError('cancelled', 'The Azure request was cancelled.'));
+        };
+        function done(): void {
+            signal?.removeEventListener('abort', cancel);
+            resolve();
+        }
+        signal?.addEventListener('abort', cancel, { once: true });
+    });
 }

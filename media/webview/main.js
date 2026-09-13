@@ -260,7 +260,7 @@
         const connecting = connection.phase === 'connecting';
         const failed = connection.phase === 'error';
         byId('azure-summary').textContent = connection.identity
-            ? 'Signed in as ' + connection.identity.label
+            ? 'Signed in as ' + connection.identity.label + (connection.stale ? ' (cached)' : '')
             : connection.phase === 'disconnected'
                 ? 'Not connected'
                 : failed
@@ -284,6 +284,8 @@
         byId('azure-connect').disabled = connecting;
         byId('azure-retry').hidden = !failed;
         byId('azure-retry').disabled = connecting;
+        byId('azure-refresh').hidden = !connected;
+        byId('azure-refresh').disabled = connecting;
         byId('azure-disconnect').hidden = connection.phase === 'disconnected';
         byId('azure-disconnect').disabled = connecting;
     }

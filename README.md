@@ -602,6 +602,12 @@ Code's built-in Microsoft authentication and lists the Azure directories
 (tenants) visible to the selected account. It does not browse Storage accounts,
 containers, or blobs, and it does not download or analyze remote files. No
 authentication or network request runs during activation or initial rendering.
+Concurrent Connect actions share one authentication/discovery request. Transient
+ARM failures use at most two bounded retries, and **Refresh** performs a new
+silent session check and directory lookup. A successful directory list is kept
+in memory for up to two minutes only; if Refresh then fails transiently, that
+unexpired list is shown explicitly as cached until it can be verified again.
+Disconnect, sign-out, authorization failure, or extension disposal clears it.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never

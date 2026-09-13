@@ -124,6 +124,7 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'showOrcGuidance',
         'azureConnect',
         'azureRetry',
+        'azureRefresh',
         'azureDisconnect',
     ]) {
         assert.ok(

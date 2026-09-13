@@ -111,6 +111,7 @@ export type WebviewRequest =
     | (Base & { readonly type: 'analyzeCurrentFile' })
     | (Base & { readonly type: 'azureConnect' })
     | (Base & { readonly type: 'azureRetry' })
+    | (Base & { readonly type: 'azureRefresh' })
     | (Base & { readonly type: 'azureDisconnect' })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
@@ -329,6 +330,7 @@ const BUILDERS: Record<string, Builder> = {
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
     azureConnect: () => ({ type: 'azureConnect' }),
     azureRetry: () => ({ type: 'azureRetry' }),
+    azureRefresh: () => ({ type: 'azureRefresh' }),
     azureDisconnect: () => ({ type: 'azureDisconnect' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),

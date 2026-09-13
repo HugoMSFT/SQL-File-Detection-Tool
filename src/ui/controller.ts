@@ -251,6 +251,9 @@ export class UiController {
             case 'azureRetry':
                 await this.azureConnection?.retry();
                 return;
+            case 'azureRefresh':
+                await this.azureConnection?.refresh();
+                return;
             case 'azureDisconnect':
                 this.azureConnection?.disconnect();
                 return;
