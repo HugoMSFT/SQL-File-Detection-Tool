@@ -2773,8 +2773,14 @@ class SQLGenerator:
                 'Use BULK INSERT or application-level data loading instead.')
 
         platform_label = self.PLATFORM_LABELS.get(target_platform, target_platform)
+        has_metadata = metadata is not None
         metadata = metadata or {}
         config = self._determine_format_config(metadata)
+        needs_bulk_data_source = (
+            has_metadata
+            and _metadata_text(metadata, 'file_type', '').lower()
+            in {'csv', 'text', 'json'}
+        )
         format_supported = target_platform in self.EXTERNAL_FORMAT_PLATFORMS.get(
             config.format_type, frozenset()
         )
@@ -2880,11 +2886,12 @@ class SQLGenerator:
                 f');',
                 f'GO',
             ]
-            lines += self._bulk_data_source_block(
-                data_source_raw, storage_url, file_name, target_platform,
-                step_number=4, credential_name=credential_name,
-                auth_method=auth_method,
-            )
+            if needs_bulk_data_source:
+                lines += self._bulk_data_source_block(
+                    data_source_raw, storage_url, file_name, target_platform,
+                    step_number=4, credential_name=credential_name,
+                    auth_method=auth_method,
+                )
             return '\n'.join(lines)
 
         lines += _credential_ddl(cred_ident, auth_method, '2.')
@@ -2913,11 +2920,12 @@ class SQLGenerator:
             f'GO',
         ]
 
-        lines += self._bulk_data_source_block(
-            data_source_raw, storage_url, file_name, target_platform,
-            step_number=4, credential_name=credential_name,
-            auth_method=auth_method,
-        )
+        if needs_bulk_data_source:
+            lines += self._bulk_data_source_block(
+                data_source_raw, storage_url, file_name, target_platform,
+                step_number=4, credential_name=credential_name,
+                auth_method=auth_method,
+            )
 
         return '\n'.join(lines)
 
@@ -4018,6 +4026,14 @@ class SQLGenerator:
             return _safe_sql_type(overrides[column_name])
         if self._has_incomplete_type_evidence(metadata):
             return 'NVARCHAR(MAX)'
+        detected_type_lower = str(detected_type).strip().lower()
+        if (
+            metadata.get('file_type') in {'csv', 'text'}
+            and detected_type_lower in {'bool', 'boolean'}
+        ):
+            # Delimited readers receive lexical True/False values, which SQL
+            # cannot convert directly to BIT during the external read.
+            return 'NVARCHAR(5)'
         max_lengths = metadata.get('max_string_lengths') or {}
         return self._map_type_to_sql(
             detected_type,

@@ -62,6 +62,17 @@ function csvMetadata(): GeneratorMetadata {
     };
 }
 
+function csvBooleanMetadata(): GeneratorMetadata {
+    return {
+        ...csvMetadata(),
+        schema: [
+            ['id', 'int64'],
+            ['active', 'bool'],
+        ],
+        column_count: 2,
+    };
+}
+
 function ndjsonMetadata(columnCount: number): GeneratorMetadata {
     return {
         file_path: 'C:/data/wide.ndjson',
@@ -184,6 +195,37 @@ describe('generator matrix: 6 targets x 4 formats x local/remote', () => {
             }
         }
     }
+});
+
+describe('delimited Boolean safety', () => {
+    it('reads lexical True/False values as text instead of an invalid BIT conversion', () => {
+        const metadata = csvBooleanMetadata();
+        const createTable = generateCreateTable(metadata);
+        const openrowset = generateOpenrowset(metadata, {
+            targetPlatform: 'azure_sql_db',
+            dataSource: 'MyDataSource',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        const externalTable = generateExternalTable(metadata, {
+            targetPlatform: 'azure_sql_db',
+            dataSource: 'MyDataSource',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+
+        for (const sql of [createTable, openrowset, externalTable]) {
+            assert.match(sql, /\[active\]\s+NVARCHAR\(5\)/);
+            assert.doesNotMatch(sql, /\[active\]\s+BIT/);
+        }
+    });
+
+    it('keeps native Boolean columns typed as BIT for schema-bearing formats', () => {
+        const sql = generateCreateTable({
+            ...parquetMetadata(),
+            schema: [['active', 'bool']],
+            column_count: 1,
+        });
+        assert.match(sql, /\[active\]\s+BIT/);
+    });
 });
 
 describe('unsupported binary and table formats never fall through to CSV', () => {
@@ -782,6 +824,48 @@ describe('table name resolution', () => {
 });
 
 describe('external storage and format safety', () => {
+    it('uses HTTPS only for the separate bulk source and ABS for Blob virtualization', () => {
+        const storageUrl =
+            'abs://raw@publicbronzelake.blob.core.windows.net/folder/sales.csv';
+        const csvSetup = generateCredentialSetup({
+            metadata: csvMetadata(),
+            targetPlatform: 'azure_sql_db',
+            storageUrl,
+        });
+        assert.match(
+            csvSetup,
+            /LOCATION = 'abs:\/\/raw@publicbronzelake\.blob\.core\.windows\.net'/,
+        );
+        assert.match(csvSetup, /TYPE = BLOB_STORAGE/);
+        assert.match(
+            csvSetup,
+            /LOCATION = 'https:\/\/publicbronzelake\.blob\.core\.windows\.net\/raw'/,
+        );
+
+        const parquetSetup = generateCredentialSetup({
+            metadata: parquetMetadata(),
+            targetPlatform: 'azure_sql_db',
+            storageUrl: storageUrl.replace('sales.csv', 'sales.parquet'),
+        });
+        assert.match(
+            parquetSetup,
+            /LOCATION = 'abs:\/\/raw@publicbronzelake\.blob\.core\.windows\.net'/,
+        );
+        assert.doesNotMatch(parquetSetup, /TYPE = BLOB_STORAGE|LOCATION = 'https:\/\//);
+
+        const bulkSetup = generateCredentialSetup({
+            targetPlatform: 'azure_sql_db',
+            storageUrl,
+            storageGoal: 'bulk_insert',
+        });
+        assert.doesNotMatch(bulkSetup, /LOCATION = 'abs:\/\//);
+        assert.match(bulkSetup, /TYPE = BLOB_STORAGE/);
+        assert.match(
+            bulkSetup,
+            /LOCATION = 'https:\/\/publicbronzelake\.blob\.core\.windows\.net\/raw'/,
+        );
+    });
+
     it('converts a short AWS S3 URL to a SQL Server endpoint', () => {
         const sql = generateCredentialSetup({
             metadata: csvMetadata(),

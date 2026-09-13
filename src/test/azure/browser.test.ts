@@ -883,6 +883,10 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
     snapshot = await subject.openEntry(snapshot.entries[0].id);
     snapshot = await subject.openEntry(snapshot.entries[0].id);
     await subject.openEntry(snapshot.entries[0].id);
+    assert.equal(
+        subject.currentFolderUrl(),
+        'abfss://landing@lake001.dfs.core.windows.net/orders/',
+    );
 
     const store = new AppStateStore({ version: '1.0.9' });
     const host: UiHost = {
@@ -906,6 +910,38 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
     };
     const controller = new UiController(host, store, { azure: subject });
     try {
+        await controller.handle({ type: 'azureBrowserUseCurrentFolder' });
+        assert.equal(store.state.activeTab, 'credential_setup');
+        assert.equal(
+            store.state.storageUrl,
+            'abfss://landing@lake001.dfs.core.windows.net/orders/',
+        );
+        assert.equal(store.state.azureFolderPreview?.label, 'landing/orders');
+        assert.deepEqual(
+            store.state.azureFolderPreview?.items.map((item) => item.name),
+            ['daily sales.parquet'],
+        );
+        assert.deepEqual(store.state.remoteSchema, {
+            status: 'not_analyzed',
+            formats: ['parquet'],
+            selectedFormat: 'parquet',
+            message:
+                'The Azure folder format is known, but its columns and parser settings have not been analyzed.',
+        });
+        assert.match(store.state.notice ?? '', /Configure SQL credentials/);
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /CREATE EXTERNAL TABLE/,
+        );
+
+        await controller.handle({ type: 'openAzureBrowser' });
+        assert.equal(store.state.azure.open, true);
+        assert.equal(store.state.azure.phase, 'ready');
+        assert.equal(store.state.azure.selectedSubscriptionId, SUBSCRIPTION);
+        assert.equal(store.state.azure.selectedAccountId, ACCOUNT_ID);
+        assert.deepEqual(store.state.azure.path, ['landing', 'orders']);
+        assert.equal(store.state.azure.selectedEntryId, snapshot.entries[0].id);
+
         await controller.handle({ type: 'azureBrowserUseSelectedFile' });
         assert.equal(
             store.state.storageUrl,
@@ -914,6 +950,67 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
         assert.equal(store.state.sourceKind, 'azure');
         assert.equal(store.state.activeTab, 'credential_setup');
         assert.equal(store.state.azure.open, false);
+        assert.equal(store.state.azureFolderPreview, null);
+        assert.equal(store.state.remoteSchema?.status, 'not_analyzed');
+        assert.equal(store.state.remoteSchema?.selectedFormat, 'parquet');
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /LOCATION = 'adls:\/\/landing@lake001\.dfs\.core\.windows\.net'/,
+        );
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /CREATE EXTERNAL TABLE/,
+        );
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED/,
+        );
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /LOCATION = 'orders\/daily%20sales\.parquet'/,
+        );
+        assert.doesNotMatch(
+            store.state.statements?.credential_setup ?? '',
+            /TYPE = BLOB_STORAGE|LOCATION = 'https:\/\//,
+        );
+        await controller.handle({ type: 'setStorageGoal', value: 'openrowset' });
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /FROM OPENROWSET\(/,
+        );
+        assert.match(
+            store.state.statements?.credential_setup ?? '',
+            /BULK 'orders\/daily%20sales\.parquet'/,
+        );
+
+        store.update({
+            storageUrl:
+                'abs://publiccsv@publicbronzelake.blob.core.windows.net/Holiday.csv',
+            remoteSchema: {
+                status: 'not_analyzed',
+                formats: ['csv'],
+                selectedFormat: 'csv',
+                message: 'Schema not analyzed.',
+            },
+            azure: {
+                ...store.state.azure,
+                selectedEntryId: 'holiday',
+                entries: [{
+                    id: 'holiday',
+                    kind: 'file',
+                    name: 'Holiday.csv',
+                    format: 'CSV',
+                    supported: true,
+                    sizeBytes: 1024,
+                    modifiedAt: null,
+                }],
+            },
+        });
+        await controller.handle({ type: 'setStorageGoal', value: 'bulk_insert' });
+        const bulkSql = store.state.statements?.credential_setup ?? '';
+        assert.match(bulkSql, /TYPE = BLOB_STORAGE/);
+        assert.match(bulkSql, /BULK INSERT/);
+        assert.match(bulkSql, /FROM 'Holiday\.csv'/);
         assert.match(store.state.notice ?? '', /were not downloaded or analyzed/);
     } finally {
         await controller.dispose();

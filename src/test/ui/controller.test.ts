@@ -949,6 +949,89 @@ test('copying before an analysis says so rather than copying nothing', async () 
     }
 });
 
+test('mixed Azure folders require an explicit format before goal SQL is generated', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.store.update({
+            activeTab: 'credential_setup',
+            sourceKind: 'azure',
+            storageUrl: 'abs://raw@account.blob.core.windows.net/mixed/',
+            azureFolderPreview: {
+                label: 'raw/mixed',
+                url: 'abs://raw@account.blob.core.windows.net/mixed/',
+                items: [
+                    {
+                        kind: 'file',
+                        name: 'orders.csv',
+                        format: 'csv',
+                        sizeBytes: 10,
+                        modifiedAt: null,
+                    },
+                    {
+                        kind: 'file',
+                        name: 'orders.parquet',
+                        format: 'parquet',
+                        sizeBytes: 20,
+                        modifiedAt: null,
+                    },
+                ],
+                truncated: false,
+            },
+            remoteSchema: {
+                status: 'format_required',
+                formats: ['csv', 'parquet'],
+                selectedFormat: null,
+                message: 'Choose a format.',
+            },
+        });
+
+        ui.generateNow();
+        assert.equal(snapshot(record).statements, null);
+
+        await ui.handle({ type: 'setAzureFolderFormat', value: 'parquet' });
+        const sql = snapshot(record).statements?.credential_setup ?? '';
+        assert.match(sql, /FORMAT_TYPE = PARQUET/);
+        assert.match(sql, /TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED/);
+        assert.equal(snapshot(record).remoteSchema?.selectedFormat, 'parquet');
+
+        await ui.handle({ type: 'setAzureFolderFormat', value: 'delta' });
+        assert.match(snapshot(record).error ?? '', /formats detected/i);
+        assert.equal(snapshot(record).remoteSchema?.selectedFormat, 'parquet');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('complete setup scripts copy and open as MSSQL-ready SQL documents', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.store.update({
+            sourceKind: 'azure',
+            storageUrl: 'abs://raw@account.blob.core.windows.net/orders.parquet',
+            remoteSchema: {
+                status: 'not_analyzed',
+                formats: ['parquet'],
+                selectedFormat: 'parquet',
+                message: 'Schema not analyzed.',
+            },
+        });
+        ui.generateNow();
+
+        await ui.handle({ type: 'copyStatement', kind: 'credential_setup' });
+        assert.match(record.clipboard.at(-1) ?? '', /CREATE EXTERNAL DATA SOURCE/);
+
+        await ui.handle({ type: 'openStatementInEditor', kind: 'credential_setup' });
+        assert.equal(record.untitled.at(-1)?.languageId, 'sql');
+        assert.match(snapshot(record).notice ?? '', /MSSQL extension/);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 test('export all emits shared prerequisites once across many files', async () => {
     const record = recorder();
     const ui = controller(record);
@@ -1306,6 +1389,9 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
             const sql = state.statements?.credential_setup ?? '';
             assert.match(sql, /CREATE EXTERNAL DATA SOURCE/);
             assert.ok(sql.includes(entry.location), sql);
+            if (entry.source === 'azure_blob') {
+                assert.doesNotMatch(sql, /TYPE = BLOB_STORAGE|LOCATION = 'https:\/\//);
+            }
             const serialized = JSON.stringify(state);
             assert.ok(!serialized.includes('accessToken'));
             assert.ok(!serialized.includes('bearer-token'));

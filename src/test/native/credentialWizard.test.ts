@@ -92,6 +92,14 @@ test('infers source types and uses safe source-specific placeholders', () => {
         effectiveStorageUrl('sql_server_2022', 's3', '', 'data.csv'),
         /^s3:\/\/<s3_endpoint>\/<bucket>\//,
     );
+    assert.equal(
+        effectiveStorageUrl('azure_sql_db', 'azure_blob', '', 'data.csv'),
+        'abs://<container>@<storage_account>.blob.core.windows.net/data.csv',
+    );
+    assert.equal(
+        effectiveStorageUrl('azure_sql_db', 'azure_data_lake', '', 'data.csv'),
+        'adls://<container>@<storage_account>.dfs.core.windows.net/data.csv',
+    );
 });
 
 test('normalizes known storage URLs before they reach generated SQL', () => {

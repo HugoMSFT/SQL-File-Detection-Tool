@@ -1754,7 +1754,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -1805,7 +1805,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2068,7 +2068,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2173,7 +2173,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2224,7 +2224,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2487,7 +2487,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2592,7 +2592,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2643,7 +2643,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -2906,7 +2906,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -3008,7 +3008,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -3313,7 +3313,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -3621,7 +3621,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -3672,7 +3672,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -3934,7 +3934,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4039,7 +4039,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4090,7 +4090,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4352,7 +4352,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4457,7 +4457,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4508,7 +4508,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4770,7 +4770,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -4872,7 +4872,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -5176,7 +5176,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -5480,7 +5480,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -5785,7 +5785,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6066,7 +6066,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6106,7 +6106,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6177,7 +6177,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6228,7 +6228,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6486,7 +6486,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6560,7 +6560,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6600,7 +6600,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6671,7 +6671,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6722,7 +6722,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -6980,7 +6980,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -7078,7 +7078,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -7384,7 +7384,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -7687,7 +7687,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -7739,7 +7739,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -7996,7 +7996,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -8094,7 +8094,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -8146,7 +8146,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -8398,7 +8398,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -8502,7 +8502,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -8805,7 +8805,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9108,7 +9108,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9159,7 +9159,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9421,7 +9421,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9524,7 +9524,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9575,7 +9575,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9837,7 +9837,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9934,7 +9934,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -9985,7 +9985,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -10242,7 +10242,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -10343,7 +10343,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -10643,7 +10643,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -10694,7 +10694,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -10951,7 +10951,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11050,7 +11050,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11101,7 +11101,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11363,7 +11363,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11466,7 +11466,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11517,7 +11517,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11779,7 +11779,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11876,7 +11876,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -11927,7 +11927,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12184,7 +12184,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12285,7 +12285,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12585,7 +12585,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12636,7 +12636,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12893,7 +12893,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -12994,7 +12994,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13045,7 +13045,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13308,7 +13308,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13413,7 +13413,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13464,7 +13464,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13727,7 +13727,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13832,7 +13832,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -13883,7 +13883,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -14146,7 +14146,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -14248,7 +14248,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -14553,7 +14553,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -14861,7 +14861,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -14912,7 +14912,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15174,7 +15174,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15279,7 +15279,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15330,7 +15330,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15592,7 +15592,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15697,7 +15697,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -15748,7 +15748,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -16010,7 +16010,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -16112,7 +16112,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -16416,7 +16416,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -16720,7 +16720,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17025,7 +17025,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17306,7 +17306,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17346,7 +17346,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17417,7 +17417,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17468,7 +17468,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17726,7 +17726,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17800,7 +17800,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17840,7 +17840,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17911,7 +17911,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -17962,7 +17962,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -18220,7 +18220,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -18318,7 +18318,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -18624,7 +18624,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -18927,7 +18927,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -18979,7 +18979,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -19236,7 +19236,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -19334,7 +19334,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -19386,7 +19386,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -19638,7 +19638,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -19742,7 +19742,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20045,7 +20045,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20348,7 +20348,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20399,7 +20399,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20661,7 +20661,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20764,7 +20764,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -20815,7 +20815,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21077,7 +21077,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21174,7 +21174,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21225,7 +21225,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21482,7 +21482,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21583,7 +21583,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21883,7 +21883,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -21934,7 +21934,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22191,7 +22191,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22290,7 +22290,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22341,7 +22341,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22603,7 +22603,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22706,7 +22706,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -22757,7 +22757,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23019,7 +23019,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23116,7 +23116,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23167,7 +23167,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23424,7 +23424,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23525,7 +23525,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23825,7 +23825,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -23876,7 +23876,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24133,7 +24133,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24234,7 +24234,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24285,7 +24285,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24548,7 +24548,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24653,7 +24653,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24704,7 +24704,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -24967,7 +24967,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -25072,7 +25072,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -25123,7 +25123,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -25386,7 +25386,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -25488,7 +25488,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -25793,7 +25793,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26101,7 +26101,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26152,7 +26152,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26414,7 +26414,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26519,7 +26519,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26570,7 +26570,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26832,7 +26832,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26937,7 +26937,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -26988,7 +26988,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -27250,7 +27250,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -27352,7 +27352,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -27656,7 +27656,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -27960,7 +27960,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28265,7 +28265,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28546,7 +28546,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28586,7 +28586,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28657,7 +28657,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28708,7 +28708,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -28966,7 +28966,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29040,7 +29040,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29080,7 +29080,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29151,7 +29151,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29202,7 +29202,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29460,7 +29460,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29558,7 +29558,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -29864,7 +29864,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30167,7 +30167,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30219,7 +30219,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30476,7 +30476,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30574,7 +30574,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30626,7 +30626,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30878,7 +30878,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -30982,7 +30982,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -31285,7 +31285,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -31588,7 +31588,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -31639,7 +31639,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -31901,7 +31901,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32004,7 +32004,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32055,7 +32055,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32317,7 +32317,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32414,7 +32414,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32465,7 +32465,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32722,7 +32722,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -32823,7 +32823,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33123,7 +33123,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33174,7 +33174,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33431,7 +33431,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33530,7 +33530,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33581,7 +33581,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33843,7 +33843,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33946,7 +33946,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -33997,7 +33997,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -34259,7 +34259,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -34356,7 +34356,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -34407,7 +34407,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -34664,7 +34664,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -34765,7 +34765,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -35065,7 +35065,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -35116,7 +35116,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -35373,7 +35373,7 @@
      ],
      [
       "[is_active]",
-      "BIT"
+      "NVARCHAR(5)"
      ],
      [
       "[product_name]",
@@ -68362,17 +68362,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -68732,17 +68727,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -69102,17 +69092,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -74225,19 +74210,14 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>wasbs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
      "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
+     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>HADOOP"
     ]
    },
    "external_file_format": {
@@ -77565,17 +77545,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -77934,17 +77909,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -79446,17 +79416,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -80068,17 +80033,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -80690,17 +80650,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -82532,17 +82487,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -83154,17 +83104,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -83776,17 +83721,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -92151,17 +92091,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -92769,17 +92704,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -95223,17 +95153,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -95841,17 +95766,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -98242,17 +98162,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -98491,17 +98406,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -98740,17 +98650,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -99409,17 +99314,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -99658,17 +99558,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -99907,17 +99802,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -102843,17 +102733,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -103088,17 +102973,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -104023,17 +103903,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -104268,17 +104143,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -105197,17 +105067,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -105420,17 +105285,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -105643,17 +105503,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 4,
+    "go_batches": 2,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://<container>@<storage_account>.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://<storage_account>.blob.core.windows.net/<container>",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>MANAGED IDENTITY"
     ]
@@ -109048,17 +108903,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -109270,17 +109120,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -110117,17 +109962,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>adls://container@acct.dfs.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },
@@ -110339,17 +110179,12 @@
    },
    "credential_setup": {
     "columns": [],
-    "go_batches": 5,
+    "go_batches": 3,
     "has_sql": true,
     "markers": [
      "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource]",
-     "\\bCREATE\\s+EXTERNAL\\s+DATA\\s+SOURCE\\s+(\\[[^\\]]*\\])=>[MyDataSource_Bulk]",
      "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource]",
-     "\\bCREATE\\s+DATABASE\\s+SCOPED\\s+CREDENTIAL\\s+(\\[[^\\]]*\\])=>[cred_MyDataSource_Bulk]",
      "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>abs://container@acct.blob.core.windows.net",
-     "\\bLOCATION\\s*=\\s*\\'([^\\']*)\\'=>https://acct.blob.core.windows.net/container",
-     "\\bTYPE\\s*=\\s*(HADOOP|BLOB_STORAGE)\\b=>BLOB_STORAGE",
-     "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE",
      "\\bIDENTITY\\s*=\\s*\\'(MANAGED\\s+IDENTITY|USER\\s+IDENTITY|SHARED\\s+ACCESS\\s+SIGNATURE|S3\\s+ACCESS\\s+KEY)\\'=>SHARED ACCESS SIGNATURE"
     ]
    },

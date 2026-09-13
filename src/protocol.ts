@@ -44,9 +44,11 @@ import type {
 } from './quickAnalyze';
 import {
     GUIDED_AUTH_METHODS,
+    STORAGE_SETUP_GOALS,
     type CredentialWizardState,
     type ExternalDataSourceType,
     type GuidedAuthMethod,
+    type StorageSetupGoal,
 } from './native';
 import type { AzureBrowserState, AzureConnectionState } from './azure/types';
 
@@ -120,6 +122,7 @@ export type WebviewRequest =
     | (Base & { readonly type: 'azureBrowserRetry' })
     | (Base & { readonly type: 'azureBrowserLoadMore' })
     | (Base & { readonly type: 'azureBrowserUseSelectedFile' })
+    | (Base & { readonly type: 'azureBrowserUseCurrentFolder' })
     | (Base & {
           readonly type: 'azureBrowserSelectTenant';
           readonly tenantId: string;
@@ -142,6 +145,8 @@ export type WebviewRequest =
           readonly type: 'setAuthMethod';
           readonly value: GuidedAuthMethod | 'public';
       })
+    | (Base & { readonly type: 'setStorageGoal'; readonly value: StorageSetupGoal })
+    | (Base & { readonly type: 'setAzureFolderFormat'; readonly value: string })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
     | (Base & { readonly type: 'setFormatName'; readonly value: string })
     | (Base & {
@@ -217,8 +222,27 @@ export interface AppStateSnapshot {
     readonly dataSourceType: ExternalDataSourceType;
     readonly credentialName: string;
     readonly authMethod: string;
+    readonly storageGoal: StorageSetupGoal;
     readonly credentialSetup: CredentialWizardState;
     readonly storageUrl: string;
+    readonly azureFolderPreview: {
+        readonly label: string;
+        readonly url: string;
+        readonly items: ReadonlyArray<{
+            readonly kind: 'folder' | 'file';
+            readonly name: string;
+            readonly format: string | null;
+            readonly sizeBytes: number | null;
+            readonly modifiedAt: string | null;
+        }>;
+        readonly truncated: boolean;
+    } | null;
+    readonly remoteSchema: {
+        readonly status: 'not_analyzed' | 'format_required';
+        readonly formats: readonly string[];
+        readonly selectedFormat: string | null;
+        readonly message: string;
+    } | null;
     readonly formatName: string;
     readonly parserOverrides: Readonly<ParserOverrides>;
     readonly sourceKind: SourceKind;
@@ -361,6 +385,7 @@ const BUILDERS: Record<string, Builder> = {
     azureBrowserRetry: () => ({ type: 'azureBrowserRetry' }),
     azureBrowserLoadMore: () => ({ type: 'azureBrowserLoadMore' }),
     azureBrowserUseSelectedFile: () => ({ type: 'azureBrowserUseSelectedFile' }),
+    azureBrowserUseCurrentFolder: () => ({ type: 'azureBrowserUseCurrentFolder' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
@@ -427,6 +452,14 @@ const BUILDERS: Record<string, Builder> = {
     setAuthMethod: (source) => {
         const value = member(source, 'value', [...GUIDED_AUTH_METHODS, 'public'] as const);
         return value === undefined ? undefined : { type: 'setAuthMethod', value };
+    },
+    setStorageGoal: (source) => {
+        const value = member(source, 'value', STORAGE_SETUP_GOALS);
+        return value === undefined ? undefined : { type: 'setStorageGoal', value };
+    },
+    setAzureFolderFormat: (source) => {
+        const value = text(source, 'value', 64);
+        return value === undefined ? undefined : { type: 'setAzureFolderFormat', value };
     },
     setStorageUrl: (source) => {
         const value = text(source, 'value', MAX_URL_LENGTH);

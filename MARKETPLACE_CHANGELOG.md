@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Added
+
+- Added subscription search while retaining the native Azure subscription
+  dropdown, with subscriptions displayed alphabetically.
+- Added a goal-first Storage setup choice for External Table, OPENROWSET, or
+  BULK INSERT.
+- Added Azure folder selection for SQL setup, with a metadata-only Preview of
+  the browsed files and folders.
+- Added complete goal-specific T-SQL after choosing an Azure file or folder,
+  including prerequisites and the selected operation.
+- Added prominent copy and **Open in MSSQL editor** actions for the complete
+  generated setup script.
+- Added explicit format selection when an Azure folder contains multiple
+  supported file types.
+
+### Fixed
+
+- Prevented Azure file-only setup from recommending an unrelated HTTPS
+  `BLOB_STORAGE` source; Blob selections now keep the primary `ABS` setup.
+- Kept HTTPS with `TYPE = BLOB_STORAGE` when BULK INSERT is the selected goal.
+- Improved selected goal-card subtitle contrast.
+- Preserved the selected Azure subscription, storage account, container, path,
+  and file when reopening the Azure browser.
+- Kept Azure browsing separate from Storage setup and moved both file and folder
+  selections directly into the Credential setup tab.
+- Prevented delimited `True`/`False` values from being read directly as `BIT`;
+  generated readers now preserve them as `NVARCHAR(5)` for safe conversion.
+- Blocked SQL generation for mixed or unknown Azure folders until a format is
+  selected instead of guessing from the first file.
+- Marked all remote schema-bound SQL as a template in both the UI and generated
+  script because Azure file contents are not downloaded or analyzed.
+- Reduced Credential setup to four focused stages and removed duplicate
+  connector and object-flow summaries.
+
 ## 1.1.5
 
 ### Changed
@@ -84,9 +118,7 @@
 
 ## 1.0.8
 
-- Moved the Marketplace publication to the personal **Hugo Queiroz**
-  publisher under `hvbqueiroz.sql-file-detection` so its independent
-  ownership is unambiguous.
+- UI fixes and improvement.
 - Runtime behavior is unchanged from 1.0.7.
 
 ## 1.0.7

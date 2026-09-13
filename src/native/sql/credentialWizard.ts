@@ -28,6 +28,14 @@ export const GUIDED_AUTH_METHODS = [
 
 export type GuidedAuthMethod = (typeof GUIDED_AUTH_METHODS)[number];
 
+export const STORAGE_SETUP_GOALS = [
+    'create_external_table',
+    'openrowset',
+    'bulk_insert',
+] as const;
+
+export type StorageSetupGoal = (typeof STORAGE_SETUP_GOALS)[number];
+
 export interface CredentialWizardOption<T extends string> {
     readonly id: T;
     readonly label: string;
@@ -396,9 +404,9 @@ export function effectiveStorageUrl(
     const file = fileName || '<file>';
     switch (dataSourceType) {
         case 'azure_blob':
-            return `https://<storage_account>.blob.core.windows.net/<container>/${file}`;
+            return `abs://<container>@<storage_account>.blob.core.windows.net/${file}`;
         case 'azure_data_lake':
-            return `https://<storage_account>.dfs.core.windows.net/<container>/${file}`;
+            return `adls://<container>@<storage_account>.dfs.core.windows.net/${file}`;
         case 'fabric_onelake':
             return `abfss://<workspace_id>@onelake.dfs.fabric.microsoft.com/<item_id>/Files/${file}`;
         case 's3':

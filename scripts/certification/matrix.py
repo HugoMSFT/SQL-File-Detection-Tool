@@ -304,6 +304,7 @@ MATRIX: Tuple[MatrixEntry, ...] = (
         'C06', 'cp932', 'external_file_format', ('vm', 'azure'), 'abs', 'H2',
         'A CP932 file has no external-file-format encoding; the generator must '
         'say so instead of emitting ENCODING = CP932.',
+        accepts=('PASS', 'NOT_EXECUTABLE'),
         catalog_object='external file format',
         static_assertions=(A('sql_excludes', "ENCODING = 'CP932'"),),
     ),

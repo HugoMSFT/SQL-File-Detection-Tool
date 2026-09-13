@@ -50,6 +50,9 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.equal(state.quickAnalyze.selectedStatement, 'openrowset');
     assert.equal(state.dataSourceType, 'azure_blob');
     assert.equal(state.authMethod, 'managed_identity');
+    assert.equal(state.storageGoal, 'create_external_table');
+    assert.equal(state.azureFolderPreview, null);
+    assert.equal(state.remoteSchema, null);
     assert.equal(state.credentialSetup.authMethod, 'managed_identity');
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);

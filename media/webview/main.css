@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   padding: 14px;
@@ -690,6 +694,50 @@ thead th {
   gap: var(--gap);
 }
 
+.storage-goal-step {
+  grid-column: 1 / -1;
+}
+
+.storage-goal-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.storage-goal-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.storage-goal-option.selected {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.storage-goal-option input {
+  margin-top: 2px;
+}
+
+.storage-goal-option strong,
+.storage-goal-option small {
+  display: block;
+}
+
+.storage-goal-option small {
+  margin-top: 3px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.storage-goal-option.selected small {
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
 .storage-source-step {
   margin-bottom: var(--gap);
 }
@@ -712,6 +760,11 @@ thead th {
 
 .storage-source-option h4 {
   margin: 0;
+}
+
+.generated-goal-heading {
+  margin-top: 24px;
+  font-size: 1.1em;
 }
 
 .source-option-detail {
@@ -868,13 +921,63 @@ thead th {
   font-size: 0.86em;
 }
 
+.remote-schema-state {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  border: 2px solid var(--vscode-editorWarning-foreground, var(--vscode-charts-yellow));
+  border-radius: var(--radius);
+  background: var(--vscode-inputValidation-warningBackground, var(--vscode-editor-background));
+}
+
+.remote-schema-state.blocking {
+  border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+  background: var(--vscode-inputValidation-errorBackground, var(--vscode-editor-background));
+}
+
+.remote-schema-state h3,
+.remote-schema-state p {
+  margin: 0;
+}
+
+.remote-schema-state h3 {
+  color: var(--vscode-editorWarning-foreground, var(--vscode-foreground));
+}
+
+.remote-schema-state.blocking h3 {
+  color: var(--vscode-errorForeground);
+}
+
+.remote-schema-state p {
+  margin-top: 6px;
+}
+
+.remote-schema-impact {
+  font-weight: 600;
+}
+
+.remote-schema-state .wizard-field {
+  max-width: 360px;
+  margin-top: 10px;
+}
+
+.connector-summary {
+  margin: 10px 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+}
+
+.advanced-object-step {
+  grid-column: 1 / -1;
+}
+
 .secret-note {
   color: var(--vscode-descriptionForeground);
 }
 
 @media (max-width: 900px) {
   .credential-steps,
-  .storage-source-options {
+  .storage-source-options,
+  .storage-goal-options {
     grid-template-columns: 1fr;
   }
 }
@@ -1118,6 +1221,23 @@ body.surface-panel [data-action='openInEditor'] {
   min-width: 150px;
 }
 
+.azure-subscription-field {
+  display: grid;
+  min-width: min(420px, 36vw);
+  grid-template-columns: minmax(120px, 0.8fr) minmax(180px, 1.2fr);
+  gap: 4px 8px;
+}
+
+.azure-subscription-field > span:first-child {
+  grid-column: 1 / -1;
+}
+
+.azure-subscription-count {
+  grid-column: 1 / -1;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.75em;
+}
+
 .azure-identity-actions {
   display: flex;
   gap: 5px;
@@ -1312,7 +1432,32 @@ body.surface-panel [data-action='openInEditor'] {
   color: var(--vscode-descriptionForeground);
 }
 
+.azure-folder-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.azure-folder-url {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: var(--vscode-textLink-foreground);
+}
+
 @media (max-width: 760px) {
+  .azure-subscription-field {
+    min-width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .azure-subscription-field > span:first-child,
+  .azure-subscription-count {
+    grid-column: auto;
+  }
+
   .azure-layout {
     grid-template-columns: 1fr;
   }

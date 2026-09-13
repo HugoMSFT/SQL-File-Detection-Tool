@@ -91,6 +91,7 @@ export {
 export {
     EXTERNAL_DATA_SOURCE_TYPES,
     GUIDED_AUTH_METHODS,
+    STORAGE_SETUP_GOALS,
     credentialWizardState,
     dataSourceOptionsFor,
     effectiveStorageUrl,
@@ -103,6 +104,7 @@ export {
     type ExternalDataSourceType,
     type GuidedAuthMethod,
     type KnownStorageLocation,
+    type StorageSetupGoal,
 } from './sql/credentialWizard';
 export {
     DuplicateColumnError,

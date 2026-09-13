@@ -27,7 +27,7 @@ import type {
     StatementKind,
     TargetPlatform,
 } from '../types';
-import type { ExternalDataSourceType } from './credentialWizard';
+import type { ExternalDataSourceType, StorageSetupGoal } from './credentialWizard';
 import {
     effectiveStorageUrl,
     normalizeDataSourceType,
@@ -1335,6 +1335,8 @@ export interface CredentialSetupOptions {
      * identity needs neither a secret nor a database master key.
      */
     authMethod?: string | null;
+    /** Limit setup SQL to the selected loading/query goal. */
+    storageGoal?: StorageSetupGoal | null;
 }
 
 /** Generate the prerequisite credential / data source / file format script. */
@@ -1343,6 +1345,7 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     const storageUrl = options.storageUrl ?? null;
     const dataSourceRaw = options.dataSource ?? 'MyDataSource';
     const authMethod = storageAuthMethod(options.authMethod, targetPlatform, storageUrl);
+    const storageGoal = options.storageGoal ?? null;
     const credIdent = credentialIdentifier(dataSourceRaw, options.credentialName);
     const incompatibleStorage = storageCompatibilityMessage(storageUrl, targetPlatform);
     if (incompatibleStorage) {
@@ -1367,6 +1370,17 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
     const formatSupported = Boolean(
         supportedPlatforms && supportedPlatforms.has(targetPlatform),
     );
+    const needsBulkDataSource =
+        storageGoal === 'bulk_insert'
+        || (
+            storageGoal === null
+            && Boolean(
+                metadata
+                && ['csv', 'text', 'json'].includes(
+                    String(metadata.file_type ?? '').toLowerCase(),
+                )
+            )
+        );
     // A file format and a data source are different objects. JSON has no
     // CREATE EXTERNAL FILE FORMAT anywhere, but every remote JSON read this
     // generator emits goes through OPENROWSET(BULK ...) with a DATA_SOURCE, so
@@ -1385,6 +1399,37 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         ? (metadata.file_name ?? metadata.file_path ?? '<file>')
         : '<file>';
     const [sourceLocation] = externalSourceParts(storageUrl, fileName, targetPlatform);
+
+    if (storageGoal === 'bulk_insert') {
+        if (!bulkDataSourceSupported(targetPlatform, storageUrl)) {
+            return notSupportedMessage(
+                'BULK INSERT STORAGE SETUP',
+                targetPlatform,
+                'BULK INSERT through BLOB_STORAGE requires Azure Blob Storage. '
+                    + 'Choose External Table or OPENROWSET for this source.',
+            );
+        }
+        const bulkAuth = bulkStorageAuthMethod(
+            options.authMethod,
+            targetPlatform,
+            storageUrl,
+        );
+        return [
+            `-- PREREQUISITE SETUP (${sqlComment(platformLabel)} / BULK INSERT)`,
+            '-- BULK INSERT requires an HTTPS location with TYPE = BLOB_STORAGE.',
+            '',
+            ...masterKeyLines(bulkAuth),
+            ...bulkDataSourceBlock(
+                dataSourceRaw,
+                storageUrl,
+                fileName,
+                targetPlatform,
+                2,
+                options.credentialName,
+                bulkAuth,
+            ),
+        ].join('\n');
+    }
 
     if (targetPlatform === 'fabric_sql_db') {
         return [
@@ -1443,17 +1488,19 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
             ');',
             'GO',
         );
-        lines.push(
-            ...bulkDataSourceBlock(
-                dataSourceRaw,
-                storageUrl,
-                fileName,
-                targetPlatform,
-                4,
-                options.credentialName,
-                authMethod,
-            ),
-        );
+        if (needsBulkDataSource) {
+            lines.push(
+                ...bulkDataSourceBlock(
+                    dataSourceRaw,
+                    storageUrl,
+                    fileName,
+                    targetPlatform,
+                    4,
+                    options.credentialName,
+                    authMethod,
+                ),
+            );
+        }
         return lines.join('\n');
     }
 
@@ -1479,17 +1526,21 @@ export function generateCredentialSetup(options: CredentialSetupOptions = {}): s
         'GO',
     );
 
-    lines.push(
-        ...bulkDataSourceBlock(
-            dataSourceRaw,
-            storageUrl,
-            fileName,
-            targetPlatform,
-            4,
-            options.credentialName,
-            authMethod,
-        ),
-    );
+    if (
+        needsBulkDataSource
+    ) {
+        lines.push(
+            ...bulkDataSourceBlock(
+                dataSourceRaw,
+                storageUrl,
+                fileName,
+                targetPlatform,
+                4,
+                options.credentialName,
+                authMethod,
+            ),
+        );
+    }
 
     return lines.join('\n');
 }
