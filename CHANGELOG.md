@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## [1.1.4] - 2026-09-12
+
+### Changed
+
+- Simplified the extension description and removed the Iceberg reference.
+
+## [1.1.3] - 2026-09-12
+
+### Fixed
+
+- Distinguished required Azure Storage-scope consent from an actual Blob RBAC
+  denial, with an explicit **Authorize storage access** action after Azure
+  management connection succeeds.
+
 ## [1.1.2] - 2026-09-12
 
 ### Fixed

@@ -365,6 +365,8 @@ test('non-interactive loading revokes unresolved interactive auth suppression', 
     await subject.connect();
     const denied = await subject.selectAccount(ACCOUNT_ID);
     assert.equal(denied.phase, 'error');
+    assert.equal(denied.errorKind, 'storageConsent');
+    assert.match(denied.message ?? '', /Connected to Azure/);
 
     const staleRetry = subject.retry();
     await storageAuthStarted;
@@ -566,6 +568,7 @@ test('granting a scope keeps the selection instead of resetting to the root', as
     await subject.connect();
     const denied = await subject.selectAccount(ACCOUNT_ID);
     assert.equal(denied.phase, 'error');
+    assert.equal(denied.errorKind, 'storageConsent');
 
     const granted = await subject.retry();
     await providerChange;

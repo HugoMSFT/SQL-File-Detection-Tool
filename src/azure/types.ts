@@ -56,6 +56,7 @@ export interface AzureConnectionService {
 export type AzureBrowserPhase = 'closed' | 'signedOut' | 'loading' | 'ready' | 'error';
 export type AzureBrowserErrorKind =
     | 'controlAccess'
+    | 'storageConsent'
     | 'dataAccess'
     | 'signIn'
     | 'temporary'
