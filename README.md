@@ -597,11 +597,11 @@ Activity Bar instead. There is no loading state to wait through and nothing to i
 folders only. Clicking a listed source analyzes it immediately and returns to
 Preview.
 
-**Azure connection check** uses VS Code's built-in Microsoft authentication and
-lists the Azure directories (tenants) visible to the selected account.
-**Browse Azure** continues through subscriptions and Blob-capable Storage
-accounts, then lists containers, virtual folders, and files read-only. Selecting
-a supported file places its canonical `abs://` or `abfss://` location into the
+**Browse Azure** opens the integrated connection and Storage browser. Its
+**Connect to Azure** action uses VS Code's built-in Microsoft authentication,
+then lists visible directories (tenants), subscriptions, Blob-capable Storage
+accounts, containers, virtual folders, and files read-only. Selecting a
+supported file places its canonical `abs://` or `abfss://` location into the
 existing Credential Setup workflow. It does not download or analyze remote
 bytes. No authentication or network request runs during activation or initial
 rendering.

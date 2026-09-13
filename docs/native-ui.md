@@ -177,11 +177,11 @@ included in renderer state, logs, URLs, or errors. Disconnect clears only the
 extension's in-memory state; it does not remove the user's Microsoft session
 from VS Code.
 
-Authentication and ARM calls begin only after **Connect to Azure**, **Retry**,
-**Refresh**, or **Browse Azure**. The browser performs only silent session
-lookup when opened; interactive tenant or Storage-scope authentication occurs
-only after an explicit **Retry**. Concurrent connection-check Connect/Retry
-actions share one in-flight request.
+Authentication and ARM calls begin only after **Browse Azure** is opened. The
+browser first performs a silent session lookup; **Connect to Azure** appears
+inside the browser only when no session is available. Interactive tenant or
+Storage-scope authentication occurs only after an explicit **Connect to Azure**
+or **Retry**.
 Transient network failures, HTTP 408/429, and selected 5xx responses receive at
 most two cancellation-aware retries with bounded backoff. Successful tenant
 lists are cached in memory for at most two minutes. Refresh bypasses that cache;

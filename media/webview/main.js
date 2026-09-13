@@ -254,54 +254,6 @@
         });
     }
 
-    function renderAzureConnection() {
-        const connection = state.azureConnection;
-        const browserIdentity = state.azure.identity;
-        const identity = connection.identity || browserIdentity;
-        const tenants = byId('azure-tenants');
-        clear(tenants);
-
-        const connected =
-            connection.phase === 'connected' || browserIdentity !== null;
-        const connecting = connection.phase === 'connecting';
-        const failed = connection.phase === 'error';
-        byId('azure-summary').textContent = identity
-            ? 'Signed in as ' + identity.label + (connection.stale ? ' (cached)' : '')
-            : connection.phase === 'disconnected'
-                ? 'Not connected'
-                : failed
-                    ? 'Connection was not completed'
-                    : 'Connecting…';
-        byId('azure-detail').textContent =
-            browserIdentity && connection.phase !== 'connected'
-                ? 'Azure Storage browsing is available. Use Browse Azure to select a remote file; its bytes are not downloaded or analyzed.'
-                : connection.message
-                    + (
-                        connected
-                            ? ' Use Browse Azure to select a remote file; its bytes are not downloaded or analyzed.'
-                            : ''
-                    );
-        connection.tenants.forEach(function (tenant) {
-            const item = element('li', 'azure-tenant');
-            item.appendChild(element('span', 'azure-tenant-label', tenant.label));
-            item.appendChild(element('code', 'azure-tenant-id', tenant.id));
-            tenants.appendChild(item);
-        });
-
-        byId('azure-connect').hidden =
-            connected || connection.phase !== 'disconnected';
-        byId('azure-connect').disabled = connecting;
-        byId('azure-retry').hidden = !failed;
-        byId('azure-retry').disabled = connecting;
-        byId('azure-browse').hidden = !connected;
-        byId('azure-browse').disabled = connecting;
-        byId('azure-refresh').hidden = !connected;
-        byId('azure-refresh').disabled = connecting;
-        byId('azure-disconnect').hidden =
-            !connected && connection.phase === 'disconnected';
-        byId('azure-disconnect').disabled = connecting;
-    }
-
     function azureStateCard(title, detail, primaryLabel, primaryAction) {
         const card = element('section', 'azure-state-card');
         card.appendChild(element('div', 'azure-cloud-mark', '☁'));
@@ -339,11 +291,9 @@
     function renderAzureBrowser() {
         const browser = byId('azure-browser');
         const standard = byId('standard-layout');
-        const connection = byId('azure-connection');
         const azure = state.azure;
         browser.hidden = !azure.open;
         standard.hidden = azure.open;
-        connection.hidden = azure.open;
         if (!azure.open) {
             return;
         }
@@ -352,9 +302,9 @@
         if (azure.phase === 'signedOut') {
             const signedOut = azureStateCard(
                 'Browse Azure Storage',
-                'Return to the Azure connection card, select Connect to Azure, then open Browse Azure again.',
-                'Back to Connect to Azure',
-                'azureBrowserClose',
+                'Connect with VS Code Microsoft authentication to browse Azure public cloud read-only.',
+                'Connect to Azure',
+                'azureBrowserConnect',
             );
             signedOut.appendChild(
                 element(
@@ -1457,7 +1407,6 @@
         const focus = captureFocus();
         renderHeader();
         renderStatus();
-        renderAzureConnection();
         renderAzureBrowser();
         renderFiles();
         renderTabs();

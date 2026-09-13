@@ -477,7 +477,7 @@ export class AzureBrowser {
                     ...CLOSED_AZURE_BROWSER_STATE,
                     open: true,
                     phase: 'signedOut',
-                    message: 'Connect to Azure first, then open Browse Azure again.',
+                    message: 'Connect to Azure to browse Azure public cloud read-only.',
                 };
                 return this.state;
             }

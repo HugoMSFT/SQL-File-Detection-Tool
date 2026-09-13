@@ -89,22 +89,6 @@ export function buildWebviewHtml(options: ShellOptions): string {
     </div>
   </header>
 
-  <section class="azure-connection" id="azure-connection" aria-labelledby="azure-title">
-    <div class="azure-copy">
-      <h2 id="azure-title">Azure connection check</h2>
-      <p id="azure-summary"></p>
-      <p id="azure-detail" class="help"></p>
-      <ul id="azure-tenants" class="azure-tenants" aria-label="Accessible Azure directories"></ul>
-    </div>
-    <div class="azure-actions">
-      <button type="button" class="btn primary" id="azure-connect" data-action="azureConnect">Connect to Azure</button>
-      <button type="button" class="btn" id="azure-retry" data-action="azureRetry" hidden>Retry</button>
-      <button type="button" class="btn primary" id="azure-browse" data-action="openAzureBrowser" hidden>Browse storage</button>
-      <button type="button" class="btn" id="azure-refresh" data-action="azureRefresh" hidden>Refresh</button>
-      <button type="button" class="btn subtle" id="azure-disconnect" data-action="azureDisconnect" hidden>Disconnect</button>
-    </div>
-  </section>
-
   <div class="status-region">
     <p id="progress" class="progress" role="status" aria-live="polite"></p>
     <p id="error" class="error" role="alert"></p>

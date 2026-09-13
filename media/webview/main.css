@@ -170,55 +170,6 @@ h3 {
   flex-basis: 100%;
 }
 
-.azure-connection {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--gap);
-  padding: 10px 12px;
-  border: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-sideBar-background);
-}
-
-.azure-copy {
-  min-width: 0;
-}
-
-.azure-copy h2,
-.azure-copy p {
-  margin: 0;
-}
-
-.azure-copy .help {
-  margin-top: 3px;
-}
-
-.azure-actions {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.azure-tenants {
-  display: grid;
-  gap: 3px;
-  margin: 7px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.azure-tenant {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-}
-
-.azure-tenant-id {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.85em;
-}
-
 /* ------------------------------------------------------------- controls --- */
 
 .btn {

@@ -275,6 +275,8 @@ export class UiController {
                     this.store.update({ azure: this.azure.snapshot });
                 }
                 return;
+            case 'azureBrowserConnect':
+                return this.runAzure(() => this.requireAzure().connect());
             case 'azureBrowserDisconnect': {
                 const azure = this.requireAzure();
                 azure.disconnect();
