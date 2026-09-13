@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [1.1.2] - 2026-09-12
+
 ### Fixed
 
 - Kept every line of the optional `CREATE TABLE` quick-load example commented,
