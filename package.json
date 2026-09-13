@@ -2,7 +2,7 @@
   "name": "sql-file-detection",
   "displayName": "SQL File Detection Tool",
   "description": "Inspect CSV, JSON, Parquet, and Delta files, preview rows, and generate T-SQL for SQL Server, Azure SQL, and Fabric.",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "preview": true,
   "publisher": "hvbqueiroz",
   "license": "MIT",
@@ -168,7 +168,7 @@
           {
             "id": "analyzeFile",
             "title": "Analyze a data file",
-            "description": "Open any CSV, TSV, DAT, JSON, NDJSON, Parquet, ORC, Delta or Iceberg source and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
+            "description": "Open any CSV, TSV, DAT, JSON, NDJSON, Parquet, ORC, or Delta source and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
             "media": {
               "markdown": "media/walkthrough/analyze.md"
             },

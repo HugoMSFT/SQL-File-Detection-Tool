@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+## [1.1.5] - 2026-09-12
+
+### Changed
+
+- Removed the stale format name from packaged Marketplace and walkthrough copy.
+
 ## [1.1.4] - 2026-09-12
 
 ### Changed
 
-- Simplified the extension description and removed the Iceberg reference.
+- Simplified the extension description.
 
 ## [1.1.3] - 2026-09-12
 
