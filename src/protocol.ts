@@ -114,7 +114,6 @@ export type WebviewRequest =
     | (Base & { readonly type: 'azureRetry' })
     | (Base & { readonly type: 'azureRefresh' })
     | (Base & { readonly type: 'azureDisconnect' })
-    | (Base & { readonly type: 'azureBrowserConnect' })
     | (Base & { readonly type: 'azureBrowserDisconnect' })
     | (Base & { readonly type: 'azureBrowserClose' })
     | (Base & { readonly type: 'azureBrowserRetry' })
@@ -355,7 +354,6 @@ const BUILDERS: Record<string, Builder> = {
     azureRetry: () => ({ type: 'azureRetry' }),
     azureRefresh: () => ({ type: 'azureRefresh' }),
     azureDisconnect: () => ({ type: 'azureDisconnect' }),
-    azureBrowserConnect: () => ({ type: 'azureBrowserConnect' }),
     azureBrowserDisconnect: () => ({ type: 'azureBrowserDisconnect' }),
     azureBrowserClose: () => ({ type: 'azureBrowserClose' }),
     azureBrowserRetry: () => ({ type: 'azureBrowserRetry' }),

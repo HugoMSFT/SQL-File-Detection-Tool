@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
     ARM_SCOPE,
     STORAGE_SCOPE,
+    TENANT_SCOPE_PREFIX,
     MicrosoftAuthentication,
     type AuthenticationSession,
     type SessionOptions,
@@ -244,6 +245,56 @@ test('provider change just after interactive auth resolves does not discard its 
     assert.equal(subject.snapshot.accounts[0].id, ACCOUNT_ID);
 });
 
+test('tenant-specific sign-in callback does not require the replaced generic ARM session', async () => {
+    let genericSignedIn = false;
+    let tenantSignedIn = false;
+    let tenantInteractiveStarted: (() => void) | undefined;
+    let resolveTenantInteractive: ((session: AuthenticationSession) => void) | undefined;
+    const tenantStarted = new Promise<void>((resolve) => {
+        tenantInteractiveStarted = resolve;
+    });
+    const tenantSession = {
+        ...SESSION,
+        id: 'tenant-session',
+    };
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            const tenantScoped = scopes.some((scope) => scope.startsWith(TENANT_SCOPE_PREFIX));
+            if (!tenantScoped) {
+                if (options.silent) {
+                    return genericSignedIn ? SESSION : undefined;
+                }
+                genericSignedIn = true;
+                return SESSION;
+            }
+            if (options.silent) {
+                return tenantSignedIn ? tenantSession : undefined;
+            }
+            tenantInteractiveStarted?.();
+            return new Promise<AuthenticationSession>((resolve) => {
+                resolveTenantInteractive = (session) => {
+                    tenantSignedIn = true;
+                    genericSignedIn = false;
+                    resolve(session);
+                };
+            });
+        }),
+        arm: new FakeArm(),
+        storage: new FakeStorage(),
+    });
+
+    const connecting = subject.connect();
+    await tenantStarted;
+    await subject.authenticationChanged();
+    resolveTenantInteractive?.(tenantSession);
+    const connected = await connecting;
+
+    assert.equal(connected.phase, 'ready');
+    assert.equal(connected.identity?.label, SESSION.account.label);
+    assert.equal(connected.selectedTenantId, TENANT_ID);
+    assert.equal(connected.accounts[0].id, ACCOUNT_ID);
+});
+
 test('superseded unresolved authentication cannot block reconciliation after its winner', async () => {
     const interactiveResolvers: Array<(session: AuthenticationSession) => void> = [];
     let notifyInteractive: (() => void) | undefined;
@@ -356,7 +407,7 @@ test('genuine sign-out during ARM discovery is reconciled when the flow settles'
                 initialSilent = false;
                 return undefined;
             }
-            if (providerChanged && scopes.length === 1) {
+            if (providerChanged) {
                 return undefined;
             }
             return SESSION;
@@ -398,7 +449,7 @@ test('failed deferred session revalidation clears authenticated resources', asyn
     let revalidationFails = false;
     const subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
-            if (revalidationFails && options.silent && scopes.length === 1) {
+            if (revalidationFails && options.silent) {
                 throw new Error('provider cache failure');
             }
             return SESSION;
@@ -444,7 +495,8 @@ function blockedDeferredReconciliation() {
     }
     let initialSilent = true;
     let providerChanged = false;
-    const subject = new AzureBrowser({
+    const holder: { subject?: AzureBrowser } = {};
+    holder.subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
             if (!options.silent) {
                 return SESSION;
@@ -453,9 +505,12 @@ function blockedDeferredReconciliation() {
                 initialSilent = false;
                 return undefined;
             }
-            if (providerChanged && scopes.length === 1) {
+            if (providerChanged) {
                 if (!options.account) {
                     return undefined;
+                }
+                if ((holder.subject?.snapshot.accounts.length ?? 0) === 0) {
+                    return SESSION;
                 }
                 notifyRevalidation?.();
                 return new Promise<AuthenticationSession | undefined>((resolve) => {
@@ -467,6 +522,7 @@ function blockedDeferredReconciliation() {
         arm: new BlockingArm(),
         storage: new FakeStorage(),
     });
+    const subject = holder.subject;
     return {
         subject,
         tenantsStarted,

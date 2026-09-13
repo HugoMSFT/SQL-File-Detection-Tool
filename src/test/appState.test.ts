@@ -60,7 +60,7 @@ test('the initial snapshot is frozen and carries no file state', () => {
         stale: false,
         errorKind: null,
         message:
-            'Connect with Microsoft to verify Azure access and list accessible directories (tenants).',
+            'Connect to Azure to verify access and list accessible directories (tenants).',
     });
     assert.deepEqual(state.azure, {
         open: false,

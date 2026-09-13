@@ -352,9 +352,9 @@
         if (azure.phase === 'signedOut') {
             const signedOut = azureStateCard(
                 'Browse Azure Storage',
-                'Sign in with VS Code Microsoft authentication. Read-only management and Storage data scopes are requested only after you connect.',
-                'Connect with Microsoft',
-                'azureBrowserConnect',
+                'Return to the Azure connection card, select Connect to Azure, then open Browse Azure again.',
+                'Back to Connect to Azure',
+                'azureBrowserClose',
             );
             signedOut.appendChild(
                 element(
@@ -369,9 +369,6 @@
                     'azure-privacy-copy',
                     'Subscription Reader access lists accounts; account-level Storage Blob Data Reader is required to list containers and files.',
                 ),
-            );
-            signedOut.appendChild(
-                actionButton('Back', 'azureBrowserClose', 'btn subtle'),
             );
             browser.appendChild(signedOut);
             return;

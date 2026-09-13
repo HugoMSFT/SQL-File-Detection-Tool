@@ -40,7 +40,7 @@ export const DISCONNECTED_AZURE_CONNECTION_STATE: AzureConnectionState = Object.
     stale: false,
     errorKind: null,
     message:
-        'Connect with Microsoft to verify Azure access and list accessible directories (tenants).',
+        'Connect to Azure to verify access and list accessible directories (tenants).',
 });
 
 export interface AzureConnectionService {

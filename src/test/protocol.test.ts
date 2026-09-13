@@ -65,7 +65,6 @@ test('Azure connection actions are explicit zero-field capabilities', () => {
 test('Azure browser actions accept only bounded opaque selections', () => {
     for (const type of [
         'openAzureBrowser',
-        'azureBrowserConnect',
         'azureBrowserDisconnect',
         'azureBrowserClose',
         'azureBrowserRetry',
@@ -76,6 +75,7 @@ test('Azure browser actions accept only bounded opaque selections', () => {
             type,
         });
     }
+    assert.equal(parseWebviewRequest({ type: 'azureBrowserConnect' }), undefined);
     assert.deepEqual(
         parseWebviewRequest({
             type: 'azureBrowserSelectTenant',

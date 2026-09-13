@@ -127,7 +127,6 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'azureRetry',
         'azureRefresh',
         'azureDisconnect',
-        'azureBrowserConnect',
         'azureBrowserRetry',
         'azureBrowserDisconnect',
         'azureBrowserClose',
@@ -147,6 +146,8 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(html, /Azure connection check/);
     assert.match(html, /Connect to Azure/);
     assert.match(html, /id="azure-browse"[^>]*>Browse storage</);
+    assert.doesNotMatch(script, /Connect with Microsoft|azureBrowserConnect/);
+    assert.match(script, /Back to Connect to Azure/);
     assert.match(script, /Use Browse Azure to select a remote file/);
     assert.match(script, /Storage Blob Data Reader/);
     assert.match(script, /Use selected file/);

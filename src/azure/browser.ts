@@ -477,7 +477,7 @@ export class AzureBrowser {
                     ...CLOSED_AZURE_BROWSER_STATE,
                     open: true,
                     phase: 'signedOut',
-                    message: 'Connect with Microsoft to browse Azure public cloud read-only.',
+                    message: 'Connect to Azure first, then open Browse Azure again.',
                 };
                 return this.state;
             }
@@ -777,6 +777,7 @@ export class AzureBrowser {
         if (!account) {
             return this.revalidateAuthentication();
         }
+        const tenantId = this.state.selectedTenantId ?? undefined;
         const generation = this.generation;
         const reconcilingLifecycle = operationLifecycle;
         this.reconcilingLifecycle = reconcilingLifecycle;
@@ -784,7 +785,7 @@ export class AzureBrowser {
         try {
             session = await this.deps.authentication.acquireSession(
                 ARM_SCOPE,
-                undefined,
+                tenantId,
                 account,
                 false,
             );
