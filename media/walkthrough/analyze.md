@@ -15,7 +15,7 @@ listed source analyzes it immediately and opens Preview.
 | CSV, TSV, DAT, delimited text | Delimiter, encoding, sampled schema, row count |
 | JSON, JSONL, NDJSON | Bounded schema sample, nesting, row count |
 | Parquet | Schema, row groups, compression, row count |
-| Delta Lake, Apache Iceberg | Table metadata, current schema, partitioning |
+| Delta Lake | Table metadata, current schema, partitioning |
 | Apache Hudi | Underlying Parquet data files; Hudi metadata is not interpreted |
 | Text | Encoding and streamed line count |
 | ORC, RCFile | Recognized; schema detection is **not** available natively |

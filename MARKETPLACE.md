@@ -19,7 +19,7 @@ PolyBase
 
 ## What it does
 
-- Previews CSV, TSV, DAT, JSON, JSON Lines, Parquet, Delta, and Iceberg sources.
+- Previews CSV, TSV, DAT, JSON, JSON Lines, Parquet, and Delta sources.
 - Maps detected columns to recommended SQL data types.
 - Generates `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, and external-table SQL.
 - Targets SQL Server, Azure SQL Database, Azure SQL Managed Instance, and Fabric
