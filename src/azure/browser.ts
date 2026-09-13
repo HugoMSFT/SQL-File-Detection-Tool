@@ -324,8 +324,8 @@ export class AzureBrowser {
             }
             if (!session) {
                 throw new AzureBrowserError(
-                    'dataAccess',
-                    'Retry to approve the Azure Storage data scope. Account-level Storage Blob Data Reader is also required for Phase 1 browsing.',
+                    'storageConsent',
+                    'Connected to Azure. Authorize read-only Storage access for this tenant to list containers. Your Azure role must also include Storage Blob Data Reader.',
                 );
             }
             const page = await this.storage.listContainers(
@@ -532,8 +532,8 @@ export class AzureBrowser {
             }
             if (!session) {
                 throw new AzureBrowserError(
-                    'dataAccess',
-                    'Retry to approve the Azure Storage data scope. Account-level Storage Blob Data Reader is also required for Phase 1 browsing.',
+                    'storageConsent',
+                    'Authorize read-only Storage access for this tenant to continue browsing.',
                 );
             }
             const page = await this.storage.listBlobs(
@@ -570,7 +570,10 @@ export class AzureBrowser {
                 return this.state;
             }
             if (!session) {
-                throw new AzureBrowserError('dataAccess', 'Retry to approve the Azure Storage data scope.');
+                throw new AzureBrowserError(
+                    'storageConsent',
+                    'Authorize read-only Storage access for this tenant to load more containers.',
+                );
             }
             const page = await this.storage.listContainers(
                 account.blobHost,

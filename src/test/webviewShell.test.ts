@@ -145,6 +145,9 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(script, /Connect to Azure/);
     assert.match(script, /azureBrowserConnect/);
     assert.doesNotMatch(script, /Connect with Microsoft/);
+    assert.match(script, /Authorize Storage browsing/);
+    assert.match(script, /Authorize storage access/);
+    assert.match(script, /Storage data access denied/);
     assert.match(script, /Storage Blob Data Reader/);
     assert.match(script, /Use selected file/);
     assert.match(script, /does not download or analyze its bytes/);

@@ -513,17 +513,20 @@
         browsePane.appendChild(breadcrumbs);
 
         if (azure.phase === 'error') {
-            const title =
-                azure.errorKind === 'controlAccess'
-                    ? 'Azure management access denied'
-                    : azure.errorKind === 'dataAccess'
-                        ? 'Storage data access denied'
-                        : 'Could not list this Azure location';
+            const storageConsent = azure.errorKind === 'storageConsent';
+            let title = 'Could not list this Azure location';
+            if (azure.errorKind === 'controlAccess') {
+                title = 'Azure management access denied';
+            } else if (storageConsent) {
+                title = 'Authorize Storage browsing';
+            } else if (azure.errorKind === 'dataAccess') {
+                title = 'Storage data access denied';
+            }
             browsePane.appendChild(
                 azureStateCard(
                     title,
                     azure.message || 'Retry the request or choose another account.',
-                    'Retry',
+                    storageConsent ? 'Authorize storage access' : 'Retry',
                     'azureBrowserRetry',
                 ),
             );
