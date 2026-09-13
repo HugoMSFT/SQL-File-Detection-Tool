@@ -117,9 +117,9 @@ const REQUIRED_PATHS = [
 /**
  * Strings that would betray a re-introduced Python or server runtime.
  *
- * Storage data-plane symbols remain release blockers. The connect-only proof
- * may use VS Code authentication and ARM tenant discovery, but it must not
- * silently restore account/container/blob browsing.
+ * Azure access is permitted only through VS Code's Microsoft provider and the
+ * bundled read-only Blob SDK. Bespoke application credentials and command-line
+ * credential fallbacks remain release blockers.
  */
 const FORBIDDEN_BUNDLE_STRINGS = [
     [/\bflask\b/i, 'Flask'],
@@ -133,8 +133,8 @@ const FORBIDDEN_BUNDLE_STRINGS = [
     [/\bsetupBackend|startBackend|stopBackend\b/i, 'a backend lifecycle command'],
     [/\bsimpleBrowser\b/i, 'the Simple Browser'],
     [
-        /\b(?:NativeAzureBridge|connectAzureStorage|azureListContainers|azureAnalyzeBlob)\b/,
-        'Azure Storage browsing code',
+        /\b(?:ClientSecretCredential|AzureCliCredential|AzurePowerShellCredential)\b/,
+        'a bespoke or command-line Azure credential',
     ],
 ];
 

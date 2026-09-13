@@ -1306,7 +1306,9 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
             const sql = state.statements?.credential_setup ?? '';
             assert.match(sql, /CREATE EXTERNAL DATA SOURCE/);
             assert.ok(sql.includes(entry.location), sql);
-            assert.ok(!('azure' in state), 'connection state must not reach the renderer');
+            const serialized = JSON.stringify(state);
+            assert.ok(!serialized.includes('accessToken'));
+            assert.ok(!serialized.includes('bearer-token'));
         }
     } finally {
         await ui.dispose();

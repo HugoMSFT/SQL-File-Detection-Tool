@@ -144,7 +144,7 @@ test('nothing reachable from activation can spawn a process', () => {
     }
 });
 
-test('removed backend and storage-browser data-plane modules are not reachable from activation', () => {
+test('removed backend and obsolete Azure modules are not reachable from activation', () => {
     const files = new Set(graph.nodes.map((node) => relative(node.file)));
     for (const legacy of [
         'backend.js',
@@ -153,7 +153,6 @@ test('removed backend and storage-browser data-plane modules are not reachable f
         'webviewHtml.js',
         'sidebar.js',
         'azure/blobBrowser.js',
-        'azure/storageClient.js',
         'net/publicData.js',
         'net/safeHttp.js',
     ]) {

@@ -52,6 +52,9 @@
     /** Renderer-only view state: the Explorer filter query and its source. */
     let fileFilter = '';
     let lastSourceLabel = null;
+    let azureAccountQuery = '';
+    let azureEntryQuery = '';
+    let azureFormat = 'all';
 
     // -- helpers -------------------------------------------------------------
 
@@ -253,26 +256,31 @@
 
     function renderAzureConnection() {
         const connection = state.azureConnection;
+        const browserIdentity = state.azure.identity;
+        const identity = connection.identity || browserIdentity;
         const tenants = byId('azure-tenants');
         clear(tenants);
 
-        const connected = connection.phase === 'connected';
+        const connected =
+            connection.phase === 'connected' || browserIdentity !== null;
         const connecting = connection.phase === 'connecting';
         const failed = connection.phase === 'error';
-        byId('azure-summary').textContent = connection.identity
-            ? 'Signed in as ' + connection.identity.label + (connection.stale ? ' (cached)' : '')
+        byId('azure-summary').textContent = identity
+            ? 'Signed in as ' + identity.label + (connection.stale ? ' (cached)' : '')
             : connection.phase === 'disconnected'
                 ? 'Not connected'
                 : failed
                     ? 'Connection was not completed'
                     : 'Connecting…';
         byId('azure-detail').textContent =
-            connection.message
-            + (
-                connected
-                    ? ' This check does not browse storage or download remote files.'
-                    : ''
-            );
+            browserIdentity && connection.phase !== 'connected'
+                ? 'Azure Storage browsing is available. Use Browse Azure to select a remote file; its bytes are not downloaded or analyzed.'
+                : connection.message
+                    + (
+                        connected
+                            ? ' Use Browse Azure to select a remote file; its bytes are not downloaded or analyzed.'
+                            : ''
+                    );
         connection.tenants.forEach(function (tenant) {
             const item = element('li', 'azure-tenant');
             item.appendChild(element('span', 'azure-tenant-label', tenant.label));
@@ -280,14 +288,449 @@
             tenants.appendChild(item);
         });
 
-        byId('azure-connect').hidden = connection.phase !== 'disconnected';
+        byId('azure-connect').hidden =
+            connected || connection.phase !== 'disconnected';
         byId('azure-connect').disabled = connecting;
         byId('azure-retry').hidden = !failed;
         byId('azure-retry').disabled = connecting;
+        byId('azure-browse').hidden = !connected;
+        byId('azure-browse').disabled = connecting;
         byId('azure-refresh').hidden = !connected;
         byId('azure-refresh').disabled = connecting;
-        byId('azure-disconnect').hidden = connection.phase === 'disconnected';
+        byId('azure-disconnect').hidden =
+            !connected && connection.phase === 'disconnected';
         byId('azure-disconnect').disabled = connecting;
+    }
+
+    function azureStateCard(title, detail, primaryLabel, primaryAction) {
+        const card = element('section', 'azure-state-card');
+        card.appendChild(element('div', 'azure-cloud-mark', '☁'));
+        card.appendChild(element('h2', null, title));
+        card.appendChild(element('p', null, detail));
+        if (primaryLabel && primaryAction) {
+            card.appendChild(actionButton(primaryLabel, primaryAction, 'btn primary'));
+        }
+        return card;
+    }
+
+    function azureSelect(label, id, items, selected, key) {
+        const field = element('label', 'field azure-identity-field');
+        field.appendChild(element('span', null, label));
+        const select = document.createElement('select');
+        select.id = id;
+        select.dataset.azureSelect = key;
+        items.forEach(function (item) {
+            const option = element('option', null, item.label);
+            option.value = item.id;
+            option.selected = item.id === selected;
+            select.appendChild(option);
+        });
+        select.disabled = state.azure.phase === 'loading' || items.length === 0;
+        field.appendChild(select);
+        return field;
+    }
+
+    function selectedAzureAccount() {
+        return state.azure.accounts.find(function (account) {
+            return account.id === state.azure.selectedAccountId;
+        }) || null;
+    }
+
+    function renderAzureBrowser() {
+        const browser = byId('azure-browser');
+        const standard = byId('standard-layout');
+        const connection = byId('azure-connection');
+        const azure = state.azure;
+        browser.hidden = !azure.open;
+        standard.hidden = azure.open;
+        connection.hidden = azure.open;
+        if (!azure.open) {
+            return;
+        }
+        clear(browser);
+
+        if (azure.phase === 'signedOut') {
+            const signedOut = azureStateCard(
+                'Browse Azure Storage',
+                'Sign in with VS Code Microsoft authentication. Read-only management and Storage data scopes are requested only after you connect.',
+                'Connect with Microsoft',
+                'azureBrowserConnect',
+            );
+            signedOut.appendChild(
+                element(
+                    'p',
+                    'azure-privacy-copy',
+                    'Tokens remain in the extension host and are never stored, logged, or sent to this webview.',
+                ),
+            );
+            signedOut.appendChild(
+                element(
+                    'p',
+                    'azure-privacy-copy',
+                    'Subscription Reader access lists accounts; account-level Storage Blob Data Reader is required to list containers and files.',
+                ),
+            );
+            signedOut.appendChild(
+                actionButton('Back', 'azureBrowserClose', 'btn subtle'),
+            );
+            browser.appendChild(signedOut);
+            return;
+        }
+
+        const identity = element('header', 'azure-identity-bar');
+        const identityCopy = element('div', 'azure-identity');
+        identityCopy.appendChild(element('span', 'azure-avatar', 'MS'));
+        const identityText = element('div');
+        identityText.appendChild(
+            element(
+                'h2',
+                null,
+                azure.identity ? azure.identity.label : 'Microsoft account',
+            ),
+        );
+        identityText.appendChild(
+            element('p', null, 'Azure public cloud · read-only browsing'),
+        );
+        identityCopy.appendChild(identityText);
+        identity.appendChild(identityCopy);
+        identity.appendChild(
+            azureSelect(
+                'Tenant',
+                'azure-browser-tenant',
+                azure.tenants,
+                azure.selectedTenantId,
+                'tenant',
+            ),
+        );
+        identity.appendChild(
+            azureSelect(
+                'Subscription',
+                'azure-browser-subscription',
+                azure.subscriptions,
+                azure.selectedSubscriptionId,
+                'subscription',
+            ),
+        );
+        const identityActions = element('div', 'azure-identity-actions');
+        identityActions.appendChild(
+            actionButton('Disconnect', 'azureBrowserDisconnect', 'btn subtle'),
+        );
+        identityActions.appendChild(
+            actionButton('Close', 'azureBrowserClose', 'btn subtle'),
+        );
+        identity.appendChild(identityActions);
+        browser.appendChild(identity);
+
+        if (azure.phase === 'loading' && azure.accounts.length === 0) {
+            browser.appendChild(
+                azureStateCard(
+                    'Loading Azure…',
+                    azure.message || 'Reading Azure metadata.',
+                    null,
+                    null,
+                ),
+            );
+            return;
+        }
+
+        const layout = element('div', 'azure-layout');
+        const accountsPane = element('aside', 'azure-accounts-pane');
+        const accountsHeading = element('div', 'azure-pane-heading');
+        accountsHeading.appendChild(element('h2', null, 'Storage accounts'));
+        accountsHeading.appendChild(
+            element('span', 'azure-count', String(azure.accounts.length)),
+        );
+        accountsPane.appendChild(accountsHeading);
+        const accountSearch = document.createElement('input');
+        accountSearch.type = 'search';
+        accountSearch.id = 'azure-account-search';
+        accountSearch.placeholder = 'Name, resource group, or region';
+        accountSearch.setAttribute('aria-label', 'Search Storage accounts');
+        accountSearch.value = azureAccountQuery;
+        accountsPane.appendChild(accountSearch);
+        const accountList = element('div', 'azure-account-list');
+        const accountQuery = azureAccountQuery.trim().toLowerCase();
+        const matchingAccounts = azure.accounts.filter(function (account) {
+            return [
+                account.name,
+                account.resourceGroup,
+                account.location,
+                account.hns ? 'ADLS Gen2' : 'Blob Storage',
+            ].join(' ').toLowerCase().includes(accountQuery);
+        });
+        matchingAccounts.forEach(function (account) {
+            const button = element('button', 'azure-account-card');
+            button.type = 'button';
+            button.dataset.azureAccount = account.id;
+            button.setAttribute(
+                'aria-pressed',
+                account.id === azure.selectedAccountId ? 'true' : 'false',
+            );
+            button.appendChild(element('strong', null, account.name));
+            button.appendChild(
+                element(
+                    'span',
+                    'azure-account-kind',
+                    account.hns ? 'ADLS Gen2 / HNS' : 'Blob Storage',
+                ),
+            );
+            button.appendChild(
+                element(
+                    'span',
+                    'azure-account-meta',
+                    account.resourceGroup + ' · ' + account.location,
+                ),
+            );
+            accountList.appendChild(button);
+        });
+        if (matchingAccounts.length === 0) {
+            accountList.appendChild(
+                element('p', 'azure-empty', 'No Storage accounts match this filter.'),
+            );
+        }
+        accountsPane.appendChild(accountList);
+        layout.appendChild(accountsPane);
+
+        const browsePane = element('section', 'azure-browse-pane');
+        const selectedAccount = selectedAzureAccount();
+        if (azure.phase === 'error' && !selectedAccount) {
+            const title =
+                azure.errorKind === 'controlAccess'
+                    ? 'Azure management access denied'
+                    : 'Could not list Azure resources';
+            browsePane.appendChild(
+                azureStateCard(
+                    title,
+                    azure.message || 'Retry the request.',
+                    'Retry',
+                    'azureBrowserRetry',
+                ),
+            );
+            layout.appendChild(browsePane);
+            browser.appendChild(layout);
+            return;
+        }
+        if (!selectedAccount) {
+            browsePane.appendChild(
+                azureStateCard(
+                    'Choose a Storage account',
+                    azure.message
+                        || 'Select an account to request its existing read-only data access.',
+                    null,
+                    null,
+                ),
+            );
+            layout.appendChild(browsePane);
+            browser.appendChild(layout);
+            return;
+        }
+
+        const browseHeading = element('div', 'azure-browse-heading');
+        const headingCopy = element('div');
+        headingCopy.appendChild(
+            element('p', 'azure-eyebrow', selectedAccount.resourceGroup),
+        );
+        headingCopy.appendChild(element('h2', null, selectedAccount.name));
+        browseHeading.appendChild(headingCopy);
+        const badges = element('div', 'azure-badges');
+        badges.appendChild(
+            element(
+                'span',
+                'azure-badge',
+                selectedAccount.hns ? 'ADLS Gen2 / HNS' : 'Blob Storage',
+            ),
+        );
+        badges.appendChild(
+            element('span', 'azure-badge', selectedAccount.location),
+        );
+        browseHeading.appendChild(badges);
+        browsePane.appendChild(browseHeading);
+
+        const breadcrumbs = element('nav', 'azure-breadcrumbs');
+        breadcrumbs.setAttribute('aria-label', 'Azure Storage location');
+        const root = element('button', 'azure-breadcrumb');
+        root.type = 'button';
+        root.dataset.azureDepth = '0';
+        root.textContent = selectedAccount.name;
+        breadcrumbs.appendChild(root);
+        azure.path.forEach(function (segment, index) {
+            breadcrumbs.appendChild(
+                element('span', 'azure-breadcrumb-separator', '›'),
+            );
+            const crumb = element('button', 'azure-breadcrumb', segment);
+            crumb.type = 'button';
+            crumb.dataset.azureDepth = String(index + 1);
+            crumb.disabled = index === azure.path.length - 1;
+            breadcrumbs.appendChild(crumb);
+        });
+        browsePane.appendChild(breadcrumbs);
+
+        if (azure.phase === 'error') {
+            const title =
+                azure.errorKind === 'controlAccess'
+                    ? 'Azure management access denied'
+                    : azure.errorKind === 'dataAccess'
+                        ? 'Storage data access denied'
+                        : 'Could not list this Azure location';
+            browsePane.appendChild(
+                azureStateCard(
+                    title,
+                    azure.message || 'Retry the request or choose another account.',
+                    'Retry',
+                    'azureBrowserRetry',
+                ),
+            );
+            layout.appendChild(browsePane);
+            browser.appendChild(layout);
+            return;
+        }
+
+        const filters = element('div', 'azure-entry-filters');
+        const entrySearch = document.createElement('input');
+        entrySearch.type = 'search';
+        entrySearch.id = 'azure-entry-search';
+        entrySearch.placeholder = 'Filter this location';
+        entrySearch.setAttribute(
+            'aria-label',
+            'Filter containers, folders, and files',
+        );
+        entrySearch.value = azureEntryQuery;
+        filters.appendChild(entrySearch);
+        const format = document.createElement('select');
+        format.id = 'azure-format-filter';
+        format.setAttribute('aria-label', 'Filter by supported file format');
+        [
+            'all',
+            'CSV',
+            'TSV',
+            'JSON',
+            'JSONL',
+            'NDJSON',
+            'PARQUET',
+            'ORC',
+            'RC',
+        ].forEach(function (value) {
+            const option = element(
+                'option',
+                null,
+                value === 'all' ? 'All supported formats' : value,
+            );
+            option.value = value;
+            option.selected = value === azureFormat;
+            format.appendChild(option);
+        });
+        filters.appendChild(format);
+        browsePane.appendChild(filters);
+
+        const entryList = element('div', 'azure-entry-list');
+        entryList.setAttribute('role', 'list');
+        const entryQuery = azureEntryQuery.trim().toLowerCase();
+        const entries = azure.entries.filter(function (entry) {
+            const matchesText = entry.name.toLowerCase().includes(entryQuery);
+            const matchesFormat =
+                entry.kind !== 'file'
+                || (
+                    entry.supported
+                    && (azureFormat === 'all' || entry.format === azureFormat)
+                );
+            return matchesText && matchesFormat;
+        });
+        entries.forEach(function (entry) {
+            const button = element('button', 'azure-entry');
+            button.type = 'button';
+            button.dataset.azureEntry = entry.id;
+            button.setAttribute(
+                'aria-pressed',
+                entry.id === azure.selectedEntryId ? 'true' : 'false',
+            );
+            button.appendChild(
+                element(
+                    'span',
+                    'azure-entry-icon',
+                    entry.kind === 'container'
+                        ? '▣'
+                        : entry.kind === 'folder'
+                            ? '▸'
+                            : '◇',
+                ),
+            );
+            const copy = element('span', 'azure-entry-copy');
+            copy.appendChild(element('strong', null, entry.name));
+            const meta = [];
+            if (entry.kind === 'file') {
+                meta.push(entry.format || 'FILE');
+                if (entry.sizeBytes !== null) {
+                    meta.push(formatBytes(entry.sizeBytes));
+                }
+                if (entry.modifiedAt) {
+                    meta.push(new Date(entry.modifiedAt).toLocaleString());
+                }
+                if (!entry.supported) {
+                    meta.push('Not a supported SQL source');
+                }
+            } else {
+                meta.push(entry.kind);
+            }
+            copy.appendChild(
+                element('span', 'azure-entry-meta', meta.join(' · ')),
+            );
+            button.appendChild(copy);
+            entryList.appendChild(button);
+        });
+        if (entries.length === 0) {
+            entryList.appendChild(
+                element(
+                    'p',
+                    'azure-empty',
+                    azure.message || 'No matching items in this location.',
+                ),
+            );
+        }
+        browsePane.appendChild(entryList);
+        if (azure.hasMore) {
+            browsePane.appendChild(
+                actionButton('Load more', 'azureBrowserLoadMore', 'btn subtle'),
+            );
+        }
+        if (azure.phase === 'loading') {
+            browsePane.appendChild(
+                element('p', 'azure-loading', azure.message || 'Loading…'),
+            );
+        }
+
+        const selectedEntry = azure.entries.find(function (entry) {
+            return entry.id === azure.selectedEntryId;
+        });
+        if (selectedEntry && selectedEntry.kind === 'file') {
+            const details = element('aside', 'azure-selection');
+            details.appendChild(element('strong', null, selectedEntry.name));
+            details.appendChild(
+                element(
+                    'p',
+                    null,
+                    selectedEntry.supported
+                        ? 'Use this remote location in Credential Setup. The extension does not download or analyze its bytes.'
+                        : 'This file format is not supported as a SQL source.',
+                ),
+            );
+            const use = actionButton(
+                'Use selected file',
+                'azureBrowserUseSelectedFile',
+                'btn primary',
+            );
+            use.disabled = !selectedEntry.supported;
+            details.appendChild(use);
+            browsePane.appendChild(details);
+        }
+
+        layout.appendChild(browsePane);
+        browser.appendChild(layout);
+    }
+
+    function rerenderAzureBrowser() {
+        const focus = captureFocus();
+        renderAzureBrowser();
+        restoreFocus(focus);
     }
 
     function renderFiles() {
@@ -1018,6 +1461,7 @@
         renderHeader();
         renderStatus();
         renderAzureConnection();
+        renderAzureBrowser();
         renderFiles();
         renderTabs();
         renderPanel();
@@ -1035,6 +1479,33 @@
         const fileItem = target.closest('.file-item');
         if (fileItem && fileItem.dataset.fileId) {
             post({ type: 'selectFile', fileId: fileItem.dataset.fileId });
+            return;
+        }
+
+        const azureAccount = target.closest('[data-azure-account]');
+        if (azureAccount && azureAccount.dataset.azureAccount) {
+            post({
+                type: 'azureBrowserSelectAccount',
+                accountId: azureAccount.dataset.azureAccount,
+            });
+            return;
+        }
+
+        const azureEntry = target.closest('[data-azure-entry]');
+        if (azureEntry && azureEntry.dataset.azureEntry) {
+            post({
+                type: 'azureBrowserOpenEntry',
+                entryId: azureEntry.dataset.azureEntry,
+            });
+            return;
+        }
+
+        const azureCrumb = target.closest('[data-azure-depth]');
+        if (azureCrumb && azureCrumb.dataset.azureDepth !== undefined) {
+            post({
+                type: 'azureBrowserNavigate',
+                depth: Number(azureCrumb.dataset.azureDepth),
+            });
             return;
         }
 
@@ -1120,6 +1591,25 @@
             post({ type: 'setPlatform', platform: target.value });
             return;
         }
+        if (target.dataset && target.dataset.azureSelect === 'tenant') {
+            post({
+                type: 'azureBrowserSelectTenant',
+                tenantId: target.value,
+            });
+            return;
+        }
+        if (target.dataset && target.dataset.azureSelect === 'subscription') {
+            post({
+                type: 'azureBrowserSelectSubscription',
+                subscriptionId: target.value,
+            });
+            return;
+        }
+        if (target.id === 'azure-format-filter') {
+            azureFormat = target.value;
+            rerenderAzureBrowser();
+            return;
+        }
         const edit = target.dataset ? target.dataset.edit : null;
         if (edit === 'wizardPlatform') {
             post({ type: 'setPlatform', platform: target.value });
@@ -1148,6 +1638,16 @@
         if (target instanceof Element && target.id === 'file-filter') {
             fileFilter = target.value;
             renderFiles();
+            return;
+        }
+        if (target instanceof Element && target.id === 'azure-account-search') {
+            azureAccountQuery = target.value;
+            rerenderAzureBrowser();
+            return;
+        }
+        if (target instanceof Element && target.id === 'azure-entry-search') {
+            azureEntryQuery = target.value;
+            rerenderAzureBrowser();
             return;
         }
         if (

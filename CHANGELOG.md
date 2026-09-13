@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added read-only Azure Storage browsing across tenants, subscriptions, Storage
+  accounts, containers, folders, and files using VS Code Microsoft
+  authentication.
+- Selected Blob and ADLS Gen2 files now feed canonical ABS/ABFSS locations into
+  Credential Setup without downloading or analyzing remote content.
+
 All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).

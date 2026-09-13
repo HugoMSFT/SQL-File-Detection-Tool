@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added read-only Azure Storage browsing across tenants, subscriptions, Storage
+  accounts, containers, folders, and files using VS Code Microsoft
+  authentication.
+- Selected Blob and ADLS Gen2 files now feed canonical ABS/ABFSS locations into
+  Credential Setup without downloading or analyzing remote content.
+
 ## 1.1.1
 
 - Parquet, Delta, ORC and RCFile external tables now emit bounded column types

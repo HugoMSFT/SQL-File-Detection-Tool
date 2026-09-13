@@ -62,6 +62,23 @@ test('the initial snapshot is frozen and carries no file state', () => {
         message:
             'Connect with Microsoft to verify Azure access and list accessible directories (tenants).',
     });
+    assert.deepEqual(state.azure, {
+        open: false,
+        phase: 'closed',
+        identity: null,
+        tenants: [],
+        selectedTenantId: null,
+        subscriptions: [],
+        selectedSubscriptionId: null,
+        accounts: [],
+        selectedAccountId: null,
+        path: [],
+        entries: [],
+        selectedEntryId: null,
+        hasMore: false,
+        errorKind: null,
+        message: null,
+    });
     assert.ok(state.platforms.some((entry) => entry.id === 'azure_sql_db'));
 });
 

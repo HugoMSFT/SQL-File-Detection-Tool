@@ -597,17 +597,24 @@ Activity Bar instead. There is no loading state to wait through and nothing to i
 folders only. Clicking a listed source analyzes it immediately and returns to
 Preview.
 
-**Azure connection check** is an explicit, connect-only proof that uses VS
-Code's built-in Microsoft authentication and lists the Azure directories
-(tenants) visible to the selected account. It does not browse Storage accounts,
-containers, or blobs, and it does not download or analyze remote files. No
-authentication or network request runs during activation or initial rendering.
+**Azure connection check** uses VS Code's built-in Microsoft authentication and
+lists the Azure directories (tenants) visible to the selected account.
+**Browse Azure** continues through subscriptions and Blob-capable Storage
+accounts, then lists containers, virtual folders, and files read-only. Selecting
+a supported file places its canonical `abs://` or `abfss://` location into the
+existing Credential Setup workflow. It does not download or analyze remote
+bytes. No authentication or network request runs during activation or initial
+rendering.
 Concurrent Connect actions share one authentication/discovery request. Transient
 ARM failures use at most two bounded retries, and **Refresh** performs a new
 silent session check and directory lookup. A successful directory list is kept
 in memory for up to two minutes only; if Refresh then fails transiently, that
 unexpired list is shown explicitly as cached until it can be verified again.
 Disconnect, sign-out, authorization failure, or extension disposal clears it.
+Storage browsing requests the tenant-specific Storage scope only after an
+explicit Connect or Retry and requires account-level **Storage Blob Data
+Reader** access. Tokens stay in the extension host and are never persisted,
+logged, or transferred to the webview.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never

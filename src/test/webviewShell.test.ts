@@ -116,6 +116,7 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     for (const action of [
         'openFileDialog',
         'openFolderDialog',
+        'openAzureBrowser',
         'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
@@ -126,6 +127,12 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'azureRetry',
         'azureRefresh',
         'azureDisconnect',
+        'azureBrowserConnect',
+        'azureBrowserRetry',
+        'azureBrowserDisconnect',
+        'azureBrowserClose',
+        'azureBrowserLoadMore',
+        'azureBrowserUseSelectedFile',
     ]) {
         assert.ok(
             html.includes(`data-action="${action}"`) || script.includes(`'${action}'`),
@@ -135,12 +142,15 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     assert.doesNotMatch(script, /azureList|azureSetAccount|azureAnalyzeBlob/);
 });
 
-test('the Azure surface states its connect-only boundary', () => {
+test('the Azure surface states its read-only browser boundary', () => {
     const html = render();
     assert.match(html, /Azure connection check/);
     assert.match(html, /Connect to Azure/);
-    assert.match(script, /does not browse storage or download remote files/);
-    assert.doesNotMatch(script, /Storage Blob Data Reader|containers|list blobs/i);
+    assert.match(html, /id="azure-browse"[^>]*>Browse storage</);
+    assert.match(script, /Use Browse Azure to select a remote file/);
+    assert.match(script, /Storage Blob Data Reader/);
+    assert.match(script, /Use selected file/);
+    assert.match(script, /does not download or analyze its bytes/);
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {

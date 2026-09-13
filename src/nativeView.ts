@@ -27,6 +27,7 @@ import {
     type SessionOptions,
 } from './azure/auth';
 import { AzureConnection } from './azure/connection';
+import { AzureBrowser } from './azure/browser';
 import { AzureTenantClient } from './azure/tenantClient';
 import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
@@ -308,7 +309,11 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
             },
             log: (message) => this.host.log(message),
         });
-        this.controller = new UiController(this.host, this.store, { azureConnection });
+        const azure = new AzureBrowser({ authentication });
+        this.controller = new UiController(this.host, this.store, {
+            azureConnection,
+            azure,
+        });
         this.disposables.push(
             vscode.workspace.onDidChangeWorkspaceFolders(() => {
                 this.controller.refreshWorkspace();

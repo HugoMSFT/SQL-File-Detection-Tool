@@ -42,7 +42,10 @@ import {
     credentialWizardState,
     normalizeDataSourceType,
 } from './native';
-import { DISCONNECTED_AZURE_CONNECTION_STATE } from './azure/types';
+import {
+    CLOSED_AZURE_BROWSER_STATE,
+    DISCONNECTED_AZURE_CONNECTION_STATE,
+} from './azure/types';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -129,6 +132,7 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         formats: options.formats ?? [],
         lastAnalysisMs: null,
         azureConnection: DISCONNECTED_AZURE_CONNECTION_STATE,
+        azure: CLOSED_AZURE_BROWSER_STATE,
     };
 }
 

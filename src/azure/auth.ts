@@ -2,6 +2,7 @@ import type { AzureIdentity } from './types';
 
 export const MICROSOFT_PROVIDER_ID = 'microsoft';
 export const ARM_SCOPE = 'https://management.azure.com/user_impersonation';
+export const STORAGE_SCOPE = 'https://storage.azure.com/user_impersonation';
 export const TENANT_SCOPE_PREFIX = 'VSCODE_TENANT:';
 
 export interface AuthenticationAccount {
@@ -40,6 +41,13 @@ export function authenticationScopes(tenantId?: string): readonly string[] {
     return tenantId ? [ARM_SCOPE, `${TENANT_SCOPE_PREFIX}${tenantId}`] : [ARM_SCOPE];
 }
 
+export function scopedAuthenticationScopes(
+    resourceScope: typeof ARM_SCOPE | typeof STORAGE_SCOPE,
+    tenantId?: string,
+): readonly string[] {
+    return tenantId ? [resourceScope, `${TENANT_SCOPE_PREFIX}${tenantId}`] : [resourceScope];
+}
+
 /**
  * Thin adapter over VS Code's built-in Microsoft provider.
  *
@@ -49,7 +57,7 @@ export function authenticationScopes(tenantId?: string): readonly string[] {
 export class MicrosoftAuthentication {
     constructor(
         private readonly getSession: GetSession,
-        private readonly getAccountsImpl: GetAccounts,
+        private readonly getAccountsImpl: GetAccounts = async () => [],
     ) {}
 
     async acquire(
@@ -57,7 +65,27 @@ export class MicrosoftAuthentication {
         account?: AuthenticationAccount,
         tenantId?: string,
     ): Promise<AuthenticationResult> {
-        const scopes = authenticationScopes(tenantId);
+        return this.acquireResource(ARM_SCOPE, allowInteractive, account, tenantId);
+    }
+
+    async acquireSession(
+        resourceScope: typeof ARM_SCOPE | typeof STORAGE_SCOPE,
+        tenantId: string | undefined,
+        account: AuthenticationAccount | undefined,
+        allowInteractive: boolean,
+    ): Promise<AuthenticationSession | undefined> {
+        return (
+            await this.acquireResource(resourceScope, allowInteractive, account, tenantId)
+        ).session;
+    }
+
+    private async acquireResource(
+        resourceScope: typeof ARM_SCOPE | typeof STORAGE_SCOPE,
+        allowInteractive: boolean,
+        account?: AuthenticationAccount,
+        tenantId?: string,
+    ): Promise<AuthenticationResult> {
+        const scopes = scopedAuthenticationScopes(resourceScope, tenantId);
         const silent = await this.getSession(MICROSOFT_PROVIDER_ID, scopes, {
             silent: true,
             ...(account ? { account } : {}),

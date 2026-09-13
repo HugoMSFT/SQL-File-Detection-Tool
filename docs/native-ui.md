@@ -167,30 +167,42 @@ Credential setup has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
-The extension performs no storage authentication, Storage account discovery,
-container listing, or remote download. Its explicit **Connect to Azure** action
-uses VS Code's built-in Microsoft provider for the ARM user-impersonation scope
-and lists only accessible directories (tenants). Tokens remain in the extension
-host and are never persisted or included in renderer state, logs, or errors.
-Disconnect clears only the extension's in-memory state; it does not remove the
-user's Microsoft session from VS Code. There is no storage-browser command in
-the manifest and no storage SDK in the dependency graph.
+The extension uses VS Code's built-in Microsoft provider for the ARM and Storage
+user-impersonation scopes. **Browse Azure** lists accessible tenants,
+subscriptions, Blob-capable Storage accounts, containers, virtual folders, and
+blob metadata read-only. ARM Reader access is distinct from account-level
+**Storage Blob Data Reader** access, and the UI reports those failures
+separately. Tokens remain in the extension host and are never persisted or
+included in renderer state, logs, URLs, or errors. Disconnect clears only the
+extension's in-memory state; it does not remove the user's Microsoft session
+from VS Code.
 
 Authentication and ARM calls begin only after **Connect to Azure**, **Retry**,
-or **Refresh**. Concurrent Connect/Retry actions share one in-flight request.
+**Refresh**, or **Browse Azure**. Storage-scope authentication begins only after
+an explicit browser Connect/Retry action. Concurrent connection-check
+Connect/Retry actions share one in-flight request.
 Transient network failures, HTTP 408/429, and selected 5xx responses receive at
 most two cancellation-aware retries with bounded backoff. Successful tenant
 lists are cached in memory for at most two minutes. Refresh bypasses that cache;
 if its retries fail transiently, an unexpired previous list remains visible and
 is marked cached. The cache is never persisted and is cleared on provider
 changes, Disconnect, authorization failure, or disposal.
-The ARM client permits only HTTPS requests to the fixed public-cloud
-`management.azure.com/tenants` endpoint and its validated continuation links,
-with hard limits for time, pages, items, and response bytes. Authentication
+The ARM clients permit only HTTPS requests to fixed public-cloud
+`management.azure.com` tenant, subscription, and Storage-account endpoints and
+validated continuation links, reject redirects, and apply hard limits for time,
+pages, items, response bytes, and retries. The official bundled
+`@azure/storage-blob` client lists at most 100 items per page and 1,000 items per
+location with timeout, cancellation, and bounded SDK retries. Authentication
 provider events are generation-coordinated with interactive sign-in: the
 session returned by the current interactive operation survives its own provider
 event, while later account removal cancels work and clears retained identity
 and tenant data.
+
+Selecting a file creates `abs://container@account.blob.core.windows.net/path`
+for Blob Storage or `abfss://container@account.dfs.core.windows.net/path` for
+HNS/ADLS Gen2 and hands it to the existing Credential Setup state. This selects
+the remote SQL source location only; no remote bytes, schema, or preview are
+downloaded.
 
 The URL boundary remains strict:
 

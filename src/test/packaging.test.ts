@@ -81,8 +81,9 @@ test('activation is scoped to the Activity Bar view, never to startup', () => {
     assert.deepEqual(manifest.activationEvents, ['onView:sqlFileDetectionTool.sidebar']);
 });
 
-test('runtime dependencies are the four the native core needs', () => {
+test('runtime dependencies are the native core and official Blob SDK', () => {
     assert.deepEqual(Object.keys(manifest.dependencies).sort(), [
+        '@azure/storage-blob',
         'chardet',
         'fflate',
         'hyparquet',
@@ -143,7 +144,7 @@ test('the allowlist admits every asset the manifest contributes', () => {
     }
 });
 
-test('the bundle carries no Python, server, spawn, or storage-browser vocabulary', () => {
+test('the bundle carries no Python, server, spawn, or bespoke credential vocabulary', () => {
     const code = readBundle();
     for (const [pattern, label] of audit.FORBIDDEN_BUNDLE_STRINGS) {
         assert.ok(!pattern.test(code), `the bundle contains ${label}`);

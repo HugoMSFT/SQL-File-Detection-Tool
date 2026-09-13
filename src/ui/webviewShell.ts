@@ -74,6 +74,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
       <span class="toolbar-title">Sources &amp; files</span>
       <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
       <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
+      <button type="button" class="btn" data-action="openAzureBrowser">Browse Azure</button>
       <button type="button" class="btn" data-source-tab="credential_setup">Storage setup</button>
       <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
       <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
@@ -88,7 +89,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
     </div>
   </header>
 
-  <section class="azure-connection" aria-labelledby="azure-title">
+  <section class="azure-connection" id="azure-connection" aria-labelledby="azure-title">
     <div class="azure-copy">
       <h2 id="azure-title">Azure connection check</h2>
       <p id="azure-summary"></p>
@@ -98,6 +99,7 @@ export function buildWebviewHtml(options: ShellOptions): string {
     <div class="azure-actions">
       <button type="button" class="btn primary" id="azure-connect" data-action="azureConnect">Connect to Azure</button>
       <button type="button" class="btn" id="azure-retry" data-action="azureRetry" hidden>Retry</button>
+      <button type="button" class="btn primary" id="azure-browse" data-action="openAzureBrowser" hidden>Browse storage</button>
       <button type="button" class="btn" id="azure-refresh" data-action="azureRefresh" hidden>Refresh</button>
       <button type="button" class="btn subtle" id="azure-disconnect" data-action="azureDisconnect" hidden>Disconnect</button>
     </div>
@@ -111,7 +113,9 @@ export function buildWebviewHtml(options: ShellOptions): string {
     <button type="button" class="btn subtle" id="dismiss" data-action="dismissNotice" hidden>Dismiss</button>
   </div>
 
-  <div class="layout">
+  <section id="azure-browser" class="azure-browser" aria-label="Azure Storage browser" hidden></section>
+
+  <div class="layout" id="standard-layout">
     <nav class="file-pane" aria-labelledby="file-pane-title">
       <div class="explorer-heading">
         <h2 id="file-pane-title">Explorer</h2>

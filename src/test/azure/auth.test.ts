@@ -4,9 +4,11 @@ import test from 'node:test';
 import {
     ARM_SCOPE,
     MICROSOFT_PROVIDER_ID,
+    STORAGE_SCOPE,
     TENANT_SCOPE_PREFIX,
     MicrosoftAuthentication,
     authenticationScopes,
+    scopedAuthenticationScopes,
     type AuthenticationSession,
     type SessionOptions,
 } from '../../azure/auth';
@@ -23,6 +25,57 @@ test('Microsoft authentication uses the ARM scope and optional tenant hint', () 
         ARM_SCOPE,
         `${TENANT_SCOPE_PREFIX}11111111-1111-1111-1111-111111111111`,
     ]);
+    assert.deepEqual(
+        scopedAuthenticationScopes(
+            STORAGE_SCOPE,
+            '11111111-1111-1111-1111-111111111111',
+        ),
+        [
+            STORAGE_SCOPE,
+            `${TENANT_SCOPE_PREFIX}11111111-1111-1111-1111-111111111111`,
+        ],
+    );
+});
+
+test('Storage authentication is silent first and interactive only on explicit retry', async () => {
+    const calls: Array<{
+        scopes: readonly string[];
+        options: SessionOptions;
+    }> = [];
+    const authentication = new MicrosoftAuthentication(
+        async (_provider, scopes, options) => {
+            calls.push({ scopes, options });
+            return options.silent ? undefined : SESSION;
+        },
+    );
+    const tenantId = '11111111-1111-1111-1111-111111111111';
+
+    assert.equal(
+        await authentication.acquireSession(
+            STORAGE_SCOPE,
+            tenantId,
+            SESSION.account,
+            false,
+        ),
+        undefined,
+    );
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0], {
+        scopes: [STORAGE_SCOPE, `${TENANT_SCOPE_PREFIX}${tenantId}`],
+        options: { silent: true, account: SESSION.account },
+    });
+
+    assert.equal(
+        await authentication.acquireSession(
+            STORAGE_SCOPE,
+            tenantId,
+            SESSION.account,
+            true,
+        ),
+        SESSION,
+    );
+    assert.equal(calls.length, 3);
+    assert.equal(calls[2].options.createIfNone, true);
 });
 
 test('authentication is silent first and prompts only for an explicit connect', async () => {
