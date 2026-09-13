@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+
+- Kept every line of the optional `CREATE TABLE` quick-load example commented,
+  preventing its column list from becoming stray executable T-SQL.
+
+### Added
+
 - Added read-only Azure Storage browsing across tenants, subscriptions, Storage
   accounts, containers, folders, and files using VS Code Microsoft
   authentication.

@@ -1826,42 +1826,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -2245,42 +2209,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -2736,42 +2664,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -3137,42 +3029,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -3442,42 +3298,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -3837,42 +3657,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -4327,42 +4111,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -4781,42 +4529,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -5181,42 +4893,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -5485,42 +5161,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -5861,42 +5501,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -6166,42 +5770,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -6645,42 +6213,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -7211,42 +6743,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -7567,42 +7063,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -9720,42 +9180,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -10136,42 +9560,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -10618,42 +10006,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -11012,42 +10364,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -11363,42 +10679,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -11806,42 +11086,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -12294,42 +11538,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -12740,42 +11948,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -13134,42 +12306,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -13485,42 +12621,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -13930,42 +13030,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -14421,42 +13485,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -14876,42 +13904,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -15277,42 +14269,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -15582,42 +14538,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -15977,42 +14897,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -16467,42 +15351,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -16921,42 +15769,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -17321,42 +16133,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -17625,42 +16401,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -18001,42 +16741,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -18306,42 +17010,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -18785,42 +17453,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -19351,42 +17983,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -19707,42 +18303,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -21860,42 +20420,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -22276,42 +20800,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -22758,42 +21246,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -23152,42 +21604,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -23503,42 +21919,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -23946,42 +22326,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -24434,42 +22778,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -24880,42 +23188,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -25274,42 +23546,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -25625,42 +23861,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -26070,42 +24270,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -26561,42 +24725,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -27016,42 +25144,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -27417,42 +25509,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -27722,42 +25778,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -28117,42 +26137,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -28607,42 +26591,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -29061,42 +27009,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -29461,42 +27373,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -29765,42 +27641,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -30141,42 +27981,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -30446,42 +28250,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -30925,42 +28693,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -31491,42 +29223,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -31847,42 +29543,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -34000,42 +31660,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -34416,42 +32040,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -34898,42 +32486,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -35292,42 +32844,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -35643,42 +33159,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -36086,42 +33566,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -36574,42 +34018,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -37020,42 +34428,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -37414,42 +34786,6 @@
      [
       "[order_timestamp_utc]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -37765,42 +35101,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[unit_price]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[temperature_c]",
-      "DECIMAL(5,2)"
-     ],
-     [
-      "[is_active]",
-      "BIT"
-     ],
-     [
-      "[product_name]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[notes]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_date]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[order_timestamp_utc]",
-      "NVARCHAR(255)"
      ],
      [
       "[quantity]",
@@ -82133,106 +79433,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -82855,106 +80055,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -83477,106 +80577,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -84301,106 +81301,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -85011,106 +81911,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -85619,106 +82419,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -86441,106 +83141,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -87063,106 +83663,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -87887,106 +84387,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -88497,106 +84897,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -89306,106 +85606,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -89915,106 +86115,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -90839,106 +86939,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -91869,106 +87869,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -92484,106 +88384,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -96338,106 +92138,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -96956,106 +92656,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -97774,106 +93374,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -98389,106 +93889,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -99197,106 +94597,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -99810,106 +95110,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -100628,106 +95828,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -101246,106 +96346,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -102061,106 +97061,6 @@
      [
       "[c_map]",
       "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ]
     ],
     "go_batches": 0,
@@ -102669,106 +97569,6 @@
      [
       "[c_int8]",
       "SMALLINT"
-     ],
-     [
-      "[c_int16]",
-      "SMALLINT"
-     ],
-     [
-      "[c_int32]",
-      "INT"
-     ],
-     [
-      "[c_int64]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint8]",
-      "TINYINT"
-     ],
-     [
-      "[c_uint16]",
-      "INT"
-     ],
-     [
-      "[c_uint32]",
-      "BIGINT"
-     ],
-     [
-      "[c_uint64]",
-      "DECIMAL(20,0)"
-     ],
-     [
-      "[c_float32]",
-      "FLOAT"
-     ],
-     [
-      "[c_float64]",
-      "FLOAT"
-     ],
-     [
-      "[c_bool]",
-      "BIT"
-     ],
-     [
-      "[c_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_large_string]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_large_binary]",
-      "VARBINARY(MAX)"
-     ],
-     [
-      "[c_date32]",
-      "DATE"
-     ],
-     [
-      "[c_time32_ms]",
-      "TIME(3)"
-     ],
-     [
-      "[c_time64_us]",
-      "TIME(6)"
-     ],
-     [
-      "[c_timestamp_ms]",
-      "DATETIME2(3)"
-     ],
-     [
-      "[c_timestamp_us]",
-      "DATETIME2(6)"
-     ],
-     [
-      "[c_timestamp_ns]",
-      "DATETIME2(7)"
-     ],
-     [
-      "[c_timestamp_utc]",
-      "DATETIMEOFFSET(6)"
-     ],
-     [
-      "[c_decimal]",
-      "DECIMAL(18,4)"
-     ],
-     [
-      "[c_list_int32]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_struct]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[c_map]",
-      "NVARCHAR(MAX)"
      ],
      [
       "[c_int16]",
@@ -103429,26 +98229,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -103678,26 +98458,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -103967,26 +98727,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -104211,26 +98951,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -104421,26 +99141,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -104676,26 +99376,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -104965,26 +99645,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -105234,26 +99894,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -105458,26 +100098,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -105708,26 +100328,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -105937,26 +100537,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -106146,26 +100726,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -106457,26 +101017,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -106794,26 +101334,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -107009,26 +101529,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -108330,26 +102830,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -108575,26 +103055,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -108860,26 +103320,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -109075,26 +103515,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -109350,26 +103770,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -109590,26 +103990,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -109875,26 +104255,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -110140,26 +104500,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -110355,26 +104695,6 @@
      [
       "[order_id]",
       "BIGINT"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ],
      [
       "[customer]",
@@ -110630,26 +104950,6 @@
      [
       "[order_date]",
       "DATE"
-     ],
-     [
-      "[customer]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[quantity]",
-      "INT"
-     ],
-     [
-      "[amount]",
-      "FLOAT"
-     ],
-     [
-      "[is_paid]",
-      "BIT"
-     ],
-     [
-      "[order_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -110868,22 +105168,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -111123,22 +105407,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -111362,22 +105630,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -111580,22 +105832,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -111771,22 +106007,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -114815,22 +109035,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -115037,22 +109241,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -115291,22 +109479,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -115487,22 +109659,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -115731,22 +109887,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -115948,22 +110088,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -116202,22 +110326,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -116440,22 +110548,6 @@
      [
       "[event_date]",
       "DATE"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ]
     ],
     "go_batches": 0,
@@ -116636,22 +110728,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -116864,22 +110940,6 @@
      [
       "[event_id]",
       "BIGINT"
-     ],
-     [
-      "[event_name]",
-      "NVARCHAR(MAX)"
-     ],
-     [
-      "[event_value]",
-      "FLOAT"
-     ],
-     [
-      "[is_test]",
-      "BIT"
-     ],
-     [
-      "[event_date]",
-      "DATE"
      ],
      [
       "[event_name]",
@@ -126575,22 +120635,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -126854,22 +120898,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -127165,22 +121193,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -127426,22 +121438,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -127631,22 +121627,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -127886,22 +121866,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -128196,22 +122160,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -128490,22 +122438,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -128750,22 +122682,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -128954,22 +122870,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -129190,22 +123090,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -129395,22 +123279,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -129694,22 +123562,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -130040,22 +123892,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -130276,22 +124112,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -131689,22 +125509,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -131965,22 +125769,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -132267,22 +126055,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -132521,22 +126293,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -132752,22 +126508,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -133035,22 +126775,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -133343,22 +127067,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -133629,22 +127337,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -133883,22 +127575,6 @@
      [
       "[differs_under]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -134114,22 +127790,6 @@
      [
       "[pair_id]",
       "INT"
-     ],
-     [
-      "[category]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[left_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[right_value]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[differs_under]",
-      "NVARCHAR(255)"
      ],
      [
       "[category]",
@@ -134388,18 +128048,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -134613,18 +128261,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -134862,18 +128498,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -135088,18 +128712,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -135266,18 +128878,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -135467,18 +129067,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -135716,18 +129304,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -135941,18 +129517,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -136179,18 +129743,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -136357,18 +129909,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -136559,18 +130099,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -136737,18 +130265,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -136974,18 +130490,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -137250,18 +130754,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -137455,18 +130947,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -138624,18 +132104,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -138846,18 +132314,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -139086,18 +132542,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -139305,18 +132749,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -139486,18 +132918,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -139711,18 +133131,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -139957,18 +133365,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -140173,18 +133569,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -140404,18 +133788,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -140585,18 +133957,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[kana_type]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[kana_type]",
@@ -140835,22 +134195,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -141146,22 +134490,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -141441,22 +134769,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -141702,22 +135014,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -141907,22 +135203,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -142162,22 +135442,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -142472,22 +135736,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -142766,22 +136014,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -143026,22 +136258,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -143230,22 +136446,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -143466,22 +136666,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -143671,22 +136855,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -143970,22 +137138,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -144316,22 +137468,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -144552,22 +137688,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -145965,22 +139085,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -146241,22 +139345,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -146543,22 +139631,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -146797,22 +139869,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -147028,22 +140084,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -147311,22 +140351,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -147619,22 +140643,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -147905,22 +140913,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -148159,22 +141151,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -148390,22 +141366,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -148675,22 +141635,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -148986,22 +141930,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -149281,22 +142209,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -149542,22 +142454,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -149747,22 +142643,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -150002,22 +142882,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -150312,22 +143176,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -150606,22 +143454,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -150866,22 +143698,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -151070,22 +143886,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -151306,22 +144106,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -151511,22 +144295,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -151810,22 +144578,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -152156,22 +144908,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -152392,22 +145128,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -153805,22 +146525,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -154081,22 +146785,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -154383,22 +147071,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -154637,22 +147309,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -154868,22 +147524,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -155151,22 +147791,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -155459,22 +148083,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -155745,22 +148353,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -155999,22 +148591,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -156230,22 +148806,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -156515,22 +149075,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -156826,22 +149370,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -157121,22 +149649,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -157382,22 +149894,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -157587,22 +150083,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -157842,22 +150322,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -158152,22 +150616,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -158446,22 +150894,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -158706,22 +151138,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -158910,22 +151326,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -159146,22 +151546,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -159351,22 +151735,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -159650,22 +152018,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -159996,22 +152348,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -160232,22 +152568,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -161645,22 +153965,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -161921,22 +154225,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -162223,22 +154511,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -162477,22 +154749,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -162708,22 +154964,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -162991,22 +155231,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -163299,22 +155523,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -163585,22 +155793,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -163839,22 +156031,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -164070,22 +156246,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -164355,22 +156515,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -164666,22 +156810,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -164961,22 +157089,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -165222,22 +157334,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -165427,22 +157523,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -165682,22 +157762,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -165992,22 +158056,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -166286,22 +158334,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -166546,22 +158578,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -166750,22 +158766,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -166986,22 +158986,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -167191,22 +159175,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -167490,22 +159458,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -167836,22 +159788,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -168072,22 +160008,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -169485,22 +161405,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -169761,22 +161665,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -170063,22 +161951,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -170317,22 +162189,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -170548,22 +162404,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -170831,22 +162671,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",
@@ -171139,22 +162963,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -171425,22 +163233,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -171679,22 +163471,6 @@
      [
       "[note]",
       "NVARCHAR(255)"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ]
     ],
     "go_batches": 0,
@@ -171910,22 +163686,6 @@
      [
       "[row_id]",
       "INT"
-     ],
-     [
-      "[script]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[sample_text]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[code_points]",
-      "NVARCHAR(255)"
-     ],
-     [
-      "[note]",
-      "NVARCHAR(255)"
      ],
      [
       "[script]",

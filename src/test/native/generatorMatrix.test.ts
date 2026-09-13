@@ -332,6 +332,18 @@ describe('audited generated-SQL regressions', () => {
         assert.match(sql, /-- WITH \(/);
         assert.match(sql, /--\s+\[id\]\s+BIGINT/);
     });
+
+    it('keeps every line of quick-load guidance commented out', () => {
+        const sql = generateCreateTable(csvMetadata(), {
+            targetPlatform: 'sql_server_2022',
+            storageUrl: STORAGE_URLS.azure_blob,
+        });
+        const quickLoad = sql.slice(sql.indexOf('-- QUICK LOAD'));
+
+        assert.strictEqual(executableSql(quickLoad), '');
+        assert.match(quickLoad, /--\s+\[id\]\s+BIGINT,/);
+        assert.match(quickLoad, /--\s+\[amount\]\s+FLOAT,/);
+    });
 });
 
 describe('target platform capabilities', () => {

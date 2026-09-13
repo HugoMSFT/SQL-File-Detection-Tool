@@ -272,6 +272,34 @@ def test_create_table_quick_load_uses_relative_adls_path():
     assert "BULK 'https://" not in sql
 
 
+def test_create_table_quick_load_is_fully_commented():
+    """Every line in the optional quick-load example must remain inert."""
+    gen = SQLGenerator()
+    sql = gen.generate_create_table(
+        {
+            'file_type': 'csv',
+            'file_path': 'sample.csv',
+            'file_name': 'sample.csv',
+            'delimiter': ',',
+            'encoding': 'utf-8',
+            'has_header': True,
+            'schema': [('id', 'int64'), ('quantity', 'int32')],
+        },
+        'sample',
+        target_platform='sql_server_2022',
+        storage_url='abs://container@account.blob.core.windows.net/sample.csv',
+    )
+    quick_load = sql[sql.index('-- QUICK LOAD'):]
+    executable = '\n'.join(
+        line for line in quick_load.splitlines()
+        if line.strip() and not line.lstrip().startswith('--')
+    )
+
+    assert executable == ''
+    assert re.search(r'--\s+\[id\]\s+BIGINT,', quick_load)
+    assert re.search(r'--\s+\[quantity\]\s+INT', quick_load)
+
+
 def test_create_table_quick_load_rejects_sql_server_2019_parquet():
     """SQL Server 2019 CREATE TABLE guidance does not fake Parquet access."""
     gen = SQLGenerator()
