@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.1.4
+
+### Changed
+
+- Simplified the extension description and removed the Iceberg reference.
+
 ## 1.1.3
 
 ### Fixed
