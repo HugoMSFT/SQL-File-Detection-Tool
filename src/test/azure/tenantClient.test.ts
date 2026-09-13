@@ -57,6 +57,7 @@ test('tenant discovery maps bounded public-cloud ARM pages', async () => {
     const fetchImpl: FetchLike = async (url, init) => {
         calls.push(url);
         assert.equal(init.method, 'GET');
+        assert.equal(init.redirect, 'error');
         assert.equal(init.headers.Authorization, 'Bearer never-log-this-token');
         if (calls.length === 1) {
             return response(200, {

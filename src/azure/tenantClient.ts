@@ -26,6 +26,7 @@ export type FetchLike = (
     input: string,
     init: {
         readonly method: 'GET';
+        readonly redirect: 'error';
         readonly headers: Readonly<Record<string, string>>;
         readonly signal: AbortSignal;
     },
@@ -165,6 +166,7 @@ export class AzureTenantClient {
         try {
             const response = await this.fetchImpl(validateTenantManagementUrl(url), {
                 method: 'GET',
+                redirect: 'error',
                 headers: {
                     Accept: 'application/json',
                     Authorization: `Bearer ${accessToken}`,
