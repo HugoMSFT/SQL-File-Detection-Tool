@@ -103,6 +103,12 @@ def test_not_executable_acceptance_is_pinned_to_specific_output():
             assert entry.static_assertions, entry.cell_id
 
 
+def test_cp932_external_format_accepts_explicit_not_available_guidance():
+    entry = MATRIX_BY_ID['C06']
+    assert 'NOT_EXECUTABLE' in entry.accepts
+    assert entry.static_assertions
+
+
 # ---------------------------------------------------------------------------
 # Evidence file integrity
 # ---------------------------------------------------------------------------

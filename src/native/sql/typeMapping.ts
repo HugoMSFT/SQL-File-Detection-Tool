@@ -447,6 +447,16 @@ export function inferredColumnSqlType(
     if (hasIncompleteTypeEvidence(metadata)) {
         return 'NVARCHAR(MAX)';
     }
+    const lowered = String(detectedType).trim().toLowerCase();
+    if (
+        (metadata.file_type === 'csv' || metadata.file_type === 'text') &&
+        (lowered === 'bool' || lowered === 'boolean')
+    ) {
+        // Delimited readers receive lexical True/False values. Azure SQL and
+        // SQL Server cannot convert those tokens directly to BIT while reading,
+        // so preserve them as text for an explicit downstream conversion.
+        return 'NVARCHAR(5)';
+    }
     return mapTypeToSql(detectedType, metadata.max_string_lengths?.[columnName]);
 }
 

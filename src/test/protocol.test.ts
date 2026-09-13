@@ -26,6 +26,33 @@ test('a well formed message is accepted and normalised', () => {
     assert.deepEqual(parsed, { type: 'setTab', tab: 'preview' });
 });
 
+test('storage setup accepts only the supported SQL goals', () => {
+    for (const value of ['create_external_table', 'openrowset', 'bulk_insert'] as const) {
+        assert.deepEqual(
+            parseWebviewRequest({ type: 'setStorageGoal', value }),
+            { type: 'setStorageGoal', value },
+        );
+    }
+    assert.equal(
+        parseWebviewRequest({ type: 'setStorageGoal', value: 'copy_into' }),
+        undefined,
+    );
+});
+
+test('Azure folder format selection is bounded text', () => {
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'setAzureFolderFormat', value: 'parquet' }),
+        { type: 'setAzureFolderFormat', value: 'parquet' },
+    );
+    assert.equal(
+        parseWebviewRequest({
+            type: 'setAzureFolderFormat',
+            value: 'x'.repeat(MAX_TEXT_LENGTH),
+        }),
+        undefined,
+    );
+});
+
 test('unknown message types are dropped', () => {
     for (const type of [
         'eval',
@@ -71,6 +98,7 @@ test('Azure browser actions accept only bounded opaque selections', () => {
         'azureBrowserRetry',
         'azureBrowserLoadMore',
         'azureBrowserUseSelectedFile',
+        'azureBrowserUseCurrentFolder',
     ] as const) {
         assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
             type,

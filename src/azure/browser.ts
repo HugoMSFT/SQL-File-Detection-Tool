@@ -139,6 +139,16 @@ export class AzureBrowser {
     }
 
     async open(): Promise<AzureBrowserState> {
+        if (this.account && this.state.identity && this.state.tenants.length > 0) {
+            this.state = {
+                ...this.state,
+                open: true,
+                phase: 'ready',
+                errorKind: null,
+                message: null,
+            };
+            return this.state;
+        }
         this.disconnect();
         this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
         return this.discover(false);
@@ -396,6 +406,14 @@ export class AzureBrowser {
             return undefined;
         }
         return azureStorageUrl(account, this.container, registered.target.blobName);
+    }
+
+    currentFolderUrl(): string | undefined {
+        const account = this.selectedAccount();
+        if (!account || !this.container) {
+            return undefined;
+        }
+        return azureStorageUrl(account, this.container, this.prefix);
     }
 
     close(): AzureBrowserState {

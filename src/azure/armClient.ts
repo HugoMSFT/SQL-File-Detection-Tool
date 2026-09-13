@@ -199,7 +199,15 @@ export class ArmClient {
                 };
             },
             signal,
-        ).then((items) => items.filter((item) => item.tenantId === tenantId));
+        ).then((items) =>
+            items
+                .filter((item) => item.tenantId === tenantId)
+                .sort((left, right) =>
+                    left.label.localeCompare(right.label, undefined, {
+                        sensitivity: 'base',
+                        numeric: true,
+                    }) || left.id.localeCompare(right.id)),
+        );
     }
 
     listStorageAccounts(

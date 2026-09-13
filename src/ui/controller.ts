@@ -28,7 +28,11 @@ import {
     DIRECTORY_SCAN_MAX_DIRECTORIES,
     DIRECTORY_SCAN_MAX_FILES,
     effectiveStorageUrl,
+    generateBulkInsert,
     generateCredentialSetup,
+    generateExternalFileFormat,
+    generateExternalTable,
+    generateOpenrowset,
     inferDataSourceType,
     externalTableRecommendedSqlType,
     isSqlSourceFile,
@@ -38,6 +42,8 @@ import {
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
     type FileMetadata,
+    type FileType,
+    type GeneratorMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
     type ParserOverrides,
@@ -317,6 +323,9 @@ export class UiController {
             case 'azureBrowserUseSelectedFile':
                 this.useSelectedAzureFile();
                 return;
+            case 'azureBrowserUseCurrentFolder':
+                this.useCurrentAzureFolder();
+                return;
             case 'setTableName':
                 this.store.update({ tableName: request.value });
                 this.regenerate();
@@ -350,11 +359,41 @@ export class UiController {
                 this.refreshQuickAnalyze();
                 this.regenerate();
                 return;
+            case 'setStorageGoal':
+                this.store.update({ storageGoal: request.value });
+                this.generateNow();
+                return;
+            case 'setAzureFolderFormat': {
+                const remoteSchema = this.store.state.remoteSchema;
+                if (
+                    !remoteSchema ||
+                    !remoteSchema.formats.includes(request.value)
+                ) {
+                    this.store.update({
+                        error: 'Choose one of the formats detected in this Azure folder.',
+                    });
+                    return;
+                }
+                this.store.update({
+                    remoteSchema: {
+                        ...remoteSchema,
+                        status: 'not_analyzed',
+                        selectedFormat: request.value,
+                        message:
+                            'The folder format is selected, but its columns and parser settings have not been analyzed.',
+                    },
+                    error: null,
+                });
+                this.generateNow();
+                return;
+            }
             case 'setStorageUrl': {
                 const value = request.value.trim();
                 if (!value) {
                     this.store.update({
                         storageUrl: '',
+                        azureFolderPreview: null,
+                        remoteSchema: null,
                         error: null,
                         notice: 'Known storage URL cleared. Safe placeholders are used instead.',
                     });
@@ -386,8 +425,14 @@ export class UiController {
                     this.store.state.platform,
                     dataSourceType,
                 );
+                const changedSource = location.storageUrl !== this.store.state.storageUrl;
                 this.store.update({
                     storageUrl: location.storageUrl,
+                    sourceKind: changedSource ? 'public_https' : this.store.state.sourceKind,
+                    azureFolderPreview: changedSource
+                        ? null
+                        : this.store.state.azureFolderPreview,
+                    remoteSchema: changedSource ? null : this.store.state.remoteSchema,
                     dataSourceType,
                     authMethod,
                     error: null,
@@ -540,17 +585,106 @@ export class UiController {
             this.store.state.platform,
             dataSourceType,
         );
+        const fileType = sqlSourceFileType(location.storageUrl) ?? 'unknown';
         azure.close();
         this.store.update({
             azure: azure.snapshot,
             activeTab: 'credential_setup',
             sourceKind: 'azure',
             storageUrl: location.storageUrl,
+            azureFolderPreview: null,
+            remoteSchema: {
+                status: fileType === 'unknown' ? 'format_required' : 'not_analyzed',
+                formats: fileType === 'unknown' ? [] : [fileType],
+                selectedFormat: fileType === 'unknown' ? null : fileType,
+                message: fileType === 'unknown'
+                    ? 'The selected file type is unknown, so goal-specific SQL cannot be generated safely.'
+                    : 'The Azure file location is selected, but its columns and parser settings have not been analyzed.',
+            },
             dataSourceType,
             authMethod,
             error: null,
             notice:
                 'Azure file location selected. Configure SQL credentials for this URL; remote bytes were not downloaded or analyzed.',
+        });
+        this.refreshQuickAnalyze();
+        this.generateNow();
+    }
+
+    private useCurrentAzureFolder(): void {
+        const azure = this.requireAzure();
+        const value = azure.currentFolderUrl();
+        if (!value) {
+            this.store.update({ azure: azure.snapshot });
+            return;
+        }
+        const snapshot = azure.snapshot;
+        const location = knownStorageLocation(value);
+        const dataSourceType = normalizeDataSourceType(
+            location.dataSourceType,
+            this.store.state.platform,
+        );
+        const authMethod = normalizeGuidedAuthMethod(
+            this.store.state.authMethod === 'public'
+                ? null
+                : this.store.state.authMethod,
+            this.store.state.platform,
+            dataSourceType,
+        );
+        const label = snapshot.path.join('/');
+        const formats = [...new Set(
+            snapshot.entries
+                .filter((entry) => entry.kind === 'file')
+                .map((entry) => sqlSourceFileType(entry.name))
+                .filter(
+                    (format): format is FileType =>
+                        format !== undefined && format !== 'unknown',
+                ),
+        )].sort();
+        const selectedFormat = formats.length === 1 ? formats[0]! : null;
+        azure.close();
+        this.rawMetadata = null;
+        this.folderMetadata = [];
+        this.store.setFiles([]);
+        this.store.update({
+            azure: azure.snapshot,
+            activeTab: 'credential_setup',
+            selectedFileId: null,
+            sourceLabel: label,
+            metadata: null,
+            preview: null,
+            statements: null,
+            sourceKind: 'azure',
+            storageUrl: location.storageUrl,
+            dataSourceType,
+            authMethod,
+            parserOverrides: {},
+            folderProfile: null,
+            azureFolderPreview: {
+                label,
+                url: location.storageUrl,
+                items: snapshot.entries.map((entry) => ({
+                    kind: entry.kind === 'file' ? 'file' : 'folder',
+                    name: entry.name,
+                    format: entry.format,
+                    sizeBytes: entry.sizeBytes,
+                    modifiedAt: entry.modifiedAt,
+                })),
+                truncated: snapshot.hasMore,
+            },
+            remoteSchema: {
+                status: selectedFormat ? 'not_analyzed' : 'format_required',
+                formats,
+                selectedFormat,
+                message: selectedFormat
+                    ? 'The Azure folder format is known, but its columns and parser settings have not been analyzed.'
+                    : formats.length > 1
+                        ? 'This folder contains multiple file formats. Choose the format to target before SQL is generated.'
+                        : 'No supported file format was detected in this folder. Choose a file or a folder containing supported files.',
+            },
+            error: null,
+            notice:
+                'Azure folder location selected. Configure SQL credentials for this URL; browse metadata remains available in Preview.',
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -608,6 +742,8 @@ export class UiController {
         this.store.update({
             sourceKind: 'local',
             storageUrl: '',
+            azureFolderPreview: null,
+            remoteSchema: null,
             authMethod:
                 state.authMethod === 'public'
                     ? normalizeGuidedAuthMethod(
@@ -710,6 +846,8 @@ export class UiController {
                     : `${supportedPaths.length} selected files`,
             sourceKind: 'local',
             storageUrl: '',
+            azureFolderPreview: null,
+            remoteSchema: null,
             authMethod:
                 state.authMethod === 'public'
                     ? normalizeGuidedAuthMethod(
@@ -928,26 +1066,37 @@ export class UiController {
         }
         const state = this.store.state;
         if (!this.rawMetadata) {
+            if (state.remoteSchema?.status === 'format_required') {
+                this.store.update({ statements: null });
+                return;
+            }
             const storageUrl = effectiveStorageUrl(
                 state.platform,
                 state.dataSourceType,
                 state.storageUrl || null,
                 '<file>',
             );
+            const remoteMetadata = this.remoteSetupMetadata();
+            const credentialSetup = generateCredentialSetup({
+                dataSource: state.dataSource || 'MyDataSource',
+                credentialName: state.credentialName || null,
+                authMethod: state.authMethod || null,
+                targetPlatform: state.platform,
+                storageUrl,
+                metadata: remoteMetadata,
+                storageGoal: state.storageGoal,
+            });
+            const goalSql = remoteMetadata
+                ? this.remoteGoalSql(remoteMetadata, credentialSetup)
+                : credentialSetup;
             this.store.update({
                 statements: {
-                    credential_setup: generateCredentialSetup({
-                        dataSource: state.dataSource || 'MyDataSource',
-                        credentialName: state.credentialName || null,
-                        authMethod: state.authMethod || null,
-                        targetPlatform: state.platform,
-                        storageUrl,
-                    }),
+                    credential_setup: goalSql,
                 },
             });
             return;
         }
-        const statements: GeneratedStatements = this.service.generateStatements({
+        const generated = this.service.generateStatements({
             metadata: {
                 ...this.rawMetadata,
                 sql_type_overrides: { ...state.columnOverrides },
@@ -966,7 +1115,129 @@ export class UiController {
                     ? { ...state.parserOverrides }
                     : undefined,
         });
+        const statements: GeneratedStatements = {
+            ...generated,
+            credential_setup: generateCredentialSetup({
+                dataSource: state.dataSource || 'MyDataSource',
+                credentialName: state.credentialName || null,
+                authMethod: state.authMethod || null,
+                targetPlatform: state.platform,
+                storageUrl: effectiveStorageUrl(
+                    state.platform,
+                    state.dataSourceType,
+                    state.storageUrl || null,
+                    this.rawMetadata.file_name,
+                ),
+                metadata: this.rawMetadata,
+                storageGoal: state.storageGoal,
+            }),
+        };
         this.store.update({ statements });
+    }
+
+    private remoteSetupMetadata(): GeneratorMetadata | null {
+        const state = this.store.state;
+        if (state.sourceKind !== 'azure' || !state.storageUrl) {
+            return null;
+        }
+        const selected = state.azure.entries.find(
+            (entry) => entry.id === state.azure.selectedEntryId && entry.kind === 'file',
+        );
+        const folderFiles = state.azureFolderPreview?.items.filter(
+            (entry) => entry.kind === 'file',
+        ) ?? [];
+        const names = selected ? [selected.name] : folderFiles.map((entry) => entry.name);
+        const detectedTypes = names
+            .map((name) => sqlSourceFileType(name))
+            .filter(
+                (detected): detected is FileType =>
+                    detected !== undefined && detected !== 'unknown',
+            );
+        const requestedFormat = state.remoteSchema?.selectedFormat;
+        const fileType = requestedFormat
+            ? detectedTypes.find((detected) => detected === requestedFormat)
+            : detectedTypes[0];
+        if (!fileType) {
+            return null;
+        }
+        const extension = fileType === 'text' ? 'txt' : fileType;
+        const fileName = selected?.name ?? `<file-name>.${extension}`;
+        return {
+            file_path: fileName,
+            file_name: fileName,
+            file_type: fileType,
+            schema: [['replace_with_actual_column', 'string']],
+            delimiter: ',',
+            encoding: 'utf-8',
+            codepage: '65001',
+            has_header: true,
+        };
+    }
+
+    private remoteGoalSql(
+        metadata: GeneratorMetadata,
+        credentialSetup: string,
+    ): string {
+        const state = this.store.state;
+        const dataSource = state.dataSource || 'MyDataSource';
+        const isFolder = state.azureFolderPreview !== null;
+        const extension = metadata.file_type === 'text'
+            ? 'txt'
+            : String(metadata.file_type || 'csv');
+        const folderRoot = state.storageUrl.endsWith('/')
+            ? state.storageUrl
+            : `${state.storageUrl}/`;
+        const operationStorageUrl = isFolder
+            ? state.storageGoal === 'openrowset'
+                ? `${folderRoot}**/*.${extension}`
+                : state.storageGoal === 'bulk_insert'
+                    ? `${folderRoot}<file-name>.${extension}`
+                    : state.storageUrl
+            : state.storageUrl;
+        const shared = {
+            tableName: state.tableName || null,
+            schemaName: state.schemaName || 'dbo',
+            dataSource,
+            targetPlatform: state.platform,
+            storageUrl: operationStorageUrl,
+        };
+        const selectionNote = [
+            '-- ====================================================================',
+            '-- TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED',
+            '-- DO NOT EXECUTE UNTIL THE PLACEHOLDER SCHEMA IS REPLACED',
+            '-- ====================================================================',
+            '-- SELECTED AZURE SOURCE',
+            `-- ${isFolder ? 'Folder' : 'File'}: ${state.storageUrl}`,
+            '-- File contents were not downloaded or inspected.',
+            '-- Replace [replace_with_actual_column] with the real column definitions',
+            '-- and confirm delimiter, header, encoding, and format settings.',
+        ].join('\n');
+
+        let operation: string;
+        if (state.storageGoal === 'bulk_insert') {
+            operation = generateBulkInsert(metadata, {
+                ...shared,
+                includePrereq: false,
+                credentialName: state.credentialName || null,
+                authMethod: state.authMethod || null,
+            });
+        } else if (state.storageGoal === 'openrowset') {
+            operation = generateOpenrowset(metadata, shared);
+        } else {
+            operation = [
+                generateExternalFileFormat(metadata, {
+                    formatName: state.formatName || null,
+                    targetPlatform: state.platform,
+                }),
+                generateExternalTable(metadata, {
+                    ...shared,
+                    fileFormat: state.formatName || null,
+                }),
+            ].join('\n\n');
+        }
+        return [selectionNote, credentialSetup, operation]
+            .filter((part) => part.trim().length > 0)
+            .join('\n\n');
     }
 
     private completeDocument(): string | null {
@@ -1015,6 +1286,12 @@ export class UiController {
             return;
         }
         await this.host.openUntitledDocument(text, 'sql');
+        this.store.update({
+            notice:
+                kind === 'credential_setup'
+                    ? 'Opened the generated script as a SQL document for the MSSQL extension.'
+                    : 'Opened the statement in a SQL editor.',
+        });
     }
 
     /**

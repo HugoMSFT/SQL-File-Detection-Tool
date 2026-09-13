@@ -198,6 +198,28 @@ def test_type_mapping():
     assert generator._map_type_to_sql('unknown_type') == 'NVARCHAR(MAX)'
 
 
+def test_delimited_boolean_columns_are_read_as_text():
+    generator = SQLGenerator()
+    csv_metadata = {
+        'file_type': 'csv',
+        'file_name': 'flags.csv',
+        'file_path': 'flags.csv',
+        'schema': [('active', 'bool')],
+        'encoding': 'utf-8',
+        'delimiter': ',',
+        'has_header': True,
+    }
+    parquet_metadata = {
+        **csv_metadata,
+        'file_type': 'parquet',
+        'file_name': 'flags.parquet',
+        'file_path': 'flags.parquet',
+    }
+
+    assert generator._column_sql_type(csv_metadata, 'active', 'bool') == 'NVARCHAR(5)'
+    assert generator._column_sql_type(parquet_metadata, 'active', 'bool') == 'BIT'
+
+
 def test_column_name_cleaning():
     """Test column name cleaning for SQL compatibility."""
     from external_file_detection.sql_generator import _clean_identifier
@@ -984,13 +1006,10 @@ def test_credential_setup_uses_adls_without_type_on_sql_server_2022():
         in sql
     )
     assert 'TYPE = HADOOP' not in sql
-    # The data virtualization source must not use https://; the separate
-    # TYPE = BLOB_STORAGE bulk source must.
-    virtualization_source = sql.split('-- 4.')[0]
-    assert "LOCATION = 'https://" not in virtualization_source
-    assert "TYPE = BLOB_STORAGE" in sql
-    assert ("LOCATION = 'https://account.blob.core.windows.net/container'"
-            in sql)
+    # A Parquet virtualization setup must not add an unrelated HTTPS
+    # BLOB_STORAGE source.
+    assert "LOCATION = 'https://" not in sql
+    assert "TYPE = BLOB_STORAGE" not in sql
     # SQL Server 2022 does not support this credential shape, so SAS is used.
     assert "IDENTITY = 'SHARED ACCESS SIGNATURE'" in sql
     assert "SECRET   = '<SAS_token_without_leading_?>'" in sql
@@ -1371,8 +1390,8 @@ def test_credential_not_on_azure_sql_mi():
     gen = SQLGenerator()
     sql = gen.generate_credential_setup('DS', 'ff', target_platform='azure_sql_mi')
     assert 'CREATE EXTERNAL DATA SOURCE [DS]' in sql
-    assert 'CREATE EXTERNAL DATA SOURCE [DS_Bulk]' in sql
-    assert 'TYPE = BLOB_STORAGE' in sql
+    assert 'CREATE EXTERNAL DATA SOURCE [DS_Bulk]' not in sql
+    assert 'TYPE = BLOB_STORAGE' not in sql
 
 
 def test_best_practices_includes_platform_methods():

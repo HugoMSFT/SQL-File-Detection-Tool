@@ -129,6 +129,7 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
         'azureBrowserClose',
         'azureBrowserLoadMore',
         'azureBrowserUseSelectedFile',
+        'azureBrowserUseCurrentFolder',
     ]) {
         assert.ok(
             html.includes(`data-action="${action}"`) || script.includes(`'${action}'`),
@@ -150,7 +151,17 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(script, /Storage data access denied/);
     assert.match(script, /Storage Blob Data Reader/);
     assert.match(script, /Use selected file/);
+    assert.match(script, /Use this folder for setup/);
     assert.match(script, /does not download or analyze its bytes/);
+    assert.match(script, /Selected storage location/);
+    assert.match(script, /Complete T-SQL for selected goal/);
+    assert.match(script, /Search subscriptions/);
+    assert.match(script, /azure-subscription-search/);
+    assert.match(
+        styles,
+        /\[hidden\]\s*\{\s*display:\s*none\s*!important/,
+        'Azure browsing and credential setup must not render at the same time',
+    );
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {
@@ -180,7 +191,15 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(script, /tree-folder/);
     assert.match(script, /Provide a storage location/);
     assert.match(script, /abs:\/\/, adls:\/\/, or abfss:\/\//);
-    assert.match(script, /Detected external data source/);
+    assert.match(script, /Platform and authentication/);
+    assert.match(script, /Remote schema has not been analyzed/);
+    assert.match(script, /SQL generation is blocked to prevent a mixed-folder guess/);
+    assert.match(script, /Copy full T-SQL/);
+    assert.match(script, /Open in MSSQL editor/);
+    assert.match(script, /External Table/);
+    assert.match(script, /OPENROWSET/);
+    assert.match(script, /BULK INSERT/);
+    assert.match(script, /setStorageGoal/);
     assert.doesNotMatch(script, /Sign in with Microsoft Entra|Browse Microsoft storage/);
     assert.doesNotMatch(script, /Directory \(tenant\)|Storage account name|Container name/);
     assert.doesNotMatch(script, /label: 'Azure & URLs'/);

@@ -94,6 +94,11 @@ test('ARM maps tenants, subscriptions, and Storage account HNS metadata', async 
             return response(200, {
                 value: [
                     {
+                        subscriptionId: '33333333-3333-3333-3333-333333333333',
+                        tenantId: TENANT_ID,
+                        displayName: 'alpha',
+                    },
+                    {
                         subscriptionId: '11111111-1111-1111-1111-111111111111',
                         tenantId: TENANT_ID,
                         displayName: 'Development',
@@ -126,6 +131,11 @@ test('ARM maps tenants, subscriptions, and Storage account HNS metadata', async 
         { id: TENANT_ID, label: 'Tenant One' },
     ]);
     assert.deepEqual(await client.listSubscriptions('token', TENANT_ID), [
+        {
+            id: '33333333-3333-3333-3333-333333333333',
+            tenantId: TENANT_ID,
+            label: 'alpha',
+        },
         {
             id: '11111111-1111-1111-1111-111111111111',
             tenantId: TENANT_ID,
