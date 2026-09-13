@@ -8,7 +8,7 @@
   "license": "MIT",
   "icon": "media/icon.png",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.93.0"
   },
   "categories": [
     "Data Science",
@@ -222,7 +222,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "1.93.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "@vscode/vsce": "^3.9.2",

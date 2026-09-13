@@ -19,6 +19,10 @@ import { UiController, metadataForDisplay } from '../../ui/controller';
 import type { OpenDialogOptions, UiHost } from '../../ui/host';
 import type { AppStateSnapshot } from '../../protocol';
 import type { StatementKind } from '../../native';
+import type {
+    AzureConnectionService,
+    AzureConnectionState,
+} from '../../azure/types';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -123,6 +127,52 @@ function snapshot(record: Recorder): AppStateSnapshot {
 function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
+
+test('Azure connection requests reach only the injected connection service', async () => {
+    const record = recorder();
+    const calls: string[] = [];
+    const disconnected: AzureConnectionState = {
+        phase: 'disconnected',
+        identity: null,
+        tenants: [],
+        errorKind: null,
+        message: 'Disconnected.',
+    };
+    const azureConnection: AzureConnectionService = {
+        state: disconnected,
+        connect: async () => {
+            calls.push('connect');
+            return disconnected;
+        },
+        retry: async () => {
+            calls.push('retry');
+            return disconnected;
+        },
+        disconnect: () => {
+            calls.push('disconnect');
+            return disconnected;
+        },
+        authenticationChanged: async () => {
+            calls.push('changed');
+            return disconnected;
+        },
+        dispose: () => {
+            calls.push('dispose');
+        },
+    };
+    const ui = controller(record, { azureConnection });
+    try {
+        await ui.handle({ type: 'azureConnect' });
+        await ui.handle({ type: 'azureRetry' });
+        await ui.handle({ type: 'azureDisconnect' });
+        await ui.authenticationChanged();
+        assert.deepEqual(calls, ['connect', 'retry', 'disconnect', 'changed']);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+    assert.deepEqual(calls, ['connect', 'retry', 'disconnect', 'changed', 'dispose']);
+});
 
 test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();

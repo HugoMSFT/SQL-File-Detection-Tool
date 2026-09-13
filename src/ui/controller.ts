@@ -67,6 +67,7 @@ import {
 import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
+import type { AzureConnectionService } from '../azure/types';
 
 /** Files the extension will analyse in one "Export All" pass. */
 export const MAX_EXPORT_FILES = 100;
@@ -76,6 +77,7 @@ export const REGENERATE_DEBOUNCE_MS = 180;
 
 export interface ControllerDeps {
     readonly service?: NativeAnalysisService;
+    readonly azureConnection?: AzureConnectionService;
     /** Injected so debounce is deterministic under test. */
     readonly setTimeoutImpl?: (fn: () => void, ms: number) => unknown;
     readonly clearTimeoutImpl?: (handle: unknown) => void;
@@ -113,6 +115,7 @@ export function recommendedSqlTypes(
 
 export class UiController {
     private readonly service: NativeAnalysisService;
+    private readonly azureConnection: AzureConnectionService | undefined;
     private readonly queue = createSerialQueue();
     private tokenSource: SimpleCancellationTokenSource | undefined;
     private generation = 0;
@@ -130,6 +133,7 @@ export class UiController {
         private readonly deps: ControllerDeps = {},
     ) {
         this.service = deps.service ?? nativeAnalysisService;
+        this.azureConnection = deps.azureConnection;
         this.store.setWorkspaceFolders(this.host.workspaceFolders());
         this.store.update({
             formats: this.service.listFormats(),
@@ -151,6 +155,7 @@ export class UiController {
             this.host.log('Dropped an unrecognised or malformed webview message.');
             return;
         }
+
         try {
             await this.dispatch(request);
         } catch (error) {
@@ -161,6 +166,10 @@ export class UiController {
             this.host.log(`Request "${request.type}" failed: ${message}`);
             this.store.update({ busy: false, progress: null, error: message });
         }
+    }
+
+    async authenticationChanged(): Promise<void> {
+        await this.azureConnection?.authenticationChanged();
     }
 
     private async dispatch(request: WebviewRequest): Promise<void> {
@@ -236,6 +245,15 @@ export class UiController {
                 return this.queue(() => this.browse(true));
             case 'analyzeCurrentFile':
                 return this.queue(() => this.analyzeCurrentFile());
+            case 'azureConnect':
+                await this.azureConnection?.connect();
+                return;
+            case 'azureRetry':
+                await this.azureConnection?.retry();
+                return;
+            case 'azureDisconnect':
+                this.azureConnection?.disconnect();
+                return;
             case 'setTableName':
                 this.store.update({ tableName: request.value });
                 this.regenerate();
@@ -1034,6 +1052,7 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
+        this.azureConnection?.dispose();
     }
 }
 

@@ -2,7 +2,7 @@
  * The native SQL File Detection Tool webview.
  *
  * Runs inside a VS Code webview under a strict CSP: this file is the only
- * script the document may load, and it is loaded with a per-render nonce. It
+ * script the document may load, restricted to the extension's own origin. It
  * therefore avoids, on purpose and permanently:
  *
  *   * `innerHTML`, `outerHTML`, `insertAdjacentHTML` and `document.write`
@@ -249,6 +249,43 @@
         document.querySelectorAll('.toolbar .btn').forEach(function (button) {
             button.disabled = state.busy;
         });
+    }
+
+    function renderAzureConnection() {
+        const connection = state.azureConnection;
+        const tenants = byId('azure-tenants');
+        clear(tenants);
+
+        const connected = connection.phase === 'connected';
+        const connecting = connection.phase === 'connecting';
+        const failed = connection.phase === 'error';
+        byId('azure-summary').textContent = connection.identity
+            ? 'Signed in as ' + connection.identity.label
+            : connection.phase === 'disconnected'
+                ? 'Not connected'
+                : failed
+                    ? 'Connection was not completed'
+                    : 'Connecting…';
+        byId('azure-detail').textContent =
+            connection.message
+            + (
+                connected
+                    ? ' This check does not browse storage or download remote files.'
+                    : ''
+            );
+        connection.tenants.forEach(function (tenant) {
+            const item = element('li', 'azure-tenant');
+            item.appendChild(element('span', 'azure-tenant-label', tenant.label));
+            item.appendChild(element('code', 'azure-tenant-id', tenant.id));
+            tenants.appendChild(item);
+        });
+
+        byId('azure-connect').hidden = connection.phase !== 'disconnected';
+        byId('azure-connect').disabled = connecting;
+        byId('azure-retry').hidden = !failed;
+        byId('azure-retry').disabled = connecting;
+        byId('azure-disconnect').hidden = connection.phase === 'disconnected';
+        byId('azure-disconnect').disabled = connecting;
     }
 
     function renderFiles() {
@@ -978,6 +1015,7 @@
         const focus = captureFocus();
         renderHeader();
         renderStatus();
+        renderAzureConnection();
         renderFiles();
         renderTabs();
         renderPanel();

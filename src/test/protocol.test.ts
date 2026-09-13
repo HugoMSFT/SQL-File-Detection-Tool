@@ -33,8 +33,6 @@ test('unknown message types are dropped', () => {
         'spawn',
         'setupBackend',
         'setDataSourceType',
-        'azureConnect',
-        'azureDisconnect',
         'azureListSubscriptions',
         'azureListAccounts',
         'azureSetAccount',
@@ -48,6 +46,14 @@ test('unknown message types are dropped', () => {
         '',
     ]) {
         assert.equal(parseWebviewRequest({ type }), undefined, type);
+    }
+});
+
+test('Azure connection actions are explicit zero-field capabilities', () => {
+    for (const type of ['azureConnect', 'azureRetry', 'azureDisconnect'] as const) {
+        assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
+            type,
+        });
     }
 });
 

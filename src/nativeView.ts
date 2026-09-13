@@ -20,9 +20,17 @@
 import * as vscode from 'vscode';
 
 import { AppStateStore } from './appState';
+import {
+    MicrosoftAuthentication,
+    type AuthenticationAccount,
+    type AuthenticationSession,
+    type SessionOptions,
+} from './azure/auth';
+import { AzureConnection } from './azure/connection';
+import { AzureTenantClient } from './azure/tenantClient';
 import { UiController } from './ui/controller';
 import type { OpenDialogOptions, UiHost } from './ui/host';
-import { buildWebviewHtml, createNonce } from './ui/webviewShell';
+import { buildWebviewHtml } from './ui/webviewShell';
 import { redact } from './util';
 
 export const SIDEBAR_VIEW_ID = 'sqlFileDetectionTool.sidebar';
@@ -63,7 +71,6 @@ function renderHtml(
 ): string {
     const media = vscode.Uri.joinPath(extensionUri, 'media', 'webview');
     return buildWebviewHtml({
-        nonce: createNonce(),
         cspSource: webview.cspSource,
         scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'main.js')).toString(),
         styleUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'main.css')).toString(),
@@ -283,10 +290,33 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
                 .getConfiguration('sqlFileDetectionTool')
                 .get<string>('defaultPlatform', 'azure_sql_db') as never,
         });
-        this.controller = new UiController(this.host, this.store);
+        const authentication = new MicrosoftAuthentication(
+            async (
+                providerId: 'microsoft',
+                scopes: readonly string[],
+                options: SessionOptions,
+            ): Promise<AuthenticationSession | undefined> =>
+                vscode.authentication.getSession(providerId, scopes, options),
+            async (providerId: 'microsoft'): Promise<readonly AuthenticationAccount[]> =>
+                vscode.authentication.getAccounts(providerId),
+        );
+        const azureConnection = new AzureConnection({
+            authentication,
+            tenants: new AzureTenantClient(),
+            publish: (state) => {
+                this.store.update({ azureConnection: state });
+            },
+            log: (message) => this.host.log(message),
+        });
+        this.controller = new UiController(this.host, this.store, { azureConnection });
         this.disposables.push(
             vscode.workspace.onDidChangeWorkspaceFolders(() => {
                 this.controller.refreshWorkspace();
+            }),
+            vscode.authentication.onDidChangeSessions((event) => {
+                if (event.provider.id === 'microsoft') {
+                    void this.controller.authenticationChanged();
+                }
             }),
         );
     }

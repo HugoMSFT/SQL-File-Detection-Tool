@@ -143,7 +143,7 @@ test('the allowlist admits every asset the manifest contributes', () => {
     }
 });
 
-test('the bundle carries no Python, server or spawn vocabulary', () => {
+test('the bundle carries no Python, server, spawn, or storage-browser vocabulary', () => {
     const code = readBundle();
     for (const [pattern, label] of audit.FORBIDDEN_BUNDLE_STRINGS) {
         assert.ok(!pattern.test(code), `the bundle contains ${label}`);

@@ -48,6 +48,7 @@ import {
     type ExternalDataSourceType,
     type GuidedAuthMethod,
 } from './native';
+import type { AzureConnectionState } from './azure/types';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -108,6 +109,9 @@ export type WebviewRequest =
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
     | (Base & { readonly type: 'analyzeCurrentFile' })
+    | (Base & { readonly type: 'azureConnect' })
+    | (Base & { readonly type: 'azureRetry' })
+    | (Base & { readonly type: 'azureDisconnect' })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
@@ -209,6 +213,7 @@ export interface AppStateSnapshot {
     readonly formats: readonly SupportedFormat[];
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
+    readonly azureConnection: AzureConnectionState;
 }
 
 export type HostMessage =
@@ -322,6 +327,9 @@ const BUILDERS: Record<string, Builder> = {
     openFileDialog: () => ({ type: 'openFileDialog' }),
     openFolderDialog: () => ({ type: 'openFolderDialog' }),
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
+    azureConnect: () => ({ type: 'azureConnect' }),
+    azureRetry: () => ({ type: 'azureRetry' }),
+    azureDisconnect: () => ({ type: 'azureDisconnect' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),

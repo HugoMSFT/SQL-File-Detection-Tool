@@ -597,15 +597,21 @@ Activity Bar instead. There is no loading state to wait through and nothing to i
 folders only. Clicking a listed source analyzes it immediately and returns to
 Preview.
 
+**Azure connection check** is an explicit, connect-only proof that uses VS
+Code's built-in Microsoft authentication and lists the Azure directories
+(tenants) visible to the selected account. It does not browse Storage accounts,
+containers, or blobs, and it does not download or analyze remote files. No
+authentication or network request runs during activation or initial rendering.
+
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never
 applies the selected file's parser facts to every file. Local paths expose direct
 SQL Server/UNC reads where supported and otherwise say that staging is required,
 rather than inventing a cloud external source.
 
-- The webview has a strict, nonce-bound Content Security Policy with
+- The webview has a strict extension-origin Content Security Policy with
   `default-src 'none'` and no `connect-src`, so the renderer has no network
-  access at all. There is one local nonced script, no inline handlers and no
+  access at all. There is one extension-owned script, no inline handlers and no
   remote assets.
 - The webview can never name a file. It sends an opaque, host-minted random id;
   the extension host resolves it to a path and its own allowed root and
@@ -920,7 +926,8 @@ src/                         extension TypeScript sources
 |-- ui/                      vscode-free UI layer
 |   |-- controller.ts        all product logic
 |   |-- host.ts              UiHost seam
-|   `-- webviewShell.ts      HTML shell, CSP, nonce
+|   `-- webviewShell.ts      HTML shell and extension-origin-only CSP
+|-- azure/                   connect-only auth, ARM tenant client, lifecycle
 |-- native/                  native analysis + SQL generation core (see docs/)
 |   |-- index.ts             public barrel
 |   |-- service.ts           NativeAnalysisService facade

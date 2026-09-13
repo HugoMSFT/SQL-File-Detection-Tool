@@ -45,9 +45,13 @@ export interface MockState {
     readonly secrets: Map<string, string>;
     readonly globalState: Map<string, unknown>;
     readonly workspaceState: Map<string, unknown>;
+    readonly authenticationSessionCalls: unknown[][];
+    readonly authenticationAccountCalls: string[];
+    authenticationChangeListenerCount(): number;
     activeEditorPath: string | undefined;
     workspaceRoot: string | undefined;
     makeView(): MockView;
+    fireAuthenticationChange(providerId: string): void;
 }
 
 function disposable(): { dispose(): void } {
@@ -90,6 +94,9 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
     const secrets = new Map<string, string>();
     const globalState = new Map<string, unknown>();
     const workspaceState = new Map<string, unknown>();
+    const authenticationSessionCalls: unknown[][] = [];
+    const authenticationAccountCalls: string[] = [];
+    const authenticationChangeHandlers: Array<(event: { provider: { id: string } }) => void> = [];
     const storage = path.join(os.tmpdir(), `sqlfdt-mock-${process.pid}`);
     const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
@@ -102,8 +109,16 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
         secrets,
         globalState,
         workspaceState,
+        authenticationSessionCalls,
+        authenticationAccountCalls,
+        authenticationChangeListenerCount: (): number => authenticationChangeHandlers.length,
         activeEditorPath: undefined,
         workspaceRoot: undefined,
+        fireAuthenticationChange: (providerId: string): void => {
+            for (const handler of [...authenticationChangeHandlers]) {
+                handler({ provider: { id: providerId } });
+            }
+        },
         context: {
             subscriptions: [] as Array<{ dispose(): void }>,
             extensionUri: MockUri.file(repoRoot),
@@ -321,8 +336,27 @@ export function createMockVscode(): { module: Record<string, unknown>; state: Mo
             },
         },
         authentication: {
-            getSession: async (): Promise<undefined> => undefined,
-            onDidChangeSessions: () => disposable(),
+            getSession: async (...args: unknown[]): Promise<undefined> => {
+                authenticationSessionCalls.push(args);
+                return undefined;
+            },
+            getAccounts: async (providerId: string): Promise<readonly unknown[]> => {
+                authenticationAccountCalls.push(providerId);
+                return [];
+            },
+            onDidChangeSessions: (
+                handler: (event: { provider: { id: string } }) => void,
+            ) => {
+                authenticationChangeHandlers.push(handler);
+                return {
+                    dispose: (): void => {
+                        const index = authenticationChangeHandlers.indexOf(handler);
+                        if (index >= 0) {
+                            authenticationChangeHandlers.splice(index, 1);
+                        }
+                    },
+                };
+            },
         },
         CancellationTokenSource: class {
             readonly token = {

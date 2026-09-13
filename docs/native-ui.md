@@ -19,9 +19,10 @@ TypeScript running in the extension host.
 | `src/nativeView.ts` | yes | The only other module that touches the VS Code API. Implements `UiHost` and owns the sidebar and panel surfaces. |
 | `src/ui/controller.ts` | no | All product logic. Receives untrusted messages, drives the native service, mutates the shared store. |
 | `src/ui/host.ts` | no | The `UiHost` seam. Everything the controller needs from the editor, expressed as an interface. |
-| `src/ui/webviewShell.ts` | no | Builds the HTML shell, the CSP and the nonce. |
+| `src/ui/webviewShell.ts` | no | Builds the HTML shell and extension-origin-only CSP. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
+| `src/azure/*` | no | Explicit Microsoft sign-in, bounded tenant discovery, and auth lifecycle reconciliation. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
 
 Keeping `vscode` confined to two files is what makes the rest of the extension
@@ -41,7 +42,7 @@ sequenceDiagram
     C->>E: onView:sqlFileDetectionTool.sidebar
     E->>E: activate() — register commands + provider
     C->>E: resolveWebviewView()
-    E->>W: HTML shell (bundled CSS + JS, nonce, CSP)
+    E->>W: HTML shell (bundled CSS + JS, CSP)
     W->>E: { type: 'ready' }
     E->>W: { type: 'state', state: <frozen snapshot> }
 ```
@@ -135,21 +136,22 @@ needs it. A test scans every snapshot in the controller suite for absolute paths
 
 ## Content Security Policy
 
-The shell is built by `buildWebviewHtml()` with a per-load nonce:
+The shell is built by `buildWebviewHtml()` with an extension-origin-only policy:
 
 ```
 default-src 'none';
 img-src {cspSource} data:;
-style-src {cspSource} 'nonce-{nonce}';
-script-src 'nonce-{nonce}';
+style-src {cspSource};
+script-src {cspSource};
 font-src {cspSource};
 ```
 
 - `default-src 'none'` with no `connect-src` means the renderer has **no network
   access at all**. It cannot fetch, it cannot open a WebSocket, and it cannot be
   used as an SSRF pivot.
-- There is exactly one `<script>`, it carries the nonce, and it is a local
-  bundled file. No CDN, no inline handler, no `eval`, no `new Function`.
+- There is exactly one `<script>`, and the CSP permits scripts only from the
+  extension's local webview origin. No CDN, nonce-reuse path, inline handler,
+  `eval`, or `new Function`.
 - The renderer builds DOM with `textContent` and `<template>` cloning. It never
   assigns `innerHTML` from data.
 
@@ -165,10 +167,23 @@ Credential setup has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
-The extension performs no storage authentication, account discovery, container
-listing, or remote download. There is no `vscode.authentication` call, no Azure
-connection state in the renderer model, and no browser command in the manifest
-or message protocol.
+The extension performs no storage authentication, Storage account discovery,
+container listing, or remote download. Its explicit **Connect to Azure** action
+uses VS Code's built-in Microsoft provider for the ARM user-impersonation scope
+and lists only accessible directories (tenants). Tokens remain in the extension
+host and are never persisted or included in renderer state, logs, or errors.
+Disconnect clears only the extension's in-memory state; it does not remove the
+user's Microsoft session from VS Code. There is no storage-browser command in
+the manifest and no storage SDK in the dependency graph.
+
+Authentication and ARM calls begin only after **Connect to Azure** or **Retry**.
+The ARM client permits only HTTPS requests to the fixed public-cloud
+`management.azure.com/tenants` endpoint and its validated continuation links,
+with hard limits for time, pages, items, and response bytes. Authentication
+provider events are generation-coordinated with interactive sign-in: the
+session returned by the current interactive operation survives its own provider
+event, while later account removal cancels work and clears retained identity
+and tenant data.
 
 The URL boundary remains strict:
 

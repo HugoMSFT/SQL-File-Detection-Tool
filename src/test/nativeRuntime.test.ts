@@ -144,7 +144,7 @@ test('nothing reachable from activation can spawn a process', () => {
     }
 });
 
-test('removed backend and storage-browser modules are not reachable from activation', () => {
+test('removed backend and storage-browser data-plane modules are not reachable from activation', () => {
     const files = new Set(graph.nodes.map((node) => relative(node.file)));
     for (const legacy of [
         'backend.js',
@@ -152,8 +152,8 @@ test('removed backend and storage-browser modules are not reachable from activat
         'process.js',
         'webviewHtml.js',
         'sidebar.js',
-        'azure/connection.js',
         'azure/blobBrowser.js',
+        'azure/storageClient.js',
         'net/publicData.js',
         'net/safeHttp.js',
     ]) {
@@ -263,6 +263,22 @@ test('activation registers the native view and never touches a backend', async (
                 mock.state.views.has('sqlFileDetectionTool.sidebar'),
                 'the native webview view provider is registered',
             );
+            assert.equal(mock.state.authenticationSessionCalls.length, 0);
+            assert.equal(mock.state.authenticationAccountCalls.length, 0);
+            assert.equal(mock.state.authenticationChangeListenerCount(), 1);
+            mock.state.fireAuthenticationChange('github');
+            mock.state.fireAuthenticationChange('microsoft');
+            await Promise.resolve();
+            assert.equal(
+                mock.state.authenticationSessionCalls.length,
+                0,
+                'provider events do not authenticate while disconnected',
+            );
+            assert.equal(
+                mock.state.authenticationAccountCalls.length,
+                0,
+                'provider events do not enumerate accounts while disconnected',
+            );
             assert.ok(mock.state.commands.size >= 4, 'commands are contributed');
             for (const command of mock.state.commands.keys()) {
                 assert.ok(
@@ -341,6 +357,10 @@ test('activation registers the native view and never touches a backend', async (
             assert.ok(serialised.includes('employees.csv'), 'the analysis reached the renderer');
 
             extension.deactivate();
+            assert.equal(mock.state.authenticationChangeListenerCount(), 0);
+            mock.state.fireAuthenticationChange('microsoft');
+            await Promise.resolve();
+            assert.equal(mock.state.authenticationSessionCalls.length, 0);
         } finally {
             Module._load = load;
         }
