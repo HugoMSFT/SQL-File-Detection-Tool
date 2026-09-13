@@ -1,8 +1,50 @@
 # Changelog
 
+## Unreleased
+
+## [1.1.2] - 2026-09-12
+
+### Fixed
+
+- Kept every line of the optional `CREATE TABLE` quick-load example commented,
+  preventing its column list from becoming stray executable T-SQL.
+
+### Added
+
+- Added read-only Azure Storage browsing across tenants, subscriptions, Storage
+  accounts, containers, folders, and files using VS Code Microsoft
+  authentication.
+- Selected Blob and ADLS Gen2 files now feed canonical ABS/ABFSS locations into
+  Credential Setup without downloading or analyzing remote content.
+
 All notable changes to **SQL File Detection Tool** are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 uses [semantic versioning](https://semver.org/).
+
+## [1.1.1]
+
+### Fixed
+
+- Bounded Parquet, Delta, ORC and RCFile external-table LOB columns instead of
+  reporting `NOT AVAILABLE`, so supported platforms generate runnable external
+  tables.
+
+## [1.1.0]
+
+### Changed
+
+- Published as a Marketplace **Preview** so the extension's beta maturity is
+  stated rather than assumed.
+- Folder scans reach nested partitioned layouts instead of stopping one level
+  down, bounded by depth, file and directory ceilings that report when they
+  withhold work rather than truncating silently.
+
+### Added
+
+- An Explorer filter over file name, folder path and format.
+- A keybinding for **Analyze Current File**.
+- Recognition of DNS-zone storage endpoints, converted correctly to Blob
+  endpoints for generated `BLOB_STORAGE` SQL.
 
 ## [1.0.15]
 

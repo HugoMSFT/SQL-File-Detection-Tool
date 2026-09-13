@@ -1110,7 +1110,11 @@ class SQLGenerator:
             f'--     DATA_SOURCE = \'{_sql_comment(_quote_literal(data_source))}\',',
             *[f'-- {line}' for line in reader_options],
             '-- )',
-            *[f'-- {line}' for line in with_schema],
+            *[
+                f'-- {schema_line}'
+                for line in with_schema
+                for schema_line in line.splitlines()
+            ],
             '-- AS src;',
         ]
 

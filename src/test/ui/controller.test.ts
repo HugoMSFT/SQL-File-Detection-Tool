@@ -19,6 +19,10 @@ import { UiController, metadataForDisplay } from '../../ui/controller';
 import type { OpenDialogOptions, UiHost } from '../../ui/host';
 import type { AppStateSnapshot } from '../../protocol';
 import type { StatementKind } from '../../native';
+import type {
+    AzureConnectionService,
+    AzureConnectionState,
+} from '../../azure/types';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -123,6 +127,65 @@ function snapshot(record: Recorder): AppStateSnapshot {
 function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
+
+test('Azure connection requests reach only the injected connection service', async () => {
+    const record = recorder();
+    const calls: string[] = [];
+    const disconnected: AzureConnectionState = {
+        phase: 'disconnected',
+        identity: null,
+        tenants: [],
+        stale: false,
+        errorKind: null,
+        message: 'Disconnected.',
+    };
+    const azureConnection: AzureConnectionService = {
+        state: disconnected,
+        connect: async () => {
+            calls.push('connect');
+            return disconnected;
+        },
+        retry: async () => {
+            calls.push('retry');
+            return disconnected;
+        },
+        refresh: async () => {
+            calls.push('refresh');
+            return disconnected;
+        },
+        disconnect: () => {
+            calls.push('disconnect');
+            return disconnected;
+        },
+        authenticationChanged: async () => {
+            calls.push('changed');
+            return disconnected;
+        },
+        dispose: () => {
+            calls.push('dispose');
+        },
+    };
+    const ui = controller(record, { azureConnection });
+    try {
+        await ui.handle({ type: 'azureConnect' });
+        await ui.handle({ type: 'azureRetry' });
+        await ui.handle({ type: 'azureRefresh' });
+        await ui.handle({ type: 'azureDisconnect' });
+        await ui.authenticationChanged();
+        assert.deepEqual(calls, ['connect', 'retry', 'refresh', 'disconnect', 'changed']);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+    assert.deepEqual(calls, [
+        'connect',
+        'retry',
+        'refresh',
+        'disconnect',
+        'changed',
+        'dispose',
+    ]);
+});
 
 test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();
@@ -404,7 +467,7 @@ test('choosing a folder lists files and selects the first', async () => {
     }
 });
 
-test('folder scans stop after one child level and skip non-SQL files', async () => {
+test('folder scans reach partitioned layouts and skip non-SQL files', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-tree-'));
     fs.mkdirSync(path.join(root, 'year', 'month'), { recursive: true });
     fs.writeFileSync(path.join(root, 'top.csv'), 'id,name\n1,top\n');
@@ -420,15 +483,21 @@ test('folder scans stop after one child level and skip non-SQL files', async () 
         await settle();
 
         const state = snapshot(record);
+        // Lake layouts nest, so a file below the first level must still be
+        // found, and its folder path must stay distinct rather than collapsing
+        // onto the folder name alone.
         assert.deepEqual(
             state.files.map((entry) => entry.label).sort(),
-            ['direct.csv', 'top.csv'],
+            ['deep.csv', 'direct.csv', 'top.csv'],
         );
         assert.equal(
             state.files.find((entry) => entry.label === 'direct.csv')?.folderLabel,
             'year',
         );
-        assert.ok(!state.files.some((entry) => entry.label === 'deep.csv'));
+        assert.equal(
+            state.files.find((entry) => entry.label === 'deep.csv')?.folderLabel,
+            'year/month',
+        );
 
         await ui.loadFiles([path.join(root, 'script.py')]);
         assert.equal(snapshot(record).files.length, 0);
@@ -1237,7 +1306,9 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
             const sql = state.statements?.credential_setup ?? '';
             assert.match(sql, /CREATE EXTERNAL DATA SOURCE/);
             assert.ok(sql.includes(entry.location), sql);
-            assert.ok(!('azure' in state), 'connection state must not reach the renderer');
+            const serialized = JSON.stringify(state);
+            assert.ok(!serialized.includes('accessToken'));
+            assert.ok(!serialized.includes('bearer-token'));
         }
     } finally {
         await ui.dispose();

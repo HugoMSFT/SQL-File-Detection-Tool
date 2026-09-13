@@ -53,6 +53,32 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.equal(state.credentialSetup.authMethod, 'managed_identity');
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
+    assert.deepEqual(state.azureConnection, {
+        phase: 'disconnected',
+        identity: null,
+        tenants: [],
+        stale: false,
+        errorKind: null,
+        message:
+            'Connect to Azure to verify access and list accessible directories (tenants).',
+    });
+    assert.deepEqual(state.azure, {
+        open: false,
+        phase: 'closed',
+        identity: null,
+        tenants: [],
+        selectedTenantId: null,
+        subscriptions: [],
+        selectedSubscriptionId: null,
+        accounts: [],
+        selectedAccountId: null,
+        path: [],
+        entries: [],
+        selectedEntryId: null,
+        hasMore: false,
+        errorKind: null,
+        message: null,
+    });
     assert.ok(state.platforms.some((entry) => entry.id === 'azure_sql_db'));
 });
 

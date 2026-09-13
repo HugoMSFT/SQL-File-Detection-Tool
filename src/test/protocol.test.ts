@@ -33,8 +33,6 @@ test('unknown message types are dropped', () => {
         'spawn',
         'setupBackend',
         'setDataSourceType',
-        'azureConnect',
-        'azureDisconnect',
         'azureListSubscriptions',
         'azureListAccounts',
         'azureSetAccount',
@@ -49,6 +47,74 @@ test('unknown message types are dropped', () => {
     ]) {
         assert.equal(parseWebviewRequest({ type }), undefined, type);
     }
+});
+
+test('Azure connection actions are explicit zero-field capabilities', () => {
+    for (const type of [
+        'azureConnect',
+        'azureRetry',
+        'azureRefresh',
+        'azureDisconnect',
+    ] as const) {
+        assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
+            type,
+        });
+    }
+});
+
+test('Azure browser actions accept only bounded opaque selections', () => {
+    for (const type of [
+        'openAzureBrowser',
+        'azureBrowserConnect',
+        'azureBrowserDisconnect',
+        'azureBrowserClose',
+        'azureBrowserRetry',
+        'azureBrowserLoadMore',
+        'azureBrowserUseSelectedFile',
+    ] as const) {
+        assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
+            type,
+        });
+    }
+    assert.deepEqual(
+        parseWebviewRequest({
+            type: 'azureBrowserSelectTenant',
+            tenantId: 'tenant',
+            accessToken: 'must-be-dropped',
+        }),
+        { type: 'azureBrowserSelectTenant', tenantId: 'tenant' },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({
+            type: 'azureBrowserSelectSubscription',
+            subscriptionId: 'subscription',
+        }),
+        { type: 'azureBrowserSelectSubscription', subscriptionId: 'subscription' },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({
+            type: 'azureBrowserSelectAccount',
+            accountId:
+                '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/a',
+        }),
+        {
+            type: 'azureBrowserSelectAccount',
+            accountId:
+                '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Storage/storageAccounts/a',
+        },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'azureBrowserOpenEntry', entryId: 'opaque-entry' }),
+        { type: 'azureBrowserOpenEntry', entryId: 'opaque-entry' },
+    );
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'azureBrowserNavigate', depth: 2 }),
+        { type: 'azureBrowserNavigate', depth: 2 },
+    );
+    assert.equal(
+        parseWebviewRequest({ type: 'azureBrowserNavigate', depth: 101 }),
+        undefined,
+    );
 });
 
 test('non-object payloads are dropped', () => {

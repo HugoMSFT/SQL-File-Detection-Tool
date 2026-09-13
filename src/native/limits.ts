@@ -50,6 +50,34 @@ export const PREVIEW_DEFAULT_ROWS = 100;
 export const STREAM_CHUNK_BYTES = 256 * 1024;
 
 /**
+ * Directory levels a folder scan descends.
+ *
+ * Lake layouts partition into directories - `table/year=2026/month=09/day=02/`
+ * is ordinary - so a single level cannot see the files that matter. The depth
+ * is bounded rather than unlimited so one mistaken folder choice cannot walk an
+ * entire drive.
+ */
+export const DIRECTORY_SCAN_MAX_DEPTH = 6;
+
+/**
+ * Largest number of files one folder scan analyses.
+ *
+ * Every hit is opened to read its schema, so this bounds the reading work a
+ * single folder choice can start. Reaching it is reported rather than hidden.
+ */
+export const DIRECTORY_SCAN_MAX_FILES = 500;
+
+/**
+ * Largest number of directories one folder scan visits.
+ *
+ * The file ceiling alone does not bound the walk: directories holding no
+ * supported file never advance it, so a wide tree could still cost an
+ * unbounded number of `readdir` and `realpath` calls. This bounds the walk
+ * itself, and reaching it is reported the same way.
+ */
+export const DIRECTORY_SCAN_MAX_DIRECTORIES = 2000;
+
+/**
  * Hard ceiling on a single delimited field, guarding against a file with an
  * unterminated quote turning into an unbounded string allocation.
  */

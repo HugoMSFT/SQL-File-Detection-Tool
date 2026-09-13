@@ -391,8 +391,22 @@ export async function firstCharacter(filePath: string, encoding: string): Promis
     return stripped.length > 0 ? stripped[0] : '';
 }
 
+/** A directory scan plus whether a ceiling stopped it before it finished. */
+export interface DirectoryScanResult {
+    readonly files: FileMetadata[];
+    /**
+     * True when a depth, file or directory ceiling withheld work.
+     *
+     * Reported as a fact by the walk rather than inferred from the result
+     * count, so a folder holding exactly the file limit is not mistaken for a
+     * truncated one and a depth cut is not silently invisible.
+     */
+    readonly truncated: boolean;
+}
+
 /**
- * Analyse supported files beneath a directory, optionally bounded by depth.
+ * Analyse supported files beneath a directory, bounded by depth, files visited
+ * and directories walked.
  *
  * Delta and Iceberg folders are reported as a single table entry and are not
  * descended into, matching `FileDetector.scan_directory`.
@@ -401,7 +415,9 @@ export async function scanDirectory(
     reference: StorageReference,
     token?: CancellationToken,
     maxDepth = Number.POSITIVE_INFINITY,
-): Promise<FileMetadata[]> {
+    maxFiles = Number.POSITIVE_INFINITY,
+    maxDirectories = Number.POSITIVE_INFINITY,
+): Promise<DirectoryScanResult> {
     if (!reference.isDirectory) {
         throw new NativeAnalysisError(
             'not_a_directory',
@@ -414,11 +430,26 @@ export async function scanDirectory(
             'Directory scan depth must be a non-negative integer.',
         );
     }
+    if (maxFiles !== Number.POSITIVE_INFINITY && (!Number.isInteger(maxFiles) || maxFiles < 1)) {
+        throw new NativeAnalysisError(
+            'malformed_input',
+            'Directory scan file limit must be a positive integer.',
+        );
+    }
+    if (
+        maxDirectories !== Number.POSITIVE_INFINITY
+        && (!Number.isInteger(maxDirectories) || maxDirectories < 1)
+    ) {
+        throw new NativeAnalysisError(
+            'malformed_input',
+            'Directory scan directory limit must be a positive integer.',
+        );
+    }
     if (
         (await isDeltaTableDirectory(reference.realPath)) ||
         (await isIcebergTableDirectory(reference.realPath))
     ) {
-        return [await analyzeFileMetadata(reference, token)];
+        return { files: [await analyzeFileMetadata(reference, token)], truncated: false };
     }
 
     const results: FileMetadata[] = [];
@@ -426,8 +457,13 @@ export async function scanDirectory(
         { reference, depth: 0 },
     ];
     const visited = new Set<string>();
+    let truncated = false;
 
     while (queue.length > 0) {
+        if (results.length >= maxFiles || visited.size >= maxDirectories) {
+            truncated = true;
+            break;
+        }
         const currentItem = queue.shift() as { reference: StorageReference; depth: number };
         const current = currentItem.reference;
         if (visited.has(current.realPath)) {
@@ -438,6 +474,9 @@ export async function scanDirectory(
 
         const entries = await listContainedEntries(current);
         const directories: StorageReference[] = [];
+        if (currentItem.depth >= maxDepth && entries.some((entry) => entry.isDirectory)) {
+            truncated = true;
+        }
         if (currentItem.depth < maxDepth) {
             for (const entry of entries) {
                 if (!entry.isDirectory) {
@@ -451,6 +490,10 @@ export async function scanDirectory(
                     (await isDeltaTableDirectory(entry.realPath)) ||
                     (await isIcebergTableDirectory(entry.realPath))
                 ) {
+                    if (results.length >= maxFiles) {
+                        truncated = true;
+                        break;
+                    }
                     results.push(await analyzeFileMetadata(entry, token));
                 } else {
                     directories.push(entry);
@@ -461,6 +504,10 @@ export async function scanDirectory(
         for (const entry of entries) {
             if (entry.isDirectory) {
                 continue;
+            }
+            if (results.length >= maxFiles) {
+                truncated = true;
+                break;
             }
             if (sqlSourceFileType(entry.realPath) !== undefined) {
                 results.push(await analyzeFileMetadata(entry, token));
@@ -473,5 +520,5 @@ export async function scanDirectory(
             })),
         );
     }
-    return results;
+    return { files: results, truncated };
 }

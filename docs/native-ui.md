@@ -19,9 +19,10 @@ TypeScript running in the extension host.
 | `src/nativeView.ts` | yes | The only other module that touches the VS Code API. Implements `UiHost` and owns the sidebar and panel surfaces. |
 | `src/ui/controller.ts` | no | All product logic. Receives untrusted messages, drives the native service, mutates the shared store. |
 | `src/ui/host.ts` | no | The `UiHost` seam. Everything the controller needs from the editor, expressed as an interface. |
-| `src/ui/webviewShell.ts` | no | Builds the HTML shell, the CSP and the nonce. |
+| `src/ui/webviewShell.ts` | no | Builds the HTML shell and extension-origin-only CSP. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
+| `src/azure/*` | no | Explicit Microsoft sign-in, bounded tenant discovery, and auth lifecycle reconciliation. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
 
 Keeping `vscode` confined to two files is what makes the rest of the extension
@@ -41,7 +42,7 @@ sequenceDiagram
     C->>E: onView:sqlFileDetectionTool.sidebar
     E->>E: activate() — register commands + provider
     C->>E: resolveWebviewView()
-    E->>W: HTML shell (bundled CSS + JS, nonce, CSP)
+    E->>W: HTML shell (bundled CSS + JS, CSP)
     W->>E: { type: 'ready' }
     E->>W: { type: 'state', state: <frozen snapshot> }
 ```
@@ -135,21 +136,22 @@ needs it. A test scans every snapshot in the controller suite for absolute paths
 
 ## Content Security Policy
 
-The shell is built by `buildWebviewHtml()` with a per-load nonce:
+The shell is built by `buildWebviewHtml()` with an extension-origin-only policy:
 
 ```
 default-src 'none';
 img-src {cspSource} data:;
-style-src {cspSource} 'nonce-{nonce}';
-script-src 'nonce-{nonce}';
+style-src {cspSource};
+script-src {cspSource};
 font-src {cspSource};
 ```
 
 - `default-src 'none'` with no `connect-src` means the renderer has **no network
   access at all**. It cannot fetch, it cannot open a WebSocket, and it cannot be
   used as an SSRF pivot.
-- There is exactly one `<script>`, it carries the nonce, and it is a local
-  bundled file. No CDN, no inline handler, no `eval`, no `new Function`.
+- There is exactly one `<script>`, and the CSP permits scripts only from the
+  extension's local webview origin. No CDN, nonce-reuse path, inline handler,
+  `eval`, or `new Function`.
 - The renderer builds DOM with `textContent` and `<template>` cloning. It never
   assigns `innerHTML` from data.
 
@@ -165,10 +167,43 @@ Credential setup has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
-The extension performs no storage authentication, account discovery, container
-listing, or remote download. There is no `vscode.authentication` call, no Azure
-connection state in the renderer model, and no browser command in the manifest
-or message protocol.
+The extension uses VS Code's built-in Microsoft provider for the ARM and Storage
+user-impersonation scopes. **Browse Azure** lists accessible tenants,
+subscriptions, Blob-capable Storage accounts, containers, virtual folders, and
+blob metadata read-only. ARM Reader access is distinct from account-level
+**Storage Blob Data Reader** access, and the UI reports those failures
+separately. Tokens remain in the extension host and are never persisted or
+included in renderer state, logs, URLs, or errors. Disconnect clears only the
+extension's in-memory state; it does not remove the user's Microsoft session
+from VS Code.
+
+Authentication and ARM calls begin only after **Browse Azure** is opened. The
+browser first performs a silent session lookup; **Connect to Azure** appears
+inside the browser only when no session is available. Interactive tenant or
+Storage-scope authentication occurs only after an explicit **Connect to Azure**
+or **Retry**.
+Transient network failures, HTTP 408/429, and selected 5xx responses receive at
+most two cancellation-aware retries with bounded backoff. Successful tenant
+lists are cached in memory for at most two minutes. Refresh bypasses that cache;
+if its retries fail transiently, an unexpired previous list remains visible and
+is marked cached. The cache is never persisted and is cleared on provider
+changes, Disconnect, authorization failure, or disposal.
+The ARM clients permit only HTTPS requests to fixed public-cloud
+`management.azure.com` tenant, subscription, and Storage-account endpoints and
+validated continuation links, reject redirects, and apply hard limits for time,
+pages, items, response bytes, and retries. The official bundled
+`@azure/storage-blob` client lists at most 100 items per page and 1,000 items per
+location with timeout, cancellation, and bounded SDK retries. Authentication
+provider events are generation-coordinated with interactive sign-in: the
+session returned by the current interactive operation survives its own provider
+event, while later account removal cancels work and clears retained identity
+and tenant data.
+
+Selecting a file creates `abs://container@account.blob.core.windows.net/path`
+for Blob Storage or `abfss://container@account.dfs.core.windows.net/path` for
+HNS/ADLS Gen2 and hands it to the existing Credential Setup state. This selects
+the remote SQL source location only; no remote bytes, schema, or preview are
+downloaded.
 
 The URL boundary remains strict:
 

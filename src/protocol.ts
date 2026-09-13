@@ -48,6 +48,7 @@ import {
     type ExternalDataSourceType,
     type GuidedAuthMethod,
 } from './native';
+import type { AzureBrowserState, AzureConnectionState } from './azure/types';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -107,7 +108,32 @@ export type WebviewRequest =
     | (Base & { readonly type: 'selectFile'; readonly fileId: string })
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
+    | (Base & { readonly type: 'openAzureBrowser' })
     | (Base & { readonly type: 'analyzeCurrentFile' })
+    | (Base & { readonly type: 'azureConnect' })
+    | (Base & { readonly type: 'azureRetry' })
+    | (Base & { readonly type: 'azureRefresh' })
+    | (Base & { readonly type: 'azureDisconnect' })
+    | (Base & { readonly type: 'azureBrowserConnect' })
+    | (Base & { readonly type: 'azureBrowserDisconnect' })
+    | (Base & { readonly type: 'azureBrowserClose' })
+    | (Base & { readonly type: 'azureBrowserRetry' })
+    | (Base & { readonly type: 'azureBrowserLoadMore' })
+    | (Base & { readonly type: 'azureBrowserUseSelectedFile' })
+    | (Base & {
+          readonly type: 'azureBrowserSelectTenant';
+          readonly tenantId: string;
+      })
+    | (Base & {
+          readonly type: 'azureBrowserSelectSubscription';
+          readonly subscriptionId: string;
+      })
+    | (Base & {
+          readonly type: 'azureBrowserSelectAccount';
+          readonly accountId: string;
+      })
+    | (Base & { readonly type: 'azureBrowserOpenEntry'; readonly entryId: string })
+    | (Base & { readonly type: 'azureBrowserNavigate'; readonly depth: number })
     | (Base & { readonly type: 'setTableName'; readonly value: string })
     | (Base & { readonly type: 'setSchemaName'; readonly value: string })
     | (Base & { readonly type: 'setDataSource'; readonly value: string })
@@ -209,6 +235,8 @@ export interface AppStateSnapshot {
     readonly formats: readonly SupportedFormat[];
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
+    readonly azureConnection: AzureConnectionState;
+    readonly azure: AzureBrowserState;
 }
 
 export type HostMessage =
@@ -321,11 +349,46 @@ const BUILDERS: Record<string, Builder> = {
     dismissNotice: () => ({ type: 'dismissNotice' }),
     openFileDialog: () => ({ type: 'openFileDialog' }),
     openFolderDialog: () => ({ type: 'openFolderDialog' }),
+    openAzureBrowser: () => ({ type: 'openAzureBrowser' }),
     analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
+    azureConnect: () => ({ type: 'azureConnect' }),
+    azureRetry: () => ({ type: 'azureRetry' }),
+    azureRefresh: () => ({ type: 'azureRefresh' }),
+    azureDisconnect: () => ({ type: 'azureDisconnect' }),
+    azureBrowserConnect: () => ({ type: 'azureBrowserConnect' }),
+    azureBrowserDisconnect: () => ({ type: 'azureBrowserDisconnect' }),
+    azureBrowserClose: () => ({ type: 'azureBrowserClose' }),
+    azureBrowserRetry: () => ({ type: 'azureBrowserRetry' }),
+    azureBrowserLoadMore: () => ({ type: 'azureBrowserLoadMore' }),
+    azureBrowserUseSelectedFile: () => ({ type: 'azureBrowserUseSelectedFile' }),
     clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
+    azureBrowserSelectTenant: (source) => {
+        const tenantId = text(source, 'tenantId', 128);
+        return tenantId ? { type: 'azureBrowserSelectTenant', tenantId } : undefined;
+    },
+    azureBrowserSelectSubscription: (source) => {
+        const subscriptionId = text(source, 'subscriptionId', 128);
+        return subscriptionId
+            ? { type: 'azureBrowserSelectSubscription', subscriptionId }
+            : undefined;
+    },
+    azureBrowserSelectAccount: (source) => {
+        const accountId = text(source, 'accountId', MAX_TEXT_LENGTH);
+        return accountId
+            ? { type: 'azureBrowserSelectAccount', accountId }
+            : undefined;
+    },
+    azureBrowserOpenEntry: (source) => {
+        const entryId = text(source, 'entryId', 64);
+        return entryId ? { type: 'azureBrowserOpenEntry', entryId } : undefined;
+    },
+    azureBrowserNavigate: (source) => {
+        const depth = boundedInteger(source, 'depth', 0, 100);
+        return depth === undefined ? undefined : { type: 'azureBrowserNavigate', depth };
+    },
     openDocumentation: (source) => {
         const id = member(source, 'id', DOCUMENTATION_IDS);
         return id === undefined ? undefined : { type: 'openDocumentation', id };

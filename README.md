@@ -166,8 +166,8 @@ Marketplace ID: `hvbqueiroz.sql-file-detection`
 
 ```bash
 npm install
-npm run package     # writes dist/sql-file-detection-1.0.15.vsix
-code --install-extension dist/sql-file-detection-1.0.15.vsix --force
+npm run package     # writes dist/sql-file-detection-1.1.1.vsix
+code --install-extension dist/sql-file-detection-1.1.1.vsix --force
 ```
 
 The package contains a single bundled JavaScript file, the webview assets, the
@@ -597,15 +597,34 @@ Activity Bar instead. There is no loading state to wait through and nothing to i
 folders only. Clicking a listed source analyzes it immediately and returns to
 Preview.
 
+**Browse Azure** opens the integrated connection and Storage browser. Its
+**Connect to Azure** action uses VS Code's built-in Microsoft authentication,
+then lists visible directories (tenants), subscriptions, Blob-capable Storage
+accounts, containers, virtual folders, and files read-only. Selecting a
+supported file places its canonical `abs://` or `abfss://` location into the
+existing Credential Setup workflow. It does not download or analyze remote
+bytes. No authentication or network request runs during activation or initial
+rendering.
+Concurrent Connect actions share one authentication/discovery request. Transient
+ARM failures use at most two bounded retries, and **Refresh** performs a new
+silent session check and directory lookup. A successful directory list is kept
+in memory for up to two minutes only; if Refresh then fails transiently, that
+unexpired list is shown explicitly as cached until it can be verified again.
+Disconnect, sign-out, authorization failure, or extension disposal clears it.
+Storage browsing requests the tenant-specific Storage scope only after an
+explicit Connect or Retry and requires account-level **Storage Blob Data
+Reader** access. Tokens stay in the extension host and are never persisted,
+logged, or transferred to the webview.
+
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never
 applies the selected file's parser facts to every file. Local paths expose direct
 SQL Server/UNC reads where supported and otherwise say that staging is required,
 rather than inventing a cloud external source.
 
-- The webview has a strict, nonce-bound Content Security Policy with
+- The webview has a strict extension-origin Content Security Policy with
   `default-src 'none'` and no `connect-src`, so the renderer has no network
-  access at all. There is one local nonced script, no inline handlers and no
+  access at all. There is one extension-owned script, no inline handlers and no
   remote assets.
 - The webview can never name a file. It sends an opaque, host-minted random id;
   the extension host resolves it to a path and its own allowed root and
@@ -870,7 +889,7 @@ npm run lint
 npm test               # compiles, bundles, then runs the node --test suites
 npm run notices -- --check   # THIRD_PARTY_NOTICES.md matches the real bundle
 npm audit --omit=dev         # production dependency tree
-npm run package        # writes dist/sql-file-detection-1.0.9.vsix
+npm run package        # writes dist/sql-file-detection-1.1.1.vsix
 npm run audit:vsix     # mechanical content audit of that .vsix
 ```
 
@@ -920,7 +939,8 @@ src/                         extension TypeScript sources
 |-- ui/                      vscode-free UI layer
 |   |-- controller.ts        all product logic
 |   |-- host.ts              UiHost seam
-|   `-- webviewShell.ts      HTML shell, CSP, nonce
+|   `-- webviewShell.ts      HTML shell and extension-origin-only CSP
+|-- azure/                   connect-only auth, ARM tenant client, lifecycle
 |-- native/                  native analysis + SQL generation core (see docs/)
 |   |-- index.ts             public barrel
 |   |-- service.ts           NativeAnalysisService facade

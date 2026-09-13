@@ -1,5 +1,10 @@
 # SQL File Detection Tool
 
+> **Beta.** This extension is published as a **Preview**. It is usable day to
+> day, but the interface and the generated SQL are still changing, and it has
+> not yet been exercised against every SQL platform on real hardware. Review
+> generated statements before running them, and please report anything wrong.
+
 Preview data files and generate platform-aware T-SQL without leaving VS Code.
 
 > **Independent project:** This is a personal open-source project by Hugo
@@ -19,13 +24,18 @@ PolyBase
 - Generates `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, and external-table SQL.
 - Targets SQL Server, Azure SQL Database, Azure SQL Managed Instance, and Fabric
   SQL Database.
+- Verifies Azure sign-in and accessible directories through VS Code's built-in
+  Microsoft authentication, with explicit Refresh and bounded transient retries.
+- Browses accessible Blob Storage and ADLS Gen2 accounts read-only, then sends a
+  selected file's ABS/ABFSS location to Credential Setup without downloading it.
 - Detects ABS, ADLS, or ABFSS from a storage URL and generates credential and
   external-data-source setup.
 
 ## Use it
 
 1. Open **SQL File Detection Tool** from the Activity Bar.
-2. Select a supported file or folder.
+2. Select a supported file or folder, or use **Browse Azure** to choose a remote
+   Blob/ADLS file location.
 3. Review the preview, schema mapping, and generated SQL tabs.
 
 For external storage, open **Credential setup** and paste an `abs://`, `adls://`,

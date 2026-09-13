@@ -298,7 +298,9 @@ function quickLoadOpenrowset(
         `--     DATA_SOURCE = '${sqlComment(quoteLiteral(dataSource))}',`,
         ...options.map((line) => `-- ${line}`),
         '-- )',
-        ...schema.map((line) => `-- ${line}`),
+        ...schema.flatMap((line) =>
+            line.split('\n').map((schemaLine) => `-- ${schemaLine}`),
+        ),
         '-- AS src;',
     ];
 }

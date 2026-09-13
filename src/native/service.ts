@@ -64,6 +64,8 @@ export interface PreviewRequest extends AnalysisRequest {
 /** Options for a directory scan. Depth zero means only the selected root. */
 export interface DirectoryAnalysisRequest extends AnalysisRequest {
     readonly maxDepth?: number;
+    readonly maxFiles?: number;
+    readonly maxDirectories?: number;
 }
 
 /** Options for the SQL generation entry points. */
@@ -104,6 +106,8 @@ export interface MultiFileRequest {
 export interface DirectoryAnalysis {
     readonly root: string;
     readonly files: FileMetadata[];
+    /** True when a ceiling withheld work rather than the scan finishing. */
+    readonly truncated: boolean;
 }
 
 function reportProgress(
@@ -160,8 +164,18 @@ export class NativeAnalysisService {
         reportProgress(request.progress, 'Resolving directory');
         const reference = await this.resolve(request);
         reportProgress(request.progress, 'Scanning directory');
-        const files = await scanDirectory(reference, token, request.maxDepth);
-        return { root: reference.realPath, files };
+        const scan = await scanDirectory(
+            reference,
+            token,
+            request.maxDepth,
+            request.maxFiles,
+            request.maxDirectories,
+        );
+        return {
+            root: reference.realPath,
+            files: scan.files,
+            truncated: scan.truncated,
+        };
     }
 
     /** Read a bounded tabular preview of a file. */

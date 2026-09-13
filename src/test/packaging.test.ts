@@ -40,6 +40,7 @@ const audit = require(path.join(REPO, 'scripts', 'audit-vsix.js')) as {
 const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as {
     name: string;
     version: string;
+    preview: boolean;
     main: string;
     scripts: Record<string, string>;
     dependencies: Record<string, string>;
@@ -62,8 +63,11 @@ test('the manifest points at the bundle and builds it before publishing', () => 
     assert.match(manifest.scripts.bundle, /scripts\/build\.js/);
 });
 
-test('the extension stays on the first Marketplace release line', () => {
-    assert.match(manifest.version, /^1\.0\.\d+$/);
+test('the extension is published as a preview while it is still a beta', () => {
+    assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
+    // The Marketplace maturity signal is the manifest flag, so it is asserted
+    // rather than left to whoever edits package.json next.
+    assert.equal(manifest.preview, true);
 });
 
 test('activation is scoped to the Activity Bar view, never to startup', () => {
@@ -77,8 +81,9 @@ test('activation is scoped to the Activity Bar view, never to startup', () => {
     assert.deepEqual(manifest.activationEvents, ['onView:sqlFileDetectionTool.sidebar']);
 });
 
-test('runtime dependencies are the four the native core needs', () => {
+test('runtime dependencies are the native core and official Blob SDK', () => {
     assert.deepEqual(Object.keys(manifest.dependencies).sort(), [
+        '@azure/storage-blob',
         'chardet',
         'fflate',
         'hyparquet',
@@ -139,7 +144,7 @@ test('the allowlist admits every asset the manifest contributes', () => {
     }
 });
 
-test('the bundle carries no Python, server or spawn vocabulary', () => {
+test('the bundle carries no Python, server, spawn, or bespoke credential vocabulary', () => {
     const code = readBundle();
     for (const [pattern, label] of audit.FORBIDDEN_BUNDLE_STRINGS) {
         assert.ok(!pattern.test(code), `the bundle contains ${label}`);

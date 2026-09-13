@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased
+
+## 1.1.2
+
+### Fixed
+
+- Kept every line of the optional `CREATE TABLE` quick-load example commented,
+  preventing its column list from becoming stray executable T-SQL.
+
+### Added
+
+- Added read-only Azure Storage browsing across tenants, subscriptions, Storage
+  accounts, containers, folders, and files using VS Code Microsoft
+  authentication.
+- Selected Blob and ADLS Gen2 files now feed canonical ABS/ABFSS locations into
+  Credential Setup without downloading or analyzing remote content.
+
+## 1.1.1
+
+- Parquet, Delta, ORC and RCFile external tables now emit bounded column types
+  on supported platforms instead of reporting `NOT AVAILABLE`.
+- Complete scripts rerun cleanly for external tables and escaped bracket names.
+- Short AWS S3 locations are converted to SQL Server's documented endpoint form.
+- Unsupported legacy encodings and unverified ORC read paths produce guidance
+  instead of SQL that looks runnable.
+- Excel timestamp inference and text-column metadata stay consistent across
+  platforms.
+
+## 1.1.0
+
+- Marked the extension as a **Preview/beta** release so its maturity is stated
+  on the Marketplace rather than assumed.
+- Folder scans now reach nested, partitioned layouts such as
+  `year=2026/month=09/day=02/` instead of stopping at the first level, bounded
+  by depth, file and directory ceilings that report when they withhold work.
+- Added an Explorer filter over file name, folder and format.
+- Added a keybinding for **Analyze Current File**.
+- Recognised DNS-zone storage endpoints (`*.dfs.storage.azure.net`) and
+  converted them correctly for generated `BLOB_STORAGE` SQL.
+
 ## 1.0.15
 
 - Kept Excel text-column metadata consistent with the Python analyzer across

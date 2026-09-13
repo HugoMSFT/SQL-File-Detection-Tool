@@ -2,7 +2,7 @@
  * Tests for the webview document shell and the bundled renderer assets.
  *
  * The shell is the security envelope for everything the user sees, so the CSP,
- * the nonce and the absence of any inline or remote execution path are asserted
+ * the extension-only source and absence of any inline or remote execution path are asserted
  * directly, and the bundled script is scanned for the APIs it has promised not
  * to use.
  */
@@ -12,7 +12,7 @@ import test from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { buildWebviewHtml, contentSecurityPolicy, createNonce } from '../ui/webviewShell';
+import { buildWebviewHtml, contentSecurityPolicy } from '../ui/webviewShell';
 
 const mediaDir = path.join(__dirname, '..', '..', 'media', 'webview');
 const script = fs.readFileSync(path.join(mediaDir, 'main.js'), 'utf8');
@@ -30,7 +30,6 @@ const scriptCode = script
 
 function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     return buildWebviewHtml({
-        nonce: 'TESTNONCE123',
         cspSource: 'vscode-webview://abc',
         scriptUri: 'vscode-webview://abc/media/webview/main.js',
         styleUri: 'vscode-webview://abc/media/webview/main.css',
@@ -38,21 +37,10 @@ function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     });
 }
 
-test('nonces are random, long enough and alphanumeric', () => {
-    const seen = new Set<string>();
-    for (let index = 0; index < 200; index += 1) {
-        const nonce = createNonce();
-        assert.match(nonce, /^[A-Za-z0-9]+$/);
-        assert.ok(nonce.length >= 16, `nonce too short: ${nonce}`);
-        assert.ok(!seen.has(nonce), 'nonces must not repeat');
-        seen.add(nonce);
-    }
-});
-
 test('the CSP denies everything by default and allows no inline or remote code', () => {
-    const policy = contentSecurityPolicy('N0NCE', 'vscode-webview://abc');
+    const policy = contentSecurityPolicy('vscode-webview://abc');
     assert.match(policy, /default-src 'none'/);
-    assert.match(policy, /script-src 'nonce-N0NCE'/);
+    assert.match(policy, /script-src vscode-webview:\/\/abc/);
     assert.match(policy, /style-src vscode-webview:\/\/abc/);
     assert.ok(!policy.includes('unsafe-inline'));
     assert.ok(!policy.includes('unsafe-eval'));
@@ -65,13 +53,13 @@ test('the CSP denies everything by default and allows no inline or remote code',
     );
 });
 
-test('the document carries the CSP and the nonce on its only script', () => {
+test('the document carries the CSP and restricts its only script to the extension origin', () => {
     const html = render();
     assert.match(html, /<meta http-equiv="Content-Security-Policy"/);
-    assert.match(html, /script-src 'nonce-TESTNONCE123'/);
+    assert.match(html, /script-src vscode-webview:\/\/abc/);
     const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]);
     assert.equal(scripts.length, 1, 'exactly one script tag');
-    assert.match(scripts[0], /nonce="TESTNONCE123"/);
+    assert.doesNotMatch(scripts[0], /nonce=/);
     assert.match(scripts[0], /src="vscode-webview:\/\/abc\/media\/webview\/main\.js"/);
 });
 
@@ -128,19 +116,38 @@ test('the shell exposes the whole product workflow, not a launcher', () => {
     for (const action of [
         'openFileDialog',
         'openFolderDialog',
+        'openAzureBrowser',
         'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
         'useStorageUrl',
         'clearStorageUrl',
         'showOrcGuidance',
+        'azureBrowserConnect',
+        'azureBrowserRetry',
+        'azureBrowserDisconnect',
+        'azureBrowserClose',
+        'azureBrowserLoadMore',
+        'azureBrowserUseSelectedFile',
     ]) {
         assert.ok(
             html.includes(`data-action="${action}"`) || script.includes(`'${action}'`),
             `${action} is not reachable`,
         );
     }
-    assert.doesNotMatch(script, /azureConnect|azureList|azureSetAccount|azureAnalyzeBlob/);
+    assert.doesNotMatch(script, /azureList|azureSetAccount|azureAnalyzeBlob/);
+});
+
+test('the Azure surface states its read-only browser boundary', () => {
+    const html = render();
+    assert.doesNotMatch(html, /Azure connection check|id="azure-connection"/);
+    assert.match(html, /data-action="openAzureBrowser">Browse Azure</);
+    assert.match(script, /Connect to Azure/);
+    assert.match(script, /azureBrowserConnect/);
+    assert.doesNotMatch(script, /Connect with Microsoft/);
+    assert.match(script, /Storage Blob Data Reader/);
+    assert.match(script, /Use selected file/);
+    assert.match(script, /does not download or analyze its bytes/);
 });
 
 test('Preview is the primary workflow and credential setup is guided', () => {
@@ -303,6 +310,17 @@ test('the explorer gives the filename its own readable row', () => {
     assert.match(styles, /grid-template-areas:\s*'icon name'\s*'\. meta'/);
     assert.match(styles, /\.file-name[\s\S]*overflow-wrap: anywhere/);
     assert.match(script, /name\.title = file\.label/);
+});
+
+test('the explorer offers a filter that narrows the listing', () => {
+    const html = render();
+    assert.match(html, /id="file-filter"/);
+    assert.match(html, /aria-label="Filter files by name, folder or format"/);
+    // The filter is renderer-only view state: narrowing a listing must not
+    // become a new message the host has to validate.
+    assert.doesNotMatch(script, /type:\s*'setFileFilter'/);
+    assert.match(script, /fileFilter/);
+    assert.match(script, /No files match this filter/);
 });
 
 test('the renderer keeps the keyboard workflow', () => {
