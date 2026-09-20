@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 1.1.15
+
+### Fixed
+
+- Kept **Advanced object names** open while typing, so the external data source
+  and credential name fields no longer collapse and lose focus after the first
+  character.
+
+### Changed
+
+- Refreshed the walkthrough animation so it shows the current interface.
+
 ## 1.1.14
 
 ### Fixed
