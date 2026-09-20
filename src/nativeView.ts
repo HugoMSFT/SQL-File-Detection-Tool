@@ -22,15 +22,12 @@ import * as vscode from 'vscode';
 import { AppStateStore } from './appState';
 import {
     MicrosoftAuthentication,
-    type AuthenticationAccount,
     type AuthenticationSession,
     type SessionOptions,
 } from './azure/auth';
-import { AzureConnection } from './azure/connection';
 import { AzureBrowser } from './azure/browser';
-import { AzureTenantClient } from './azure/tenantClient';
 import { UiController } from './ui/controller';
-import type { OpenDialogOptions, UiHost } from './ui/host';
+import type { OpenDialogOptions, OpenDialogSelection, UiHost } from './ui/host';
 import { buildWebviewHtml } from './ui/webviewShell';
 import { redact } from './util';
 
@@ -98,57 +95,16 @@ class VsCodeUiHost implements UiHost {
             .map((folder) => folder.uri.fsPath);
     }
 
-    activeFilePath(): string | undefined {
-        const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document.uri.scheme === 'file') {
-            return editor.document.uri.fsPath;
-        }
-        const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-        if (input && typeof input === 'object' && 'uri' in input) {
-            const uri = (input as { uri?: vscode.Uri }).uri;
-            if (uri?.scheme === 'file') {
-                return uri.fsPath;
-            }
-        }
-        return undefined;
-    }
-
-    /**
-     * Explain why the active editor has no analysable path.
-     *
-     * The native reader needs a real file. A virtual or remote document has
-     * none, so the UI says so rather than failing with something obscure.
-     */
-    activeFileLimitation(): string | undefined {
-        const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-        const uri =
-            vscode.window.activeTextEditor?.document.uri ??
-            (input && typeof input === 'object' && 'uri' in input
-                ? (input as { uri?: vscode.Uri }).uri
-                : undefined);
-        if (!uri) {
-            return 'No file is open in the active editor.';
-        }
-        if (uri.scheme === 'file') {
-            return undefined;
-        }
-        if (uri.scheme === 'untitled') {
-            return 'This editor has not been saved yet. Save it to a file first.';
-        }
-        return (
-            `The active editor uses the "${uri.scheme}" scheme, which has no local file for ` +
-            'the native reader to open. Save or download a copy locally and analyse that.'
-        );
-    }
-
-    async showOpenDialog(options: OpenDialogOptions): Promise<readonly string[] | undefined> {
+    async showOpenDialog(
+        options: OpenDialogOptions,
+    ): Promise<readonly OpenDialogSelection[] | undefined> {
         const picked = await vscode.window.showOpenDialog({
-            canSelectFiles: !options.folders,
+            canSelectFiles: options.files,
             canSelectFolders: options.folders,
             canSelectMany: options.many,
-            openLabel: options.folders ? 'Analyze folder' : 'Analyze',
+            openLabel: 'Analyze',
             title: options.title,
-            filters: options.folders ? undefined : OPEN_FILTERS,
+            filters: options.files ? OPEN_FILTERS : undefined,
         });
         if (!picked || picked.length === 0) {
             return undefined;
@@ -160,7 +116,13 @@ class VsCodeUiHost implements UiHost {
             );
             return undefined;
         }
-        return local.map((uri) => uri.fsPath);
+        return Promise.all(
+            local.map(async (uri) => ({
+                path: uri.fsPath,
+                isDirectory:
+                    ((await vscode.workspace.fs.stat(uri)).type & vscode.FileType.Directory) !== 0,
+            })),
+        );
     }
 
     async copyToClipboard(text: string): Promise<void> {
@@ -298,20 +260,9 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
                 options: SessionOptions,
             ): Promise<AuthenticationSession | undefined> =>
                 vscode.authentication.getSession(providerId, scopes, options),
-            async (providerId: 'microsoft'): Promise<readonly AuthenticationAccount[]> =>
-                vscode.authentication.getAccounts(providerId),
         );
-        const azureConnection = new AzureConnection({
-            authentication,
-            tenants: new AzureTenantClient(),
-            publish: (state) => {
-                this.store.update({ azureConnection: state });
-            },
-            log: (message) => this.host.log(message),
-        });
         const azure = new AzureBrowser({ authentication });
         this.controller = new UiController(this.host, this.store, {
-            azureConnection,
             azure,
         });
         this.disposables.push(
@@ -456,11 +407,6 @@ export class NativeUi implements vscode.Disposable, vscode.WebviewViewProvider {
     async analyzePath(target: string, isDirectory: boolean): Promise<void> {
         await this.openDefault();
         await this.controller.analyzePath(target, isDirectory);
-    }
-
-    async analyzeCurrentFile(): Promise<void> {
-        await this.openDefault();
-        await this.controller.handle({ type: 'analyzeCurrentFile' });
     }
 
     // -- plumbing ------------------------------------------------------------

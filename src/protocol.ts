@@ -50,7 +50,7 @@ import {
     type GuidedAuthMethod,
     type StorageSetupGoal,
 } from './native';
-import type { AzureBrowserState, AzureConnectionState } from './azure/types';
+import type { AzureBrowserState } from './azure/types';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -76,6 +76,7 @@ export const UI_TABS = [
 ] as const;
 
 export type UiTab = (typeof UI_TABS)[number];
+export type SourceBrowserMode = 'local' | 'azure';
 
 /** Statement tabs, i.e. the subset of {@link UI_TABS} the generator produces. */
 export const STATEMENT_KINDS: readonly StatementKind[] = [
@@ -109,15 +110,11 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setTab'; readonly tab: UiTab })
     | (Base & { readonly type: 'setFileFilter'; readonly value: string })
     | (Base & { readonly type: 'selectFile'; readonly fileId: string })
-    | (Base & { readonly type: 'openFileDialog' })
-    | (Base & { readonly type: 'openFolderDialog' })
+    | (Base & { readonly type: 'activateLocalSource' })
+    | (Base & { readonly type: 'openLocalDialog' })
     | (Base & { readonly type: 'openAzureBrowser' })
-    | (Base & { readonly type: 'analyzeCurrentFile' })
-    | (Base & { readonly type: 'azureConnect' })
-    | (Base & { readonly type: 'azureRetry' })
-    | (Base & { readonly type: 'azureRefresh' })
-    | (Base & { readonly type: 'azureDisconnect' })
     | (Base & { readonly type: 'azureBrowserConnect' })
+    | (Base & { readonly type: 'azureBrowserRefresh' })
     | (Base & { readonly type: 'azureBrowserDisconnect' })
     | (Base & { readonly type: 'azureBrowserClose' })
     | (Base & { readonly type: 'azureBrowserRetry' })
@@ -210,11 +207,13 @@ export interface AppStateSnapshot {
     readonly version: string;
     readonly platform: TargetPlatform;
     readonly platforms: ReadonlyArray<{ id: TargetPlatform; label: string }>;
+    readonly sourceMode: SourceBrowserMode;
     readonly activeTab: UiTab;
     readonly fileFilter: string;
     readonly files: readonly FileEntry[];
     readonly selectedFileId: string | null;
     readonly sourceLabel: string | null;
+    readonly locationLabel: string | null;
     readonly metadata: FileMetadata | null;
     readonly preview: PreviewResult | null;
     readonly statements: Readonly<Record<string, string>> | null;
@@ -261,7 +260,6 @@ export interface AppStateSnapshot {
     readonly formats: readonly SupportedFormat[];
     /** Milliseconds the last analysis took; drives the perf readout. */
     readonly lastAnalysisMs: number | null;
-    readonly azureConnection: AzureConnectionState;
     readonly azure: AzureBrowserState;
 }
 
@@ -373,15 +371,11 @@ const BUILDERS: Record<string, Builder> = {
     refresh: () => ({ type: 'refresh' }),
     cancel: () => ({ type: 'cancel' }),
     dismissNotice: () => ({ type: 'dismissNotice' }),
-    openFileDialog: () => ({ type: 'openFileDialog' }),
-    openFolderDialog: () => ({ type: 'openFolderDialog' }),
+    activateLocalSource: () => ({ type: 'activateLocalSource' }),
+    openLocalDialog: () => ({ type: 'openLocalDialog' }),
     openAzureBrowser: () => ({ type: 'openAzureBrowser' }),
-    analyzeCurrentFile: () => ({ type: 'analyzeCurrentFile' }),
-    azureConnect: () => ({ type: 'azureConnect' }),
-    azureRetry: () => ({ type: 'azureRetry' }),
-    azureRefresh: () => ({ type: 'azureRefresh' }),
-    azureDisconnect: () => ({ type: 'azureDisconnect' }),
     azureBrowserConnect: () => ({ type: 'azureBrowserConnect' }),
+    azureBrowserRefresh: () => ({ type: 'azureBrowserRefresh' }),
     azureBrowserDisconnect: () => ({ type: 'azureBrowserDisconnect' }),
     azureBrowserClose: () => ({ type: 'azureBrowserClose' }),
     azureBrowserRetry: () => ({ type: 'azureBrowserRetry' }),

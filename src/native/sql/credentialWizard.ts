@@ -200,28 +200,28 @@ const AUTH_OPTIONS: Readonly<
 > = {
     sas: {
         id: 'sas',
-        label: 'SAS token',
-        detail: "Generates IDENTITY = 'SHARED ACCESS SIGNATURE' with a safe placeholder.",
+        label: 'SQL SAS credential',
+        detail: "SQL uses IDENTITY = 'SHARED ACCESS SIGNATURE'; the script contains a safe token placeholder.",
     },
     s3_access_key: {
         id: 's3_access_key',
-        label: 'S3 access key',
-        detail: "Generates IDENTITY = 'S3 ACCESS KEY' with access-key placeholders.",
+        label: 'SQL S3 credential',
+        detail: "SQL uses IDENTITY = 'S3 ACCESS KEY' with access-key placeholders.",
     },
     storage_key: {
         id: 'storage_key',
-        label: 'Storage account key',
-        detail: 'Generates the SQL Server 2019 WASBS credential with key placeholders.',
+        label: 'SQL storage-key credential',
+        detail: 'SQL Server 2019 uses a WASBS credential with key placeholders.',
     },
     user_identity: {
         id: 'user_identity',
-        label: 'Microsoft Entra ID',
-        detail: "Uses the signed-in caller through IDENTITY = 'USER IDENTITY'.",
+        label: 'SQL caller identity',
+        detail: "Uses the identity executing T-SQL through IDENTITY = 'USER IDENTITY', not the VS Code browsing account.",
     },
     managed_identity: {
         id: 'managed_identity',
-        label: 'User-assigned managed identity',
-        detail: "Generates IDENTITY = 'MANAGED IDENTITY' without storing a secret.",
+        label: 'SQL managed identity',
+        detail: "The SQL host uses IDENTITY = 'MANAGED IDENTITY' without storing a secret.",
     },
 };
 

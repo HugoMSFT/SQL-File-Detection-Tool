@@ -35,6 +35,8 @@ const SUPPORTED_EXTENSIONS = new Set([
     'rc',
 ]);
 
+export const AZURE_BROWSER_CACHE_TTL_MS = 2 * 60 * 1_000;
+
 type RetryOperation = 'discover' | 'tenant' | 'subscription' | 'account' | 'location';
 
 interface RegisteredEntry {
@@ -49,6 +51,8 @@ export interface AzureBrowserDeps {
     readonly authentication: MicrosoftAuthentication;
     readonly arm?: ArmClient;
     readonly storage?: StorageBrowserClient;
+    readonly now?: () => number;
+    readonly cacheTtlMs?: number;
 }
 
 interface InteractiveOperation {
@@ -90,6 +94,10 @@ export class AzureBrowser {
     private reconcilingLifecycle: number | undefined;
     private interactiveOperationId = 0;
     private lifecycle = 0;
+    private reconnectRequiresUserAction = true;
+    private lastRefreshAt: number | undefined;
+    private connectPromise: Promise<AzureBrowserState> | undefined;
+    private refreshPromise: Promise<AzureBrowserState> | undefined;
 
     constructor(private readonly deps: AzureBrowserDeps) {
         this.arm = deps.arm ?? new ArmClient();
@@ -101,6 +109,9 @@ export class AzureBrowser {
     }
 
     async authenticationChanged(): Promise<AzureBrowserState> {
+        if (this.reconnectRequiresUserAction) {
+            return this.state;
+        }
         // VS Code reports only the provider, not the affected session. A session
         // created by this operation is authoritative until its full discovery
         // chain settles; later provider events still revalidate normally.
@@ -114,7 +125,9 @@ export class AzureBrowser {
             return this.state;
         }
         this.pendingAuthenticationChangeLifecycle = undefined;
-        return this.revalidateAuthentication();
+        return this.state.open
+            ? this.reconcileDeferredAuthentication(this.lifecycle)
+            : this.revalidateAuthentication();
     }
 
     /**
@@ -131,6 +144,7 @@ export class AzureBrowser {
         const pinned = this.account;
         this.clearAuthenticationState();
         if (!wasOpen) {
+            this.reconnectRequiresUserAction = true;
             this.state = CLOSED_AZURE_BROWSER_STATE;
             return this.state;
         }
@@ -139,7 +153,17 @@ export class AzureBrowser {
     }
 
     async open(): Promise<AzureBrowserState> {
-        if (this.account && this.state.identity && this.state.tenants.length > 0) {
+        if (this.reconnectRequiresUserAction) {
+            return this.signedOut(
+                this.state.phase === 'signedOut' && this.state.message
+                    ? this.state.message
+                    : 'Connect to Azure to browse Azure public cloud read-only.',
+            );
+        }
+        if (this.account && this.state.identity && this.lastRefreshAt !== undefined) {
+            if (!this.cacheIsFresh()) {
+                return this.refresh();
+            }
             this.state = {
                 ...this.state,
                 open: true,
@@ -149,14 +173,56 @@ export class AzureBrowser {
             };
             return this.state;
         }
-        this.disconnect();
-        this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
-        return this.discover(false);
+        this.reconnectRequiresUserAction = true;
+        return this.signedOut('Connect to Azure to browse Azure public cloud read-only.');
     }
 
     connect(): Promise<AzureBrowserState> {
+        if (this.connectPromise) {
+            return this.connectPromise;
+        }
+        this.reconnectRequiresUserAction = false;
         this.retryOperation = 'discover';
-        return this.runInteractive(() => this.discover(true));
+        const pending = this.runInteractive(() => this.discover(true));
+        this.connectPromise = pending;
+        void pending.then(
+            () => this.clearConnectPromise(pending),
+            () => this.clearConnectPromise(pending),
+        );
+        return pending;
+    }
+
+    refresh(): Promise<AzureBrowserState> {
+        if (this.connectPromise) {
+            return this.connectPromise;
+        }
+        if (this.refreshPromise) {
+            return this.refreshPromise;
+        }
+        if (this.reconnectRequiresUserAction || !this.account) {
+            this.reconnectRequiresUserAction = true;
+            return Promise.resolve(
+                this.signedOut('Connect to Azure before refreshing Azure resources.'),
+            );
+        }
+        const identity = this.state.identity;
+        const pinned = this.account;
+        this.dropResourceState();
+        this.state = {
+            ...CLOSED_AZURE_BROWSER_STATE,
+            open: true,
+            phase: 'loading',
+            identity,
+            message: 'Refreshing Azure resources…',
+        };
+        this.retryOperation = 'discover';
+        const pending = this.discover(false, pinned);
+        this.refreshPromise = pending;
+        void pending.then(
+            () => this.clearRefreshPromise(pending),
+            () => this.clearRefreshPromise(pending),
+        );
+        return pending;
     }
 
     retry(): Promise<AzureBrowserState> {
@@ -231,9 +297,10 @@ export class AzureBrowser {
                         ? 'No enabled subscriptions are visible in this tenant.'
                         : null,
             };
-            return selectedSubscriptionId
-                ? this.selectSubscription(selectedSubscriptionId, interactive)
-                : this.state;
+            if (selectedSubscriptionId) {
+                return this.selectSubscription(selectedSubscriptionId, interactive);
+            }
+            return this.state;
         } catch (error) {
             return this.fail(error, generation);
         }
@@ -428,9 +495,12 @@ export class AzureBrowser {
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
         this.reconcilingLifecycle = undefined;
+        this.connectPromise = undefined;
+        this.refreshPromise = undefined;
         this.cancel();
         if (authenticationPending) {
             this.dropAuthenticationState();
+            this.reconnectRequiresUserAction = true;
             this.state = CLOSED_AZURE_BROWSER_STATE;
             return this.state;
         }
@@ -440,18 +510,14 @@ export class AzureBrowser {
 
     disconnect(): AzureBrowserState {
         this.lifecycle += 1;
+        this.reconnectRequiresUserAction = true;
         this.interactiveOperation = undefined;
         this.pendingAuthenticationChangeLifecycle = undefined;
         this.reconcilingLifecycle = undefined;
+        this.connectPromise = undefined;
+        this.refreshPromise = undefined;
         this.cancel();
-        this.account = undefined;
-        this.entryRegistry.clear();
-        this.continuationToken = undefined;
-        this.container = undefined;
-        this.prefix = '';
-        this.retryOperation = 'discover';
-        this.state = CLOSED_AZURE_BROWSER_STATE;
-        return this.state;
+        return this.signedOut('Disconnected. Select Connect to browse Azure again.');
     }
 
     cancel(preserveInteractiveOperationId?: number): void {
@@ -491,13 +557,9 @@ export class AzureBrowser {
                 return this.state;
             }
             if (!session) {
-                this.state = {
-                    ...CLOSED_AZURE_BROWSER_STATE,
-                    open: true,
-                    phase: 'signedOut',
-                    message: 'Connect to Azure to browse Azure public cloud read-only.',
-                };
-                return this.state;
+                return this.signedOut(
+                    'Connect to Azure to browse Azure public cloud read-only.',
+                );
             }
             this.account = session.account;
             const tenants = await this.arm.listTenants(session.accessToken, this.signal());
@@ -511,12 +573,26 @@ export class AzureBrowser {
                 identity: this.deps.authentication.identity(session),
                 tenants,
                 selectedTenantId,
+                subscriptions: [],
+                selectedSubscriptionId: null,
+                accounts: [],
+                selectedAccountId: null,
+                path: [],
+                entries: [],
+                selectedEntryId: null,
+                hasMore: false,
                 errorKind: null,
                 message: tenants.length === 0 ? 'No Azure tenants are visible for this account.' : null,
             };
-            return selectedTenantId
-                ? this.selectTenant(selectedTenantId, interactive)
-                : this.state;
+            if (selectedTenantId) {
+                const discovered = await this.selectTenant(selectedTenantId, interactive);
+                if (discovered.phase === 'ready') {
+                    this.markRefreshed();
+                }
+                return discovered;
+            }
+            this.markRefreshed();
+            return this.state;
         } catch (error) {
             return this.fail(error, generation);
         }
@@ -827,13 +903,9 @@ export class AzureBrowser {
                 return this.state;
             }
             this.clearAuthenticationState();
-            this.state = {
-                ...CLOSED_AZURE_BROWSER_STATE,
-                open: true,
-                phase: 'signedOut',
-                message: 'The Microsoft session could not be revalidated. Connect again.',
-            };
-            return this.state;
+            return this.signedOut(
+                'The Microsoft session could not be revalidated. Connect again.',
+            );
         }
         if (this.reconcilingLifecycle === reconcilingLifecycle) {
             this.reconcilingLifecycle = undefined;
@@ -858,7 +930,9 @@ export class AzureBrowser {
             };
             return this.state;
         }
-        return this.revalidateAuthentication();
+        this.clearAuthenticationState();
+        this.state = { ...CLOSED_AZURE_BROWSER_STATE, open: true, phase: 'loading' };
+        return this.discover(false);
     }
 
     private clearAuthenticationState(): void {
@@ -868,11 +942,57 @@ export class AzureBrowser {
 
     private dropAuthenticationState(): void {
         this.account = undefined;
+        this.dropResourceState();
+    }
+
+    private dropResourceState(): void {
+        this.lastRefreshAt = undefined;
         this.entryRegistry.clear();
         this.continuationToken = undefined;
         this.container = undefined;
         this.prefix = '';
         this.retryOperation = 'discover';
+    }
+
+    private signedOut(message: string): AzureBrowserState {
+        this.reconnectRequiresUserAction = true;
+        this.dropAuthenticationState();
+        this.state = {
+            ...CLOSED_AZURE_BROWSER_STATE,
+            open: true,
+            phase: 'signedOut',
+            message,
+        };
+        return this.state;
+    }
+
+    private markRefreshed(): void {
+        this.lastRefreshAt = this.now();
+    }
+
+    private cacheIsFresh(): boolean {
+        return (
+            this.lastRefreshAt !== undefined
+            && this.now() - this.lastRefreshAt < (
+                this.deps.cacheTtlMs ?? AZURE_BROWSER_CACHE_TTL_MS
+            )
+        );
+    }
+
+    private now(): number {
+        return (this.deps.now ?? Date.now)();
+    }
+
+    private clearConnectPromise(pending: Promise<AzureBrowserState>): void {
+        if (this.connectPromise === pending) {
+            this.connectPromise = undefined;
+        }
+    }
+
+    private clearRefreshPromise(pending: Promise<AzureBrowserState>): void {
+        if (this.refreshPromise === pending) {
+            this.refreshPromise = undefined;
+        }
     }
 
     private loading(

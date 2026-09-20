@@ -15,14 +15,16 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { AppStateStore } from '../../appState';
+import { MicrosoftAuthentication } from '../../azure/auth';
+import { AzureBrowser } from '../../azure/browser';
 import { UiController, metadataForDisplay } from '../../ui/controller';
-import type { OpenDialogOptions, UiHost } from '../../ui/host';
+import type {
+    OpenDialogOptions,
+    OpenDialogSelection,
+    UiHost,
+} from '../../ui/host';
 import type { AppStateSnapshot } from '../../protocol';
 import type { StatementKind } from '../../native';
-import type {
-    AzureConnectionService,
-    AzureConnectionState,
-} from '../../azure/types';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -43,9 +45,7 @@ interface Recorder {
     readonly preferences: Map<string, unknown>;
     readonly dialogs: OpenDialogOptions[];
     readonly downloadDir: string;
-    dialogResult: readonly string[] | undefined;
-    activeFile: string | undefined;
-    activeLimitation: string | undefined;
+    dialogResult: readonly OpenDialogSelection[] | undefined;
     saveResult: string | undefined;
     panelOpens: number;
     clock: number;
@@ -69,8 +69,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
         dialogs: [],
         downloadDir,
         dialogResult: undefined,
-        activeFile: undefined,
-        activeLimitation: undefined,
         saveResult: undefined,
         panelOpens: 0,
         clock: 0,
@@ -78,8 +76,6 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
     const host: UiHost = {
         version: '1.1.1',
         workspaceFolders: () => folders,
-        activeFilePath: () => state.activeFile,
-        activeFileLimitation: () => state.activeLimitation,
         showOpenDialog: async (dialogOptions) => {
             state.dialogs.push(dialogOptions);
             return state.dialogResult;
@@ -127,65 +123,6 @@ function snapshot(record: Recorder): AppStateSnapshot {
 function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
-
-test('Azure connection requests reach only the injected connection service', async () => {
-    const record = recorder();
-    const calls: string[] = [];
-    const disconnected: AzureConnectionState = {
-        phase: 'disconnected',
-        identity: null,
-        tenants: [],
-        stale: false,
-        errorKind: null,
-        message: 'Disconnected.',
-    };
-    const azureConnection: AzureConnectionService = {
-        state: disconnected,
-        connect: async () => {
-            calls.push('connect');
-            return disconnected;
-        },
-        retry: async () => {
-            calls.push('retry');
-            return disconnected;
-        },
-        refresh: async () => {
-            calls.push('refresh');
-            return disconnected;
-        },
-        disconnect: () => {
-            calls.push('disconnect');
-            return disconnected;
-        },
-        authenticationChanged: async () => {
-            calls.push('changed');
-            return disconnected;
-        },
-        dispose: () => {
-            calls.push('dispose');
-        },
-    };
-    const ui = controller(record, { azureConnection });
-    try {
-        await ui.handle({ type: 'azureConnect' });
-        await ui.handle({ type: 'azureRetry' });
-        await ui.handle({ type: 'azureRefresh' });
-        await ui.handle({ type: 'azureDisconnect' });
-        await ui.authenticationChanged();
-        assert.deepEqual(calls, ['connect', 'retry', 'refresh', 'disconnect', 'changed']);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-    assert.deepEqual(calls, [
-        'connect',
-        'retry',
-        'refresh',
-        'disconnect',
-        'changed',
-        'dispose',
-    ]);
-});
 
 test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();
@@ -366,8 +303,7 @@ test('handle never throws, whatever the handler does', async () => {
         },
     });
     try {
-        record.activeFile = path.join(FIXTURES, 'sample.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
         await settle();
         const error = snapshot(record).error;
         assert.ok(error, 'the failure surfaces as state, not an exception');
@@ -378,14 +314,13 @@ test('handle never throws, whatever the handler does', async () => {
     }
 });
 
-// -- current file / workspace flow -------------------------------------------
+// -- explicit file / workspace flow ------------------------------------------
 
-test('analyzing the current file produces metadata, preview and SQL', async () => {
+test('analyzing an explicit file produces metadata, preview and SQL', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
 
         const state = snapshot(record);
@@ -422,8 +357,7 @@ test('controller preview preserves exact CSV numerics as source text', async () 
     const record = recorder({ workspaceFolders: [root] });
     const ui = controller(record);
     try {
-        record.activeFile = source;
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(source, false);
         await settle();
 
         assert.deepEqual(snapshot(record).preview?.rows[0], [
@@ -438,34 +372,12 @@ test('controller preview preserves exact CSV numerics as source text', async () 
     }
 });
 
-test('an unsupported editor scheme is reported instead of failing obscurely', async () => {
-    const record = recorder();
-    const ui = controller(record);
-    try {
-        record.activeLimitation =
-            'The active editor is not a file on disk, so the native reader cannot open it.';
-        await ui.handle({ type: 'analyzeCurrentFile' });
-        await settle();
-        assert.equal(snapshot(record).error, record.activeLimitation);
-        assert.equal(snapshot(record).files.length, 0);
-
-        record.activeLimitation = undefined;
-        record.activeFile = undefined;
-        await ui.handle({ type: 'analyzeCurrentFile' });
-        await settle();
-        assert.match(snapshot(record).error ?? '', /No file is open/i);
-    } finally {
-        await ui.dispose();
-        cleanup(record);
-    }
-});
-
 test('choosing a folder lists files and selects the first', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.dialogResult = [FIXTURES];
-        await ui.handle({ type: 'openFolderDialog' });
+        record.dialogResult = [{ path: FIXTURES, isDirectory: true }];
+        await ui.handle({ type: 'openLocalDialog' });
         await settle();
 
         const state = snapshot(record);
@@ -479,6 +391,74 @@ test('choosing a folder lists files and selects the first', async () => {
     } finally {
         await ui.dispose();
         cleanup(record);
+    }
+});
+
+test('Browse local accepts one or more files', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.dialogResult = [
+            { path: path.join(FIXTURES, 'employees.csv'), isDirectory: false },
+            { path: path.join(FIXTURES, 'sample.csv'), isDirectory: false },
+        ];
+        await ui.handle({ type: 'openLocalDialog' });
+        await settle();
+
+        const state = snapshot(record);
+        assert.equal(state.sourceMode, 'local');
+        assert.equal(state.files.length, 2);
+        assert.equal(state.sourceLabel, 'csv (2 files)');
+        assert.ok(state.selectedFileId);
+        assert.ok(state.metadata);
+        assert.deepEqual(record.dialogs[0], {
+            files: true,
+            folders: true,
+            many: true,
+            title: 'Select data files or a folder to analyze',
+        });
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('Browse local rejects mixed file and folder selections', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        record.dialogResult = [
+            { path: FIXTURES, isDirectory: true },
+            { path: path.join(FIXTURES, 'sample.csv'), isDirectory: false },
+        ];
+        await ui.handle({ type: 'openLocalDialog' });
+
+        assert.match(snapshot(record).error ?? '', /one folder or one or more files/i);
+        assert.equal(snapshot(record).files.length, 0);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('outside-workspace File location shows an abbreviated path', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-location-'));
+    const source = path.join(root, 'private-folder-name', 'orders.csv');
+    fs.mkdirSync(path.dirname(source), { recursive: true });
+    fs.writeFileSync(source, 'id\n1\n');
+    const record = recorder({ workspaceFolders: [FIXTURES] });
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([source]);
+        assert.equal(
+            snapshot(record).locationLabel,
+            '.../private-folder-name/orders.csv',
+        );
+        assert.ok(!String(snapshot(record).locationLabel).includes(root));
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+        fs.rmSync(root, { recursive: true, force: true });
     }
 });
 
@@ -588,20 +568,53 @@ test('starting a folder scan clears the previous file result', async () => {
     }
 });
 
-test('cancelling the folder picker leaves the state untouched', async () => {
+test('a cancelled picker still switches to the local source tab', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
         record.dialogResult = undefined;
-        await ui.handle({ type: 'openFileDialog' });
-        await ui.handle({ type: 'openFolderDialog' });
+        await ui.handle({ type: 'activateLocalSource' });
         await settle();
         assert.equal(snapshot(record).files.length, 0);
         assert.equal(snapshot(record).error, null);
+        assert.equal(snapshot(record).sourceMode, 'local');
+        assert.equal(snapshot(record).activeTab, 'preview');
         assert.deepEqual(
-            record.dialogs.map((dialog) => dialog.folders),
-            [false, true],
+            record.dialogs.map((dialog) => [dialog.files, dialog.folders]),
+            [[true, true]],
         );
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('returning from Azure restores the retained folder without a picker', async () => {
+    const record = recorder();
+    const azure = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => undefined),
+    });
+    const ui = controller(record, { azure });
+    try {
+        await ui.loadDirectory(FIXTURES);
+        await settle();
+        const retainedIds = snapshot(record).files.map((file) => file.id);
+        const retainedLocation = snapshot(record).sourceLabel;
+        const retainedSelection = snapshot(record).selectedFileId;
+
+        await ui.handle({ type: 'openAzureBrowser' });
+        assert.equal(snapshot(record).sourceMode, 'azure');
+        assert.equal(snapshot(record).azure.open, true);
+
+        await ui.handle({ type: 'activateLocalSource' });
+
+        assert.equal(record.dialogs.length, 0);
+        assert.equal(snapshot(record).sourceMode, 'local');
+        assert.equal(snapshot(record).azure.open, false);
+        assert.deepEqual(snapshot(record).files.map((file) => file.id), retainedIds);
+        assert.equal(snapshot(record).sourceLabel, retainedLocation);
+        assert.equal(snapshot(record).selectedFileId, retainedSelection);
+        assert.equal(snapshot(record).activeTab, 'preview');
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -612,8 +625,7 @@ test('the renderer can only select files the host listed', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.activeFile = path.join(FIXTURES, 'sample.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
         await settle();
         const good = snapshot(record).selectedFileId as string;
 
@@ -665,6 +677,44 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
         );
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.equal(record.preferences.get('activeTab'), 'preview');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('selecting an existing local file replaces Azure setup state', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
+        await settle();
+        const fileId = snapshot(record).selectedFileId as string;
+        assert.ok(snapshot(record).metadata);
+
+        record.store.update({
+            sourceMode: 'azure',
+            sourceKind: 'azure',
+            activeTab: 'credential_setup',
+            storageUrl: 'abs://raw@account.blob.core.windows.net/orders.csv',
+            remoteSchema: {
+                status: 'not_analyzed',
+                formats: ['csv'],
+                selectedFormat: 'csv',
+                message: 'Schema not analyzed.',
+            },
+        });
+
+        await ui.handle({ type: 'selectFile', fileId });
+        await settle();
+
+        assert.equal(snapshot(record).sourceMode, 'local');
+        assert.equal(snapshot(record).sourceKind, 'local');
+        assert.equal(snapshot(record).activeTab, 'preview');
+        assert.equal(snapshot(record).storageUrl, '');
+        assert.equal(snapshot(record).remoteSchema, null);
+        assert.ok(snapshot(record).metadata);
+        assert.ok(snapshot(record).preview);
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -748,8 +798,7 @@ for (const [name, fixture, fileType] of [
         const record = recorder();
         const ui = controller(record);
         try {
-            record.activeFile = fixture;
-            await ui.handle({ type: 'analyzeCurrentFile' });
+            await ui.analyzePath(fixture, false);
             await settle();
             const state = snapshot(record);
             assert.equal(state.error, null, `${name} should analyse cleanly`);
@@ -767,12 +816,10 @@ test('a large Parquet file keeps the default preview bounded', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.activeFile = path.join(
-            SAMPLES,
-            'performance',
-            'events_250k.parquet',
+        await ui.analyzePath(
+            path.join(SAMPLES, 'performance', 'events_250k.parquet'),
+            false,
         );
-        await ui.handle({ type: 'analyzeCurrentFile' });
         await settle();
 
         const state = snapshot(record);
@@ -815,8 +862,7 @@ test('a Unicode CSV keeps its characters through analysis and generation', async
     const record = recorder({ workspaceFolders: [DEMO] });
     const ui = controller(record);
     try {
-        record.activeFile = unicode;
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(unicode, false);
         await settle();
         const state = snapshot(record);
         assert.equal(state.error, null);
@@ -840,8 +886,7 @@ test('ORC reports its limitation and never reaches for Python', async () => {
     const record = recorder({ workspaceFolders: [DEMO] });
     const ui = controller(record);
     try {
-        record.activeFile = orc;
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(orc, false);
         await settle();
 
         const state = snapshot(record);
@@ -877,8 +922,7 @@ test('platform, names and overrides regenerate the SQL and persist preferences',
         clearTimeoutImpl: () => undefined,
     });
     try {
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
         const before = snapshot(record).statements?.create_table as string;
 
@@ -940,8 +984,7 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
     });
 
     try {
-        record.activeFile = path.join(FIXTURES, 'sample.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
         await settle();
 
         for (const value of ['C', 'Cu', 'Cus', 'Cust', 'Custo']) {
@@ -1024,8 +1067,7 @@ test('preview row counts are clamped to the allowed range', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
 
         await ui.handle({ type: 'setPreviewRows', rows: 1_000_000 });
@@ -1047,8 +1089,7 @@ test('copy and open use the host, not a browser API', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
 
         await ui.handle({ type: 'copyStatement', kind: 'create_table' as StatementKind });
@@ -1168,8 +1209,8 @@ test('export all emits shared prerequisites once across many files', async () =>
     const ui = controller(record);
     try {
         record.saveResult = path.join(record.downloadDir, 'out.sql');
-        record.dialogResult = [FIXTURES];
-        await ui.handle({ type: 'openFolderDialog' });
+        record.dialogResult = [{ path: FIXTURES, isDirectory: true }];
+        await ui.handle({ type: 'openLocalDialog' });
         await settle();
         assert.ok(snapshot(record).files.length > 2);
 
@@ -1218,8 +1259,7 @@ test('dismissing the save dialog keeps the work in an untitled buffer', async ()
     const ui = controller(record);
     try {
         record.saveResult = undefined;
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
         await ui.handle({ type: 'exportAllSql' });
         await settle();
@@ -1324,8 +1364,7 @@ test('an explicit cancel clears progress without leaving an error', async () => 
         },
     });
     try {
-        record.activeFile = path.join(FIXTURES, 'employees.csv');
-        const running = ui.handle({ type: 'analyzeCurrentFile' });
+        const running = ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
         await settle();
         assert.equal(snapshot(record).busy, true);
         await ui.handle({ type: 'cancel' });
@@ -1385,8 +1424,7 @@ test('credential name, auth method and table name reach the generator', async ()
         },
     });
     try {
-        record.activeFile = path.join(FIXTURES, 'sample.csv');
-        await ui.handle({ type: 'analyzeCurrentFile' });
+        await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
         await settle();
         await ui.handle({ type: 'setCredentialName', value: 'cert_cred' });
         await ui.handle({ type: 'setAuthMethod', value: 'managed_identity' });
@@ -1433,10 +1471,49 @@ test('a known URL configures credential SQL without requiring file analysis', as
         );
         assert.equal(state.dataSourceType, 'azure_blob');
         assert.equal(state.authMethod, 'sas');
+        assert.equal(state.remoteSchema?.status, 'not_analyzed');
+        assert.equal(state.remoteSchema?.selectedFormat, 'parquet');
         assert.match(state.statements?.credential_setup ?? '', /CREATE EXTERNAL DATA SOURCE/);
+        assert.match(state.statements?.credential_setup ?? '', /CREATE EXTERNAL TABLE/);
+        assert.match(
+            state.statements?.credential_setup ?? '',
+            /TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED/,
+        );
+        await ui.handle({ type: 'setStorageGoal', value: 'openrowset' });
+        assert.match(snapshot(record).statements?.credential_setup ?? '', /OPENROWSET\s*\(/);
+
+        await ui.handle({
+            type: 'setStorageUrl',
+            value: 'abs://data@myaccount.blob.core.windows.net/orders.csv',
+        });
+        await ui.handle({ type: 'setStorageGoal', value: 'bulk_insert' });
+        assert.match(snapshot(record).statements?.credential_setup ?? '', /BULK INSERT/);
         assert.ok(!JSON.stringify(state).includes('sig=SECRET'));
         assert.ok(!JSON.stringify(state).includes('?sv=2026'));
         assert.match(state.notice ?? '', /removed/i);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a manual folder URL requires a format before generating goal SQL', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({
+            type: 'setStorageUrl',
+            value: 'abs://raw@myaccount.blob.core.windows.net/orders/',
+        });
+        assert.equal(snapshot(record).remoteSchema?.status, 'format_required');
+        assert.ok((snapshot(record).remoteSchema?.formats.length ?? 0) > 1);
+        assert.equal(snapshot(record).statements, null);
+
+        await ui.handle({ type: 'setAzureFolderFormat', value: 'csv' });
+        assert.match(
+            snapshot(record).statements?.credential_setup ?? '',
+            /CREATE EXTERNAL TABLE/,
+        );
     } finally {
         await ui.dispose();
         cleanup(record);
@@ -1549,8 +1626,10 @@ test('storage setup infers ABS, ADLS, and ABFSS exclusively from the provided UR
             assert.equal(state.storageUrl, entry.url);
             assert.equal(state.dataSourceType, entry.source);
             assert.equal(state.credentialSetup.locationPrefix, entry.connector);
+            assert.equal(state.remoteSchema, null);
             const sql = state.statements?.credential_setup ?? '';
             assert.match(sql, /CREATE EXTERNAL DATA SOURCE/);
+            assert.doesNotMatch(sql, /TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED/);
             assert.ok(sql.includes(entry.location), sql);
             if (entry.source === 'azure_blob') {
                 assert.doesNotMatch(sql, /TYPE = BLOB_STORAGE|LOCATION = 'https:\/\//);
@@ -1624,8 +1703,8 @@ test('no snapshot ever contains an absolute filesystem path', async () => {
     const record = recorder();
     const ui = controller(record);
     try {
-        record.dialogResult = [FIXTURES];
-        await ui.handle({ type: 'openFolderDialog' });
+        record.dialogResult = [{ path: FIXTURES, isDirectory: true }];
+        await ui.handle({ type: 'openLocalDialog' });
         await settle();
         const serialised = JSON.stringify(snapshot(record));
         assert.ok(!serialised.includes(FIXTURES.replace(/\\/g, '\\\\')), 'no workspace root');

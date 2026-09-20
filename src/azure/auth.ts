@@ -28,10 +28,6 @@ export type GetSession = (
     options: SessionOptions,
 ) => Promise<AuthenticationSession | undefined>;
 
-export type GetAccounts = (
-    providerId: typeof MICROSOFT_PROVIDER_ID,
-) => Promise<readonly AuthenticationAccount[]>;
-
 export interface AuthenticationResult {
     readonly session: AuthenticationSession | undefined;
     readonly source: 'silent' | 'interactive' | 'none';
@@ -55,10 +51,7 @@ export function scopedAuthenticationScopes(
  * creation is reachable only when the caller explicitly permits it.
  */
 export class MicrosoftAuthentication {
-    constructor(
-        private readonly getSession: GetSession,
-        private readonly getAccountsImpl: GetAccounts = async () => [],
-    ) {}
+    constructor(private readonly getSession: GetSession) {}
 
     async acquire(
         allowInteractive: boolean,
@@ -104,10 +97,6 @@ export class MicrosoftAuthentication {
             session: interactive,
             source: interactive ? 'interactive' : 'none',
         };
-    }
-
-    getAccounts(): Promise<readonly AuthenticationAccount[]> {
-        return this.getAccountsImpl(MICROSOFT_PROVIDER_ID);
     }
 
     identity(session: AuthenticationSession): AzureIdentity {

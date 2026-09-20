@@ -77,6 +77,9 @@ test('unknown message types are dropped', () => {
         'azureListContainers',
         'azureListBlobs',
         'azureAnalyzeBlob',
+        'openFileDialog',
+        'openFolderDialog',
+        'analyzeCurrentFile',
         'readFile',
         'toString',
         'constructor',
@@ -87,16 +90,12 @@ test('unknown message types are dropped', () => {
     }
 });
 
-test('Azure connection actions are explicit zero-field capabilities', () => {
-    for (const type of [
-        'azureConnect',
-        'azureRetry',
-        'azureRefresh',
-        'azureDisconnect',
-    ] as const) {
-        assert.deepEqual(parseWebviewRequest({ type, accessToken: 'must-be-dropped' }), {
-            type,
-        });
+test('Browse local actions are explicit zero-field capabilities', () => {
+    for (const type of ['activateLocalSource', 'openLocalDialog'] as const) {
+        assert.deepEqual(
+            parseWebviewRequest({ type, path: 'must-be-dropped' }),
+            { type },
+        );
     }
 });
 
@@ -104,6 +103,7 @@ test('Azure browser actions accept only bounded opaque selections', () => {
     for (const type of [
         'openAzureBrowser',
         'azureBrowserConnect',
+        'azureBrowserRefresh',
         'azureBrowserDisconnect',
         'azureBrowserClose',
         'azureBrowserRetry',
@@ -356,7 +356,7 @@ test('fuzzing never throws and never invents a request', () => {
         ...STATEMENT_KINDS,
         'ready',
         'selectFile',
-        'azureConnect',
+        'azureBrowserConnect',
         'setPreviewRows',
         'setStorageUrl',
         '__proto__',

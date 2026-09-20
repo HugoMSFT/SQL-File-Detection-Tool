@@ -26,7 +26,6 @@ const manifest = JSON.parse(
 test('the manifest declares every command the extension registers', () => {
     const declared = manifest.contributes.commands.map((command) => command.command).sort();
     assert.deepEqual(declared, [
-        'sqlFileDetectionTool.analyzeCurrentFile',
         'sqlFileDetectionTool.analyzeSelected',
         'sqlFileDetectionTool.open',
         'sqlFileDetectionTool.openInEditor',
@@ -36,6 +35,7 @@ test('the manifest declares every command the extension registers', () => {
 test('the removed runtime commands stay out of the manifest', () => {
     const declared = manifest.contributes.commands.map((command) => command.command);
     for (const removed of [
+        'sqlFileDetectionTool.analyzeCurrentFile',
         'sqlFileDetectionTool.connectAzureStorage',
         'sqlFileDetectionTool.disconnectAzureStorage',
         'sqlFileDetectionTool.setupBackend',
@@ -43,6 +43,13 @@ test('the removed runtime commands stay out of the manifest', () => {
     ]) {
         assert.ok(!declared.includes(removed), `${removed} should have been removed`);
     }
+});
+
+test('Current file has no command, menu, walkthrough, or keybinding', () => {
+    const serialized = JSON.stringify(manifest);
+    assert.ok(!serialized.includes('analyzeCurrentFile'));
+    assert.ok(!serialized.includes('Analyze Current File'));
+    assert.ok(!serialized.includes('ctrl+alt+d'));
 });
 
 test('every registered command exists in the manifest', () => {
@@ -53,7 +60,7 @@ test('every registered command exists in the manifest', () => {
     const registered = [
         ...source.matchAll(/registerCommand\(\s*'([^']+)'/g),
     ].map((match) => match[1]);
-    assert.ok(registered.length >= 4);
+    assert.ok(registered.length >= 3);
     const declared = new Set(manifest.contributes.commands.map((command) => command.command));
     for (const command of registered) {
         assert.ok(declared.has(command), `${command} is missing from package.json`);

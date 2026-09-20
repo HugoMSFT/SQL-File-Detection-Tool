@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 1.1.14
+
+### Fixed
+
+- Made **Browse Azure** require an explicit Connect before using a VS Code
+  Microsoft session, including after Disconnect or extension reload.
+- Added Refresh, two-minute metadata expiry, and coalesced Connect requests.
+- Combined file and folder selection into **Browse local**, paired with
+  **Browse Azure** as exclusive source tabs. Choosing local disconnects Azure
+  and restores local Preview state.
+- Removed the **Current file** command and clarified Storage authorization
+  versus Blob Data Reader failures.
+- Added a retained **File location** display and redesigned **Storage SQL** with
+  clearer runtime identities, readiness states, and context-aware goals.
+
 ## 1.1.13
 
 ### Added

@@ -1,13 +1,12 @@
 # Analyze a data file
 
-Three ways in, all local and all native:
+Choose a local source in either of these ways:
 
-- **Browse files** or **Browse folder** inside the view.
-- **Current file** analyzes the file in the active editor.
+- **Browse local** inside the view, then choose one folder or one or more files.
 - Right-click a file or folder in the Explorer and choose
   **Analyze with SQL File Detection Tool**.
 
-Folder browsing checks the selected folder and one child level. Selecting any
+Choosing a folder checks it and one child level. Selecting any
 listed source analyzes it immediately and opens Preview.
 
 | Format | What is read |

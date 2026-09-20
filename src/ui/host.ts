@@ -14,9 +14,15 @@
  */
 
 export interface OpenDialogOptions {
+    readonly files: boolean;
     readonly folders: boolean;
     readonly many: boolean;
     readonly title: string;
+}
+
+export interface OpenDialogSelection {
+    readonly path: string;
+    readonly isDirectory: boolean;
 }
 
 /** Everything the controller needs that is not pure computation. */
@@ -25,17 +31,9 @@ export interface UiHost {
 
     /** Absolute paths of the open workspace folders. */
     workspaceFolders(): readonly string[];
-    /** Absolute path of the file in the active editor, when it is on disk. */
-    activeFilePath(): string | undefined;
-    /**
-     * Why the active editor cannot be analysed natively, when it cannot.
-     *
-     * Virtual and remote schemes have no filesystem path for the native reader,
-     * so the UI states that plainly instead of failing obscurely.
-     */
-    activeFileLimitation(): string | undefined;
-
-    showOpenDialog(options: OpenDialogOptions): Promise<readonly string[] | undefined>;
+    showOpenDialog(
+        options: OpenDialogOptions,
+    ): Promise<readonly OpenDialogSelection[] | undefined>;
 
     copyToClipboard(text: string): Promise<void>;
     openUntitledDocument(content: string, languageId: string): Promise<void>;

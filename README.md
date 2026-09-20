@@ -19,7 +19,7 @@ unless another platform is selected explicitly.
 ![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.0.9.gif)
 
 Open the Activity Bar icon, select a supported file or folder, and Preview opens
-automatically. Use the SQL tabs for generated statements. In Credential setup,
+automatically. Use the SQL tabs for generated statements. In Storage SQL,
 paste an `abs://`, `adls://`, or `abfss://` URL and the connector is detected
 automatically. The GIF uses the shipped renderer and can be regenerated with
 `npm run capture:gif`.
@@ -468,7 +468,7 @@ Run `sql-file-detection-tool COMMAND --help` for complete command options.
 ## Azure Storage authentication
 
 This section describes the **Python** package (CLI and web application). The VS
-Code extension's URL-driven storage setup is described under
+Code extension's URL-driven Storage SQL workflow is described under
 [VS Code extension](#vs-code-extension).
 
 The tool attaches to Azure Storage the same way Azure Storage Explorer does.
@@ -573,13 +573,12 @@ There is no setup step to measure, because there is no setup step. Activation
 is triggered by the Activity Bar view, a command or a context-menu action -
 never at VS Code startup.
 
-Commands (Command Palette, prefix **SQL File Detection Tool**):
+Commands and context actions:
 
 | Command | Purpose |
 | --- | --- |
 | `Open` | Opens the native interface in an editor tab by default |
 | `Open in Editor` | Opens or focuses the editor tab explicitly |
-| `Analyze Current File` | Analyzes the active editor's file |
 | `Analyze with SQL File Detection Tool` | Explorer / editor context menu, on the exact target |
 
 ### Editor panel and Activity Bar
@@ -593,28 +592,43 @@ credential/data-source setup, and known storage URLs remain available. Set
 Activity Bar instead. There is no loading state to wait through and nothing to install; see
 [Startup and analysis cost](#startup-and-analysis-cost) for the measurements.
 
-**Browse folder** scans files in the selected folder and its immediate child
-folders only. Clicking a listed source analyzes it immediately and returns to
-Preview.
+**Browse local** accepts one folder or one or more files. Folder selection scans
+the chosen folder and its immediate child folders only. Clicking a listed source
+analyzes it immediately and returns to Preview.
+
+**Browse local** and **Browse Azure** are mutually exclusive source tabs.
+Switching from Azure to Browse local immediately disconnects the extension's
+Azure browser, clears Azure setup state, and restores the retained local Preview
+without opening another picker. The Explorer shows the current workspace-relative
+file location; use **Choose location** or **Change location** only when selecting
+a different folder or file set. Explorer and editor context menus remain
+available for analyzing a specific source.
 
 **Browse Azure** opens the integrated connection and Storage browser. Its
-**Connect to Azure** action uses VS Code's built-in Microsoft authentication,
-then lists visible directories (tenants), subscriptions, Blob-capable Storage
-accounts, containers, virtual folders, and files read-only. Selecting a
-supported file places its canonical `abs://` or `abfss://` location into the
-existing Credential Setup workflow. It does not download or analyze remote
-bytes. No authentication or network request runs during activation or initial
-rendering.
+**Connect to Azure** action explicitly opts into VS Code's built-in Microsoft
+authentication, then lists visible directories (tenants), subscriptions,
+Blob-capable Storage accounts, containers, virtual folders, and files read-only.
+Opening the browser never silently adopts an existing VS Code session. Selecting
+a supported file places its canonical `abs://` or `abfss://` location into the
+Storage SQL workflow. It does not download or analyze remote
+bytes. No authentication or network request runs during activation, initial
+rendering, or before **Connect to Azure** is selected.
 Concurrent Connect actions share one authentication/discovery request. Transient
-ARM failures use at most two bounded retries, and **Refresh** performs a new
-silent session check and directory lookup. A successful directory list is kept
-in memory for up to two minutes only; if Refresh then fails transiently, that
-unexpired list is shown explicitly as cached until it can be verified again.
-Disconnect, sign-out, authorization failure, or extension disposal clears it.
+ARM failures use bounded retries, and **Refresh** performs a new silent session
+check and metadata lookup for the connected account. Successful Azure metadata
+is reused for at most two minutes when the browser is closed and reopened;
+expired metadata refreshes automatically. **Disconnect** clears all browser data
+and requires another explicit Connect, but does not sign the Microsoft account
+out of VS Code. Sign-out, authorization failure, or extension disposal also
+clears retained browser data.
 Storage browsing requests the tenant-specific Storage scope only after an
 explicit Connect or Retry and requires account-level **Storage Blob Data
 Reader** access. Tokens stay in the extension host and are never persisted,
 logged, or transferred to the webview.
+An account may be visible through Azure Resource Manager while container access
+is denied: Reader, Owner, and Contributor management permissions do not grant
+blob data access. Assign **Storage Blob Data Reader** on the storage account,
+resource group, or subscription and allow up to 10 minutes for propagation.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never
@@ -647,16 +661,19 @@ The editor panel and sidebar share one state store, so they always agree.
 The platform and selected tab are remembered in workspace and global state.
 File contents and credentials are never persisted there.
 
-### Guided SQL credential setup
+### Storage SQL
 
-The **Credential setup** tab accepts an `abs://`, `adls://`, or `abfss://`
+The **Storage SQL** tab accepts an `abs://`, `adls://`, or `abfss://`
 location, with Azure HTTPS and `s3://` retained for compatibility. The extension
 validates the location, removes query strings and fragments, infers the storage
 service and connector from the URL, and generates credential/data-source SQL even
 before a file is analyzed.
 
-The target SQL platform, inferred storage service, authentication method, and
-object names then constrain one another:
+The selected goal, target SQL platform, inferred storage service, SQL runtime
+identity, and object names constrain one another. Browse Azure identity is kept
+separate from the identity used when SQL executes the generated script. The UI
+shows whether output is blocked, contains placeholders, or is ready to run;
+advanced object names remain collapsed until needed.
 
 | Target | Storage choices | Guided authentication |
 | --- | --- | --- |

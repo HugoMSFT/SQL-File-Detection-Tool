@@ -46,6 +46,7 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.deepEqual(state.files, []);
     assert.equal(state.selectedFileId, null);
     assert.equal(state.metadata, null);
+    assert.equal(state.sourceMode, 'local');
     assert.equal(state.activeTab, 'preview');
     assert.equal(state.fileFilter, '');
     assert.equal(state.quickAnalyze.selectedStatement, 'openrowset');
@@ -57,15 +58,6 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.equal(state.credentialSetup.authMethod, 'managed_identity');
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
-    assert.deepEqual(state.azureConnection, {
-        phase: 'disconnected',
-        identity: null,
-        tenants: [],
-        stale: false,
-        errorKind: null,
-        message:
-            'Connect to Azure to verify access and list accessible directories (tenants).',
-    });
     assert.deepEqual(state.azure, {
         open: false,
         phase: 'closed',

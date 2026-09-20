@@ -61,15 +61,17 @@ Preview is the initial tab and primary workflow. The left navigator persists
 across tabs, while the main view starts with bounded real rows from the selected
 file. Metadata and Schema separate detected facts from type overrides. Focused
 tabs expose `CREATE TABLE`, `BULK INSERT`, `OPENROWSET`, external file format,
-external table, and URL-driven credential setup. Quick Analyze,
+external table, and URL-driven Storage SQL. Quick Analyze,
 Formats, Best Practices, COPY INTO, JSON, and FOR JSON are not navigation tabs.
 JSON guidance is emitted only in the relevant `OPENROWSET` or external-table
 context.
 
-The credential tab is a five-step wizard: storage URL, target platform, detected
-external data source, authentication, and object names. `credentialWizard.ts`
-infers ABS, ADLS, or ABFSS from the URL and constrains the remaining choices
-before generation. Fabric SQL Database allows only OneLake over ABFSS with
+Storage SQL is a goal-first workflow: operation, source, SQL runtime access,
+then optional advanced object names. The global target-platform selector remains
+the single platform control. A readiness row distinguishes blocked output,
+templates requiring replacement, and SQL with no generated placeholders.
+`credentialWizard.ts` infers ABS, ADLS, or ABFSS from the URL and constrains the
+remaining choices before generation. Fabric SQL Database allows only OneLake over ABFSS with
 `USER IDENTITY`; OneLake on the other supported products uses the ADLS
 connector; SQL Server 2022 S3 uses `S3 ACCESS KEY`; and SQL Server 2025 managed
 identity carries its Azure Arc and user-assigned identity caveat. The webview
@@ -161,9 +163,9 @@ comments from `media/webview/main.js` and then fails the build on `innerHTML`,
 `on*=` attributes in the HTML, any second script tag, or any remote resource
 reference.
 
-## Storage setup and threat model
+## Storage SQL and threat model
 
-Credential setup has one entry path: a storage URL. The host validates and
+Storage SQL has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
@@ -174,20 +176,32 @@ blob metadata read-only. ARM Reader access is distinct from account-level
 **Storage Blob Data Reader** access, and the UI reports those failures
 separately. Tokens remain in the extension host and are never persisted or
 included in renderer state, logs, URLs, or errors. Disconnect clears only the
-extension's in-memory state; it does not remove the user's Microsoft session
-from VS Code.
+extension's in-memory state, requires another explicit Connect, and does not
+remove the user's Microsoft session from VS Code.
 
-Authentication and ARM calls begin only after **Browse Azure** is opened. The
-browser first performs a silent session lookup; **Connect to Azure** appears
-inside the browser only when no session is available. Interactive tenant or
-Storage-scope authentication occurs only after an explicit **Connect to Azure**
-or **Retry**.
-Transient network failures, HTTP 408/429, and selected 5xx responses receive at
-most two cancellation-aware retries with bounded backoff. Successful tenant
-lists are cached in memory for at most two minutes. Refresh bypasses that cache;
-if its retries fail transiently, an unexpired previous list remains visible and
-is marked cached. The cache is never persisted and is cleared on provider
-changes, Disconnect, authorization failure, or disposal.
+**Browse local** and **Browse Azure** form one source tablist. Browse local
+accepts one folder or one or more files. Selecting it disconnects and closes the
+Azure browser, clears Azure-derived setup, and restores the retained Preview
+without opening the picker. The Explorer renders a safe workspace-relative
+**File location**; **Choose location** or **Change location** opens the picker.
+Selecting an already-listed local file performs the same transition. Explorer
+and editor context menus retain direct source analysis.
+
+Opening **Browse Azure** never performs authentication or an ARM call. The
+browser starts in its signed-out state on each extension activation and begins
+session acquisition only after **Connect to Azure** is selected. While connected,
+closing and reopening the browser reuses verified metadata for at most two
+minutes; expired metadata and the explicit **Refresh** action perform a new
+silent session check and metadata lookup. Interactive tenant or Storage-scope
+authentication occurs only after an explicit **Connect to Azure** or **Retry**.
+Transient network failures, HTTP 408/429, and selected 5xx responses receive
+cancellation-aware retries with bounded backoff. Azure browser metadata is
+cached in memory for at most two minutes, is never persisted, and is cleared on
+Disconnect, sign-out, authorization failure, or disposal.
+HTTP 401 from Storage is treated as expired or missing Storage authorization and
+offers authorization again. HTTP 403 is reported as a data-plane RBAC denial:
+**Storage Blob Data Reader** is required at the storage-account or parent scope
+to enumerate containers, independently of Owner or Contributor management roles.
 The ARM clients permit only HTTPS requests to fixed public-cloud
 `management.azure.com` tenant, subscription, and Storage-account endpoints and
 validated continuation links, reject redirects, and apply hard limits for time,
@@ -201,7 +215,7 @@ and tenant data.
 
 Selecting a file creates `abs://container@account.blob.core.windows.net/path`
 for Blob Storage or `abfss://container@account.dfs.core.windows.net/path` for
-HNS/ADLS Gen2 and hands it to the existing Credential Setup state. This selects
+HNS/ADLS Gen2 and hands it to Storage SQL. This selects
 the remote SQL source location only; no remote bytes, schema, or preview are
 downloaded.
 

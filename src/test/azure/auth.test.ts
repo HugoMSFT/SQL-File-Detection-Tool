@@ -89,7 +89,6 @@ test('authentication is silent first and prompts only for an explicit connect', 
             calls.push({ provider, scopes, options });
             return options.silent ? undefined : SESSION;
         },
-        async () => [SESSION.account],
     );
 
     const passive = await authentication.acquire(false, SESSION.account);
@@ -117,7 +116,6 @@ test('an existing silent session prevents an interactive prompt', async () => {
             calls += 1;
             return SESSION;
         },
-        async () => [SESSION.account],
     );
 
     assert.deepEqual(await authentication.acquire(true), {
