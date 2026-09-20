@@ -7,8 +7,8 @@ Each analyzed file gets its own tabs:
 - **Schema** — source types and recommended, editable SQL types.
 - **CREATE TABLE**, **BULK INSERT**, **OPENROWSET**, **EXT TABLE** — generated
   scripts for the selected platform.
-- **Credential setup** — a guided platform, source, authentication, and object
-  naming workflow that generates placeholders without collecting secrets.
+- **Storage SQL** — a goal-first source and SQL runtime access workflow with
+  explicit blocked, template, and ready states.
 
 The **Target platform** selector defaults to **Azure SQL Database** and also
 covers Azure SQL Managed Instance, SQL Server 2019/2022/2025 and Microsoft

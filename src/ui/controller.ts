@@ -68,12 +68,12 @@ import {
     MIN_PREVIEW_ROWS,
     isStatementKind,
     parseWebviewRequest,
+    type AppStateSnapshot,
     type WebviewRequest,
 } from '../protocol';
 import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
-import type { AzureConnectionService } from '../azure/types';
 import { AzureBrowser } from '../azure/browser';
 
 /** Files the extension will analyse in one "Export All" pass. */
@@ -84,11 +84,44 @@ export const REGENERATE_DEBOUNCE_MS = 180;
 
 export interface ControllerDeps {
     readonly service?: NativeAnalysisService;
-    readonly azureConnection?: AzureConnectionService;
     readonly azure?: AzureBrowser;
     /** Injected so debounce is deterministic under test. */
     readonly setTimeoutImpl?: (fn: () => void, ms: number) => unknown;
     readonly clearTimeoutImpl?: (handle: unknown) => void;
+}
+
+type LocalSourceState = Pick<
+    AppStateSnapshot,
+    | 'fileFilter'
+    | 'selectedFileId'
+    | 'sourceLabel'
+    | 'locationLabel'
+    | 'metadata'
+    | 'preview'
+    | 'tableName'
+    | 'dataSource'
+    | 'dataSourceType'
+    | 'credentialName'
+    | 'authMethod'
+    | 'storageGoal'
+    | 'storageUrl'
+    | 'azureFolderPreview'
+    | 'remoteSchema'
+    | 'formatName'
+    | 'parserOverrides'
+    | 'sourceKind'
+    | 'folderProfile'
+    | 'columnOverrides'
+    | 'recommendedSqlTypes'
+    | 'limitation'
+    | 'lastAnalysisMs'
+>;
+
+interface LocalSourceSnapshot {
+    readonly files: readonly RegisteredFile[];
+    readonly state: LocalSourceState;
+    readonly rawMetadata: FileMetadata | null;
+    readonly folderMetadata: readonly FileMetadata[];
 }
 
 /**
@@ -110,6 +143,29 @@ export function metadataForDisplay(
     };
 }
 
+function localLocationLabel(
+    absolutePath: string,
+    workspaceFolders: readonly string[],
+): string {
+    const resolved = path.resolve(absolutePath);
+    for (const folder of workspaceFolders) {
+        const root = path.resolve(folder);
+        const relative = path.relative(root, resolved);
+        if (relative === '') {
+            return path.basename(root);
+        }
+        if (
+            !relative.startsWith(`..${path.sep}`)
+            && relative !== '..'
+            && !path.isAbsolute(relative)
+        ) {
+            return [path.basename(root), relative.split(path.sep).join('/')].join('/');
+        }
+    }
+    const parent = path.basename(path.dirname(resolved));
+    return parent ? `.../${parent}/${path.basename(resolved)}` : path.basename(resolved);
+}
+
 /** Platform-neutral SQL type recommendations shown in the schema editor. */
 export function recommendedSqlTypes(
     metadata: FileMetadata,
@@ -123,7 +179,6 @@ export function recommendedSqlTypes(
 
 export class UiController {
     private readonly service: NativeAnalysisService;
-    private readonly azureConnection: AzureConnectionService | undefined;
     private readonly azure: AzureBrowser | undefined;
     private readonly queue = createSerialQueue();
     private tokenSource: SimpleCancellationTokenSource | undefined;
@@ -135,6 +190,7 @@ export class UiController {
     private disposed = false;
     /** Benchmark instrumentation: only the first analysis is timed in the log. */
     private firstAnalysisLogged = false;
+    private localSourceSnapshot: LocalSourceSnapshot | undefined;
 
     constructor(
         private readonly host: UiHost,
@@ -142,7 +198,6 @@ export class UiController {
         private readonly deps: ControllerDeps = {},
     ) {
         this.service = deps.service ?? nativeAnalysisService;
-        this.azureConnection = deps.azureConnection;
         this.azure = deps.azure;
         this.store.setWorkspaceFolders(this.host.workspaceFolders());
         this.store.update({
@@ -179,12 +234,11 @@ export class UiController {
     }
 
     async authenticationChanged(): Promise<void> {
-        const connection = this.azureConnection?.authenticationChanged();
         const browser = this.azure?.authenticationChanged();
         if (this.azure) {
             this.store.update({ azure: this.azure.snapshot });
         }
-        await Promise.all([connection, browser]);
+        await browser;
         if (this.azure && !this.disposed) {
             this.store.update({ azure: this.azure.snapshot });
         }
@@ -265,36 +319,20 @@ export class UiController {
                 return;
             case 'selectFile':
                 return this.queue(() => this.selectFile(request.fileId));
-            case 'openFileDialog':
-                return this.queue(() => this.browse(false));
-            case 'openFolderDialog':
-                return this.queue(() => this.browse(true));
+            case 'activateLocalSource':
+                return this.queue(() => this.showLocalSource());
+            case 'openLocalDialog':
+                return this.queue(() => this.browseLocal());
             case 'openAzureBrowser':
+                this.activateAzureSource();
                 return this.runAzure(() => this.requireAzure().open());
-            case 'analyzeCurrentFile':
-                return this.queue(() => this.analyzeCurrentFile());
-            case 'azureConnect':
-                await this.azureConnection?.connect();
-                return;
-            case 'azureRetry':
-                await this.azureConnection?.retry();
-                return;
-            case 'azureRefresh':
-                await this.azureConnection?.refresh();
-                return;
-            case 'azureDisconnect':
-                this.azureConnection?.disconnect();
-                this.azure?.disconnect();
-                if (this.azure) {
-                    this.store.update({ azure: this.azure.snapshot });
-                }
-                return;
             case 'azureBrowserConnect':
                 return this.runAzure(() => this.requireAzure().connect());
+            case 'azureBrowserRefresh':
+                return this.runAzure(() => this.requireAzure().refresh());
             case 'azureBrowserDisconnect': {
                 const azure = this.requireAzure();
                 azure.disconnect();
-                this.azureConnection?.disconnect();
                 this.store.update({ azure: azure.snapshot });
                 return;
             }
@@ -434,19 +472,51 @@ export class UiController {
                     dataSourceType,
                 );
                 const changedSource = location.storageUrl !== this.store.state.storageUrl;
+                const inferredFileType = sqlSourceFileType(location.storageUrl);
+                const selectableFormats: readonly FileType[] = [
+                    'csv',
+                    'text',
+                    'json',
+                    'parquet',
+                    'orc',
+                    'rc',
+                    'delta',
+                    'iceberg',
+                ];
+                const remoteSchema = this.rawMetadata
+                    ? null
+                    : inferredFileType && inferredFileType !== 'unknown'
+                        ? {
+                              status: 'not_analyzed' as const,
+                              formats: [inferredFileType],
+                              selectedFormat: inferredFileType,
+                              message:
+                                  'The file format is inferred from the URL, but its columns and parser settings have not been analyzed.',
+                          }
+                        : {
+                              status: 'format_required' as const,
+                              formats: selectableFormats,
+                              selectedFormat: null,
+                              message:
+                                  'Choose the file format represented by this URL before goal-specific SQL is generated.',
+                          };
                 this.store.update({
                     storageUrl: location.storageUrl,
-                    sourceKind: changedSource ? 'public_https' : this.store.state.sourceKind,
+                    sourceKind:
+                        dataSourceType === 's3' ? 'public_https' : 'azure',
                     azureFolderPreview: changedSource
                         ? null
                         : this.store.state.azureFolderPreview,
-                    remoteSchema: changedSource ? null : this.store.state.remoteSchema,
+                    remoteSchema:
+                        changedSource || !this.store.state.remoteSchema
+                            ? remoteSchema
+                            : this.store.state.remoteSchema,
                     dataSourceType,
                     authMethod,
                     error: null,
                     notice: location.removedSuffix
                         ? 'Storage location applied. Query parameters and fragments were removed before SQL generation.'
-                        : 'Storage location applied to Credential Setup.',
+                        : 'Storage location applied to Storage SQL.',
                 });
                 this.refreshQuickAnalyze();
                 this.generateNow();
@@ -581,11 +651,20 @@ export class UiController {
             this.store.update({ azure: azure.snapshot });
             return;
         }
+        this.activateAzureSource();
         const location = knownStorageLocation(value);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
         );
+        if (dataSourceType !== location.dataSourceType) {
+            this.store.update({
+                azure: azure.snapshot,
+                error:
+                    'The selected Azure storage type is not supported by the current SQL platform. Choose another source or change the target platform.',
+            });
+            return;
+        }
         const authMethod = normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
@@ -627,11 +706,20 @@ export class UiController {
             return;
         }
         const snapshot = azure.snapshot;
+        this.activateAzureSource();
         const location = knownStorageLocation(value);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
         );
+        if (dataSourceType !== location.dataSourceType) {
+            this.store.update({
+                azure: azure.snapshot,
+                error:
+                    'The selected Azure storage type is not supported by the current SQL platform. Choose another source or change the target platform.',
+            });
+            return;
+        }
         const authMethod = normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
@@ -706,36 +794,36 @@ export class UiController {
 
     // -- file selection ------------------------------------------------------
 
-    private async browse(folders: boolean): Promise<void> {
+    private async showLocalSource(): Promise<void> {
+        this.activateLocalSource();
+        if (!this.store.state.sourceLabel && this.store.state.files.length === 0) {
+            await this.browseLocal();
+        }
+    }
+
+    private async browseLocal(): Promise<void> {
+        this.activateLocalSource();
         const picked = await this.host.showOpenDialog({
-            folders,
-            many: !folders,
-            title: folders ? 'Select a folder to analyze' : 'Select data files to analyze',
+            files: true,
+            folders: true,
+            many: true,
+            title: 'Select data files or a folder to analyze',
         });
         if (!picked || picked.length === 0) {
             return;
         }
-        if (folders) {
-            await this.loadDirectory(picked[0]);
+        const folders = picked.filter((item) => item.isDirectory);
+        if (folders.length > 0) {
+            if (picked.length !== 1) {
+                this.store.update({
+                    error: 'Select one folder or one or more files, not both.',
+                });
+                return;
+            }
+            await this.loadDirectory(folders[0].path);
             return;
         }
-        await this.loadFiles(picked);
-    }
-
-    private async analyzeCurrentFile(): Promise<void> {
-        const limitation = this.host.activeFileLimitation();
-        if (limitation) {
-            this.store.update({ error: limitation });
-            return;
-        }
-        const target = this.host.activeFilePath();
-        if (!target) {
-            this.store.update({
-                error: 'No file is open in the active editor.',
-            });
-            return;
-        }
-        await this.loadFiles([target]);
+        await this.loadFiles(picked.map((item) => item.path));
     }
 
     /**
@@ -745,17 +833,19 @@ export class UiController {
      * folder the user chose can be read even if it is linked into it.
      */
     async loadDirectory(directory: string): Promise<void> {
+        this.activateLocalSource();
         this.folderMetadata = [];
         this.rawMetadata = null;
         this.store.setFiles([]);
         this.store.clearSelection();
-        const { label: selectedLabel } = displayLabel(
+        const selectedLabel = localLocationLabel(
             directory,
             this.host.workspaceFolders(),
         );
         const state = this.store.state;
         this.store.update({
             sourceLabel: selectedLabel,
+            locationLabel: selectedLabel,
             sourceKind: 'local',
             fileFilter: '',
             storageUrl: '',
@@ -798,7 +888,7 @@ export class UiController {
                 })),
             );
             this.folderMetadata = result.files;
-            const { label } = displayLabel(result.root, this.host.workspaceFolders());
+            const label = localLocationLabel(result.root, this.host.workspaceFolders());
             this.store.update({
                 busy: false,
                 progress: null,
@@ -825,6 +915,7 @@ export class UiController {
 
     /** Analyse one or more explicitly chosen files. */
     async loadFiles(paths: readonly string[]): Promise<void> {
+        this.activateLocalSource();
         this.folderMetadata = [];
         const supportedPaths = paths.filter(isSqlSourceFile);
         const skipped = paths.length - supportedPaths.length;
@@ -858,13 +949,28 @@ export class UiController {
         this.store.clearSelection();
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
-        const { label } = displayLabel(supportedPaths[0], this.host.workspaceFolders());
+        const label = localLocationLabel(
+            supportedPaths[0],
+            this.host.workspaceFolders(),
+        );
+        const parents = new Set(
+            supportedPaths.map((item) => path.dirname(path.resolve(item))),
+        );
+        const sharedFolder = parents.size === 1
+            ? localLocationLabel(
+                  path.dirname(path.resolve(supportedPaths[0])),
+                  this.host.workspaceFolders(),
+              )
+            : null;
         const state = this.store.state;
         this.store.update({
             sourceLabel:
                 supportedPaths.length === 1
                     ? label
-                    : `${supportedPaths.length} selected files`,
+                    : sharedFolder
+                        ? `${sharedFolder} (${supportedPaths.length} files)`
+                        : `${supportedPaths.length} selected files`,
+            locationLabel: label,
             sourceKind: 'local',
                     fileFilter: '',
             storageUrl: '',
@@ -902,12 +1008,17 @@ export class UiController {
             this.store.update({ error: 'That file is no longer in the list. Refresh and try again.' });
             return;
         }
+        this.activateLocalSource();
         const changed = this.store.state.selectedFileId !== fileId;
         if (changed) {
             this.rawMetadata = null;
         }
         this.store.update({
             selectedFileId: fileId,
+            locationLabel: localLocationLabel(
+                file.absolutePath,
+                this.host.workspaceFolders(),
+            ),
             activeTab: 'preview',
             metadata: changed ? null : this.store.state.metadata,
             preview: changed ? null : this.store.state.preview,
@@ -926,6 +1037,131 @@ export class UiController {
         }
         void this.host.setPreference('activeTab', 'preview');
         await this.analyzeSelected(file);
+    }
+
+    private activateLocalSource(): void {
+        const azure = this.azure;
+        if (azure) {
+            azure.disconnect();
+            azure.close();
+        }
+        const snapshot = this.localSourceSnapshot;
+        this.localSourceSnapshot = undefined;
+        if (snapshot) {
+            this.rawMetadata = snapshot.rawMetadata;
+            this.folderMetadata = snapshot.folderMetadata;
+            this.store.restoreFiles(snapshot.files);
+            const inferred = inferDataSourceType(snapshot.state.storageUrl);
+            const storageUrl =
+                inferred
+                && normalizeDataSourceType(inferred, this.store.state.platform) !== inferred
+                    ? ''
+                    : snapshot.state.storageUrl;
+            this.store.update({
+                ...snapshot.state,
+                ...(azure ? { azure: azure.snapshot } : {}),
+                sourceMode: 'local',
+                activeTab: 'preview',
+                storageUrl,
+                azureFolderPreview: storageUrl ? snapshot.state.azureFolderPreview : null,
+                remoteSchema: storageUrl ? snapshot.state.remoteSchema : null,
+                sourceKind: storageUrl ? snapshot.state.sourceKind : 'local',
+                statements: null,
+                busy: false,
+                progress: null,
+                error: null,
+                notice: null,
+            });
+            void this.host.setPreference('activeTab', 'preview');
+            this.refreshQuickAnalyze();
+            this.generateNow();
+            return;
+        }
+        if (this.store.state.files.length === 0) {
+            this.rawMetadata = null;
+            this.folderMetadata = [];
+            this.store.clearSelection();
+        }
+        const state = this.store.state;
+        this.store.update({
+            ...(azure ? { azure: azure.snapshot } : {}),
+            sourceMode: 'local',
+            activeTab: 'preview',
+            sourceKind: 'local',
+            storageUrl: '',
+            azureFolderPreview: null,
+            remoteSchema: null,
+            authMethod:
+                state.authMethod === 'public'
+                    ? normalizeGuidedAuthMethod(
+                          null,
+                          state.platform,
+                          state.dataSourceType,
+                      )
+                    : state.authMethod,
+            error: null,
+            notice: null,
+        });
+        void this.host.setPreference('activeTab', 'preview');
+        this.refreshQuickAnalyze();
+        this.generateNow();
+    }
+
+    private activateAzureSource(): void {
+        if (this.store.state.sourceMode === 'azure') {
+            return;
+        }
+        const state = this.store.state;
+        this.localSourceSnapshot = {
+            files: this.store.snapshotFiles(),
+            state: {
+                fileFilter: state.fileFilter,
+                selectedFileId: state.selectedFileId,
+                sourceLabel: state.sourceLabel,
+                locationLabel: state.locationLabel,
+                metadata: state.metadata,
+                preview: state.preview,
+                tableName: state.tableName,
+                dataSource: state.dataSource,
+                dataSourceType: state.dataSourceType,
+                credentialName: state.credentialName,
+                authMethod: state.authMethod,
+                storageGoal: state.storageGoal,
+                storageUrl: state.storageUrl,
+                azureFolderPreview: state.azureFolderPreview,
+                remoteSchema: state.remoteSchema,
+                formatName: state.formatName,
+                parserOverrides: state.parserOverrides,
+                sourceKind: state.sourceKind,
+                folderProfile: state.folderProfile,
+                columnOverrides: state.columnOverrides,
+                recommendedSqlTypes: state.recommendedSqlTypes,
+                limitation: state.limitation,
+                lastAnalysisMs: state.lastAnalysisMs,
+            },
+            rawMetadata: this.rawMetadata,
+            folderMetadata: this.folderMetadata,
+        };
+        this.cancelActive();
+        this.rawMetadata = null;
+        this.folderMetadata = [];
+        this.store.setFiles([]);
+        this.store.clearSelection();
+        this.store.update({
+            sourceMode: 'azure',
+            activeTab: 'preview',
+            fileFilter: '',
+            sourceKind: 'azure',
+            storageUrl: '',
+            azureFolderPreview: null,
+            remoteSchema: null,
+            tableName: '',
+            parserOverrides: {},
+            columnOverrides: {},
+            recommendedSqlTypes: {},
+            error: null,
+            notice: null,
+        });
     }
 
     private async analyzeSelected(file: RegisteredFile): Promise<void> {
@@ -1121,7 +1357,7 @@ export class UiController {
                 storageGoal: state.storageGoal,
             });
             const goalSql = remoteMetadata
-                ? this.remoteGoalSql(remoteMetadata, credentialSetup)
+                ? this.storageGoalSql(remoteMetadata, credentialSetup)
                 : credentialSetup;
             this.store.update({
                 statements: {
@@ -1149,29 +1385,32 @@ export class UiController {
                     ? { ...state.parserOverrides }
                     : undefined,
         });
+        const credentialSetup = generateCredentialSetup({
+            dataSource: state.dataSource || 'MyDataSource',
+            credentialName: state.credentialName || null,
+            authMethod: state.authMethod || null,
+            targetPlatform: state.platform,
+            storageUrl: effectiveStorageUrl(
+                state.platform,
+                state.dataSourceType,
+                state.storageUrl || null,
+                this.rawMetadata.file_name,
+            ),
+            metadata: this.rawMetadata,
+            storageGoal: state.storageGoal,
+        });
         const statements: GeneratedStatements = {
             ...generated,
-            credential_setup: generateCredentialSetup({
-                dataSource: state.dataSource || 'MyDataSource',
-                credentialName: state.credentialName || null,
-                authMethod: state.authMethod || null,
-                targetPlatform: state.platform,
-                storageUrl: effectiveStorageUrl(
-                    state.platform,
-                    state.dataSourceType,
-                    state.storageUrl || null,
-                    this.rawMetadata.file_name,
-                ),
-                metadata: this.rawMetadata,
-                storageGoal: state.storageGoal,
-            }),
+            credential_setup: state.storageUrl
+                ? this.storageGoalSql(this.rawMetadata, credentialSetup, true)
+                : credentialSetup,
         };
         this.store.update({ statements });
     }
 
     private remoteSetupMetadata(): GeneratorMetadata | null {
         const state = this.store.state;
-        if (state.sourceKind !== 'azure' || !state.storageUrl) {
+        if (state.sourceKind === 'local' || !state.storageUrl) {
             return null;
         }
         const selected = state.azure.entries.find(
@@ -1189,7 +1428,7 @@ export class UiController {
             );
         const requestedFormat = state.remoteSchema?.selectedFormat;
         const fileType = requestedFormat
-            ? detectedTypes.find((detected) => detected === requestedFormat)
+            ? requestedFormat as FileType
             : detectedTypes[0];
         if (!fileType) {
             return null;
@@ -1208,9 +1447,10 @@ export class UiController {
         };
     }
 
-    private remoteGoalSql(
+    private storageGoalSql(
         metadata: GeneratorMetadata,
         credentialSetup: string,
+        schemaAnalyzed = false,
     ): string {
         const state = this.store.state;
         const dataSource = state.dataSource || 'MyDataSource';
@@ -1235,17 +1475,23 @@ export class UiController {
             targetPlatform: state.platform,
             storageUrl: operationStorageUrl,
         };
-        const selectionNote = [
-            '-- ====================================================================',
-            '-- TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED',
-            '-- DO NOT EXECUTE UNTIL THE PLACEHOLDER SCHEMA IS REPLACED',
-            '-- ====================================================================',
-            '-- SELECTED AZURE SOURCE',
-            `-- ${isFolder ? 'Folder' : 'File'}: ${state.storageUrl}`,
-            '-- File contents were not downloaded or inspected.',
-            '-- Replace [replace_with_actual_column] with the real column definitions',
-            '-- and confirm delimiter, header, encoding, and format settings.',
-        ].join('\n');
+        const selectionNote = schemaAnalyzed
+            ? [
+                  '-- SELECTED REMOTE SOURCE',
+                  `-- File: ${state.storageUrl}`,
+                  '-- Schema and parser settings come from the analyzed local file.',
+              ].join('\n')
+            : [
+                  '-- ====================================================================',
+                  '-- TEMPLATE ONLY - REMOTE SCHEMA NOT ANALYZED',
+                  '-- DO NOT EXECUTE UNTIL THE PLACEHOLDER SCHEMA IS REPLACED',
+                  '-- ====================================================================',
+                  '-- SELECTED REMOTE SOURCE',
+                  `-- ${isFolder ? 'Folder' : 'File'}: ${state.storageUrl}`,
+                  '-- File contents were not downloaded or inspected.',
+                  '-- Replace [replace_with_actual_column] with the real column definitions',
+                  '-- and confirm delimiter, header, encoding, and format settings.',
+              ].join('\n');
 
         let operation: string;
         if (state.storageGoal === 'bulk_insert') {
@@ -1477,7 +1723,6 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
-        this.azureConnection?.dispose();
         this.azure?.disconnect();
     }
 }

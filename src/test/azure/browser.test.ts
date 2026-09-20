@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import * as path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -10,7 +11,11 @@ import {
     type SessionOptions,
 } from '../../azure/auth';
 import { ArmClient } from '../../azure/armClient';
-import { AzureBrowser, azureStorageUrl } from '../../azure/browser';
+import {
+    AZURE_BROWSER_CACHE_TTL_MS,
+    AzureBrowser,
+    azureStorageUrl,
+} from '../../azure/browser';
 import { AzureBrowserError, classifyStorageError } from '../../azure/errors';
 import {
     StorageBrowserClient,
@@ -138,23 +143,142 @@ test('Blob and HNS selections produce canonical ABS and ABFSS locations', () => 
     );
 });
 
-test('disconnect prevents an in-flight authentication result from reopening the browser', async () => {
+test('disconnect stays signed out and prevents silent reconnect on reopen', async () => {
     let resolveSession: ((session: AuthenticationSession | undefined) => void) | undefined;
+    let authenticationCalls = 0;
     const pendingSession = new Promise<AuthenticationSession | undefined>((resolve) => {
         resolveSession = resolve;
     });
     const subject = new AzureBrowser({
-        authentication: new MicrosoftAuthentication(async () => pendingSession),
+        authentication: new MicrosoftAuthentication(async () => {
+            authenticationCalls += 1;
+            return pendingSession;
+        }),
         arm: new FakeArm(),
         storage: new FakeStorage(),
     });
-    const opening = subject.open();
+    const initial = await subject.open();
+    assert.equal(initial.phase, 'signedOut');
+    assert.equal(authenticationCalls, 0);
+
+    const connecting = subject.connect();
     subject.disconnect();
     resolveSession?.(SESSION);
-    await opening;
-    assert.equal(subject.snapshot.phase, 'closed');
-    assert.equal(subject.snapshot.open, false);
+    await connecting;
+    assert.equal(subject.snapshot.phase, 'signedOut');
+    assert.equal(subject.snapshot.open, true);
     assert.equal(subject.snapshot.identity, null);
+    assert.match(subject.snapshot.message ?? '', /Disconnected/);
+
+    const reopened = await subject.open();
+    assert.equal(reopened.phase, 'signedOut');
+    assert.equal(reopened.identity, null);
+    assert.equal(authenticationCalls, 1);
+
+    await subject.authenticationChanged();
+    assert.equal(authenticationCalls, 1);
+
+    const reconnected = await subject.connect();
+    assert.equal(reconnected.phase, 'ready');
+    assert.equal(reconnected.identity?.label, SESSION.account.label);
+    assert.ok(authenticationCalls > 1);
+});
+
+test('closed browser refreshes expired Azure metadata and supports manual refresh', async () => {
+    let now = 0;
+    let tenantCalls = 0;
+    class CountingArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            tenantCalls += 1;
+            return super.listTenants();
+        }
+    }
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => SESSION),
+        arm: new CountingArm(),
+        storage: new FakeStorage(),
+        now: () => now,
+    });
+
+    await subject.connect();
+    assert.equal(tenantCalls, 1);
+    subject.close();
+    now = AZURE_BROWSER_CACHE_TTL_MS - 1;
+    await subject.open();
+    assert.equal(tenantCalls, 1);
+
+    now = AZURE_BROWSER_CACHE_TTL_MS + 1;
+    await subject.selectSubscription(SUBSCRIPTION);
+    subject.close();
+    const refreshedOnOpen = await subject.open();
+    assert.equal(refreshedOnOpen.phase, 'ready');
+    assert.equal(tenantCalls, 2);
+
+    await subject.refresh();
+    assert.equal(tenantCalls, 3);
+});
+
+test('failed refresh never leaves expired Azure resources usable', async () => {
+    let now = 0;
+    let failRefresh = false;
+    class RefreshArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            if (failRefresh) {
+                throw new AzureBrowserError('temporary', 'Refresh failed.');
+            }
+            return super.listTenants();
+        }
+    }
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => SESSION),
+        arm: new RefreshArm(),
+        storage: new FakeStorage(),
+        now: () => now,
+    });
+    await subject.connect();
+    const containers = await subject.selectAccount(ACCOUNT_ID);
+    await subject.openEntry(containers.entries[0].id);
+    subject.close();
+
+    now = AZURE_BROWSER_CACHE_TTL_MS + 1;
+    failRefresh = true;
+    const failed = await subject.open();
+
+    assert.equal(failed.phase, 'error');
+    assert.deepEqual(failed.tenants, []);
+    assert.deepEqual(failed.subscriptions, []);
+    assert.deepEqual(failed.accounts, []);
+    assert.deepEqual(failed.entries, []);
+    assert.equal(failed.selectedTenantId, null);
+    assert.equal(failed.selectedSubscriptionId, null);
+    assert.equal(failed.selectedAccountId, null);
+});
+
+test('refresh with no tenants clears the previous Azure hierarchy', async () => {
+    let hasTenants = true;
+    class EmptyArm extends FakeArm {
+        override async listTenants(): Promise<readonly { id: string; label: string }[]> {
+            return hasTenants ? super.listTenants() : [];
+        }
+    }
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => SESSION),
+        arm: new EmptyArm(),
+        storage: new FakeStorage(),
+    });
+    await subject.connect();
+    const containers = await subject.selectAccount(ACCOUNT_ID);
+    await subject.openEntry(containers.entries[0].id);
+    hasTenants = false;
+
+    const refreshed = await subject.refresh();
+
+    assert.equal(refreshed.phase, 'ready');
+    assert.deepEqual(refreshed.tenants, []);
+    assert.deepEqual(refreshed.subscriptions, []);
+    assert.deepEqual(refreshed.accounts, []);
+    assert.deepEqual(refreshed.entries, []);
+    assert.deepEqual(refreshed.path, []);
 });
 
 test('provider change before interactive auth resolves does not cancel its session', async () => {
@@ -295,26 +419,26 @@ test('tenant-specific sign-in callback does not require the replaced generic ARM
     assert.equal(connected.accounts[0].id, ACCOUNT_ID);
 });
 
-test('superseded unresolved authentication cannot block reconciliation after its winner', async () => {
-    const interactiveResolvers: Array<(session: AuthenticationSession) => void> = [];
+test('concurrent Connect requests share one authentication flow', async () => {
+    let resolveInteractive: ((session: AuthenticationSession) => void) | undefined;
     let notifyInteractive: (() => void) | undefined;
+    let interactiveCalls = 0;
     let signedIn = false;
-    const interactiveStarted = (): Promise<void> =>
-        new Promise((resolve) => {
-            notifyInteractive = resolve;
-        });
-    let started = interactiveStarted();
+    const interactiveStarted = new Promise<void>((resolve) => {
+        notifyInteractive = resolve;
+    });
     const subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, _scopes, options) => {
             if (options.silent) {
                 return signedIn ? SESSION : undefined;
             }
+            interactiveCalls += 1;
+            notifyInteractive?.();
             return new Promise<AuthenticationSession>((resolve) => {
-                interactiveResolvers.push((session) => {
+                resolveInteractive = (session) => {
                     signedIn = true;
                     resolve(session);
-                });
-                notifyInteractive?.();
+                };
             });
         }),
         arm: new FakeArm(),
@@ -322,21 +446,14 @@ test('superseded unresolved authentication cannot block reconciliation after its
     });
 
     const first = subject.connect();
-    await started;
-    started = interactiveStarted();
+    await interactiveStarted;
     const second = subject.connect();
-    await started;
-    interactiveResolvers[1](SESSION);
-    await second;
-    assert.equal(subject.snapshot.phase, 'ready');
-
-    signedIn = false;
-    const providerChange = await subject.authenticationChanged();
-    assert.equal(providerChange.phase, 'signedOut');
-    interactiveResolvers[0](SESSION);
-    await first;
-    assert.equal(subject.snapshot.phase, 'signedOut');
-    assert.equal(subject.snapshot.identity, null);
+    assert.equal(second, first);
+    resolveInteractive?.(SESSION);
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    assert.equal(firstResult.phase, 'ready');
+    assert.equal(secondResult.phase, 'ready');
+    assert.equal(interactiveCalls, 1);
 });
 
 test('non-interactive loading revokes unresolved interactive auth suppression', async () => {
@@ -448,9 +565,11 @@ test('failed deferred session revalidation clears authenticated resources', asyn
             return super.listTenants();
         }
     }
+    let authenticationCalls = 0;
     let revalidationFails = false;
     const subject = new AzureBrowser({
         authentication: new MicrosoftAuthentication(async (_provider, scopes, options) => {
+            authenticationCalls += 1;
             if (revalidationFails && options.silent) {
                 throw new Error('provider cache failure');
             }
@@ -472,6 +591,15 @@ test('failed deferred session revalidation clears authenticated resources', asyn
     assert.deepEqual(reconciled.tenants, []);
     assert.deepEqual(reconciled.accounts, []);
     assert.doesNotMatch(JSON.stringify(reconciled), /provider cache failure|bearer-token/);
+
+    const callsAfterFailure = authenticationCalls;
+    await subject.authenticationChanged();
+    await subject.open();
+    assert.equal(authenticationCalls, callsAfterFailure);
+
+    revalidationFails = false;
+    const reconnected = await subject.connect();
+    assert.equal(reconnected.phase, 'ready');
 });
 
 function blockedDeferredReconciliation() {
@@ -649,7 +777,9 @@ test('cancelled authentication from an old browser lifecycle cannot suppress sig
     subject.close();
     available = true;
     const reopened = await subject.open();
-    assert.equal(reopened.phase, 'ready');
+    assert.equal(reopened.phase, 'signedOut');
+    const reconnected = await subject.connect();
+    assert.equal(reconnected.phase, 'ready');
     available = false;
 
     const signedOut = await subject.authenticationChanged();
@@ -671,6 +801,9 @@ test('authentication revalidation proves the account in use before any other', a
         storage: new FakeStorage(),
     });
     await subject.connect();
+    let current = await subject.selectAccount(ACCOUNT_ID);
+    current = await subject.openEntry(current.entries[0].id);
+    current = await subject.openEntry(current.entries[0].id);
     const beforeRefresh = options.length;
     const refreshed = await subject.authenticationChanged();
     // A stale account must never be able to displace the session in use, so the
@@ -679,6 +812,7 @@ test('authentication revalidation proves the account in use before any other', a
     assert.equal(options[beforeRefresh].silent, true);
     assert.equal(refreshed.phase, 'ready');
     assert.equal(refreshed.identity?.label, SESSION.account.label);
+    assert.deepEqual(refreshed.path, current.path);
 });
 
 test('revalidation falls back to another account once the pinned one is removed', async () => {
@@ -864,36 +998,37 @@ test('browser discovers ARM metadata, browses hierarchy, selects a URL, and disc
     const serialized = JSON.stringify(subject.value.snapshot);
     assert.ok(!serialized.includes(SESSION.accessToken));
     assert.ok(!serialized.includes('Bearer'));
-    assert.equal(subject.value.disconnect().phase, 'closed');
+    assert.equal(subject.value.disconnect().phase, 'signedOut');
+    assert.equal(subject.value.snapshot.open, true);
     assert.equal(subject.value.snapshot.identity, null);
 });
 
 test('storage access failures are distinct from management access failures', () => {
+    const expired = classifyStorageError({ statusCode: 401, code: 'AuthenticationFailed' });
+    assert.equal(expired.kind, 'storageConsent');
+    assert.match(expired.message, /Authorize Storage browsing again/);
     const dataDenied = classifyStorageError({ statusCode: 403, code: 'AuthorizationFailure' });
     assert.equal(dataDenied.kind, 'dataAccess');
     assert.match(dataDenied.message, /Storage Blob Data Reader/);
+    assert.match(dataDenied.message, /Owner and Contributor do not grant/);
+    assert.match(dataDenied.message, /parent scope/);
+    assert.match(dataDenied.message, /firewall or private endpoint/);
     const controlDenied = new AzureBrowserError('controlAccess', 'Reader access is required.', 403);
     assert.equal(controlDenied.kind, 'controlAccess');
 });
 
-test('using an Azure file hands its canonical URL to existing Credential Setup', async () => {
+test('an incompatible Azure source stays in the browser and generates no setup', async () => {
     const subject = browser().value;
     await subject.connect();
-    let snapshot = await subject.selectAccount(ACCOUNT_ID);
-    snapshot = await subject.openEntry(snapshot.entries[0].id);
-    snapshot = await subject.openEntry(snapshot.entries[0].id);
-    await subject.openEntry(snapshot.entries[0].id);
-    assert.equal(
-        subject.currentFolderUrl(),
-        'abfss://landing@lake001.dfs.core.windows.net/orders/',
-    );
+    let current = await subject.selectAccount(ACCOUNT_ID);
+    current = await subject.openEntry(current.entries[0].id);
+    current = await subject.openEntry(current.entries[0].id);
+    await subject.openEntry(current.entries[0].id);
 
-    const store = new AppStateStore({ version: '1.0.9' });
+    const store = new AppStateStore({ version: '1.0.9', platform: 'fabric_sql_db' });
     const host: UiHost = {
         version: '1.0.9',
         workspaceFolders: () => [],
-        activeFilePath: () => undefined,
-        activeFileLimitation: () => undefined,
         showOpenDialog: async () => undefined,
         copyToClipboard: async () => undefined,
         openUntitledDocument: async () => undefined,
@@ -910,8 +1045,82 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
     };
     const controller = new UiController(host, store, { azure: subject });
     try {
+        await controller.handle({ type: 'azureBrowserUseSelectedFile' });
+        assert.equal(store.state.azure.open, true);
+        assert.equal(store.state.storageUrl, '');
+        assert.equal(store.state.statements, null);
+        assert.match(store.state.error ?? '', /not supported by the current SQL platform/);
+    } finally {
+        await controller.dispose();
+    }
+});
+
+test('using an Azure file hands its canonical URL to existing Credential Setup', async () => {
+    const subject = browser().value;
+    await subject.connect();
+    let snapshot = await subject.selectAccount(ACCOUNT_ID);
+    snapshot = await subject.openEntry(snapshot.entries[0].id);
+    snapshot = await subject.openEntry(snapshot.entries[0].id);
+    await subject.openEntry(snapshot.entries[0].id);
+    assert.equal(
+        subject.currentFolderUrl(),
+        'abfss://landing@lake001.dfs.core.windows.net/orders/',
+    );
+
+    const store = new AppStateStore({ version: '1.0.9' });
+    let localPickerCalls = 0;
+    const host: UiHost = {
+        version: '1.0.9',
+        workspaceFolders: () => [],
+        showOpenDialog: async () => {
+            localPickerCalls += 1;
+            return undefined;
+        },
+        copyToClipboard: async () => undefined,
+        openUntitledDocument: async () => undefined,
+        openExternal: async () => true,
+        saveTextFile: async () => undefined,
+        showInformation: () => undefined,
+        showWarning: () => undefined,
+        showError: () => undefined,
+        log: () => undefined,
+        getPreference: <T,>(_key: string, fallback: T): T => fallback,
+        setPreference: async () => undefined,
+        openPanel: async () => undefined,
+        now: () => 0,
+    };
+    const controller = new UiController(host, store, { azure: subject });
+    try {
+        await controller.loadFiles([
+            path.join(process.cwd(), 'data sample', 'csv', 'employees.csv'),
+        ]);
+        const retainedIds = store.state.files.map((file) => file.id);
+        const retainedMetadata = store.state.metadata;
+        const retainedLocation = store.state.sourceLabel;
+        await controller.handle({ type: 'openAzureBrowser' });
+        await controller.handle({ type: 'azureBrowserConnect' });
+        await controller.handle({
+            type: 'azureBrowserSelectAccount',
+            accountId: ACCOUNT_ID,
+        });
+        await controller.handle({
+            type: 'azureBrowserOpenEntry',
+            entryId: store.state.azure.entries[0].id,
+        });
+        await controller.handle({
+            type: 'azureBrowserOpenEntry',
+            entryId: store.state.azure.entries[0].id,
+        });
+        await controller.handle({
+            type: 'azureBrowserOpenEntry',
+            entryId: store.state.azure.entries[0].id,
+        });
+        const selectedAzureFileId = store.state.azure.selectedEntryId;
         await controller.handle({ type: 'azureBrowserUseCurrentFolder' });
         assert.equal(store.state.activeTab, 'credential_setup');
+        assert.equal(store.state.sourceMode, 'azure');
+        assert.deepEqual(store.state.files, []);
+        assert.equal(store.state.metadata, null);
         assert.equal(
             store.state.storageUrl,
             'abfss://landing@lake001.dfs.core.windows.net/orders/',
@@ -940,7 +1149,16 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
         assert.equal(store.state.azure.selectedSubscriptionId, SUBSCRIPTION);
         assert.equal(store.state.azure.selectedAccountId, ACCOUNT_ID);
         assert.deepEqual(store.state.azure.path, ['landing', 'orders']);
-        assert.equal(store.state.azure.selectedEntryId, snapshot.entries[0].id);
+        assert.equal(store.state.azure.selectedEntryId, selectedAzureFileId);
+
+        const folderStorageUrl = store.state.storageUrl;
+        await controller.handle({ type: 'azureBrowserClose' });
+        assert.equal(store.state.azure.open, false);
+        assert.equal(store.state.azure.identity?.label, SESSION.account.label);
+        assert.equal(store.state.sourceMode, 'azure');
+        assert.equal(store.state.storageUrl, folderStorageUrl);
+        await controller.handle({ type: 'openAzureBrowser' });
+        assert.equal(store.state.azure.phase, 'ready');
 
         await controller.handle({ type: 'azureBrowserUseSelectedFile' });
         assert.equal(
@@ -1012,6 +1230,27 @@ test('using an Azure file hands its canonical URL to existing Credential Setup',
         assert.match(bulkSql, /BULK INSERT/);
         assert.match(bulkSql, /FROM 'Holiday\.csv'/);
         assert.match(store.state.notice ?? '', /were not downloaded or analyzed/);
+
+        await controller.handle({ type: 'openAzureBrowser' });
+        assert.equal(store.state.azure.open, true);
+        await controller.handle({ type: 'activateLocalSource' });
+        assert.equal(store.state.azure.open, false);
+        assert.equal(store.state.azure.phase, 'closed');
+        assert.equal(store.state.azure.identity, null);
+        assert.equal(store.state.sourceKind, 'local');
+        assert.equal(store.state.sourceMode, 'local');
+        assert.equal(store.state.storageUrl, '');
+        assert.equal(store.state.activeTab, 'preview');
+        assert.equal(localPickerCalls, 0);
+        assert.deepEqual(
+            (store.state.files as readonly { id: string }[]).map((file) => file.id),
+            retainedIds,
+        );
+        assert.deepEqual(store.state.metadata, retainedMetadata);
+        assert.equal(store.state.sourceLabel, retainedLocation);
+
+        await controller.handle({ type: 'openLocalDialog' });
+        assert.equal(localPickerCalls, 1);
     } finally {
         await controller.dispose();
     }

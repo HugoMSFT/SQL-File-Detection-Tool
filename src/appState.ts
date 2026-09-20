@@ -42,10 +42,7 @@ import {
     credentialWizardState,
     normalizeDataSourceType,
 } from './native';
-import {
-    CLOSED_AZURE_BROWSER_STATE,
-    DISCONNECTED_AZURE_CONNECTION_STATE,
-} from './azure/types';
+import { CLOSED_AZURE_BROWSER_STATE } from './azure/types';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -77,11 +74,13 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         version: options.version,
         platform,
         platforms: PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] })),
+        sourceMode: 'local',
         activeTab: options.activeTab ?? 'preview',
         fileFilter: '',
         files: [],
         selectedFileId: null,
         sourceLabel: null,
+        locationLabel: null,
         metadata: null,
         preview: null,
         statements: null,
@@ -135,7 +134,6 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         limitation: null,
         formats: options.formats ?? [],
         lastAnalysisMs: null,
-        azureConnection: DISCONNECTED_AZURE_CONNECTION_STATE,
         azure: CLOSED_AZURE_BROWSER_STATE,
     };
 }
@@ -234,6 +232,7 @@ export class AppStateStore {
         this.update({
             selectedFileId: null,
             sourceLabel: null,
+            locationLabel: null,
             metadata: null,
             preview: null,
             statements: null,
@@ -320,6 +319,20 @@ export class AppStateStore {
     /** Resolve a renderer-supplied id, or `undefined` when it is unknown. */
     lookup(fileId: string): RegisteredFile | undefined {
         return this.registry.get(fileId);
+    }
+
+    /** Capture host-only file handles before temporarily switching source modes. */
+    snapshotFiles(): readonly RegisteredFile[] {
+        return [...this.registry.values()];
+    }
+
+    /** Restore trusted host-only file handles without exposing paths to the renderer. */
+    restoreFiles(files: readonly RegisteredFile[]): void {
+        this.registry.clear();
+        for (const file of files) {
+            this.registry.set(file.id, file);
+        }
+        this.update({ files: files.map((file) => file.entry) });
     }
 
     /** The currently selected file, if any. */

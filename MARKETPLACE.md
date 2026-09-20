@@ -25,21 +25,24 @@ PolyBase
 - Targets SQL Server, Azure SQL Database, Azure SQL Managed Instance, and Fabric
   SQL Database.
 - Verifies Azure sign-in and accessible directories through VS Code's built-in
-  Microsoft authentication, with explicit Refresh and bounded transient retries.
+  Microsoft authentication only after explicit Connect, with Refresh and
+  bounded transient retries.
 - Browses accessible Blob Storage and ADLS Gen2 accounts read-only, then sends a
-  selected file's ABS/ABFSS location to Credential Setup without downloading it.
+  selected file's ABS/ABFSS location to Storage SQL without downloading it.
 - Detects ABS, ADLS, or ABFSS from a storage URL and generates credential and
   external-data-source setup.
 
 ## Use it
 
 1. Open **SQL File Detection Tool** from the Activity Bar.
-2. Select a supported file or folder, or use **Browse Azure** to choose a remote
-   Blob/ADLS file location.
+2. Choose **Browse local** for one folder or one or more files, or choose
+  **Browse Azure**. Switching back to local disconnects the extension's Azure
+  browser and restores the retained location without opening another picker.
 3. Review the preview, schema mapping, and generated SQL tabs.
 
-For external storage, open **Credential setup** and paste an `abs://`, `adls://`,
-or `abfss://` URL. The extension does not sign in to storage or collect secrets.
+For external storage, open **Storage SQL** and paste an `abs://`, `adls://`,
+or `abfss://` URL. Pasting a URL does not sign in to storage or collect secrets;
+authenticated browsing begins only after **Connect to Azure** is selected.
 
 ## Notes
 

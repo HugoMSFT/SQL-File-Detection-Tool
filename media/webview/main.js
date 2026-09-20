@@ -37,7 +37,7 @@
         { id: 'openrowset', label: 'OPENROWSET' },
         { id: 'create_external_table', label: 'EXT TABLE' },
         { id: 'external_file_format', label: 'File format' },
-        { id: 'credential_setup', label: 'Credential setup' },
+        { id: 'credential_setup', label: 'Storage SQL' },
     ];
 
     const SUPPORT_LABEL = {
@@ -94,7 +94,7 @@
     let azureFormat = AZURE_FORMATS.includes(restoredViewState.azureFormat)
         ? restoredViewState.azureFormat
         : 'all';
-    let focusAzureLauncherAfterClose = false;
+    let focusSourceTabAfterClose = false;
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
         restoredViewState.storageUrlDraft,
     );
@@ -339,6 +339,13 @@
     function renderHeader() {
         byId('app-version').textContent = state.version ? 'v' + state.version : '';
 
+        document.querySelectorAll('[data-source-mode]').forEach(function (button) {
+            const active = button.dataset.sourceMode === state.sourceMode;
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+            button.classList.toggle('active', active);
+            button.tabIndex = active ? 0 : -1;
+        });
+
         const platform = byId('platform');
         if (platform.options.length !== state.platforms.length) {
             clear(platform);
@@ -460,7 +467,7 @@
         if (azure.phase === 'signedOut') {
             const signedOut = azureStateCard(
                 'Browse Azure Storage',
-                'Connect with VS Code Microsoft authentication to browse Azure public cloud read-only.',
+                azure.message || 'Connect with VS Code Microsoft authentication to browse Azure public cloud read-only.',
                 'Connect to Azure',
                 'azureBrowserConnect',
             );
@@ -517,6 +524,9 @@
             ),
         );
         const identityActions = element('div', 'azure-identity-actions');
+        const refresh = actionButton('Refresh', 'azureBrowserRefresh', 'btn subtle');
+        refresh.disabled = azure.phase === 'loading';
+        identityActions.appendChild(refresh);
         identityActions.appendChild(
             actionButton('Disconnect', 'azureBrowserDisconnect', 'btn subtle'),
         );
@@ -825,7 +835,7 @@
                     'p',
                     null,
                     selectedEntry.supported
-                        ? 'Use this remote location in Credential Setup. The extension does not download or analyze its bytes.'
+                        ? 'Use this remote location in Storage SQL. The extension does not download or analyze its bytes.'
                         : 'This file format is not supported as a SQL source.',
                 ),
             );
@@ -853,7 +863,21 @@
         const list = byId('file-list');
         const scrollTop = list.scrollTop;
         clear(list);
-        byId('source-label').textContent = state.sourceLabel || '';
+        const azureSource = state.sourceMode === 'azure';
+        const location = azureSource
+            ? state.storageUrl
+            : state.locationLabel || state.sourceLabel;
+        byId('source-label').textContent = location
+            || (azureSource ? 'No Azure source selected' : 'No local source selected');
+        const locationAction = byId('change-source-location');
+        locationAction.dataset.action = azureSource
+            ? 'openAzureBrowser'
+            : 'openLocalDialog';
+        locationAction.textContent = azureSource
+            ? 'Change Azure selection'
+            : location
+                ? 'Change location'
+                : 'Choose location';
 
         // A new source starts with a clean filter: a leftover query that hides
         // every file in a folder the user just chose reads as "nothing found".
@@ -1449,7 +1473,7 @@
                 'p',
                 'source-option-detail',
                 state.storageUrl
-                    ? 'Ready to generate the complete script for the selected goal.'
+                    ? 'Storage location selected. Readiness and required changes are shown below.'
                     : 'Use an abs://, adls://, or abfss:// location. Azure HTTPS and s3:// locations remain supported.',
             ),
         );
@@ -1463,12 +1487,12 @@
         urlInput.placeholder = 'abs://container@account.blob.core.windows.net/path';
         urlInput.dataset.edit = 'knownStorageUrl';
         urlInput.value = editable('knownStorageUrl', state.storageUrl || '');
-        urlInput.readOnly = state.sourceKind === 'azure';
+        urlInput.readOnly = state.sourceMode === 'azure';
         urlLabel.appendChild(urlInput);
         known.appendChild(urlLabel);
         const urlActions = element('div', 'storage-url-actions');
         urlActions.appendChild(
-            state.sourceKind === 'azure'
+            state.sourceMode === 'azure'
                 ? actionButton('Change Azure selection', 'openAzureBrowser', 'btn')
                 : actionButton('Use URL', 'useStorageUrl', 'btn primary'),
         );
@@ -1488,17 +1512,124 @@
         return step;
     }
 
+    function selectedStorageFileType() {
+        return String(
+            (state.remoteSchema && state.remoteSchema.selectedFormat)
+            || (state.metadata && state.metadata.file_type)
+            || '',
+        ).toLowerCase();
+    }
+
+    function storageGoalAvailability(goal) {
+        if (goal !== 'bulk_insert') {
+            return { available: true, reason: '' };
+        }
+        if (state.platform === 'fabric_sql_db') {
+            return {
+                available: false,
+                reason: 'BULK INSERT is not available on Fabric SQL Database.',
+            };
+        }
+        if (state.dataSourceType === 's3' || state.dataSourceType === 'fabric_onelake') {
+            return {
+                available: false,
+                reason: 'BULK INSERT requires an Azure Blob Storage source.',
+            };
+        }
+        const fileType = selectedStorageFileType();
+        if (fileType && fileType !== 'csv' && fileType !== 'text') {
+            return {
+                available: false,
+                reason: 'BULK INSERT supports delimited text; use OPENROWSET or External Table for this format.',
+            };
+        }
+        return { available: true, reason: '' };
+    }
+
+    function storageSetupReadiness() {
+        if (!state.storageUrl) {
+            return {
+                kind: 'blocked',
+                title: 'Blocked: storage source required',
+                detail: 'Choose an Azure location or provide a supported storage URL.',
+            };
+        }
+        const goal = storageGoalAvailability(state.storageGoal);
+        if (!goal.available) {
+            return { kind: 'blocked', title: 'Blocked: incompatible goal', detail: goal.reason };
+        }
+        const sql = (state.statements && state.statements.credential_setup) || '';
+        if (/NOT AVAILABLE|not supported|was not replaced/i.test(sql)) {
+            return {
+                kind: 'blocked',
+                title: 'Blocked: unsupported configuration',
+                detail: 'Change the goal, source, or target platform.',
+            };
+        }
+        if (state.remoteSchema && state.remoteSchema.status === 'format_required') {
+            return {
+                kind: 'blocked',
+                title: 'Blocked: choose a file format',
+                detail: 'The selected folder contains no single safe format to target.',
+            };
+        }
+        if (!sql) {
+            return {
+                kind: 'blocked',
+                title: 'Blocked: no generated SQL',
+                detail: 'Complete the source and format choices.',
+            };
+        }
+        const executableSql = sql
+            .split(/\r?\n/)
+            .filter(function (line) {
+                return !line.trimStart().startsWith('--');
+            })
+            .join('\n');
+        const operationPattern = state.storageGoal === 'bulk_insert'
+            ? /\bBULK\s+INSERT\b/i
+            : state.storageGoal === 'openrowset'
+                ? /\bOPENROWSET\s*\(/i
+                : /\bCREATE\s+EXTERNAL\s+TABLE\b/i;
+        if (!operationPattern.test(executableSql)) {
+            return {
+                kind: 'blocked',
+                title: 'Blocked: selected operation was not generated',
+                detail: 'Change the source format, goal, or target platform.',
+            };
+        }
+        if (state.remoteSchema && state.remoteSchema.status === 'not_analyzed') {
+            return {
+                kind: 'template',
+                title: 'Template: schema required',
+                detail: 'Replace the placeholder column definitions before executing this script.',
+            };
+        }
+        if (/<[^>\r\n]+>|replace_with_actual/i.test(sql)) {
+            return {
+                kind: 'template',
+                title: 'Template: replace placeholders',
+                detail: 'Add the required credential values or object details before execution.',
+            };
+        }
+        return {
+            kind: 'ready',
+            title: 'Ready to run',
+            detail: 'No generated placeholders remain. Confirm Azure permissions and object names before execution.',
+        };
+    }
+
     function renderCredentialSetup(container) {
         const wizard = state.credentialSetup;
         const intro = element('div', 'credential-intro');
         intro.appendChild(element('div', 'credential-mark', 'SQL'));
         const introCopy = element('div');
-        introCopy.appendChild(element('h2', null, 'Configure external storage access'));
+        introCopy.appendChild(element('h2', null, 'Generate storage SQL'));
         introCopy.appendChild(
             element(
                 'p',
                 null,
-                'Provide a storage URL, then create the credential and external data source for your SQL platform.',
+                'Generate the SQL objects and access clauses for a storage location. This does not change Azure RBAC, firewalls, or private endpoints.',
             ),
         );
         intro.appendChild(introCopy);
@@ -1530,10 +1661,12 @@
         ];
         const goalOptions = element('div', 'storage-goal-options');
         goals.forEach(function (goal) {
+            const availability = storageGoalAvailability(goal.id);
             const label = element(
                 'label',
                 'storage-goal-option'
-                    + (state.storageGoal === goal.id ? ' selected' : ''),
+                    + (state.storageGoal === goal.id ? ' selected' : '')
+                    + (!availability.available ? ' unavailable' : ''),
             );
             const input = document.createElement('input');
             input.type = 'radio';
@@ -1541,10 +1674,14 @@
             input.value = goal.id;
             input.dataset.edit = 'storageGoal';
             input.checked = state.storageGoal === goal.id;
+            input.disabled = !availability.available;
+            label.setAttribute('aria-disabled', availability.available ? 'false' : 'true');
             label.appendChild(input);
             const copy = element('span');
             copy.appendChild(element('strong', null, goal.label));
-            copy.appendChild(element('small', null, goal.detail));
+            copy.appendChild(
+                element('small', null, availability.available ? goal.detail : availability.reason),
+            );
             label.appendChild(copy);
             goalOptions.appendChild(label);
         });
@@ -1603,30 +1740,36 @@
 
         const platformStep = wizardStep(
             '3',
-            'Platform and authentication',
-            'Choose where the script will run and how SQL will access storage.',
+            'SQL runtime access',
+            'Choose the identity or credential used when the generated T-SQL runs.',
         );
         const accessFields = element('div', 'wizard-object-fields');
-        accessFields.appendChild(
-            selectControl(
-                'SQL platform',
-                'wizardPlatform',
-                state.platforms,
-                state.platform,
-            ),
-        );
+        const platform = state.platforms.find(function (option) {
+            return option.id === state.platform;
+        });
+        const target = element('div', 'runtime-target');
+        target.appendChild(element('span', null, 'Target platform'));
+        target.appendChild(element('strong', null, platform ? platform.label : state.platform));
+        accessFields.appendChild(target);
         const authOption = wizard.authOptions.find(function (option) {
             return option.id === wizard.authMethod;
         });
         accessFields.appendChild(
             selectControl(
-                'Authentication method',
+                'SQL runtime identity',
                 'authMethod',
                 wizard.authOptions,
                 wizard.authMethod,
             ),
         );
         platformStep.appendChild(accessFields);
+        platformStep.appendChild(
+            element(
+                'p',
+                'identity-boundary',
+                'This controls storage access from SQL. It does not reuse or change the account used by Browse Azure in VS Code.',
+            ),
+        );
         const connectorSummary = element('p', 'connector-summary');
         connectorSummary.textContent = state.storageUrl
             ? 'Connector: '
@@ -1638,12 +1781,16 @@
         platformStep.appendChild(connectorSummary);
         steps.appendChild(platformStep);
 
-        const objectStep = wizardStep(
-            '4',
-            'Object names',
-            'Optional advanced names for generated database objects.',
+        const objectStep = element('details', 'wizard-step advanced-object-step');
+        const objectSummary = element('summary', 'advanced-object-summary');
+        objectSummary.appendChild(element('span', 'wizard-step-number', '4'));
+        const objectSummaryCopy = element('span');
+        objectSummaryCopy.appendChild(element('strong', null, 'Advanced object names'));
+        objectSummaryCopy.appendChild(
+            element('small', null, 'Override generated credential and data source names.'),
         );
-        objectStep.classList.add('advanced-object-step');
+        objectSummary.appendChild(objectSummaryCopy);
+        objectStep.appendChild(objectSummary);
         const objectFields = element('div', 'wizard-object-fields');
         objectFields.appendChild(
             textControl('External data source name', 'dataSource', state.dataSource),
@@ -1660,6 +1807,16 @@
         steps.appendChild(objectStep);
 
         container.appendChild(steps);
+
+        const readiness = storageSetupReadiness();
+        const readinessState = element(
+            'section',
+            'storage-readiness ' + readiness.kind,
+        );
+        readinessState.setAttribute('role', 'status');
+        readinessState.appendChild(element('strong', null, readiness.title));
+        readinessState.appendChild(element('p', null, readiness.detail));
+        container.appendChild(readinessState);
 
         const note = element('aside', 'wizard-note');
         note.appendChild(element('strong', null, 'Platform guidance'));
@@ -1679,9 +1836,11 @@
             element(
                 'h2',
                 'generated-goal-heading',
-                state.remoteSchema && state.remoteSchema.status === 'not_analyzed'
-                    ? 'T-SQL template for selected goal'
-                    : 'Complete T-SQL for selected goal',
+                readiness.kind === 'ready'
+                    ? 'Generated T-SQL'
+                    : readiness.kind === 'template'
+                        ? 'T-SQL template'
+                        : 'T-SQL preview',
             ),
         );
         renderSqlBlock(
@@ -1720,11 +1879,13 @@
         renderTabs();
         renderPanel();
         restoreFocus(focus);
-        if (focusAzureLauncherAfterClose && !state.azure.open) {
-            focusAzureLauncherAfterClose = false;
-            const launcher = document.querySelector('[data-action="openAzureBrowser"]');
-            if (launcher instanceof HTMLElement) {
-                launcher.focus({ preventScroll: true });
+        if (focusSourceTabAfterClose && !state.azure.open) {
+            focusSourceTabAfterClose = false;
+            const activeSource = document.querySelector(
+                '[data-source-mode][aria-selected="true"]',
+            );
+            if (activeSource instanceof HTMLElement) {
+                activeSource.focus({ preventScroll: true });
             }
         }
     }
@@ -1831,7 +1992,7 @@
         }
         const name = action.dataset.action;
         if (name === 'azureBrowserClose') {
-            focusAzureLauncherAfterClose = true;
+            focusSourceTabAfterClose = true;
         }
         if (name === 'useStorageUrl') {
             const input = document.querySelector('.storage-url-input');
@@ -1879,10 +2040,6 @@
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;
-        if (edit === 'wizardPlatform') {
-            post({ type: 'setPlatform', platform: target.value });
-            return;
-        }
         if (edit === 'authMethod') {
             post({ type: 'setAuthMethod', value: target.value });
             return;
@@ -2018,9 +2175,28 @@
     });
 
     document.addEventListener('keydown', function (event) {
+        const sourceTab = event.target instanceof Element
+            ? event.target.closest('.source-tab')
+            : null;
+        if (
+            sourceTab
+            && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)
+        ) {
+            const tabs = Array.from(document.querySelectorAll('.source-tab'));
+            const current = tabs.indexOf(sourceTab);
+            const next = event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                    ? tabs.length - 1
+                    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length)
+                        % tabs.length;
+            event.preventDefault();
+            tabs[next].focus({ preventScroll: true });
+            return;
+        }
         if (event.key === 'Escape' && state && state.azure.open) {
             event.preventDefault();
-            focusAzureLauncherAfterClose = true;
+            focusSourceTabAfterClose = true;
             post({ type: 'azureBrowserClose' });
             return;
         }

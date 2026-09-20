@@ -2,7 +2,7 @@
   "name": "sql-file-detection",
   "displayName": "SQL File Detection Tool",
   "description": "Inspect CSV, JSON, Parquet, and Delta files, preview rows, and generate T-SQL for SQL Server, Azure SQL, and Fabric.",
-  "version": "1.1.13",
+  "version": "1.1.14",
   "preview": true,
   "publisher": "hvbqueiroz",
   "license": "MIT",
@@ -66,11 +66,6 @@
         "category": "SQL File Detection Tool"
       },
       {
-        "command": "sqlFileDetectionTool.analyzeCurrentFile",
-        "title": "Analyze Current File",
-        "category": "SQL File Detection Tool"
-      },
-      {
         "command": "sqlFileDetectionTool.analyzeSelected",
         "title": "Analyze with SQL File Detection Tool"
       },
@@ -90,14 +85,14 @@
       ],
       "editor/title/context": [
         {
-          "command": "sqlFileDetectionTool.analyzeCurrentFile",
+          "command": "sqlFileDetectionTool.analyzeSelected",
           "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
       ],
       "editor/context": [
         {
-          "command": "sqlFileDetectionTool.analyzeCurrentFile",
+          "command": "sqlFileDetectionTool.analyzeSelected",
           "when": "resourceScheme == file && resourceExtname =~ /^\\.(csv|tsv|txt|dat|json|jsonl|ndjson|parquet|snappy|orc|rc)$/i",
           "group": "7_modification"
         }
@@ -168,18 +163,15 @@
           {
             "id": "analyzeFile",
             "title": "Analyze a data file",
-            "description": "Open any CSV, TSV, DAT, JSON, NDJSON, Parquet, ORC, or Delta source and analyze it, or right-click one in the Explorer.\n[Analyze the current file](command:sqlFileDetectionTool.analyzeCurrentFile)",
+            "description": "Choose **Browse local** to select files or a folder, or right-click a supported source in the Explorer.",
             "media": {
               "markdown": "media/walkthrough/analyze.md"
-            },
-            "completionEvents": [
-              "onCommand:sqlFileDetectionTool.analyzeCurrentFile"
-            ]
+            }
           },
           {
             "id": "reviewSql",
             "title": "Review the generated T-SQL",
-            "description": "Preview is the first tab. CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Credential setup guides compatible storage and authentication choices without collecting secrets.",
+            "description": "Preview is the first tab. CREATE TABLE, BULK INSERT, OPENROWSET and external-table scripts are generated for the selected platform. Storage SQL guides compatible sources and SQL runtime identities without collecting secrets.",
             "media": {
               "markdown": "media/walkthrough/sql.md"
             }
@@ -193,14 +185,6 @@
             }
           }
         ]
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "sqlFileDetectionTool.analyzeCurrentFile",
-        "key": "ctrl+alt+d",
-        "mac": "cmd+alt+d",
-        "when": "editorTextFocus"
       }
     ]
   },

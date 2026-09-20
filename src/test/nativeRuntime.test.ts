@@ -153,6 +153,8 @@ test('removed backend and obsolete Azure modules are not reachable from activati
         'webviewHtml.js',
         'sidebar.js',
         'azure/blobBrowser.js',
+        'azure/connection.js',
+        'azure/tenantClient.js',
         'net/publicData.js',
         'net/safeHttp.js',
     ]) {
@@ -278,7 +280,7 @@ test('activation registers the native view and never touches a backend', async (
                 0,
                 'provider events do not enumerate accounts while disconnected',
             );
-            assert.ok(mock.state.commands.size >= 4, 'commands are contributed');
+            assert.ok(mock.state.commands.size >= 3, 'commands are contributed');
             for (const command of mock.state.commands.keys()) {
                 assert.ok(
                     !/setup|installBackend|startBackend|stopBackend|connectAzure|disconnectAzure/i
@@ -321,8 +323,8 @@ test('activation registers the native view and never touches a backend', async (
                 'csv',
                 'employees.csv',
             );
-            const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
-            assert.ok(analyze, 'the analyze command is registered');
+            const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeSelected');
+            assert.ok(analyze, 'the context analysis command is registered');
             const analysisStart = process.hrtime.bigint();
             await analyze();
             // Wait for the analysis result rather than a fixed delay, so the

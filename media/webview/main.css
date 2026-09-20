@@ -133,6 +133,46 @@ h3 {
   opacity: 0.86;
 }
 
+.source-tabs {
+  display: inline-flex;
+  align-items: stretch;
+  flex: 1 1 260px;
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-header .source-tab {
+  flex: 1 1 0;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 0;
+}
+
+.app-header .source-tab:last-child {
+  border-right: 0;
+}
+
+.app-header .source-tab.active,
+.app-header .source-tab[aria-selected='true'] {
+  color: var(--vscode-button-background);
+  background: var(--vscode-button-foreground);
+}
+
+.app-header .source-tab.active:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .option-row {
   display: flex;
   flex-wrap: wrap;
@@ -344,6 +384,31 @@ body.surface-sidebar .file-list {
   font-size: 0.82em;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.source-location-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.source-location-label {
+  grid-column: 1 / -1;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.78em;
+  font-weight: 600;
+}
+
+.source-location-row .source {
+  min-width: 0;
+  margin: 0;
+}
+
+.source-location-row .btn {
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 .source {
@@ -752,6 +817,21 @@ thead th {
   color: var(--vscode-list-activeSelectionForeground);
 }
 
+.storage-goal-option.unavailable {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.storage-goal-option.unavailable.selected {
+  border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+  background: var(--vscode-inputValidation-errorBackground, transparent);
+  color: var(--vscode-foreground);
+}
+
+.storage-goal-option.unavailable.selected small {
+  color: var(--vscode-descriptionForeground);
+}
+
 .storage-source-step {
   margin-bottom: var(--gap);
 }
@@ -841,6 +921,29 @@ thead th {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.runtime-target {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+  padding: 5px 0;
+}
+
+.runtime-target span {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.runtime-target strong {
+  font-size: 0.9em;
+}
+
+.identity-boundary {
+  margin: 10px 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
 }
 
 .wizard-object-fields .field {
@@ -982,6 +1085,55 @@ thead th {
 
 .advanced-object-step {
   grid-column: 1 / -1;
+}
+
+.advanced-object-summary {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.advanced-object-summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-object-summary strong,
+.advanced-object-summary small {
+  display: block;
+}
+
+.advanced-object-summary small {
+  margin-top: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82em;
+}
+
+.advanced-object-step[open] .advanced-object-summary {
+  margin-bottom: 12px;
+}
+
+.storage-readiness {
+  margin: var(--gap) 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--vscode-testing-iconPassed, var(--vscode-textLink-foreground));
+  background: var(--vscode-textBlockQuote-background, transparent);
+}
+
+.storage-readiness.template {
+  border-left-color: var(--vscode-editorWarning-foreground, var(--vscode-charts-yellow));
+}
+
+.storage-readiness.blocked {
+  border-left-color: var(--vscode-errorForeground);
+}
+
+.storage-readiness p {
+  margin: 3px 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.86em;
 }
 
 .secret-note {

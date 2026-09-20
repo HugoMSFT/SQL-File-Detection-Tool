@@ -114,16 +114,16 @@ test('the shell ships templates rather than rendered data', () => {
 test('the shell exposes the whole product workflow, not a launcher', () => {
     const html = render();
     for (const action of [
-        'openFileDialog',
-        'openFolderDialog',
+        'activateLocalSource',
+        'openLocalDialog',
         'openAzureBrowser',
-        'analyzeCurrentFile',
         'exportAllSql',
         'openInEditor',
         'useStorageUrl',
         'clearStorageUrl',
         'showOrcGuidance',
         'azureBrowserConnect',
+        'azureBrowserRefresh',
         'azureBrowserRetry',
         'azureBrowserDisconnect',
         'azureBrowserClose',
@@ -145,6 +145,8 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(html, /data-action="openAzureBrowser">Browse Azure</);
     assert.match(script, /Connect to Azure/);
     assert.match(script, /azureBrowserConnect/);
+    assert.match(script, /azureBrowserRefresh/);
+    assert.match(script, /azure\.message \|\|/);
     assert.doesNotMatch(script, /Connect with Microsoft/);
     assert.match(script, /Authorize Storage browsing/);
     assert.match(script, /Authorize storage access/);
@@ -154,7 +156,7 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(script, /Use this folder for setup/);
     assert.match(script, /does not download or analyze its bytes/);
     assert.match(script, /Selected storage location/);
-    assert.match(script, /Complete T-SQL for selected goal/);
+    assert.match(script, /Use this remote location in Storage SQL/);
     assert.match(script, /Search subscriptions/);
     assert.match(script, /azure-subscription-search/);
     const signedOutBranch = script.slice(
@@ -163,7 +165,10 @@ test('the Azure surface states its read-only browser boundary', () => {
     );
     assert.match(signedOutBranch, /azureBrowserClose/);
     assert.match(script, /event\.key === 'Escape' && state && state\.azure\.open/);
-    assert.match(script, /focusAzureLauncherAfterClose/);
+    assert.match(script, /\['ArrowLeft', 'ArrowRight', 'Home', 'End'\]/);
+    assert.match(script, /button\.tabIndex = active \? 0 : -1/);
+    assert.match(script, /focusSourceTabAfterClose/);
+    assert.match(script, /\[data-source-mode\]\[aria-selected="true"\]/);
     assert.match(
         styles,
         /\[hidden\]\s*\{\s*display:\s*none\s*!important/,
@@ -171,18 +176,21 @@ test('the Azure surface states its read-only browser boundary', () => {
     );
 });
 
-test('Preview is the primary workflow and credential setup is guided', () => {
+test('Preview is primary and Storage SQL exposes readiness and runtime access', () => {
     const html = render();
-    assert.match(script, /Configure external storage access/);
+    assert.match(script, /Generate storage SQL/);
     assert.doesNotMatch(script, /setDataSourceType/);
-    assert.match(script, /Authentication method/);
+    assert.match(script, /SQL runtime access/);
+    assert.match(script, /SQL runtime identity/);
+    assert.match(script, /does not reuse or change the account used by Browse Azure/);
+    assert.doesNotMatch(script, /wizardPlatform/);
     assert.match(script, /Secrets stay out of the extension/);
     assert.match(script, /openDocumentation/);
     assert.match(script, /opens Microsoft Learn externally/);
     assert.match(script, /dataset\.documentation/);
-    assert.match(html, /Sources &amp; files/);
+    assert.match(html, /<span class="toolbar-title">Source<\/span>/);
     assert.match(html, />Explorer</);
-    assert.match(html, /Storage setup/);
+    assert.match(html, /Storage SQL/);
     assert.match(html, /Select a file, folder, or URL to begin\./);
     assert.match(
         script,
@@ -198,7 +206,12 @@ test('Preview is the primary workflow and credential setup is guided', () => {
     assert.match(script, /tree-folder/);
     assert.match(script, /Provide a storage location/);
     assert.match(script, /abs:\/\/, adls:\/\/, or abfss:\/\//);
-    assert.match(script, /Platform and authentication/);
+    assert.match(script, /Advanced object names/);
+    assert.match(script, /element\('details', 'wizard-step advanced-object-step'\)/);
+    assert.match(script, /Blocked: storage source required/);
+    assert.match(script, /Template: schema required/);
+    assert.match(script, /Ready to run/);
+    assert.match(script, /BULK INSERT supports delimited text/);
     assert.match(script, /Remote schema has not been analyzed/);
     assert.match(script, /SQL generation is blocked to prevent a mixed-folder guess/);
     assert.match(script, /Copy full T-SQL/);
@@ -223,20 +236,27 @@ test('Preview is the primary workflow and credential setup is guided', () => {
         html.indexOf('<nav class="file-pane"'),
         html.indexOf('<main class="content"'),
     );
-    assert.ok(!explorer.includes('data-action="openFileDialog"'));
-    assert.ok(!explorer.includes('data-action="openFolderDialog"'));
+    assert.match(explorer, /File location/);
+    assert.match(explorer, /id="source-label"/);
+    assert.match(explorer, /data-action="openLocalDialog">Choose location/);
     assert.doesNotMatch(html, /class="source-actions"/);
 
     const toolbar = html.slice(
         html.indexOf('<div class="toolbar"'),
         html.indexOf('<div class="option-row">'),
     );
+    assert.match(toolbar, /class="source-tabs" role="tablist"/);
+    assert.equal((toolbar.match(/role="tab"/g) ?? []).length, 2);
+    assert.match(toolbar, /data-source-mode="local"/);
+    assert.match(toolbar, /data-source-mode="azure"/);
     assert.match(
         toolbar,
-        /Browse files[\s\S]*Browse folder[\s\S]*Storage setup/,
+        /Browse local[\s\S]*Browse Azure[\s\S]*Storage SQL/,
     );
-    assert.equal((html.match(/data-action="openFileDialog"/g) ?? []).length, 1);
-    assert.equal((html.match(/data-action="openFolderDialog"/g) ?? []).length, 1);
+    assert.match(toolbar, /data-action="activateLocalSource">Browse local/);
+    assert.doesNotMatch(toolbar, /Current file|analyzeCurrentFile/);
+    assert.equal((html.match(/data-action="openLocalDialog"/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /openFileDialog|openFolderDialog|analyzeCurrentFile/);
 });
 
 test('the shell has no trace of the removed server flow', () => {

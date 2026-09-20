@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## [1.1.14] - 2026-09-20
+
+### Fixed
+
+- Made **Browse Azure** require an explicit Connect before using a VS Code
+  Microsoft session, including after Disconnect or extension reload.
+- Added a live Refresh action, two-minute metadata expiry, coalesced concurrent
+  Connect requests, and accurate signed-out status text.
+- Removed the unused duplicate Azure connection state machine so the UI,
+  protocol, and tests now exercise one authentication lifecycle.
+- Combined file and folder selection into one **Browse local** tab, paired with
+  **Browse Azure** in an exclusive, keyboard-accessible source tablist.
+- Removed the **Current file** command, toolbar button, editor menu entries,
+  keybinding, walkthrough link, protocol action, and host implementation.
+- Switching to a local source now disconnects and closes Azure immediately,
+  clears remote setup state, and lets existing local files reopen Preview.
+- Distinguished expired Storage authorization from a true blob data RBAC denial
+  and clarified the required role, scope, and propagation delay.
+- Restored retained local selections without reopening the picker and added a
+  workspace-relative **File location** line with a separate change action.
+- Renamed the generated-storage workflow to **Storage SQL**, separated its SQL
+  runtime identity from the Browse Azure account, removed its duplicate platform
+  selector, collapsed advanced names, disabled incompatible BULK INSERT goals,
+  and added blocked/template/ready status.
+
 ## [1.1.13] - 2026-09-19
 
 ### Added

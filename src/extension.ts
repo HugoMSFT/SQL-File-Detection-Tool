@@ -91,11 +91,6 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('sqlFileDetectionTool.openInEditor', () =>
             withErrors('could not open the editor panel', () => native.openPanel()),
         ),
-        vscode.commands.registerCommand('sqlFileDetectionTool.analyzeCurrentFile', () =>
-            withErrors('could not analyze the current file', () =>
-                native.analyzeCurrentFile(),
-            ),
-        ),
         vscode.commands.registerCommand(
             'sqlFileDetectionTool.analyzeSelected',
             (resource?: vscode.Uri) =>

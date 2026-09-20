@@ -44,6 +44,8 @@ test('keeps Fabric SQL Database on OneLake, ABFSS and USER IDENTITY', () => {
     assert.equal(state.dataSourceType, 'fabric_onelake');
     assert.equal(state.locationPrefix, 'ABFSS');
     assert.deepEqual(state.authOptions.map((option) => option.id), ['user_identity']);
+    assert.deepEqual(state.authOptions.map((option) => option.label), ['SQL caller identity']);
+    assert.match(state.authOptions[0].detail, /not the VS Code browsing account/);
     assert.equal(state.authMethod, 'user_identity');
 });
 
@@ -70,6 +72,10 @@ test('states the SQL Server 2025 Arc requirement for managed identity', () => {
         'managed_identity',
     );
     assert.equal(state.authMethod, 'managed_identity');
+    assert.equal(
+        state.authOptions.find((option) => option.id === 'managed_identity')?.label,
+        'SQL managed identity',
+    );
     assert.match(state.note, /Azure Arc-enabled/);
     assert.match(state.note, /user-assigned identity/);
 });

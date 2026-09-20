@@ -202,8 +202,8 @@ test('the packaged bundle activates, renders and analyses with no Python, no sub
 
         // First analysis of a real file.
         mock.state.activeEditorPath = SAMPLE;
-        const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeCurrentFile');
-        assert.ok(analyze, 'the analyze command is registered');
+        const analyze = mock.state.commands.get('sqlFileDetectionTool.analyzeSelected');
+        assert.ok(analyze, 'the context analysis command is registered');
 
         const firstStart = process.hrtime.bigint();
         await analyze();

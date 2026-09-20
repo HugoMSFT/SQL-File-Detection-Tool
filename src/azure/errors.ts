@@ -1,26 +1,4 @@
-import type { AzureBrowserErrorKind, AzureConnectionErrorKind } from './types';
-
-export class AzureConnectionError extends Error {
-    constructor(
-        readonly kind: AzureConnectionErrorKind,
-        message: string,
-        readonly status?: number,
-        readonly retryAfterMs?: number,
-    ) {
-        super(message);
-        this.name = 'AzureConnectionError';
-    }
-}
-
-export function safeAzureError(error: unknown): AzureConnectionError {
-    if (error instanceof AzureConnectionError) {
-        return error;
-    }
-    return new AzureConnectionError(
-        'temporary',
-        'Azure could not be reached. Check your connection and retry.',
-    );
-}
+import type { AzureBrowserErrorKind } from './types';
 
 export class AzureBrowserError extends Error {
     constructor(
@@ -48,10 +26,17 @@ export function classifyStorageError(error: unknown): AzureBrowserError {
                 : typeof error.status === 'number'
                     ? error.status
                     : undefined;
-        if (statusCode === 401 || statusCode === 403) {
+        if (statusCode === 401) {
+            return new AzureBrowserError(
+                'storageConsent',
+                'Azure Storage authorization expired or was not granted. Authorize Storage browsing again.',
+                statusCode,
+            );
+        }
+        if (statusCode === 403) {
             return new AzureBrowserError(
                 'dataAccess',
-                'This account is visible, but its containers are not. Account-level Storage Blob Data Reader is required for read-only browsing.',
+                'This account is visible, but Azure Storage denied container listing. Assign Storage Blob Data Reader on this storage account or a parent scope; Owner and Contributor do not grant blob data access. If that role already exists, check the storage firewall or private endpoint. Role changes can take up to 10 minutes, then select Retry.',
                 statusCode,
             );
         }

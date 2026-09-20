@@ -70,15 +70,17 @@ export function buildWebviewHtml(options: ShellOptions): string {
       </div>
       <span class="version" id="app-version"></span>
     </div>
-    <div class="toolbar" role="toolbar" aria-label="Sources and file actions">
-      <span class="toolbar-title">Sources &amp; files</span>
-      <button type="button" class="btn primary" data-action="openFileDialog">Browse files</button>
-      <button type="button" class="btn" data-action="openFolderDialog">Browse folder</button>
-      <button type="button" class="btn" data-action="openAzureBrowser">Browse Azure</button>
-      <button type="button" class="btn" data-source-tab="credential_setup">Storage setup</button>
-      <button type="button" class="btn" data-action="analyzeCurrentFile">Current file</button>
-      <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
-      <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
+    <div class="toolbar" aria-label="Sources and file actions">
+      <span class="toolbar-title">Source</span>
+      <div class="source-tabs" role="tablist" aria-label="Source browser">
+        <button type="button" class="btn source-tab" role="tab" aria-selected="false" data-source-mode="local" data-action="activateLocalSource">Browse local</button>
+        <button type="button" class="btn source-tab" role="tab" aria-selected="false" data-source-mode="azure" data-action="openAzureBrowser">Browse Azure</button>
+      </div>
+      <div class="toolbar-actions" role="toolbar" aria-label="File actions">
+        <button type="button" class="btn" data-source-tab="credential_setup">Storage SQL</button>
+        <button type="button" class="btn" data-action="exportAllSql">Export all SQL</button>
+        <button type="button" class="btn panel-only" data-action="openInEditor">Open in editor</button>
+      </div>
     </div>
     <div class="option-row">
       <label class="field">
@@ -103,7 +105,11 @@ export function buildWebviewHtml(options: ShellOptions): string {
     <nav class="file-pane" aria-labelledby="file-pane-title">
       <div class="explorer-heading">
         <h2 id="file-pane-title">Explorer</h2>
-        <p class="source" id="source-label"></p>
+        <div class="source-location-row">
+          <span class="source-location-label">File location</span>
+          <p class="source" id="source-label"></p>
+          <button type="button" class="btn subtle" id="change-source-location" data-action="openLocalDialog">Choose location</button>
+        </div>
       </div>
       <div class="file-filter-row" id="file-filter-row" hidden>
         <input type="search" id="file-filter" class="file-filter" placeholder="Filter files" aria-label="Filter files by name, folder or format" autocomplete="off" spellcheck="false">
