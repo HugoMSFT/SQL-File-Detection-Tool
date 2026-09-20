@@ -26,6 +26,17 @@ test('a well formed message is accepted and normalised', () => {
     assert.deepEqual(parsed, { type: 'setTab', tab: 'preview' });
 });
 
+test('file filters are bounded text shared by both surfaces', () => {
+    assert.deepEqual(parseWebviewRequest({ type: 'setFileFilter', value: 'sales' }), {
+        type: 'setFileFilter',
+        value: 'sales',
+    });
+    assert.equal(
+        parseWebviewRequest({ type: 'setFileFilter', value: 'x'.repeat(257) }),
+        undefined,
+    );
+});
+
 test('storage setup accepts only the supported SQL goals', () => {
     for (const value of ['create_external_table', 'openrowset', 'bulk_insert'] as const) {
         assert.deepEqual(

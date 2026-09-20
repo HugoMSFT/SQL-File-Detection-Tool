@@ -24,6 +24,8 @@
     'use strict';
 
     const vscode = acquireVsCodeApi();
+    const restored = vscode.getState();
+    const restoredViewState = restored && typeof restored === 'object' ? restored : {};
 
     /** Tabs in display order. Statement tabs appear only when they have text. */
     const TABS = [
@@ -44,18 +46,65 @@
         unsupported_native: 'Not analysed natively',
     };
 
+    const AZURE_FORMATS = [
+        'all',
+        'CSV',
+        'TSV',
+        'JSON',
+        'JSONL',
+        'NDJSON',
+        'PARQUET',
+        'ORC',
+        'RC',
+    ];
+
+    function restoredText(value, maximumLength) {
+        return typeof value === 'string' ? value.slice(0, maximumLength) : '';
+    }
+
+    function sanitizeStorageUrlDraft(value) {
+        const text = restoredText(value, 4096);
+        const query = text.indexOf('?');
+        const fragment = text.indexOf('#');
+        const suffixes = [query, fragment].filter(function (index) {
+            return index >= 0;
+        });
+        return suffixes.length === 0 ? text : text.slice(0, Math.min.apply(null, suffixes));
+    }
+
     let state = null;
     /** Values the user is mid-edit, so a state push cannot yank the caret. */
     const pendingEdits = new Map();
     const debounceTimers = new Map();
-    const collapsedFolders = new Set();
+    const collapsedFolders = new Set(
+        Array.isArray(restoredViewState.collapsedFolders)
+            ? restoredViewState.collapsedFolders
+                .filter(function (value) {
+                    return typeof value === 'string';
+                })
+                .slice(0, 200)
+            : [],
+    );
     /** Renderer-only view state: the Explorer filter query and its source. */
-    let fileFilter = '';
-    let lastSourceLabel = null;
-    let azureSubscriptionQuery = '';
-    let azureAccountQuery = '';
-    let azureEntryQuery = '';
-    let azureFormat = 'all';
+    let fileFilter = restoredText(restoredViewState.fileFilter, 256);
+    let lastSourceLabel = restoredText(restoredViewState.lastSourceLabel, 1024) || null;
+    let azureSubscriptionQuery = restoredText(restoredViewState.azureSubscriptionQuery, 256);
+    let azureAccountQuery = restoredText(restoredViewState.azureAccountQuery, 256);
+    let azureEntryQuery = restoredText(restoredViewState.azureEntryQuery, 256);
+    let azureFormat = AZURE_FORMATS.includes(restoredViewState.azureFormat)
+        ? restoredViewState.azureFormat
+        : 'all';
+    let focusAzureLauncherAfterClose = false;
+    const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
+        restoredViewState.storageUrlDraft,
+    );
+    if (restoredStorageUrlDraft) {
+        pendingEdits.set('knownStorageUrl', restoredStorageUrlDraft);
+    }
+    const restoredPreviewRows = restoredText(restoredViewState.previewRowsDraft, 8);
+    if (restoredPreviewRows) {
+        pendingEdits.set('previewRows', restoredPreviewRows);
+    }
 
     // -- helpers -------------------------------------------------------------
 
@@ -65,6 +114,63 @@
 
     function post(message) {
         vscode.postMessage(message);
+    }
+
+    function persistViewState() {
+        vscode.setState({
+            fileFilter: fileFilter,
+            lastSourceLabel: lastSourceLabel,
+            collapsedFolders: Array.from(collapsedFolders).slice(0, 200),
+            azureSubscriptionQuery: azureSubscriptionQuery,
+            azureAccountQuery: azureAccountQuery,
+            azureEntryQuery: azureEntryQuery,
+            azureFormat: azureFormat,
+            storageUrlDraft: sanitizeStorageUrlDraft(
+                pendingEdits.get('knownStorageUrl') || '',
+            ),
+            previewRowsDraft: restoredText(
+                pendingEdits.get('previewRows'),
+                8,
+            ),
+        });
+    }
+
+    function acknowledgePendingEdits(nextState) {
+        const scalarFields = {
+            tableName: 'tableName',
+            schemaName: 'schemaName',
+            dataSource: 'dataSource',
+            credentialName: 'credentialName',
+            formatName: 'formatName',
+        };
+        Object.keys(scalarFields).forEach(function (key) {
+            if (
+                pendingEdits.has(key)
+                && String(nextState[scalarFields[key]] || '') === pendingEdits.get(key)
+            ) {
+                pendingEdits.delete(key);
+            }
+        });
+        if (
+            pendingEdits.has('previewRows')
+            && String(nextState.previewRows) === pendingEdits.get('previewRows')
+        ) {
+            pendingEdits.delete('previewRows');
+        }
+        for (const key of Array.from(pendingEdits.keys())) {
+            if (key.startsWith('parser:')) {
+                const option = key.slice('parser:'.length);
+                if (String(nextState.parserOverrides[option] ?? '') === pendingEdits.get(key)) {
+                    pendingEdits.delete(key);
+                }
+            } else if (key.startsWith('override:')) {
+                const column = key.slice('override:'.length);
+                if (String(nextState.columnOverrides[column] ?? '') === pendingEdits.get(key)) {
+                    pendingEdits.delete(key);
+                }
+            }
+        }
+        persistViewState();
     }
 
     function renderDocumentationLinks(container, links) {
@@ -116,6 +222,7 @@
                 pendingEdits.delete(key);
             }
         }
+        persistViewState();
     }
 
     function clear(node) {
@@ -371,6 +478,9 @@
                     'Subscription Reader access lists accounts; account-level Storage Blob Data Reader is required to list containers and files.',
                 ),
             );
+            signedOut.appendChild(
+                actionButton('Close', 'azureBrowserClose', 'btn subtle'),
+            );
             browser.appendChild(signedOut);
             return;
         }
@@ -615,17 +725,7 @@
         const format = document.createElement('select');
         format.id = 'azure-format-filter';
         format.setAttribute('aria-label', 'Filter by supported file format');
-        [
-            'all',
-            'CSV',
-            'TSV',
-            'JSON',
-            'JSONL',
-            'NDJSON',
-            'PARQUET',
-            'ORC',
-            'RC',
-        ].forEach(function (value) {
+        AZURE_FORMATS.forEach(function (value) {
             const option = element(
                 'option',
                 null,
@@ -759,7 +859,8 @@
         // every file in a folder the user just chose reads as "nothing found".
         if (state.sourceLabel !== lastSourceLabel) {
             lastSourceLabel = state.sourceLabel;
-            fileFilter = '';
+            collapsedFolders.clear();
+            persistViewState();
         }
         const filterRow = byId('file-filter-row');
         const filterInput = byId('file-filter');
@@ -1619,6 +1720,13 @@
         renderTabs();
         renderPanel();
         restoreFocus(focus);
+        if (focusAzureLauncherAfterClose && !state.azure.open) {
+            focusAzureLauncherAfterClose = false;
+            const launcher = document.querySelector('[data-action="openAzureBrowser"]');
+            if (launcher instanceof HTMLElement) {
+                launcher.focus({ preventScroll: true });
+            }
+        }
     }
 
     // -- events --------------------------------------------------------------
@@ -1677,6 +1785,7 @@
             } else {
                 collapsedFolders.add(folderPath);
             }
+            persistViewState();
             renderFiles();
             byId('file-list').focus({ preventScroll: true });
             return;
@@ -1721,14 +1830,19 @@
             return;
         }
         const name = action.dataset.action;
+        if (name === 'azureBrowserClose') {
+            focusAzureLauncherAfterClose = true;
+        }
         if (name === 'useStorageUrl') {
             const input = document.querySelector('.storage-url-input');
             pendingEdits.delete('knownStorageUrl');
+            persistViewState();
             post({ type: 'setStorageUrl', value: input ? input.value.trim() : '' });
             return;
         }
         if (name === 'clearStorageUrl') {
             pendingEdits.delete('knownStorageUrl');
+            persistViewState();
             post({ type: 'setStorageUrl', value: '' });
             return;
         }
@@ -1760,6 +1874,7 @@
         }
         if (target.id === 'azure-format-filter') {
             azureFormat = target.value;
+            persistViewState();
             rerenderAzureBrowser();
             return;
         }
@@ -1784,6 +1899,7 @@
             const key = 'parser:' + target.dataset.parserOption;
             cancelDebounce(key);
             pendingEdits.delete(key);
+            persistViewState();
             post({
                 type: 'setParserOverride',
                 fileId: state.selectedFileId,
@@ -1792,27 +1908,43 @@
             });
             return;
         }
+        if (edit === 'previewRows') {
+            const rows = Number(target.value);
+            if (isFinite(rows)) {
+                cancelDebounce('previewRows');
+                pendingEdits.delete('previewRows');
+                persistViewState();
+                post({ type: 'setPreviewRows', rows: Math.trunc(rows) });
+            }
+            return;
+        }
     });
 
     document.addEventListener('input', function (event) {
         const target = event.target;
         if (target instanceof Element && target.id === 'file-filter') {
-            fileFilter = target.value;
+            const value = target.value;
+            fileFilter = value;
+            persistViewState();
             renderFiles();
+            post({ type: 'setFileFilter', value: value });
             return;
         }
         if (target instanceof Element && target.id === 'azure-account-search') {
             azureAccountQuery = target.value;
+            persistViewState();
             rerenderAzureBrowser();
             return;
         }
         if (target instanceof Element && target.id === 'azure-subscription-search') {
             azureSubscriptionQuery = target.value;
+            persistViewState();
             rerenderAzureBrowser();
             return;
         }
         if (target instanceof Element && target.id === 'azure-entry-search') {
             azureEntryQuery = target.value;
+            persistViewState();
             rerenderAzureBrowser();
             return;
         }
@@ -1830,15 +1962,12 @@
             const parserKey = target.dataset.parserOption;
             const fileId = state.selectedFileId;
             pendingEdits.set('parser:' + parserKey, value);
-            debounce('parser:' + parserKey, function () {
-                pendingEdits.delete('parser:' + parserKey);
-                post({
-                    type: 'setParserOverride',
-                    fileId: fileId,
-                    key: parserKey,
-                    value: value,
-                });
-            }, 250);
+            post({
+                type: 'setParserOverride',
+                fileId: fileId,
+                key: parserKey,
+                value: value,
+            });
             return;
         }
 
@@ -1846,15 +1975,12 @@
             const column = target.dataset.column;
             const fileId = state.selectedFileId;
             pendingEdits.set('override:' + column, value);
-            debounce('override:' + column, function () {
-                pendingEdits.delete('override:' + column);
-                post({
-                    type: 'setColumnOverride',
-                    fileId: fileId,
-                    column: column,
-                    sqlType: value,
-                });
-            }, 250);
+            post({
+                type: 'setColumnOverride',
+                fileId: fileId,
+                column: column,
+                sqlType: value,
+            });
             return;
         }
         if (edit === 'previewRows') {
@@ -1862,13 +1988,18 @@
             if (!isFinite(rows)) {
                 return;
             }
+            pendingEdits.set('previewRows', value);
+            persistViewState();
             debounce('previewRows', function () {
+                pendingEdits.delete('previewRows');
+                persistViewState();
                 post({ type: 'setPreviewRows', rows: Math.trunc(rows) });
             }, 350);
             return;
         }
         if (edit === 'knownStorageUrl') {
             pendingEdits.set(edit, value);
+            persistViewState();
             return;
         }
 
@@ -1883,13 +2014,16 @@
             return;
         }
         pendingEdits.set(edit, value);
-        debounce(edit, function () {
-            pendingEdits.delete(edit);
-            post({ type: messageType, value: value });
-        }, 250);
+        post({ type: messageType, value: value });
     });
 
     document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && state && state.azure.open) {
+            event.preventDefault();
+            focusAzureLauncherAfterClose = true;
+            post({ type: 'azureBrowserClose' });
+            return;
+        }
         if (
             event.key === 'Enter'
             && event.target instanceof Element
@@ -1934,6 +2068,8 @@
         if (state && state.selectedFileId !== message.state.selectedFileId) {
             clearFileEdits();
         }
+        acknowledgePendingEdits(message.state);
+        fileFilter = message.state.fileFilter || '';
         state = message.state;
         render();
     });
