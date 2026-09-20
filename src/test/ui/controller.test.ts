@@ -282,6 +282,21 @@ test('folder Quick Analyze keeps per-file facts and reports mixed values', async
     }
 });
 
+test('the file filter is shared and resets for a newly chosen source', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.handle({ type: 'setFileFilter', value: 'sales' });
+        assert.equal(snapshot(record).fileFilter, 'sales');
+
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        assert.equal(snapshot(record).fileFilter, '');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 // -- message validation -------------------------------------------------------
 
 test('a malformed or unknown message is dropped, never defaulted', async () => {
@@ -521,6 +536,58 @@ test('folder scans reach partitioned layouts and skip non-SQL files', async () =
     }
 });
 
+test('starting a folder scan clears the previous file result', async () => {
+    const record = recorder();
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    const ui = controller(record, {
+        service: {
+            listFormats: () => [],
+            normalizePlatform: () => 'azure_sql_db',
+            resolveTableName: () => 'T',
+            analyze: async ({ filePath }: { filePath: string }) => ({
+                file_path: filePath,
+                file_name: path.basename(filePath),
+                file_type: 'csv',
+                size_bytes: 1,
+                columns: [],
+            }),
+            analyzeDirectory: async () => {
+                await blocked;
+                return { root: DEMO, files: [] };
+            },
+            preview: async () => ({ columns: [], rows: [], total_rows: 0, truncated: false }),
+            generateStatements: () => ({ create_table: 'previous SQL' }),
+            generateCompleteDocument: () => 'x',
+            generateMultiFileScript: () => 'x',
+        },
+    });
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        assert.ok(snapshot(record).metadata);
+        assert.ok(snapshot(record).statements);
+
+        const scanning = ui.loadDirectory(DEMO);
+        await settle();
+        const pending = snapshot(record);
+        assert.equal(pending.busy, true);
+        assert.equal(pending.selectedFileId, null);
+        assert.deepEqual(pending.files, []);
+        assert.equal(pending.metadata, null);
+        assert.equal(pending.preview, null);
+        assert.equal(pending.statements, null);
+
+        release?.();
+        await scanning;
+    } finally {
+        release?.();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 test('cancelling the folder picker leaves the state untouched', async () => {
     const record = recorder();
     const ui = controller(record);
@@ -599,6 +666,70 @@ test('selecting a listed file analyzes it immediately and opens Preview', async 
         assert.ok((state.preview?.rows.length ?? 0) > 0);
         assert.equal(record.preferences.get('activeTab'), 'preview');
     } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('selecting another file clears the previous result while analysis is pending', async () => {
+    const record = recorder();
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    let call = 0;
+    const ui = controller(record, {
+        service: {
+            listFormats: () => [],
+            normalizePlatform: () => 'azure_sql_db',
+            resolveTableName: () => 'T',
+            analyze: async ({ filePath }: { filePath: string }) => {
+                call += 1;
+                if (call === 2) {
+                    await blocked;
+                }
+                return {
+                    file_path: filePath,
+                    file_name: path.basename(filePath),
+                    file_type: 'csv',
+                    size_bytes: 1,
+                    columns: [],
+                };
+            },
+            analyzeDirectory: async () => ({ root: FIXTURES, files: [] }),
+            preview: async () => ({ columns: [], rows: [], total_rows: 0, truncated: false }),
+            generateStatements: () => ({ create_table: 'previous SQL' }),
+            generateCompleteDocument: () => 'x',
+            generateMultiFileScript: () => 'x',
+        },
+    });
+    try {
+        await ui.loadFiles([
+            path.join(FIXTURES, 'sample.csv'),
+            path.join(FIXTURES, 'employees.csv'),
+        ]);
+        assert.ok(snapshot(record).metadata);
+        assert.ok(snapshot(record).statements);
+
+        const next = snapshot(record).files.find((file) => file.label === 'employees.csv');
+        assert.ok(next);
+        const selecting = ui.handle({ type: 'selectFile', fileId: next.id });
+        await settle();
+
+        const pending = snapshot(record);
+        assert.equal(pending.selectedFileId, next.id);
+        assert.equal(pending.busy, true);
+        assert.equal(pending.metadata, null);
+        assert.equal(pending.preview, null);
+        assert.equal(pending.statements, null);
+        assert.deepEqual(pending.recommendedSqlTypes, {});
+        assert.equal(pending.limitation, null);
+        assert.equal(pending.lastAnalysisMs, null);
+
+        release?.();
+        await selecting;
+    } finally {
+        release?.();
         await ui.dispose();
         cleanup(record);
     }
@@ -1166,16 +1297,48 @@ test('a superseded analysis cannot overwrite newer state', async () => {
 
 test('an explicit cancel clears progress without leaving an error', async () => {
     const record = recorder();
-    const ui = controller(record);
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    const ui = controller(record, {
+        service: {
+            listFormats: () => [],
+            normalizePlatform: () => 'azure_sql_db',
+            resolveTableName: () => 'T',
+            analyze: async ({ filePath }: { filePath: string }) => {
+                await blocked;
+                return {
+                    file_path: filePath,
+                    file_name: path.basename(filePath),
+                    file_type: 'csv',
+                    size_bytes: 1,
+                    columns: [],
+                };
+            },
+            analyzeDirectory: async () => ({ root: FIXTURES, files: [] }),
+            preview: async () => ({ columns: [], rows: [], total_rows: 0, truncated: false }),
+            generateStatements: () => ({}),
+            generateCompleteDocument: () => '',
+            generateMultiFileScript: () => '',
+        },
+    });
     try {
         record.activeFile = path.join(FIXTURES, 'employees.csv');
         const running = ui.handle({ type: 'analyzeCurrentFile' });
+        await settle();
+        assert.equal(snapshot(record).busy, true);
         await ui.handle({ type: 'cancel' });
+        assert.equal(snapshot(record).notice, 'Analysis canceled.');
+        release?.();
         await running;
         await settle();
         assert.equal(snapshot(record).busy, false);
         assert.equal(snapshot(record).progress, null);
+        assert.equal(snapshot(record).notice, 'Analysis canceled.');
+        assert.equal(snapshot(record).error, null);
     } finally {
+        release?.();
         await ui.dispose();
         cleanup(record);
     }

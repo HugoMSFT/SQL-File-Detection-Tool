@@ -47,6 +47,7 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.equal(state.selectedFileId, null);
     assert.equal(state.metadata, null);
     assert.equal(state.activeTab, 'preview');
+    assert.equal(state.fileFilter, '');
     assert.equal(state.quickAnalyze.selectedStatement, 'openrowset');
     assert.equal(state.dataSourceType, 'azure_blob');
     assert.equal(state.authMethod, 'managed_identity');

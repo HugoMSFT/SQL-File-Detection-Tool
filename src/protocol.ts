@@ -107,6 +107,7 @@ export type WebviewRequest =
     | (Base & { readonly type: 'dismissNotice' })
     | (Base & { readonly type: 'setPlatform'; readonly platform: string })
     | (Base & { readonly type: 'setTab'; readonly tab: UiTab })
+    | (Base & { readonly type: 'setFileFilter'; readonly value: string })
     | (Base & { readonly type: 'selectFile'; readonly fileId: string })
     | (Base & { readonly type: 'openFileDialog' })
     | (Base & { readonly type: 'openFolderDialog' })
@@ -210,6 +211,7 @@ export interface AppStateSnapshot {
     readonly platform: TargetPlatform;
     readonly platforms: ReadonlyArray<{ id: TargetPlatform; label: string }>;
     readonly activeTab: UiTab;
+    readonly fileFilter: string;
     readonly files: readonly FileEntry[];
     readonly selectedFileId: string | null;
     readonly sourceLabel: string | null;
@@ -426,6 +428,10 @@ const BUILDERS: Record<string, Builder> = {
     setTab: (source) => {
         const tab = member(source, 'tab', UI_TABS);
         return tab === undefined ? undefined : { type: 'setTab', tab };
+    },
+    setFileFilter: (source) => {
+        const value = text(source, 'value', 256);
+        return value === undefined ? undefined : { type: 'setFileFilter', value };
     },
     selectFile: (source) => {
         const fileId = text(source, 'fileId', 64);

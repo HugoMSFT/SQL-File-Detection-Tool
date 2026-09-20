@@ -157,6 +157,13 @@ test('the Azure surface states its read-only browser boundary', () => {
     assert.match(script, /Complete T-SQL for selected goal/);
     assert.match(script, /Search subscriptions/);
     assert.match(script, /azure-subscription-search/);
+    const signedOutBranch = script.slice(
+        script.indexOf("if (azure.phase === 'signedOut')"),
+        script.indexOf('const identity =', script.indexOf("if (azure.phase === 'signedOut')")),
+    );
+    assert.match(signedOutBranch, /azureBrowserClose/);
+    assert.match(script, /event\.key === 'Escape' && state && state\.azure\.open/);
+    assert.match(script, /focusAzureLauncherAfterClose/);
     assert.match(
         styles,
         /\[hidden\]\s*\{\s*display:\s*none\s*!important/,
@@ -294,9 +301,13 @@ test('the renderer has no network capability of its own', () => {
     }
 });
 
-test('the renderer talks to the host only through postMessage', () => {
+test('the renderer uses the VS Code API only for host messages and bounded view state', () => {
     assert.ok(script.includes('acquireVsCodeApi()'));
     assert.ok(script.includes('vscode.postMessage(message)'));
+    assert.ok(script.includes('vscode.getState()'));
+    assert.ok(script.includes('vscode.setState({'));
+    assert.match(script, /storageUrlDraft:\s*sanitizeStorageUrlDraft/);
+    assert.match(script, /function sanitizeStorageUrlDraft/);
     assert.ok(
         script.includes("window.addEventListener('message'"),
         'the renderer must listen for host state',
@@ -334,14 +345,29 @@ test('the explorer gives the filename its own readable row', () => {
     assert.match(script, /name\.title = file\.label/);
 });
 
+test('the sidebar bounds its Explorer so result tabs stay in the first viewport', () => {
+    assert.match(
+        styles,
+        /body\.surface-sidebar \.layout\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*visible/s,
+    );
+    assert.match(
+        styles,
+        /body\.surface-sidebar \.file-pane\s*\{[^}]*min-height:\s*0[^}]*max-height:\s*min\(34vh, 320px\)/s,
+    );
+    assert.match(
+        styles,
+        /body\.surface-sidebar \.file-list\s*\{[^}]*max-height:\s*min\(26vh, 240px\)/s,
+    );
+});
+
 test('the explorer offers a filter that narrows the listing', () => {
     const html = render();
     assert.match(html, /id="file-filter"/);
     assert.match(html, /aria-label="Filter files by name, folder or format"/);
-    // The filter is renderer-only view state: narrowing a listing must not
-    // become a new message the host has to validate.
-    assert.doesNotMatch(script, /type:\s*'setFileFilter'/);
+    assert.match(script, /type:\s*'setFileFilter'/);
     assert.match(script, /fileFilter/);
+    assert.match(script, /collapsedFolders:\s*Array\.from/);
+    assert.match(script, /persistViewState\(\)/);
     assert.match(script, /No files match this filter/);
 });
 

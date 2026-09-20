@@ -78,6 +78,7 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         platform,
         platforms: PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] })),
         activeTab: options.activeTab ?? 'preview',
+        fileFilter: '',
         files: [],
         selectedFileId: null,
         sourceLabel: null,

@@ -293,6 +293,8 @@ input[type='number'] {
 body.surface-sidebar .layout {
   flex-direction: column;
   display: flex;
+  min-height: 0;
+  overflow: visible;
 }
 
 body.surface-sidebar .file-pane,
@@ -310,8 +312,20 @@ body.surface-sidebar .content {
 }
 
 body.surface-sidebar .file-pane {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   max-width: none;
+  min-height: 0;
+  max-height: min(34vh, 320px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 0;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+
+body.surface-sidebar .file-list {
+  min-height: 80px;
+  max-height: min(26vh, 240px);
 }
 
 .content {

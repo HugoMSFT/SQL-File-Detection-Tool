@@ -197,10 +197,15 @@ export class UiController {
                 this.store.setWorkspaceFolders(this.host.workspaceFolders());
                 this.store.update({});
                 return;
-            case 'cancel':
+            case 'cancel': {
                 this.cancelActive();
-                this.store.update({ busy: false, progress: null });
+                this.store.update({
+                    busy: false,
+                    progress: null,
+                    notice: 'Analysis canceled.',
+                });
                 return;
+            }
             case 'dismissNotice':
                 this.store.update({ notice: null, error: null });
                 return;
@@ -255,6 +260,9 @@ export class UiController {
                 void this.host.setPreference('activeTab', request.tab);
                 return;
             }
+            case 'setFileFilter':
+                this.store.update({ fileFilter: request.value });
+                return;
             case 'selectFile':
                 return this.queue(() => this.selectFile(request.fileId));
             case 'openFileDialog':
@@ -649,6 +657,7 @@ export class UiController {
         this.store.update({
             azure: azure.snapshot,
             activeTab: 'credential_setup',
+            fileFilter: '',
             selectedFileId: null,
             sourceLabel: label,
             metadata: null,
@@ -738,9 +747,17 @@ export class UiController {
     async loadDirectory(directory: string): Promise<void> {
         this.folderMetadata = [];
         this.rawMetadata = null;
+        this.store.setFiles([]);
+        this.store.clearSelection();
+        const { label: selectedLabel } = displayLabel(
+            directory,
+            this.host.workspaceFolders(),
+        );
         const state = this.store.state;
         this.store.update({
+            sourceLabel: selectedLabel,
             sourceKind: 'local',
+            fileFilter: '',
             storageUrl: '',
             azureFolderPreview: null,
             remoteSchema: null,
@@ -755,6 +772,7 @@ export class UiController {
             parserOverrides: {},
             folderProfile: null,
         });
+        this.refreshQuickAnalyze();
         const { token, generation } = this.begin();
         this.store.update({ busy: true, progress: 'Scanning folder…', error: null });
         try {
@@ -816,6 +834,7 @@ export class UiController {
             this.store.clearSelection();
             this.generateNow();
             this.store.update({
+                fileFilter: '',
                 error:
                     'No SQL-readable data file was selected. Use CSV, TSV, DAT, JSON, ' +
                     'Parquet, ORC, RCFile, Delta, Iceberg, or a folder containing them.',
@@ -835,6 +854,8 @@ export class UiController {
                 isDirectory: false,
             };
         });
+        this.rawMetadata = null;
+        this.store.clearSelection();
         this.store.setFiles(entries);
         const first = this.store.state.files[0];
         const { label } = displayLabel(supportedPaths[0], this.host.workspaceFolders());
@@ -845,6 +866,7 @@ export class UiController {
                     ? label
                     : `${supportedPaths.length} selected files`,
             sourceKind: 'local',
+                    fileFilter: '',
             storageUrl: '',
             azureFolderPreview: null,
             remoteSchema: null,
@@ -881,15 +903,27 @@ export class UiController {
             return;
         }
         const changed = this.store.state.selectedFileId !== fileId;
+        if (changed) {
+            this.rawMetadata = null;
+        }
         this.store.update({
             selectedFileId: fileId,
             activeTab: 'preview',
+            metadata: changed ? null : this.store.state.metadata,
+            preview: changed ? null : this.store.state.preview,
+            statements: changed ? null : this.store.state.statements,
             tableName: changed ? '' : this.store.state.tableName,
             parserOverrides: changed ? {} : this.store.state.parserOverrides,
             columnOverrides: changed ? {} : this.store.state.columnOverrides,
+            recommendedSqlTypes: changed ? {} : this.store.state.recommendedSqlTypes,
+            limitation: changed ? null : this.store.state.limitation,
+            lastAnalysisMs: changed ? null : this.store.state.lastAnalysisMs,
             error: null,
             notice: null,
         });
+        if (changed) {
+            this.refreshQuickAnalyze();
+        }
         void this.host.setPreference('activeTab', 'preview');
         await this.analyzeSelected(file);
     }

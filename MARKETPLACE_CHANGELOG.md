@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.13
+
 ### Added
 
 - Added subscription search while retaining the native Azure subscription
@@ -19,6 +21,17 @@
 
 ### Fixed
 
+- Cleared metadata, preview, schema, and generated SQL from the previous file
+  while a newly selected file is being analyzed, and added explicit cancellation
+  feedback.
+- Added a visible Close action to every Azure browser state, including signed
+  out, plus Escape-to-close with focus restored to **Browse Azure**.
+- Preserved safe setup drafts, filters, collapsed folders, and Azure search
+  controls when VS Code recreates a webview; URL query strings and fragments are
+  never persisted.
+- Synchronized the Explorer filter between sidebar and editor surfaces.
+- Kept result tabs in the first sidebar viewport by bounding the Explorer pane
+  instead of stacking two 560 px minimum-height regions.
 - Prevented Azure file-only setup from recommending an unrelated HTTPS
   `BLOB_STORAGE` source; Blob selections now keep the primary `ABS` setup.
 - Kept HTTPS with `TYPE = BLOB_STORAGE` when BULK INSERT is the selected goal.
