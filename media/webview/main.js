@@ -95,6 +95,7 @@
         ? restoredViewState.azureFormat
         : 'all';
     let focusSourceTabAfterClose = false;
+    let advancedObjectNamesOpen = restoredViewState.advancedObjectNamesOpen === true;
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
         restoredViewState.storageUrlDraft,
     );
@@ -125,6 +126,7 @@
             azureAccountQuery: azureAccountQuery,
             azureEntryQuery: azureEntryQuery,
             azureFormat: azureFormat,
+            advancedObjectNamesOpen: advancedObjectNamesOpen,
             storageUrlDraft: sanitizeStorageUrlDraft(
                 pendingEdits.get('knownStorageUrl') || '',
             ),
@@ -1782,6 +1784,11 @@
         steps.appendChild(platformStep);
 
         const objectStep = element('details', 'wizard-step advanced-object-step');
+        objectStep.open = advancedObjectNamesOpen;
+        objectStep.addEventListener('toggle', function () {
+            advancedObjectNamesOpen = objectStep.open;
+            persistViewState();
+        });
         const objectSummary = element('summary', 'advanced-object-summary');
         objectSummary.appendChild(element('span', 'wizard-step-number', '4'));
         const objectSummaryCopy = element('span');

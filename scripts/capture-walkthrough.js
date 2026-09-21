@@ -444,7 +444,8 @@ async function main() {
         throw new Error('The empty Preview did not render the source-selection start state.');
     }
 
-    // A delayed schema edit must not survive a file change or post back for the
+    // A schema edit is attributed to the file that was selected when it was
+    // typed, and must not survive a file change or be replayed against the
     // newly selected file.
     await page.evaluate((state) => {
         window.__posted = [];
@@ -463,14 +464,17 @@ async function main() {
         states.schema,
     );
     await page.waitForTimeout(300);
-    const staleEditCleared = await page.evaluate(() => {
+    const staleEditCleared = await page.evaluate((previousFileId) => {
         const input = document.querySelector('[data-edit="override"]');
+        const overrides = window.__posted.filter(
+            (message) => message.type === 'setColumnOverride',
+        );
         return Boolean(
             input
             && input.value !== 'DECIMAL(18,4)'
-            && !window.__posted.some((message) => message.type === 'setColumnOverride'),
+            && overrides.every((message) => message.fileId === previousFileId),
         );
-    });
+    }, states.schema.selectedFileId);
     if (!staleEditCleared) {
         await browser.close();
         fs.rmSync(work, { recursive: true, force: true });
@@ -483,6 +487,10 @@ async function main() {
     await page.waitForTimeout(80);
     await page.evaluate(() => {
         const input = document.querySelector('[data-edit="credentialName"]');
+        const disclosure = input.closest('details');
+        if (disclosure) {
+            disclosure.open = true;
+        }
         input.value = 'credential_name';
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.focus();
@@ -550,6 +558,12 @@ async function main() {
         fs.rmSync(work, { recursive: true, force: true });
         throw new Error('Microsoft storage sign-in remains in Credential Setup.');
     }
+
+    // The checks above type into the renderer, and those drafts would otherwise
+    // appear in the recording. Reload so every recorded frame shows the UI in
+    // its default state.
+    await page.goto(`file://${path.join(work, 'index.html').replace(/\\/g, '/')}`);
+    await page.waitForTimeout(120);
 
     const frames = [];
     const frameDir = process.env.SFDT_FRAME_DIR;

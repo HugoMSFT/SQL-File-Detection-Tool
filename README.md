@@ -16,7 +16,7 @@ unless another platform is selected explicitly.
 
 ## See it in action
 
-![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.0.9.gif)
+![SQL File Detection Tool preview and generated SQL workflow.](media/sql-file-detection-tool-walkthrough-1.1.15.gif)
 
 Open the Activity Bar icon, select a supported file or folder, and Preview opens
 automatically. Use the SQL tabs for generated statements. In Storage SQL,

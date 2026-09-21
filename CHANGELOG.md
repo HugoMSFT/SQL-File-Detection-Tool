@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## [1.1.15] - 2026-09-20
+
+### Fixed
+
+- Kept the **Advanced object names** section open while typing in it. The
+  section is rebuilt on every host state refresh, so entering one character in
+  the external data source or database scoped credential name collapsed it and
+  moved focus to the document, making those fields impossible to fill in.
+
+### Changed
+
+- Regenerated the README and Marketplace walkthrough GIF from the current
+  webview, so the published animation shows today's tabs, Storage SQL layout,
+  and Explorer rather than the 1.0.9 interface.
+- Updated `scripts/capture-walkthrough.js` to reload the renderer before
+  recording, so pre-flight check input no longer leaks into the frames, and to
+  assert the current column-override contract: the edit is posted immediately
+  and attributed to the file selected when it was typed.
+
 ## [1.1.14] - 2026-09-20
 
 ### Fixed
