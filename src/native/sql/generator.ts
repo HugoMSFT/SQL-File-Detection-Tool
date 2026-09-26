@@ -1157,7 +1157,9 @@ export function generateExternalTable(
         );
     if (externalLobColumns.length > 0) {
         const rendered = externalLobColumns
-            .map(({ columnName, sqlType }) => `[${columnName}] (${sqlType})`)
+            .map(({ columnName, sqlType }) =>
+                `[${sqlComment(columnName)}] (${sqlType})`,
+            )
             .join(', ');
         return [
             '-- ====================================================================',

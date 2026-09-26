@@ -2551,7 +2551,7 @@ class SQLGenerator:
                 external_lob_columns.append((column_name, sql_type))
         if external_lob_columns:
             rendered = ', '.join(
-                f'[{column_name}] ({sql_type})'
+                f'[{_sql_comment(column_name)}] ({sql_type})'
                 for column_name, sql_type in external_lob_columns
             )
             return '\n'.join([

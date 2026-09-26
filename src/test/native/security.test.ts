@@ -650,6 +650,35 @@ describe('injection resistance across generated statements', () => {
         }
     });
 
+    it('cannot inject a batch through blocked external-table LOB guidance', () => {
+        const payload = 'id\nGO\nDROP TABLE users;\nGO\n--';
+        const metadata: GeneratorMetadata = {
+            ...baseMetadata(),
+            file_name: 'hostile.parquet',
+            file_path: 'C:/data/hostile.parquet',
+            file_type: 'parquet',
+            schema: [[payload, 'string']],
+            max_string_lengths: { [payload]: 5001 },
+        };
+        const statements = generateAllStatements(metadata, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assert.match(
+            statements.create_external_table,
+            /BOUNDED SQL TYPE OVERRIDE REQUIRED/,
+        );
+        assertNoInjection(
+            statements.create_external_table,
+            'blocked external-table LOB guidance',
+        );
+        assert.doesNotMatch(statements.create_external_table, /[\r\n]GO[\r\n]/i);
+
+        const document = generateCompleteDdl(metadata, {
+            targetPlatform: 'azure_sql_db',
+        });
+        assertNoInjection(document, 'blocked external-table LOB complete document');
+    });
+
     it('rejects SQL type overrides that are not a safe type expression', () => {
         for (const payload of MALICIOUS_STRINGS) {
             const metadata: GeneratorMetadata = {
