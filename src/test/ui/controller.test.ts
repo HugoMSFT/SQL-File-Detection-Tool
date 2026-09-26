@@ -17,6 +17,7 @@ import * as path from 'node:path';
 import { AppStateStore } from '../../appState';
 import { MicrosoftAuthentication } from '../../azure/auth';
 import { AzureBrowser } from '../../azure/browser';
+import { StorageBrowserClient, type StoragePage } from '../../azure/storageClient';
 import { UiController, metadataForDisplay } from '../../ui/controller';
 import type {
     OpenDialogOptions,
@@ -2073,6 +2074,75 @@ test('source switching cancels refinement, and returning to local restores sampl
         assert.equal(snapshot(record).sourceMode, 'local');
         assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
         assert.equal(snapshot(record).busy, false);
+        assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        const restored = snapshot(record);
+        service.final.release();
+        await running;
+        assert.deepEqual(snapshot(record), restored);
+        assert.equal(authenticationCalls, 0);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('public Azure selection preserves local sample provenance and file settings', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'local.csv');
+    fs.writeFileSync(file, 'id\n1\n2\n');
+    const service = new HeldRefinementService(file);
+    let authenticationCalls = 0;
+    class PublicFixtureStorage extends StorageBrowserClient {
+        override async listPublicBlobs(): Promise<StoragePage> {
+            return {
+                items: [{
+                    kind: 'file',
+                    name: 'sample.csv',
+                    blobName: 'sample.csv',
+                    sizeBytes: 20,
+                    modifiedAt: null,
+                }],
+                continuationToken: undefined,
+            };
+        }
+    }
+    const azure = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => {
+            authenticationCalls += 1;
+            assert.fail('Public browsing must not request a Microsoft session.');
+        }),
+        storage: new PublicFixtureStorage(),
+    });
+    const ui = controller(record, { service, azure });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        const fileId = snapshot(record).selectedFileId;
+        await ui.handle({ type: 'setTableName', fileId, value: 'my_local_table' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column: 'id', sqlType: 'BIGINT' });
+        const settings = fileSettingsFrom(snapshot(record));
+        await ui.handle({
+            type: 'azureBrowserOpenPublicContainer',
+            url: 'https://blob001.blob.core.windows.net/raw',
+            prefix: '',
+        });
+        assert.equal(snapshot(record).azure.mode, 'public');
+        assert.equal(service.requests[0].token?.isCancellationRequested, true);
+        await ui.handle({
+            type: 'azureBrowserOpenEntry',
+            entryId: snapshot(record).azure.entries[0].id,
+        });
+        await ui.handle({ type: 'azureBrowserUseSelectedFile' });
+        assert.equal(snapshot(record).authMethod, 'public');
+        assert.match(snapshot(record).storageUrl, /^abs:\/\/raw@blob001\.blob\.core\.windows\.net\//);
+        assert.equal(snapshot(record).metadata, null);
+
+        await ui.handle({ type: 'activateLocalSource' });
+        assert.equal(snapshot(record).selectedFileId, fileId);
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).busy, false);
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), settings);
         assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
         const restored = snapshot(record);
         service.final.release();
