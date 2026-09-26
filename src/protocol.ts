@@ -52,6 +52,7 @@ import {
 } from './native';
 import type { AzureBrowserState } from './azure/types';
 import { MAX_BLOB_PATH_LENGTH, MAX_PUBLIC_CONTAINER_URL_LENGTH } from './azure/locations';
+import { MAX_PROFILE_NAME_LENGTH, PARSER_OVERRIDE_KEYS } from './fileSettings';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -141,10 +142,12 @@ export type WebviewRequest =
       })
     | (Base & { readonly type: 'azureBrowserOpenEntry'; readonly entryId: string })
     | (Base & { readonly type: 'azureBrowserNavigate'; readonly depth: number })
-    | (Base & { readonly type: 'setTableName'; readonly value: string })
-    | (Base & { readonly type: 'setSchemaName'; readonly value: string })
-    | (Base & { readonly type: 'setDataSource'; readonly value: string })
-    | (Base & { readonly type: 'setCredentialName'; readonly value: string })
+    | (Base & {
+          readonly type: 'setTableName' | 'setSchemaName' | 'setDataSource' | 'setCredentialName' | 'setFormatName';
+          /** Null only when editing object names without a selected local file. */
+          readonly fileId: string | null;
+          readonly value: string;
+      })
     | (Base & {
           readonly type: 'setAuthMethod';
           readonly value: GuidedAuthMethod | 'public';
@@ -152,21 +155,23 @@ export type WebviewRequest =
     | (Base & { readonly type: 'setStorageGoal'; readonly value: StorageSetupGoal })
     | (Base & { readonly type: 'setAzureFolderFormat'; readonly value: string })
     | (Base & { readonly type: 'setStorageUrl'; readonly value: string })
-    | (Base & { readonly type: 'setFormatName'; readonly value: string })
     | (Base & {
           readonly type: 'setParserOverride';
           readonly fileId: string;
           readonly key: keyof ParserOverrides;
           readonly value: string;
       })
-    | (Base & { readonly type: 'resetParserOverride'; readonly key: keyof ParserOverrides })
+    | (Base & { readonly type: 'resetParserOverride'; readonly fileId: string; readonly key: keyof ParserOverrides })
     | (Base & {
           readonly type: 'setColumnOverride';
           readonly fileId: string;
           readonly column: string;
           readonly sqlType: string;
       })
-    | (Base & { readonly type: 'clearColumnOverrides' })
+    | (Base & { readonly type: 'clearColumnOverrides'; readonly fileId: string })
+    | (Base & { readonly type: 'resetFileSettings' | 'undoFileSettings'; readonly fileId: string })
+    | (Base & { readonly type: 'saveImportProfile' | 'applyImportProfile'; readonly fileId: string; readonly name: string })
+    | (Base & { readonly type: 'deleteImportProfile'; readonly name: string })
     | (Base & { readonly type: 'setPreviewRows'; readonly rows: number })
     | (Base & { readonly type: 'copyStatement'; readonly kind: StatementKind })
     | (Base & {
@@ -256,6 +261,11 @@ export interface AppStateSnapshot {
     readonly folderProfile: FolderProfile | null;
     readonly quickAnalyze: QuickAnalyzeState;
     readonly columnOverrides: Readonly<Record<string, string>>;
+    readonly canUndoSettings: boolean;
+    /** Changes when settings are replaced, so surfaces discard obsolete drafts. */
+    readonly settingsRevision: number;
+    /** The renderer receives profile names, not persisted settings or identities. */
+    readonly importProfiles: readonly string[];
     readonly recommendedSqlTypes: Readonly<Record<string, string>>;
     readonly previewRows: number;
     readonly busy: boolean;
@@ -372,6 +382,34 @@ type Builder = (
     source: Record<string, unknown>,
 ) => Omit<WebviewRequest, 'requestId'> | undefined;
 
+function objectNameRequest(
+    type: 'setTableName' | 'setSchemaName' | 'setDataSource' | 'setCredentialName' | 'setFormatName',
+    source: Record<string, unknown>,
+): WebviewRequest | undefined {
+    const fileId = source.fileId === null ? null : text(source, 'fileId', 64);
+    const value = text(source, 'value', 256);
+    return fileId === undefined || fileId === '' || value === undefined
+        ? undefined
+        : { type, fileId, value };
+}
+
+function fileSettingsAction(
+    type: 'clearColumnOverrides' | 'resetFileSettings' | 'undoFileSettings',
+    source: Record<string, unknown>,
+): WebviewRequest | undefined {
+    const fileId = text(source, 'fileId', 64);
+    return fileId ? { type, fileId } : undefined;
+}
+
+function profileAction(
+    type: 'saveImportProfile' | 'applyImportProfile',
+    source: Record<string, unknown>,
+): WebviewRequest | undefined {
+    const fileId = text(source, 'fileId', 64);
+    const name = text(source, 'name', MAX_PROFILE_NAME_LENGTH);
+    return fileId && name ? { type, fileId, name } : undefined;
+}
+
 const BUILDERS: Record<string, Builder> = {
     ready: () => ({ type: 'ready' }),
     refresh: () => ({ type: 'refresh' }),
@@ -400,7 +438,15 @@ const BUILDERS: Record<string, Builder> = {
     azureBrowserLoadMore: () => ({ type: 'azureBrowserLoadMore' }),
     azureBrowserUseSelectedFile: () => ({ type: 'azureBrowserUseSelectedFile' }),
     azureBrowserUseCurrentFolder: () => ({ type: 'azureBrowserUseCurrentFolder' }),
-    clearColumnOverrides: () => ({ type: 'clearColumnOverrides' }),
+    clearColumnOverrides: (source) => fileSettingsAction('clearColumnOverrides', source),
+    resetFileSettings: (source) => fileSettingsAction('resetFileSettings', source),
+    undoFileSettings: (source) => fileSettingsAction('undoFileSettings', source),
+    saveImportProfile: (source) => profileAction('saveImportProfile', source),
+    applyImportProfile: (source) => profileAction('applyImportProfile', source),
+    deleteImportProfile: (source) => {
+        const name = text(source, 'name', MAX_PROFILE_NAME_LENGTH);
+        return name ? { type: 'deleteImportProfile', name } : undefined;
+    },
     exportAllSql: () => ({ type: 'exportAllSql' }),
     openInEditor: () => ({ type: 'openInEditor' }),
     showOrcGuidance: () => ({ type: 'showOrcGuidance' }),
@@ -449,24 +495,10 @@ const BUILDERS: Record<string, Builder> = {
         const fileId = text(source, 'fileId', 64);
         return fileId ? { type: 'selectFile', fileId } : undefined;
     },
-    setTableName: (source) => {
-        const value = text(source, 'value', 256);
-        return value === undefined ? undefined : { type: 'setTableName', value };
-    },
-    setSchemaName: (source) => {
-        const value = text(source, 'value', 256);
-        return value === undefined ? undefined : { type: 'setSchemaName', value };
-    },
-    setDataSource: (source) => {
-        const value = text(source, 'value', 256);
-        return value === undefined ? undefined : { type: 'setDataSource', value };
-    },
-    setCredentialName: (source) => {
-        const value = text(source, 'value', 256);
-        return value === undefined
-            ? undefined
-            : { type: 'setCredentialName', value };
-    },
+    setTableName: (source) => objectNameRequest('setTableName', source),
+    setSchemaName: (source) => objectNameRequest('setSchemaName', source),
+    setDataSource: (source) => objectNameRequest('setDataSource', source),
+    setCredentialName: (source) => objectNameRequest('setCredentialName', source),
     setAuthMethod: (source) => {
         const value = member(source, 'value', [...GUIDED_AUTH_METHODS, 'public'] as const);
         return value === undefined ? undefined : { type: 'setAuthMethod', value };
@@ -483,37 +515,19 @@ const BUILDERS: Record<string, Builder> = {
         const value = text(source, 'value', MAX_URL_LENGTH);
         return value === undefined ? undefined : { type: 'setStorageUrl', value };
     },
-    setFormatName: (source) => {
-        const value = text(source, 'value', 256);
-        return value === undefined ? undefined : { type: 'setFormatName', value };
-    },
+    setFormatName: (source) => objectNameRequest('setFormatName', source),
     setParserOverride: (source) => {
         const fileId = text(source, 'fileId', 64);
-        const key = member(source, 'key', [
-            'format',
-            'firstRow',
-            'fieldDelimiter',
-            'rowTerminator',
-            'quoteCharacter',
-            'codepage',
-            'compression',
-        ] as const);
+        const key = member(source, 'key', PARSER_OVERRIDE_KEYS);
         const value = text(source, 'value', 128);
         return !fileId || key === undefined || value === undefined
             ? undefined
             : { type: 'setParserOverride', fileId, key, value };
     },
     resetParserOverride: (source) => {
-        const key = member(source, 'key', [
-            'format',
-            'firstRow',
-            'fieldDelimiter',
-            'rowTerminator',
-            'quoteCharacter',
-            'codepage',
-            'compression',
-        ] as const);
-        return key === undefined ? undefined : { type: 'resetParserOverride', key };
+        const fileId = text(source, 'fileId', 64);
+        const key = member(source, 'key', PARSER_OVERRIDE_KEYS);
+        return !fileId || key === undefined ? undefined : { type: 'resetParserOverride', fileId, key };
     },
     setColumnOverride: (source) => {
         const fileId = text(source, 'fileId', 64);
@@ -559,6 +573,16 @@ export function parseWebviewRequest(raw: unknown): WebviewRequest | undefined {
     }
     const built = BUILDERS[type](raw);
     if (!built) {
+        return undefined;
+    }
+    if (
+        [
+            'setTableName', 'setSchemaName', 'setDataSource', 'setCredentialName', 'setFormatName',
+            'setParserOverride', 'resetParserOverride', 'setColumnOverride', 'clearColumnOverrides',
+            'resetFileSettings', 'undoFileSettings', 'saveImportProfile', 'applyImportProfile', 'deleteImportProfile',
+        ].includes(type)
+        && Object.keys(raw).some((key) => key !== 'requestId' && !Object.prototype.hasOwnProperty.call(built, key))
+    ) {
         return undefined;
     }
     const id = requestId(raw);

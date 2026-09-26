@@ -21,6 +21,7 @@ TypeScript running in the extension host.
 | `src/ui/host.ts` | no | The `UiHost` seam. Everything the controller needs from the editor, expressed as an interface. |
 | `src/ui/webviewShell.ts` | no | Builds the HTML shell and extension-origin-only CSP. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
+| `src/fileSettings.ts` | no | Bounded session-only file settings/Undo and strict, credential-free import-profile validation. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
 | `src/azure/*` | no | Explicit Microsoft sign-in or known-public-container listing, bounded discovery, and mode/auth lifecycle reconciliation. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
@@ -92,6 +93,47 @@ it with `vscode.env.openExternal`. Unsupported command/platform combinations do
 not receive a command link. SQL Server documentation is pinned to the 2019,
 2022, or 2025 view; Azure SQL Database, Managed Instance, and Fabric use their
 current product views.
+
+## File settings and import profiles
+
+**File settings and import profiles** is available above the result tabs' content
+in both surfaces. Table, schema, external data source, credential **name**, file
+format name, parser overrides, and SQL type overrides stay with each local file
+when switching files or returning from Browse Azure. New files start with the
+usual inferred table name, `dbo`, `MyDataSource`, and automatic credential/file
+format names. **Reset settings** restores these defaults without changing the
+selection, preview, or detected facts. **Undo settings change** restores one
+previous settings snapshot for that file, including a reset or applied profile.
+Selecting the file again reanalyzes it without resetting settings. Parser
+overrides affect generated SQL, not the detected metadata or preview reader.
+Multi-file export uses each file's own settings, not the active file's names.
+
+File settings are memory-only. The host validates realpath containment before
+hashing a canonical path as a history key; neither that key nor the path enters
+the renderer's settings state. History retains at most 50 files and 512 KiB of
+serialized UTF-8 settings, including Undo snapshots; least-recently-used entries
+are evicted first. It contains no file contents. Object-name and override edits,
+Reset, Undo, and profile actions carry the selected opaque `fileId`. Stale
+messages cannot edit a different file, and analysis completion uses current
+settings rather than replacing edits made while it was running. Authoritative
+schema changes discard and report overrides for columns that no longer exist.
+
+**Save current settings**, **Apply selected profile**, and **Delete profile**
+manage named profiles in the existing non-sensitive VS Code preference storage
+(`native.importProfiles`). Saving an existing name replaces it. The version-1
+schema allows only `version`, `name`, `tableName`, `schemaName`, `dataSource`,
+`credentialName`, `formatName`, `parserOverrides`, and `columnOverrides`.
+Only explicit overrides are saved, not inferred column types or metadata.
+Unknown/prototype fields, invalid SQL types or parser values, and
+credential-/URL-/control-bearing names are rejected with safe errors. Exact
+source column names preserve ordinary punctuation and surrounding spaces.
+Profiles are limited to 20 entries, 32 KiB each, 256 KiB total, and 128 column
+overrides each. Applying one matches columns by name and reports absent columns;
+it never changes the platform, source selection, storage URL, or authentication.
+No tokens, SAS values, account keys, connection strings, paths, or file contents
+are persisted in profiles. Corrupt or unsupported saved profiles produce a
+visible warning and an output-channel warning without changing the stored value
+or triggering authentication, file analysis, or network access at startup.
 
 ## The message boundary
 
@@ -292,9 +334,9 @@ The separate Storage SQL URL boundary remains unchanged:
 
 ## Cancellation and stale results
 
-Analysis is serialised through `createSerialQueue()`, so two concurrent requests
-keep their own arguments and their own results rather than one being satisfied
-by the other. On top of that:
+Context-menu analysis and export use `createSerialQueue()`, so requests keep
+their own arguments. Explicit file selections and source switches cancel
+obsolete analysis immediately rather than waiting behind it. On top of that:
 
 - `begin()` bumps a monotonic `generation` and cancels the previous
   `CancellationTokenSource`.
@@ -302,6 +344,8 @@ by the other. On top of that:
   its result instead of writing it. A slow analysis of file A can therefore never
   overwrite a fast analysis of file B.
 - The token reaches all the way down into the native analysis service.
+- Cancellation also invalidates the generation, so even an operation that
+  finishes after its token is canceled cannot publish a stale result.
 - Schema and SQL regeneration is debounced, so typing in the table name field
   does not start work on every keystroke.
 

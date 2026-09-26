@@ -24,7 +24,8 @@ import type {
     UiHost,
 } from '../../ui/host';
 import type { AppStateSnapshot } from '../../protocol';
-import type { StatementKind } from '../../native';
+import { NativeAnalysisService, type StatementKind } from '../../native';
+import { DEFAULT_FILE_SETTINGS, IMPORT_PROFILES_PREFERENCE, fileSettingsFrom, type ImportProfile } from '../../fileSettings';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -124,6 +125,443 @@ function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
 
+function gate(): { promise: Promise<void>; release: () => void } {
+    let release!: () => void;
+    const promise = new Promise<void>((resolve) => { release = resolve; });
+    return { promise, release };
+}
+
+test('all settings and one-level Undo are isolated across file switching, refresh and source switching', async () => {
+    const record = recorder();
+    const azure = new AzureBrowser({ authentication: new MicrosoftAuthentication(async () => undefined) });
+    const ui = controller(record, { azure });
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv'), path.join(FIXTURES, 'employees.csv')]);
+        const [first, second] = snapshot(record).files;
+        const column = snapshot(record).metadata!.schema![0][0];
+        for (const [type, value] of [
+            ['setTableName', 'first_table'], ['setSchemaName', 'first_schema'],
+            ['setDataSource', 'FirstSource'], ['setCredentialName', 'FirstCredential'],
+            ['setFormatName', 'FirstFormat'],
+        ]) {
+            await ui.handle({ type, fileId: first.id, value });
+        }
+        await ui.handle({ type: 'setParserOverride', fileId: first.id, key: 'fieldDelimiter', value: '|' });
+        await ui.handle({ type: 'setColumnOverride', fileId: first.id, column, sqlType: 'BIGINT' });
+        const retained = fileSettingsFrom(snapshot(record));
+
+        await ui.handle({ type: 'selectFile', fileId: second.id });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), { ...DEFAULT_FILE_SETTINGS, tableName: 'employees' });
+        assert.equal(snapshot(record).canUndoSettings, false);
+        await ui.handle({ type: 'setTableName', fileId: second.id, value: 'second_table' });
+
+        await ui.handle({ type: 'selectFile', fileId: first.id });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), retained);
+        await ui.handle({ type: 'refresh' });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), retained);
+        assert.equal(snapshot(record).canUndoSettings, true);
+        await ui.handle({ type: 'openAzureBrowser' });
+        await ui.handle({ type: 'setSchemaName', fileId: null, value: 'azure_schema' });
+        await ui.handle({ type: 'setDataSource', fileId: null, value: 'AzureSource' });
+        await ui.handle({ type: 'activateLocalSource' });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), retained);
+        assert.equal(snapshot(record).selectedFileId, first.id);
+        assert.equal(record.dialogs.length, 0);
+
+        const metadata = snapshot(record).metadata;
+        const preview = snapshot(record).preview;
+        await ui.handle({ type: 'resetFileSettings', fileId: first.id });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), { ...DEFAULT_FILE_SETTINGS, tableName: 'sample' });
+        assert.equal(snapshot(record).metadata, metadata, 'Reset is not reanalysis');
+        assert.equal(snapshot(record).preview, preview);
+        assert.equal(snapshot(record).selectedFileId, first.id);
+        assert.equal(snapshot(record).canUndoSettings, true);
+        await ui.handle({ type: 'selectFile', fileId: second.id });
+        await ui.handle({ type: 'undoFileSettings', fileId: second.id });
+        assert.equal(snapshot(record).tableName, 'employees');
+        assert.equal(snapshot(record).canUndoSettings, false);
+        await ui.handle({ type: 'selectFile', fileId: first.id });
+        await ui.handle({ type: 'undoFileSettings', fileId: first.id });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), retained);
+        assert.equal(snapshot(record).canUndoSettings, false);
+
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        assert.notEqual(snapshot(record).selectedFileId, first.id, 'a fresh listing has fresh opaque handles');
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), retained, 'canonical identity retains settings across a new listing');
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('stale settings, reset, undo and profile messages cannot change another file', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv'), path.join(FIXTURES, 'employees.csv')]);
+        const [first, second] = snapshot(record).files;
+        await ui.handle({ type: 'saveImportProfile', fileId: first.id, name: 'First' });
+        await ui.handle({ type: 'selectFile', fileId: second.id });
+        await ui.handle({ type: 'setSchemaName', fileId: second.id, value: 'second_schema' });
+        const retained = fileSettingsFrom(snapshot(record));
+        const column = snapshot(record).metadata!.schema![0][0];
+        const messages = [
+            ...['setTableName', 'setSchemaName', 'setDataSource', 'setCredentialName', 'setFormatName']
+                .map((type) => ({ type, fileId: first.id, value: 'Wrong' })),
+            { type: 'setTableName', fileId: null, value: 'Wrong remote draft' },
+            { type: 'setParserOverride', fileId: first.id, key: 'fieldDelimiter', value: '|' },
+            { type: 'resetParserOverride', fileId: first.id, key: 'fieldDelimiter' },
+            { type: 'setColumnOverride', fileId: first.id, column, sqlType: 'BIGINT' },
+            { type: 'clearColumnOverrides', fileId: first.id },
+            { type: 'resetFileSettings', fileId: first.id },
+            { type: 'undoFileSettings', fileId: first.id },
+            { type: 'saveImportProfile', fileId: first.id, name: 'Wrong' },
+            { type: 'applyImportProfile', fileId: first.id, name: 'First' },
+        ];
+        for (const message of messages) {
+            await ui.handle(message);
+            assert.deepEqual(fileSettingsFrom(snapshot(record)), retained, message.type);
+            assert.equal(snapshot(record).canUndoSettings, true);
+        }
+        assert.deepEqual(snapshot(record).importProfiles, ['First']);
+        assert.match(record.logs.at(-1) ?? '', /Settings were not changed/);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('edits made during reanalysis survive completion, including names after a storage URL is applied', async () => {
+    const record = recorder();
+    const service = new NativeAnalysisService();
+    const entered = gate();
+    const release = gate();
+    const ui = controller(record, { service });
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        const fileId = snapshot(record).selectedFileId!;
+        const column = snapshot(record).metadata!.schema![0][0];
+        const original = service.analyze.bind(service);
+        service.analyze = async (request) => {
+            entered.release();
+            await release.promise;
+            return original(request);
+        };
+        const pending = ui.handle({ type: 'selectFile', fileId });
+        await entered.promise;
+        for (const [type, value] of [
+            ['setTableName', 'edited_table'], ['setSchemaName', 'edited_schema'],
+            ['setDataSource', 'EditedSource'], ['setCredentialName', 'EditedCredential'],
+            ['setFormatName', 'EditedFormat'],
+        ]) {
+            await ui.handle({ type, fileId, value });
+        }
+        await ui.handle({ type: 'setStorageUrl', value: 'abs://data@account.blob.core.windows.net/sample.csv' });
+        await ui.handle({ type: 'setParserOverride', fileId, key: 'fieldDelimiter', value: '|' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'DECIMAL(18,4)' });
+        const edited = fileSettingsFrom(snapshot(record));
+        await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'NOT_A_TYPE' });
+        assert.equal(snapshot(record).busy, true, 'invalid settings do not end an active analysis');
+        release.release();
+        await pending;
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), edited);
+        assert.match(snapshot(record).statements!.create_table, /\[edited_schema\]\.\[edited_table\]/);
+        assert.match(snapshot(record).statements!.create_table, /DECIMAL\(18,4\)/);
+        assert.match(snapshot(record).statements!.bulk_insert, /FIELDTERMINATOR\s+= '\|'/);
+        assert.equal(snapshot(record).busy, false);
+    } finally {
+        release.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('file selection and source switches suppress a late analysis even when it ignores cancellation', async () => {
+    const record = recorder();
+    const service = new NativeAnalysisService();
+    const azure = new AzureBrowser({ authentication: new MicrosoftAuthentication(async () => undefined) });
+    const entered = gate();
+    const release = gate();
+    const ui = controller(record, { service, azure });
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv'), path.join(FIXTURES, 'employees.csv')]);
+        const [first, second] = snapshot(record).files;
+        const original = service.analyze.bind(service);
+        const delayed = await original({ filePath: path.join(FIXTURES, 'sample.csv'), allowedRoot: FIXTURES });
+        service.analyze = async (request) => {
+            if (request.filePath.endsWith('sample.csv')) {
+                entered.release();
+                await release.promise;
+                return delayed;
+            }
+            return original(request);
+        };
+        const pending = ui.handle({ type: 'selectFile', fileId: first.id });
+        await entered.promise;
+        await ui.handle({ type: 'selectFile', fileId: second.id });
+        assert.equal(snapshot(record).metadata?.file_name, 'employees.csv', 'the new selection does not wait for obsolete analysis');
+        await ui.handle({ type: 'setTableName', fileId: second.id, value: 'kept' });
+        await ui.handle({ type: 'openAzureBrowser' });
+        assert.equal(snapshot(record).busy, false);
+        release.release();
+        await pending;
+        assert.equal(snapshot(record).sourceMode, 'azure');
+        assert.equal(snapshot(record).metadata, null);
+        await ui.handle({ type: 'activateLocalSource' });
+        assert.equal(snapshot(record).selectedFileId, second.id);
+        assert.equal(snapshot(record).metadata?.file_name, 'employees.csv');
+        assert.equal(snapshot(record).tableName, 'kept');
+    } finally {
+        release.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('profiles reload without secrets, apply only matching columns and keep current platform and source choices', async () => {
+    const first = recorder();
+    const second = recorder();
+    const firstUi = controller(first);
+    let secondUi: UiController | undefined;
+    try {
+        const source = path.join(first.downloadDir, 'source.csv');
+        const target = path.join(second.downloadDir, 'target.csv');
+        fs.writeFileSync(source, 'id,amount\n1,20\n2,30\n');
+        fs.writeFileSync(target, 'id,name\n1,Alice\n2,Bob\n');
+        await firstUi.loadFiles([source]);
+        const firstId = snapshot(first).selectedFileId!;
+        await firstUi.handle({ type: 'setTableName', fileId: firstId, value: 'orders' });
+        await firstUi.handle({ type: 'setCredentialName', fileId: firstId, value: 'OrdersCredential' });
+        await firstUi.handle({ type: 'setParserOverride', fileId: firstId, key: 'fieldDelimiter', value: '|' });
+        await firstUi.handle({ type: 'setColumnOverride', fileId: firstId, column: 'id', sqlType: 'BIGINT' });
+        await firstUi.handle({ type: 'setColumnOverride', fileId: firstId, column: 'amount', sqlType: 'DECIMAL(18,4)' });
+        await firstUi.handle({ type: 'setStorageUrl', value: 'abs://data@account.blob.core.windows.net/source.csv?sig=SECRET' });
+        await firstUi.handle({ type: 'saveImportProfile', fileId: firstId, name: 'Orders' });
+        const saved = first.preferences.get(IMPORT_PROFILES_PREFERENCE);
+        assert.ok(saved);
+        assert.doesNotMatch(JSON.stringify(saved), /SECRET|source\.csv|blob\.core|storageUrl|authMethod|platform|file_path|sample_rows/);
+        assert.ok(!JSON.stringify(saved).includes(first.downloadDir));
+        assert.deepEqual(Object.keys(saved as object), ['0']);
+        second.preferences.set(IMPORT_PROFILES_PREFERENCE, JSON.parse(JSON.stringify(saved)));
+        let authenticationCalls = 0;
+        const azure = new AzureBrowser({
+            authentication: new MicrosoftAuthentication(async () => { authenticationCalls += 1; return undefined; }),
+        });
+        secondUi = controller(second, { azure });
+        assert.deepEqual(snapshot(second).importProfiles, ['Orders']);
+        assert.equal(snapshot(second).selectedFileId, null, 'file history is session-only');
+        assert.equal(authenticationCalls, 0);
+        await secondUi.loadFiles([target]);
+        const secondId = snapshot(second).selectedFileId!;
+        await secondUi.handle({ type: 'setPlatform', platform: 'fabric_sql_db' });
+        await secondUi.handle({ type: 'setStorageUrl', value: 'abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse/Files/target.csv' });
+        const before = snapshot(second);
+        await secondUi.handle({ type: 'applyImportProfile', fileId: secondId, name: 'Orders' });
+        const applied = snapshot(second);
+        assert.equal(applied.tableName, 'orders');
+        assert.equal(applied.credentialName, 'OrdersCredential');
+        assert.deepEqual(applied.columnOverrides, { id: 'BIGINT' });
+        assert.equal(applied.parserOverrides.fieldDelimiter, '|');
+        assert.match(applied.notice ?? '', /amount/);
+        for (const key of ['platform', 'sourceMode', 'sourceKind', 'storageUrl', 'dataSourceType', 'authMethod', 'selectedFileId'] as const) {
+            assert.equal(applied[key], before[key], key);
+        }
+        assert.equal(applied.authMethod, 'user_identity');
+        assert.equal(applied.dataSourceType, 'fabric_onelake');
+        await secondUi.handle({ type: 'undoFileSettings', fileId: secondId });
+        assert.equal(snapshot(second).tableName, 'target');
+        assert.deepEqual(snapshot(second).columnOverrides, {});
+        await secondUi.handle({ type: 'deleteImportProfile', name: 'Orders' });
+        assert.deepEqual(snapshot(second).importProfiles, []);
+        assert.deepEqual(second.preferences.get(IMPORT_PROFILES_PREFERENCE), []);
+        assert.equal(authenticationCalls, 0);
+    } finally {
+        await firstUi.dispose();
+        await secondUi?.dispose();
+        cleanup(first);
+        cleanup(second);
+    }
+});
+
+test('corrupt saved profiles warn safely on startup and failed preference writes leave saved state intact', async () => {
+    const record = recorder();
+    record.preferences.set(IMPORT_PROFILES_PREFERENCE, [{ version: 1, name: 'Broken', token: 'SECRET' }]);
+    const original = record.host.setPreference;
+    record.host = {
+        ...record.host,
+        setPreference: async (key, value) => {
+            if (key === IMPORT_PROFILES_PREFERENCE) {
+                throw new Error('unsafe storage failure SECRET');
+            }
+            await original(key, value);
+        },
+    };
+    const ui = controller(record);
+    try {
+        assert.deepEqual(snapshot(record).importProfiles, []);
+        assert.match(record.warnings[0], /could not be loaded/);
+        assert.match(record.logs[0], /No saved data was changed/);
+        assert.doesNotMatch(JSON.stringify(record.logs), /SECRET/);
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        await ui.handle({ type: 'saveImportProfile', fileId: snapshot(record).selectedFileId, name: 'Valid' });
+        assert.match(snapshot(record).error ?? '', /could not be saved/);
+        assert.deepEqual(snapshot(record).importProfiles, []);
+        assert.deepEqual(record.preferences.get(IMPORT_PROFILES_PREFERENCE), [{ version: 1, name: 'Broken', token: 'SECRET' }]);
+        assert.doesNotMatch(JSON.stringify(snapshot(record)), /SECRET/);
+        assert.doesNotMatch(JSON.stringify(record.logs), /SECRET/);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('queued profile saves capture the originating file before persistence awaits and do not lose concurrent saves', async () => {
+    const record = recorder();
+    const entered = gate();
+    const release = gate();
+    const original = record.host.setPreference;
+    let writes = 0;
+    record.host = {
+        ...record.host,
+        setPreference: async (key, value) => {
+            if (key === IMPORT_PROFILES_PREFERENCE && ++writes === 1) {
+                entered.release();
+                await release.promise;
+            }
+            await original(key, value);
+        },
+    };
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([path.join(FIXTURES, 'sample.csv'), path.join(FIXTURES, 'employees.csv')]);
+        const [first, second] = snapshot(record).files;
+        await ui.handle({ type: 'setTableName', fileId: first.id, value: 'first_table' });
+        const firstSave = ui.handle({ type: 'saveImportProfile', fileId: first.id, name: 'First' });
+        await entered.promise;
+        await ui.handle({ type: 'selectFile', fileId: second.id });
+        await ui.handle({ type: 'setTableName', fileId: second.id, value: 'second_table' });
+        const secondSave = ui.handle({ type: 'saveImportProfile', fileId: second.id, name: 'Second' });
+        release.release();
+        await Promise.all([firstSave, secondSave]);
+        const profiles = record.preferences.get(IMPORT_PROFILES_PREFERENCE) as ImportProfile[];
+        assert.deepEqual(profiles.map(({ name, tableName }) => [name, tableName]), [
+            ['First', 'first_table'], ['Second', 'second_table'],
+        ]);
+        assert.equal(snapshot(record).tableName, 'second_table');
+    } finally {
+        release.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('authoritative schema drift removes and reports only absent overrides, including on Undo', async () => {
+    const record = recorder();
+    const service = new NativeAnalysisService();
+    const ui = controller(record, { service });
+    try {
+        const source = path.join(record.downloadDir, 'source.csv');
+        fs.writeFileSync(source, 'id,amount\n1,20\n2,30\n');
+        await ui.loadFiles([source]);
+        const fileId = snapshot(record).selectedFileId!;
+        await ui.handle({ type: 'setColumnOverride', fileId, column: 'id', sqlType: 'BIGINT' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column: 'amount', sqlType: 'DECIMAL(18,4)' });
+        await ui.handle({ type: 'setSchemaName', fileId, value: 'kept' });
+        const metadata = await service.analyze({ filePath: source, allowedRoot: record.downloadDir });
+        service.analyze = async () => ({ ...metadata, schema: [['id', 'int64'], ['replacement', 'string']] });
+        await ui.handle({ type: 'selectFile', fileId });
+        assert.deepEqual(snapshot(record).columnOverrides, { id: 'BIGINT' });
+        assert.equal(snapshot(record).schemaName, 'kept');
+        assert.match(snapshot(record).notice ?? '', /amount/);
+        await ui.handle({ type: 'undoFileSettings', fileId });
+        assert.deepEqual(snapshot(record).columnOverrides, { id: 'BIGINT' });
+        assert.match(snapshot(record).notice ?? '', /amount/);
+        assert.doesNotMatch(snapshot(record).statements!.create_table, /DECIMAL\(18,4\)/);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('exact source column punctuation survives profiles and prototype-shaped column edits are explicitly rejected', async () => {
+    const record = recorder();
+    const service = new NativeAnalysisService();
+    const source = path.join(FIXTURES, 'sample.csv');
+    const metadata = await service.analyze({ filePath: source, allowedRoot: FIXTURES });
+    const columns = ['Revenue / USD', 'Key: value', ' padded ', '__proto__', 'constructor', 'prototype'];
+    service.analyze = async () => ({ ...metadata, schema: columns.map((name) => [name, 'string']) });
+    const ui = controller(record, { service });
+    try {
+        await ui.loadFiles([source]);
+        const fileId = snapshot(record).selectedFileId!;
+        for (const column of columns.slice(0, 3)) {
+            await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'NVARCHAR(80)' });
+        }
+        const overrides = { ...snapshot(record).columnOverrides };
+        await ui.handle({ type: 'saveImportProfile', fileId, name: 'Exact names' });
+        await ui.handle({ type: 'resetFileSettings', fileId });
+        await ui.handle({ type: 'applyImportProfile', fileId, name: 'Exact names' });
+        assert.deepEqual(snapshot(record).columnOverrides, overrides);
+        for (const column of columns.slice(3)) {
+            for (const sqlType of ['INT', '']) {
+                await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType });
+                assert.match(snapshot(record).error ?? '', /prototype keys/);
+                assert.deepEqual(snapshot(record).columnOverrides, overrides);
+            }
+        }
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('multi-file export uses each files retained names and overrides, not the active files settings', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        const firstPath = path.join(record.downloadDir, 'first.csv');
+        const secondPath = path.join(record.downloadDir, 'second.csv');
+        fs.writeFileSync(firstPath, 'id,value\n1,10\n');
+        fs.writeFileSync(secondPath, 'id,value\n2,20\n');
+        await ui.loadFiles([firstPath, secondPath]);
+        const [first, second] = snapshot(record).files;
+        for (const [file, suffix, sqlType, delimiter] of [
+            [first, 'First', 'BIGINT', '|'],
+            [second, 'Second', 'DECIMAL(18,4)', ';'],
+        ] as const) {
+            await ui.handle({ type: 'selectFile', fileId: file.id });
+            for (const [type, value] of [
+                ['setTableName', `Table${suffix}`], ['setSchemaName', `Schema${suffix}`],
+                ['setDataSource', `Source${suffix}`], ['setCredentialName', `Credential${suffix}`],
+                ['setFormatName', `Format${suffix}`],
+            ]) {
+                await ui.handle({ type, fileId: file.id, value });
+            }
+            await ui.handle({ type: 'setColumnOverride', fileId: file.id, column: 'id', sqlType });
+            await ui.handle({ type: 'setParserOverride', fileId: file.id, key: 'fieldDelimiter', value: delimiter });
+        }
+        await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
+        await ui.handle({ type: 'exportAllSql' });
+        const sql = record.saved[0].content;
+        for (const suffix of ['First', 'Second']) {
+            assert.ok(sql.includes(`[Schema${suffix}].[Table${suffix}]`));
+            assert.ok(sql.includes(`Source${suffix}`));
+            assert.ok(sql.includes(`Credential${suffix}`));
+            assert.ok(sql.includes(`Format${suffix}`));
+        }
+        const split = sql.indexOf('CREATE TABLE [SchemaSecond].[TableSecond]');
+        assert.ok(split > 0);
+        assert.match(sql.slice(0, split), /\[id\]\s+BIGINT/);
+        assert.match(sql.slice(split), /\[id\]\s+DECIMAL\(18,4\)/);
+        assert.match(sql, /FIELDTERMINATOR\s+= '\|'/);
+        assert.match(sql, /FIELDTERMINATOR\s+= ';'/);
+        assert.equal(snapshot(record).selectedFileId, second.id);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 test('the controller applies and resets parser overrides per selected file', async () => {
     const record = recorder();
     const timers: Array<() => void> = [];
@@ -156,7 +594,7 @@ test('the controller applies and resets parser overrides per selected file', asy
         );
         assert.match(snapshot(record).statements?.bulk_insert ?? '', /FIELDTERMINATOR\s+= '\|'/);
 
-        await ui.handle({ type: 'resetParserOverride', key: 'fieldDelimiter' });
+        await ui.handle({ type: 'resetParserOverride', fileId, key: 'fieldDelimiter' });
         timers.splice(0).forEach((fire) => fire());
         assert.equal(snapshot(record).parserOverrides.fieldDelimiter, undefined);
         assert.equal(
@@ -926,8 +1364,8 @@ test('platform, names and overrides regenerate the SQL and persist preferences',
         await settle();
         const before = snapshot(record).statements?.create_table as string;
 
-        await ui.handle({ type: 'setTableName', value: 'Employees' });
-        await ui.handle({ type: 'setSchemaName', value: 'hr' });
+        await ui.handle({ type: 'setTableName', fileId: snapshot(record).selectedFileId, value: 'Employees' });
+        await ui.handle({ type: 'setSchemaName', fileId: snapshot(record).selectedFileId, value: 'hr' });
         await ui.handle({ type: 'setPlatform', platform: 'sql_server_2022' });
         await settle();
         timers.forEach((fire) => fire());
@@ -958,7 +1396,7 @@ test('platform, names and overrides regenerate the SQL and persist preferences',
         assert.equal(snapshot(record).columnOverrides[column], undefined, 'blank clears');
 
         await ui.handle({ type: 'setColumnOverride', fileId, column, sqlType: 'BIGINT' });
-        await ui.handle({ type: 'clearColumnOverrides' });
+        await ui.handle({ type: 'clearColumnOverrides', fileId });
         await settle();
         assert.deepEqual(snapshot(record).columnOverrides, {});
     } finally {
@@ -988,7 +1426,7 @@ test('a burst of keystrokes collapses into one regeneration', async () => {
         await settle();
 
         for (const value of ['C', 'Cu', 'Cus', 'Cust', 'Custo']) {
-            await ui.handle({ type: 'setTableName', value });
+            await ui.handle({ type: 'setTableName', fileId: snapshot(record).selectedFileId, value });
         }
         await settle();
         assert.equal(scheduled, 5);
@@ -1426,9 +1864,9 @@ test('credential name, auth method and table name reach the generator', async ()
     try {
         await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
         await settle();
-        await ui.handle({ type: 'setCredentialName', value: 'cert_cred' });
+        await ui.handle({ type: 'setCredentialName', fileId: snapshot(record).selectedFileId, value: 'cert_cred' });
         await ui.handle({ type: 'setAuthMethod', value: 'managed_identity' });
-        await ui.handle({ type: 'setTableName', value: 'staged_orders' });
+        await ui.handle({ type: 'setTableName', fileId: snapshot(record).selectedFileId, value: 'staged_orders' });
         await settle();
         // The regeneration is debounced, so run whatever the debounce queued.
         timers.splice(0).forEach((fn) => fn());

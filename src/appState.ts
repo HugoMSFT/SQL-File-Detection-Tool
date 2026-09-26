@@ -24,7 +24,7 @@ import type {
     SupportedFormat,
     TargetPlatform,
 } from './native';
-import { DEFAULT_TARGET_PLATFORM, PLATFORM_LABELS, PLATFORMS } from './native';
+import { DEFAULT_TARGET_PLATFORM, PLATFORM_LABELS, PLATFORMS, resolveWithinRoot } from './native';
 import { statementDocumentation } from './documentation';
 import {
     folderProfileFor,
@@ -43,6 +43,7 @@ import {
     normalizeDataSourceType,
 } from './native';
 import { CLOSED_AZURE_BROWSER_STATE } from './azure/types';
+import { DEFAULT_FILE_SETTINGS, FileSettingsHistory, type FileSettings } from './fileSettings';
 
 /** Everything the host knows about one listed file. */
 export interface RegisteredFile {
@@ -52,6 +53,8 @@ export interface RegisteredFile {
     /** Root the analysis of this file is confined to. Host-chosen. */
     readonly allowedRoot: string;
     readonly entry: FileEntry;
+    /** Hash of the validated canonical path. Host-only, never a renderer handle. */
+    readonly settingsIdentity?: string;
 }
 
 /** Default preview row count. Bounded again on every request. */
@@ -84,19 +87,14 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
         metadata: null,
         preview: null,
         statements: null,
-        tableName: '',
-        schemaName: 'dbo',
-        dataSource: 'MyDataSource',
+        ...DEFAULT_FILE_SETTINGS,
         dataSourceType,
-        credentialName: '',
         authMethod: credentialSetup.authMethod,
         storageGoal: 'create_external_table',
         credentialSetup,
         storageUrl: '',
         azureFolderPreview: null,
         remoteSchema: null,
-        formatName: '',
-        parserOverrides: {},
         sourceKind: 'local',
         folderProfile: null,
         quickAnalyze: {
@@ -124,7 +122,9 @@ function initialSnapshot(options: AppStateOptions): AppStateSnapshot {
                 'openrowset',
             ),
         },
-        columnOverrides: {},
+        canUndoSettings: false,
+        settingsRevision: 0,
+        importProfiles: [],
         recommendedSqlTypes: {},
         previewRows: DEFAULT_PREVIEW_ROWS,
         busy: false,
@@ -185,6 +185,7 @@ export class AppStateStore {
     private snapshot: AppStateSnapshot;
     private readonly listeners = new Set<StateListener>();
     private readonly registry = new Map<string, RegisteredFile>();
+    private readonly fileSettings = new FileSettingsHistory();
     private workspaceFolders: readonly string[];
 
     constructor(private readonly options: AppStateOptions) {
@@ -241,6 +242,8 @@ export class AppStateStore {
             columnOverrides: {},
             recommendedSqlTypes: {},
             parserOverrides: {},
+            canUndoSettings: false,
+            settingsRevision: this.snapshot.settingsRevision + 1,
             limitation: null,
             lastAnalysisMs: null,
         });
@@ -321,6 +324,48 @@ export class AppStateStore {
         return this.registry.get(fileId);
     }
 
+    /** Validate containment before a local path can become a settings identity. */
+    async identifyFile(fileId: string): Promise<RegisteredFile | undefined> {
+        const file = this.lookup(fileId);
+        if (!file) {
+            return undefined;
+        }
+        const reference = await resolveWithinRoot(file.absolutePath, file.allowedRoot);
+        if (this.lookup(fileId) !== file) {
+            return undefined;
+        }
+        const canonical = path.normalize(reference.realPath);
+        const settingsIdentity = crypto.createHash('sha256')
+            .update(process.platform === 'win32' ? canonical.toLowerCase() : canonical)
+            .digest('hex');
+        const identified = { ...file, settingsIdentity };
+        this.registry.set(fileId, identified);
+        return identified;
+    }
+
+    settingsFor(file: RegisteredFile): FileSettings {
+        return file.settingsIdentity
+            ? this.fileSettings.get(file.settingsIdentity)
+            : DEFAULT_FILE_SETTINGS;
+    }
+
+    rememberSettings(file: RegisteredFile, settings: FileSettings, rememberUndo = true): FileSettings {
+        if (!file.settingsIdentity || this.lookup(file.id) !== file) {
+            throw new Error('File settings require a current, validated local file.');
+        }
+        return this.fileSettings.write(file.settingsIdentity, settings, rememberUndo);
+    }
+
+    canUndoSettings(file: RegisteredFile): boolean {
+        return !!file.settingsIdentity && this.fileSettings.canUndo(file.settingsIdentity);
+    }
+
+    undoSettings(file: RegisteredFile): FileSettings | undefined {
+        return file.settingsIdentity && this.lookup(file.id) === file
+            ? this.fileSettings.undo(file.settingsIdentity)
+            : undefined;
+    }
+
     /** Capture host-only file handles before temporarily switching source modes. */
     snapshotFiles(): readonly RegisteredFile[] {
         return [...this.registry.values()];
@@ -344,6 +389,7 @@ export class AppStateStore {
     /** Reset to a pristine model, e.g. on disconnect or deactivate. */
     reset(): void {
         this.registry.clear();
+        this.fileSettings.clear();
         this.snapshot = Object.freeze({
             ...initialSnapshot(this.options),
             platform: this.snapshot.platform,
@@ -357,6 +403,7 @@ export class AppStateStore {
     dispose(): void {
         this.listeners.clear();
         this.registry.clear();
+        this.fileSettings.clear();
     }
 }
 

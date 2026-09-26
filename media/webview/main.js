@@ -99,6 +99,9 @@
     let publicContainerUrlDraft = '';
     let publicContainerPrefixDraft = '';
     let advancedObjectNamesOpen = restoredViewState.advancedObjectNamesOpen === true;
+    let fileSettingsOpen = restoredViewState.fileSettingsOpen === true;
+    let profileNameDraft = '';
+    let selectedImportProfile = '';
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
         restoredViewState.storageUrlDraft,
     );
@@ -130,6 +133,7 @@
             azureEntryQuery: azureEntryQuery,
             azureFormat: azureFormat,
             advancedObjectNamesOpen: advancedObjectNamesOpen,
+            fileSettingsOpen: fileSettingsOpen,
             storageUrlDraft: sanitizeStorageUrlDraft(
                 pendingEdits.get('knownStorageUrl') || '',
             ),
@@ -151,7 +155,7 @@
         Object.keys(scalarFields).forEach(function (key) {
             if (
                 pendingEdits.has(key)
-                && String(nextState[scalarFields[key]] || '') === pendingEdits.get(key)
+                && String(nextState[scalarFields[key]] || '') === pendingEdits.get(key).trim()
             ) {
                 pendingEdits.delete(key);
             }
@@ -170,7 +174,10 @@
                 }
             } else if (key.startsWith('override:')) {
                 const column = key.slice('override:'.length);
-                if (String(nextState.columnOverrides[column] ?? '') === pendingEdits.get(key)) {
+                if (
+                    String(nextState.columnOverrides[column] ?? '').replace(/ +/g, '').toUpperCase()
+                    === pendingEdits.get(key).trim().replace(/ +/g, '').toUpperCase()
+                ) {
                     pendingEdits.delete(key);
                 }
             }
@@ -217,13 +224,17 @@
     }
 
     function clearFileEdits() {
+        function fileEdit(key) {
+            return ['tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'].includes(key)
+                || key.startsWith('parser:') || key.startsWith('override:');
+        }
         for (const key of Array.from(debounceTimers.keys())) {
-            if (key.startsWith('parser:') || key.startsWith('override:')) {
+            if (fileEdit(key)) {
                 cancelDebounce(key);
             }
         }
         for (const key of Array.from(pendingEdits.keys())) {
-            if (key.startsWith('parser:') || key.startsWith('override:')) {
+            if (fileEdit(key)) {
                 pendingEdits.delete(key);
             }
         }
@@ -1433,10 +1444,12 @@
             const input = row.querySelector('.override-input');
             input.dataset.edit = 'override';
             input.dataset.column = field[0];
+            input.dataset.fileId = state.selectedFileId;
             input.setAttribute('aria-label', 'SQL type for ' + field[0]);
             input.value = editable(
                 'override:' + field[0],
-                state.columnOverrides[field[0]]
+                (Object.prototype.hasOwnProperty.call(state.columnOverrides, field[0])
+                    ? state.columnOverrides[field[0]] : '')
                     || (state.recommendedSqlTypes || {})[field[0]]
                     || '',
             );
@@ -1450,6 +1463,7 @@
             const clearButton = element('button', 'btn subtle', 'Reset SQL types');
             clearButton.type = 'button';
             clearButton.dataset.action = 'clearColumnOverrides';
+            clearButton.dataset.fileId = state.selectedFileId;
             container.appendChild(clearButton);
         }
     }
@@ -1470,7 +1484,6 @@
                 label: 'Credential name',
                 value: state.credentialName,
             },
-            { key: 'storageUrl', label: 'Storage URL', value: state.storageUrl },
         ].forEach(function (field) {
             const label = element('label', 'field');
             label.appendChild(element('span', null, field.label));
@@ -1479,12 +1492,128 @@
             input.spellcheck = false;
             input.autocomplete = 'off';
             input.dataset.edit = field.key;
+            input.dataset.fileId = state.selectedFileId || '';
+            input.maxLength = 128;
             input.value = editable(field.key, field.value || '');
             label.appendChild(input);
             row.appendChild(label);
         });
 
         container.appendChild(row);
+    }
+
+    function settingsButton(label, action) {
+        const button = element('button', 'btn subtle', label);
+        button.type = 'button';
+        button.dataset.action = action;
+        button.dataset.fileId = state.selectedFileId || '';
+        return button;
+    }
+
+    function renderFileSettings(container) {
+        const profiles = state.importProfiles || [];
+        if (!state.selectedFileId && profiles.length === 0) {
+            return;
+        }
+        const section = element('details', 'file-settings');
+        section.open = fileSettingsOpen;
+        section.addEventListener('toggle', function () {
+            fileSettingsOpen = section.open;
+            persistViewState();
+        });
+        section.appendChild(element('summary', null, 'File settings and import profiles'));
+        if (state.selectedFileId) {
+            section.appendChild(element(
+                'p', 'help',
+                'Settings stay with this local file for this session. Reset removes your overrides; it does not reanalyze or deselect the file.',
+            ));
+            const actions = element('div', 'settings-actions');
+            actions.appendChild(settingsButton('Reset settings', 'resetFileSettings'));
+            const undo = settingsButton('Undo settings change', 'undoFileSettings');
+            undo.disabled = !state.canUndoSettings;
+            actions.appendChild(undo);
+            section.appendChild(actions);
+            renderNamingOptions(section);
+
+            const parser = element('details', 'parser-settings');
+            parser.appendChild(element('summary', null, 'SQL parser overrides'));
+            parser.appendChild(element(
+                'p', 'help',
+                'These options change generated SQL, not detected metadata or preview rows. Select the file again to reanalyze without clearing settings.',
+            ));
+            const grid = element('div', 'parser-grid');
+            state.quickAnalyze.options.filter(function (option) {
+                return option.label !== 'File encoding';
+            }).forEach(function (option) {
+                const field = element('label', 'field parser-option');
+                field.appendChild(element('span', null, option.label));
+                let input;
+                if (option.key === 'format') {
+                    input = document.createElement('select');
+                    state.formats.filter(function (format) {
+                        return format.fileType !== 'excel' && format.fileType !== 'unknown';
+                    }).forEach(function (format) {
+                        const choice = element('option', null, format.fileType);
+                        choice.value = format.fileType;
+                        input.appendChild(choice);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = option.key === 'firstRow' ? 'number' : 'text';
+                    input.maxLength = 128;
+                    input.autocomplete = 'off';
+                    input.spellcheck = false;
+                    if (option.key === 'firstRow') {
+                        input.min = '1';
+                        input.max = '1000000';
+                    }
+                }
+                input.dataset.parserOption = option.key;
+                input.dataset.fileId = state.selectedFileId;
+                input.value = editable('parser:' + option.key, option.value);
+                field.appendChild(input);
+                field.appendChild(element('span', 'provenance', option.provenance));
+                if (option.overridden) {
+                    const reset = settingsButton('Use detected/default value', 'resetParserOverride');
+                    reset.dataset.parserKey = option.key;
+                    field.appendChild(reset);
+                }
+                grid.appendChild(field);
+            });
+            parser.appendChild(grid);
+            section.appendChild(parser);
+        }
+
+        section.appendChild(element('h3', null, 'Reusable import profiles'));
+        section.appendChild(element(
+            'p', 'help',
+            'Profiles save object names and parser and SQL type overrides across reloads. They never save file paths, contents, storage URLs, credentials, sign-in, or the target platform. Saving an existing name replaces that profile.',
+        ));
+        const controls = element('div', 'import-profile-controls');
+        const nameField = textControl('Profile name', 'importProfileName', profileNameDraft);
+        nameField.querySelector('input').maxLength = 64;
+        controls.appendChild(nameField);
+        const save = settingsButton('Save current settings', 'saveImportProfile');
+        save.id = 'save-import-profile';
+        save.disabled = !state.selectedFileId || !profileNameDraft.trim();
+        controls.appendChild(save);
+        if (!profiles.includes(selectedImportProfile)) {
+            selectedImportProfile = '';
+        }
+        controls.appendChild(selectControl(
+            'Saved profile',
+            'importProfile',
+            profiles.map(function (name) { return { id: name, label: name }; }),
+            selectedImportProfile,
+        ));
+        const apply = settingsButton('Apply selected profile', 'applyImportProfile');
+        apply.disabled = !selectedImportProfile || !state.selectedFileId || !state.metadata;
+        controls.appendChild(apply);
+        const remove = settingsButton('Delete profile', 'deleteImportProfile');
+        remove.disabled = !selectedImportProfile;
+        controls.appendChild(remove);
+        section.appendChild(controls);
+        container.appendChild(section);
     }
 
     function renderSqlBlock(container, kind, text) {
@@ -1515,7 +1644,9 @@
     }
 
     function renderStatement(container, kind) {
-        renderNamingOptions(container);
+        if (!state.selectedFileId) {
+            renderNamingOptions(container);
+        }
         renderLimitation(container);
         renderDocumentationLinks(container, state.quickAnalyze.documentation);
         renderSqlBlock(container, kind, (state.statements || {})[kind]);
@@ -1553,6 +1684,10 @@
         input.spellcheck = false;
         input.autocomplete = 'off';
         input.dataset.edit = edit;
+        if (['tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'].includes(edit)) {
+            input.dataset.fileId = state.selectedFileId || '';
+            input.maxLength = 128;
+        }
         input.value = editable(edit, value || '');
         if (placeholder) {
             input.placeholder = placeholder;
@@ -1987,6 +2122,7 @@
     function renderPanel() {
         const panel = byId('panel');
         clear(panel);
+        renderFileSettings(panel);
         const tab = state.activeTab;
         if (tab === 'metadata') {
             renderMetadata(panel);
@@ -2141,6 +2277,29 @@
             publicContainerUrlDraft = '';
             publicContainerPrefixDraft = '';
         }
+        if (name === 'saveImportProfile') {
+            post({ type: name, fileId: action.dataset.fileId, name: profileNameDraft });
+            return;
+        }
+        if (name === 'applyImportProfile') {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId, name: selectedImportProfile });
+            return;
+        }
+        if (name === 'deleteImportProfile') {
+            post({ type: name, name: selectedImportProfile });
+            return;
+        }
+        if (['resetFileSettings', 'undoFileSettings', 'clearColumnOverrides'].includes(name)) {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId });
+            return;
+        }
+        if (name === 'resetParserOverride') {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId, key: action.dataset.parserKey });
+            return;
+        }
         if (name === 'azureBrowserClose') {
             focusSourceTabAfterClose = true;
         }
@@ -2197,6 +2356,11 @@
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;
+        if (edit === 'importProfile') {
+            selectedImportProfile = target.value;
+            render();
+            return;
+        }
         if (edit === 'authMethod') {
             post({ type: 'setAuthMethod', value: target.value });
             return;
@@ -2210,13 +2374,16 @@
             return;
         }
         if (target.dataset && target.dataset.parserOption) {
+            if (target.dataset.fileId !== state.selectedFileId) {
+                return;
+            }
             const key = 'parser:' + target.dataset.parserOption;
             cancelDebounce(key);
             pendingEdits.delete(key);
             persistViewState();
             post({
                 type: 'setParserOverride',
-                fileId: state.selectedFileId,
+                fileId: target.dataset.fileId,
                 key: target.dataset.parserOption,
                 value: target.value,
             });
@@ -2280,9 +2447,20 @@
         const edit = target.dataset.edit;
         const value = target.value;
 
+        if (edit === 'importProfileName') {
+            profileNameDraft = value;
+            byId('save-import-profile').disabled = !state.selectedFileId || !value.trim();
+            return;
+        }
+        if (
+            target.dataset.fileId !== undefined
+            && target.dataset.fileId !== (state.selectedFileId || '')
+        ) {
+            return;
+        }
         if (target.dataset.parserOption) {
             const parserKey = target.dataset.parserOption;
-            const fileId = state.selectedFileId;
+            const fileId = target.dataset.fileId;
             pendingEdits.set('parser:' + parserKey, value);
             post({
                 type: 'setParserOverride',
@@ -2295,7 +2473,7 @@
 
         if (edit === 'override') {
             const column = target.dataset.column;
-            const fileId = state.selectedFileId;
+            const fileId = target.dataset.fileId;
             pendingEdits.set('override:' + column, value);
             post({
                 type: 'setColumnOverride',
@@ -2336,7 +2514,7 @@
             return;
         }
         pendingEdits.set(edit, value);
-        post({ type: messageType, value: value });
+        post({ type: messageType, fileId: target.dataset.fileId || null, value: value });
     });
 
     document.addEventListener('keydown', function (event) {
@@ -2406,7 +2584,11 @@
         if (!message || message.type !== 'state' || !message.state) {
             return;
         }
-        if (state && state.selectedFileId !== message.state.selectedFileId) {
+        if (state && (
+            state.selectedFileId !== message.state.selectedFileId
+            || state.sourceMode !== message.state.sourceMode
+            || state.settingsRevision !== message.state.settingsRevision
+        )) {
             clearFileEdits();
         }
         acknowledgePendingEdits(message.state);

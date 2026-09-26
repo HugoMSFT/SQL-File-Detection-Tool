@@ -17,6 +17,7 @@ import * as path from 'node:path';
 import { test } from 'node:test';
 
 import { createMockVscode } from './mocks/vscode';
+import type { AppStateSnapshot } from '../protocol';
 
 const OUT = path.resolve(__dirname, '..');
 const REPO = path.resolve(OUT, '..');
@@ -356,6 +357,31 @@ test('activation registers the native view and never touches a backend', async (
             const serialised = JSON.stringify(posted);
             assert.ok(!/localhost|127\.0\.0\.1|flask/i.test(serialised), 'no backend chatter');
             assert.ok(serialised.includes('employees.csv'), 'the analysis reached the renderer');
+
+            const latest = (surface: typeof panel): AppStateSnapshot =>
+                (surface.webview.posted.at(-1) as { state: AppStateSnapshot }).state;
+            const fileId = latest(panel).selectedFileId;
+            assert.ok(fileId);
+            await view.receive({ type: 'setTableName', fileId, value: 'SharedTable' });
+            assert.equal(latest(panel).tableName, 'SharedTable');
+            await panel.receive({ type: 'setSchemaName', fileId, value: 'SharedSchema' });
+            assert.equal(latest(view).schemaName, 'SharedSchema');
+            await view.receive({ type: 'saveImportProfile', fileId, name: 'Shared import' });
+            for (let i = 0; i < 20 && latest(panel).importProfiles.length === 0; i += 1) {
+                await new Promise((resolve) => setImmediate(resolve));
+            }
+            assert.deepEqual(latest(panel).importProfiles, ['Shared import']);
+            assert.deepEqual(latest(view).importProfiles, ['Shared import']);
+            assert.ok(mock.state.globalState.has('native.importProfiles'));
+            await panel.receive({ type: 'resetFileSettings', fileId });
+            assert.equal(latest(view).schemaName, 'dbo');
+            assert.equal(latest(view).selectedFileId, fileId);
+            assert.equal(latest(view).canUndoSettings, true);
+            await view.receive({ type: 'undoFileSettings', fileId });
+            assert.equal(latest(panel).tableName, 'SharedTable');
+            assert.equal(latest(panel).schemaName, 'SharedSchema');
+            assert.deepEqual(latest(panel), latest(view), 'both real Surface subscriptions receive the same settings state');
+            assert.equal(mock.state.authenticationSessionCalls.length, 0);
 
             extension.deactivate();
             assert.equal(mock.state.authenticationChangeListenerCount(), 0);

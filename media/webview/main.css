@@ -1155,6 +1155,30 @@ thead th {
   margin-bottom: var(--gap);
 }
 
+.file-settings {
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.settings-actions,
+.import-profile-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.import-profile-controls .field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.parser-settings {
+  margin-top: var(--gap);
+}
+
 .parser-option,
 .source-readiness,
 .folder-profile,

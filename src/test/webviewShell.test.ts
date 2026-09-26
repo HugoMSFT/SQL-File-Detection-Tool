@@ -366,6 +366,22 @@ test('the renderer renders values as text, never as markup', () => {
     assert.ok(script.includes('cloneNode(true)'));
 });
 
+test('both surfaces expose scoped settings and profile actions without persisting drafts or file identities', () => {
+    for (const action of [
+        'resetFileSettings', 'undoFileSettings', 'saveImportProfile',
+        'applyImportProfile', 'deleteImportProfile', 'resetParserOverride',
+    ]) {
+        assert.ok(script.includes(`'${action}'`), `${action} is not reachable`);
+    }
+    assert.match(script, /fileId: target\.dataset\.fileId \|\| null/);
+    assert.match(script, /fileId: action\.dataset\.fileId/);
+    assert.match(script, /state\.settingsRevision !== message\.state\.settingsRevision/);
+    assert.match(script, /function clearFileEdits[\s\S]*'tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'/);
+    assert.match(script, /Reset removes your overrides; it does not reanalyze or deselect the file/);
+    const persistedViewState = script.slice(script.indexOf('function persistViewState()'), script.indexOf('function acknowledgePendingEdits'));
+    assert.doesNotMatch(persistedViewState, /profileNameDraft|selectedImportProfile|parserOverrides|columnOverrides|fileId|tableName/);
+});
+
 test('the stylesheet uses theme variables rather than fixed colours', () => {
     assert.ok(styles.includes('var(--vscode-foreground)'));
     assert.ok(styles.includes('var(--vscode-button-background)'));
