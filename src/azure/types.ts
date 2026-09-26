@@ -11,7 +11,14 @@ export type AzureBrowserPhase = 'closed' | 'signedOut' | 'loading' | 'ready' | '
 export type AzureBrowserErrorKind =
     | 'controlAccess'
     | 'storageConsent'
+    | 'storageAuthentication'
     | 'dataAccess'
+    | 'publicAccess'
+    | 'accountDisabled'
+    | 'network'
+    | 'notFound'
+    | 'rateLimited'
+    | 'timeout'
     | 'signIn'
     | 'temporary'
     | 'invalidResponse';
@@ -45,7 +52,19 @@ export interface AzureBrowserEntry {
     readonly modifiedAt: string | null;
 }
 
-export interface AzureBrowserState {
+export interface AzurePublicContainer {
+    readonly accountName: string;
+    readonly blobHost: string;
+    readonly container: string;
+}
+
+/** Minted by the browser, never accepted from the renderer. */
+export interface AzureStorageSelection {
+    readonly url: string;
+    readonly access: 'authenticated' | 'public';
+}
+
+interface AzureBrowserCommonState {
     readonly open: boolean;
     readonly phase: AzureBrowserPhase;
     readonly identity: AzureIdentity | null;
@@ -63,7 +82,14 @@ export interface AzureBrowserState {
     readonly message: string | null;
 }
 
+export type AzureBrowserState = AzureBrowserCommonState & (
+    | { readonly mode: 'authenticated'; readonly publicContainer: null }
+    | { readonly mode: 'public'; readonly publicContainer: AzurePublicContainer | null }
+);
+
 export const CLOSED_AZURE_BROWSER_STATE: AzureBrowserState = Object.freeze({
+    mode: 'authenticated',
+    publicContainer: null,
     open: false,
     phase: 'closed',
     identity: null,

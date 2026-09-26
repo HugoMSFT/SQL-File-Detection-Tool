@@ -176,6 +176,28 @@ test('the Azure surface states its read-only browser boundary', () => {
     );
 });
 
+test('public browsing is an explicit non-persisted form with no renderer authentication or network access', () => {
+    for (const selector of [
+        'showPublicContainer', 'azure-public-container-form', 'azure-public-container-url',
+        'azure-public-container-prefix', 'azureBrowserOpenPublicContainer',
+    ]) {
+        assert.ok(script.includes(selector));
+    }
+    assert.match(script, /Public container · no sign-in/);
+    assert.match(script, /Container-level public access is required to list/);
+    assert.match(script, /Blob-level access only permits reading known blobs/);
+    assert.match(script, /root\.disabled = publicMode/);
+    assert.match(script, /if \(!publicMode\) \{\s*layout\.appendChild\(accountsPane\)/);
+    assert.match(script, /useFolder\.disabled = azure\.phase !== 'ready'/);
+    const persistence = script.slice(script.indexOf('function persistViewState()'), script.indexOf('function acknowledgePendingEdits'));
+    assert.doesNotMatch(persistence, /publicContainer|azure-public/);
+    const openForm = script.slice(script.indexOf("if (name === 'showPublicContainer')"), script.indexOf("if (name === 'azureBrowserOpenPublicContainer')"));
+    assert.doesNotMatch(openForm, /post\(/);
+    assert.match(script, /document\.addEventListener\('submit'/);
+    assert.match(script, /maxLength: 2048/);
+    assert.match(script, /maxLength: 1024/);
+});
+
 test('Preview is primary and Storage SQL exposes readiness and runtime access', () => {
     const html = render();
     assert.match(script, /Generate storage SQL/);

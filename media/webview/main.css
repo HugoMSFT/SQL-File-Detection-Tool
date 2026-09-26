@@ -1406,6 +1406,7 @@ body.surface-panel [data-action='openInEditor'] {
 
 .azure-identity-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -1413,6 +1414,23 @@ body.surface-panel [data-action='openInEditor'] {
   display: grid;
   grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
   min-height: 410px;
+}
+
+.azure-public-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.azure-public-form {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+  padding: 20px;
+  margin: auto;
+}
+
+.azure-public-form h2,
+.azure-public-form p {
+  margin: 0;
 }
 
 .azure-accounts-pane {

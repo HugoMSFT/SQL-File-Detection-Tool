@@ -611,24 +611,53 @@ Blob-capable Storage accounts, containers, virtual folders, and files read-only.
 Opening the browser never silently adopts an existing VS Code session. Selecting
 a supported file places its canonical `abs://` or `abfss://` location into the
 Storage SQL workflow. It does not download or analyze remote
-bytes. No authentication or network request runs during activation, initial
-rendering, or before **Connect to Azure** is selected.
+bytes. No authentication or network request runs during activation or initial
+rendering. Network access begins only after **Connect to Azure** or an explicit
+public-container submission.
 Concurrent Connect actions share one authentication/discovery request. Transient
 ARM failures use bounded retries, and **Refresh** performs a new silent session
 check and metadata lookup for the connected account. Successful Azure metadata
 is reused for at most two minutes when the browser is closed and reopened;
 expired metadata refreshes automatically. **Disconnect** clears all browser data
-and requires another explicit Connect, but does not sign the Microsoft account
-out of VS Code. Sign-out, authorization failure, or extension disposal also
-clears retained browser data.
-Storage browsing requests the tenant-specific Storage scope only after an
+and requires another explicit Connect or public-container submission, but does
+not sign the Microsoft account out of VS Code. Microsoft sign-out invalidates
+authenticated browsing, not an explicitly opened public container.
+Authenticated Storage browsing requests the tenant-specific Storage scope only after an
 explicit Connect or Retry and requires account-level **Storage Blob Data
 Reader** access. Tokens stay in the extension host and are never persisted,
 logged, or transferred to the webview.
 An account may be visible through Azure Resource Manager while container access
 is denied: Reader, Owner, and Contributor management permissions do not grant
-blob data access. Assign **Storage Blob Data Reader** on the storage account,
-resource group, or subscription and allow up to 10 minutes for propagation.
+blob data access. A structured `AuthorizationPermissionMismatch` points to
+**Storage Blob Data Reader** and its scope (account or parent to enumerate
+containers; container or parent to list its blobs). A generic 403 does **not**
+prove a missing role: the browser reports permission **or network policy** as
+possible causes. Separate guidance covers expired consent, rejected credentials,
+disabled accounts/subscriptions, firewall/private-endpoint/DNS problems,
+not-found locations, throttling, and timeouts. Error text never includes raw
+service bodies, request URLs, headers, or secrets.
+
+**Open public container**, inside Browse Azure, is a separate, explicit
+no-sign-in mode. Enter a known `https://account.blob.core.windows.net/container`
+or `abs://container@account.blob.core.windows.net/` location and an optional
+folder prefix. Canonical Azure public-cloud DNS-zone Blob hosts and the reserved
+`$root`/`$web` containers are supported. Listing requires **Container-level**
+public access; **Blob-level** public access permits reading known blobs but
+does not permit listing. Anonymous browsing cannot discover accounts or list
+their containers, and never serves as a fallback after an OAuth failure.
+
+Public requests use no Microsoft session, ARM, SAS, key, cookies, or
+Authorization header. Only extension-host metadata listings are permitted,
+with 100 items per page and at most 1,000 displayed per location. Non-Azure
+hosts, credentials, explicit ports, query strings (including SAS), fragments,
+unsafe paths, and redirects are rejected. Input drafts and endpoints are not
+persisted. Close retains the current public selection in memory; reopening
+uses the same two-minute cache policy, Refresh re-lists without sign-in, and
+Disconnect or Browse local clears the browser. Mode switches cancel stale
+requests. Selecting a public file or folder hands its canonical ABS URL to
+Storage SQL and explicitly selects **Public (no credential)** SQL runtime
+access, rather than retaining a previous managed identity. No remote file
+contents, schema, or row preview are downloaded.
 
 Folder detection remains per file. The folder profile reports **Mixed** and an
 outlier count when formats, delimiters, encodings, or schemas differ; it never

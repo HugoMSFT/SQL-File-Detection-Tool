@@ -51,6 +51,7 @@ import {
     type StorageSetupGoal,
 } from './native';
 import type { AzureBrowserState } from './azure/types';
+import { MAX_BLOB_PATH_LENGTH, MAX_PUBLIC_CONTAINER_URL_LENGTH } from './azure/locations';
 
 /** Upper bound for any free-text field a webview may send. */
 export const MAX_TEXT_LENGTH = 2048;
@@ -114,6 +115,11 @@ export type WebviewRequest =
     | (Base & { readonly type: 'openLocalDialog' })
     | (Base & { readonly type: 'openAzureBrowser' })
     | (Base & { readonly type: 'azureBrowserConnect' })
+    | (Base & {
+          readonly type: 'azureBrowserOpenPublicContainer';
+          readonly url: string;
+          readonly prefix: string;
+      })
     | (Base & { readonly type: 'azureBrowserRefresh' })
     | (Base & { readonly type: 'azureBrowserDisconnect' })
     | (Base & { readonly type: 'azureBrowserClose' })
@@ -375,6 +381,18 @@ const BUILDERS: Record<string, Builder> = {
     openLocalDialog: () => ({ type: 'openLocalDialog' }),
     openAzureBrowser: () => ({ type: 'openAzureBrowser' }),
     azureBrowserConnect: () => ({ type: 'azureBrowserConnect' }),
+    azureBrowserOpenPublicContainer: (source) => {
+        const url = text(source, 'url', MAX_PUBLIC_CONTAINER_URL_LENGTH);
+        const prefix = source.prefix === undefined ? '' : text(source, 'prefix', MAX_BLOB_PATH_LENGTH);
+        if (
+            !url || prefix === undefined
+            // eslint-disable-next-line no-control-regex -- these fields are network locations, not labels
+            || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(url + prefix)
+        ) {
+            return undefined;
+        }
+        return { type: 'azureBrowserOpenPublicContainer', url, prefix };
+    },
     azureBrowserRefresh: () => ({ type: 'azureBrowserRefresh' }),
     azureBrowserDisconnect: () => ({ type: 'azureBrowserDisconnect' }),
     azureBrowserClose: () => ({ type: 'azureBrowserClose' }),

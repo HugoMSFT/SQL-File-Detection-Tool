@@ -22,7 +22,7 @@ TypeScript running in the extension host.
 | `src/ui/webviewShell.ts` | no | Builds the HTML shell and extension-origin-only CSP. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
-| `src/azure/*` | no | Explicit Microsoft sign-in, bounded tenant discovery, and auth lifecycle reconciliation. |
+| `src/azure/*` | no | Explicit Microsoft sign-in or known-public-container listing, bounded discovery, and mode/auth lifecycle reconciliation. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
 
 Keeping `vscode` confined to two files is what makes the rest of the extension
@@ -79,8 +79,9 @@ receives no SAS token, access key, or master-key password. Generated SQL contain
 placeholders that users replace later in a secure editor.
 
 Folder scans retain one metadata record per file. Generation and schema
-overrides remain selected-file scoped. Storage URLs configure generated SQL but
-are never fetched. Local files expose direct SQL Server/UNC reads where supported
+overrides remain selected-file scoped. URLs entered in Storage SQL configure
+generated SQL but are never fetched. Only an explicit Browse Azure action
+authorizes metadata listing. Local files expose direct SQL Server/UNC reads where supported
 and otherwise state that staging is required.
 
 Generated-statement headers and relevant external-object readiness entries show
@@ -169,7 +170,7 @@ Storage SQL has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
-The extension uses VS Code's built-in Microsoft provider for the ARM and Storage
+The authenticated browser uses VS Code's built-in Microsoft provider for the ARM and Storage
 user-impersonation scopes. **Browse Azure** lists accessible tenants,
 subscriptions, Blob-capable Storage accounts, containers, virtual folders, and
 blob metadata read-only. ARM Reader access is distinct from account-level
@@ -189,19 +190,28 @@ and editor context menus retain direct source analysis.
 
 Opening **Browse Azure** never performs authentication or an ARM call. The
 browser starts in its signed-out state on each extension activation and begins
-session acquisition only after **Connect to Azure** is selected. While connected,
+session acquisition only after **Connect to Azure** is selected. The separate
+**Open public container** submission performs anonymous metadata listing without
+acquiring any Microsoft session. While connected,
 closing and reopening the browser reuses verified metadata for at most two
 minutes; expired metadata and the explicit **Refresh** action perform a new
 silent session check and metadata lookup. Interactive tenant or Storage-scope
 authentication occurs only after an explicit **Connect to Azure** or **Retry**.
-Transient network failures, HTTP 408/429, and selected 5xx responses receive
+Transient ARM network failures, HTTP 408/429, and selected 5xx responses receive
 cancellation-aware retries with bounded backoff. Azure browser metadata is
 cached in memory for at most two minutes, is never persisted, and is cleared on
-Disconnect, sign-out, authorization failure, or disposal.
+Disconnect or disposal; Microsoft provider changes invalidate only authenticated
+browsing.
 HTTP 401 from Storage is treated as expired or missing Storage authorization and
-offers authorization again. HTTP 403 is reported as a data-plane RBAC denial:
-**Storage Blob Data Reader** is required at the storage-account or parent scope
-to enumerate containers, independently of Owner or Contributor management roles.
+offers authorization again in authenticated mode. Allowlisted structured error
+codes distinguish `AuthorizationPermissionMismatch` (data role/scope),
+`AuthenticationFailed` (credential retry), `AccountIsDisabled` (account or
+subscription administration, not repeated sign-in), known network-policy failures,
+and missing containers/resources. Generic 403 remains uncertain: permission or
+network policy could be responsible. Transport codes distinguish DNS/connectivity
+failures from timeouts, and throttling has separate guidance. Diagnostics name
+container listing or blob listing correctly and never echo arbitrary messages,
+service bodies, request URLs, query strings, or headers.
 The ARM clients permit only HTTPS requests to fixed public-cloud
 `management.azure.com` tenant, subscription, and Storage-account endpoints and
 validated continuation links, reject redirects, and apply hard limits for time,
@@ -213,13 +223,61 @@ session returned by the current interactive operation survives its own provider
 event, while later account removal cancels work and clears retained identity
 and tenant data.
 
+### Explicit public-container browsing
+
+`AzureBrowserState.mode` discriminates authenticated and public browsing.
+Public state has no identity, tenant, subscription, or account resources.
+`publicContainer` contains only a validated account name, Blob host, and container
+(or is null after rejected input). Public retries cannot acquire OAuth, including
+after invalid input, 401, 403, or disabled-public-access responses.
+
+The public form submits only a bounded URL and optional folder prefix. It accepts
+HTTPS or ABS URLs with a known container on canonical public-cloud Blob hosts:
+`account.blob.core.windows.net` and `account.zN.blob.storage.azure.net`.
+Ordinary container names follow Azure's lowercase DNS-label rules; `$root` and
+`$web` are explicit exceptions, not account roots. A shared host validator is also
+used for ARM-discovered endpoints. The host rejects credentials, explicit ports,
+queries (including SAS rather than silently stripping it), fragments, lookalike
+or private/IP hosts, and decoded traversal/control characters. Encoded spaces and
+Unicode folder names are preserved.
+
+An official `ContainerClient` with `AnonymousCredential` sends only GET List Blobs
+requests, through an extension-host transport restricted to the original HTTPS
+origin and container path. It sends neither Authorization nor cookies and rejects
+all redirects, including same-origin redirects, before the SDK can follow them.
+Response bodies are capped at 2 MiB; continuation markers, prefixes, page sizes,
+and returned hierarchy names/metadata are bounded and validated. Only listing
+metadata is read, never blob bytes. The existing 100-item pages, 1,000-entry limit,
+breadcrumbs, filters, and selections are reused, but the account breadcrumb is
+disabled and the host rejects attempts to enumerate containers.
+
+Container-level public access is required for listing. Blob-level public access
+only permits reading known blobs. Private containers may report 404 instead of
+disclosing their existence. None of these failures silently switches to OAuth,
+and an OAuth failure never downgrades to anonymous browsing.
+
+Mode changes immediately cancel requests and invalidate both generations and
+deferred authentication lifecycles. A cancelled silent session lookup cannot
+later launch an interactive consent prompt. Microsoft provider events do not
+replace public browsing. Close retains public metadata in memory for the same
+two-minute cache policy; Refresh and expired-cache reopening re-list anonymously.
+Disconnect and Browse local clear it. Public input drafts and endpoints are
+never written to settings or webview persistence.
+
+The header shows **Public container · no sign-in**. Host-only selection metadata
+(`url`, `access`) controls handoff: public file/folder selections produce canonical
+ABS URLs and explicitly select Public SQL runtime access, overriding stale managed
+identity settings. The renderer cannot supply this access identity. Storage SQL
+still generates templates when remote schema has not been analyzed; there is no
+remote row or schema preview.
+
 Selecting a file creates `abs://container@account.blob.core.windows.net/path`
 for Blob Storage or `abfss://container@account.dfs.core.windows.net/path` for
 HNS/ADLS Gen2 and hands it to Storage SQL. This selects
 the remote SQL source location only; no remote bytes, schema, or preview are
 downloaded.
 
-The URL boundary remains strict:
+The separate Storage SQL URL boundary remains unchanged:
 
 - `abs://` selects Azure Blob and emits the ABS connector.
 - `adls://` selects Azure Data Lake and emits the ADLS connector.

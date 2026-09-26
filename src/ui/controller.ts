@@ -328,6 +328,11 @@ export class UiController {
                 return this.runAzure(() => this.requireAzure().open());
             case 'azureBrowserConnect':
                 return this.runAzure(() => this.requireAzure().connect());
+            case 'azureBrowserOpenPublicContainer':
+                this.activateAzureSource();
+                return this.runAzure(() =>
+                    this.requireAzure().openPublicContainer(request.url, request.prefix),
+                );
             case 'azureBrowserRefresh':
                 return this.runAzure(() => this.requireAzure().refresh());
             case 'azureBrowserDisconnect': {
@@ -646,13 +651,13 @@ export class UiController {
 
     private useSelectedAzureFile(): void {
         const azure = this.requireAzure();
-        const value = azure.selectedUrl();
-        if (!value) {
-            this.store.update({ azure: azure.snapshot });
+        const selection = azure.selectedLocation();
+        if (!selection) {
+            this.store.update({ azure: azure.snapshot, error: 'Select a file from a successful Azure listing first.' });
             return;
         }
         this.activateAzureSource();
-        const location = knownStorageLocation(value);
+        const location = knownStorageLocation(selection.url);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
@@ -665,7 +670,7 @@ export class UiController {
             });
             return;
         }
-        const authMethod = normalizeGuidedAuthMethod(
+        const authMethod = selection.access === 'public' ? 'public' : normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
                 : this.store.state.authMethod,
@@ -692,7 +697,9 @@ export class UiController {
             authMethod,
             error: null,
             notice:
-                'Azure file location selected. Configure SQL credentials for this URL; remote bytes were not downloaded or analyzed.',
+                selection.access === 'public'
+                    ? 'Public Azure file location selected. SQL runtime access is Public (no credential); remote bytes were not downloaded or analyzed.'
+                    : 'Azure file location selected. Configure SQL credentials for this URL; remote bytes were not downloaded or analyzed.',
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -700,14 +707,14 @@ export class UiController {
 
     private useCurrentAzureFolder(): void {
         const azure = this.requireAzure();
-        const value = azure.currentFolderUrl();
-        if (!value) {
-            this.store.update({ azure: azure.snapshot });
+        const selection = azure.currentFolderLocation();
+        if (!selection) {
+            this.store.update({ azure: azure.snapshot, error: 'Open a folder from a successful Azure listing first.' });
             return;
         }
         const snapshot = azure.snapshot;
         this.activateAzureSource();
-        const location = knownStorageLocation(value);
+        const location = knownStorageLocation(selection.url);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
@@ -720,7 +727,7 @@ export class UiController {
             });
             return;
         }
-        const authMethod = normalizeGuidedAuthMethod(
+        const authMethod = selection.access === 'public' ? 'public' : normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
                 : this.store.state.authMethod,
@@ -781,7 +788,9 @@ export class UiController {
             },
             error: null,
             notice:
-                'Azure folder location selected. Configure SQL credentials for this URL; browse metadata remains available in Preview.',
+                selection.access === 'public'
+                    ? 'Public Azure folder location selected. SQL runtime access is Public (no credential); Preview contains listing metadata only, not remote file bytes.'
+                    : 'Azure folder location selected. Configure SQL credentials for this URL; browse metadata remains available in Preview.',
         });
         this.refreshQuickAnalyze();
         this.generateNow();

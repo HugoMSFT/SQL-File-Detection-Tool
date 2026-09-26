@@ -95,6 +95,9 @@
         ? restoredViewState.azureFormat
         : 'all';
     let focusSourceTabAfterClose = false;
+    let publicContainerFormOpen = false;
+    let publicContainerUrlDraft = '';
+    let publicContainerPrefixDraft = '';
     let advancedObjectNamesOpen = restoredViewState.advancedObjectNamesOpen === true;
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
         restoredViewState.storageUrlDraft,
@@ -455,13 +458,90 @@
         }) || null;
     }
 
+    function publicContainerForm() {
+        const form = element('form', 'azure-public-form');
+        form.id = 'azure-public-container-form';
+        form.appendChild(element('h2', null, 'Open public container'));
+        const help = element(
+            'p',
+            'help',
+            'Use a known Azure Blob container. Container-level public access is required to list it; Blob-level access only permits reading known blobs. Accounts and containers cannot be discovered anonymously. No Microsoft sign-in, SAS, or key is used.',
+        );
+        help.id = 'azure-public-container-help';
+        form.appendChild(help);
+        [
+            {
+                id: 'azure-public-container-url',
+                label: 'HTTPS or ABS container URL',
+                placeholder: 'https://account.blob.core.windows.net/container',
+                value: publicContainerUrlDraft,
+                maxLength: 2048,
+            },
+            {
+                id: 'azure-public-container-prefix',
+                label: 'Folder prefix (optional)',
+                placeholder: 'folder/subfolder/',
+                value: publicContainerPrefixDraft,
+                maxLength: 1024,
+            },
+        ].forEach(function (config) {
+            const field = element('label', 'field');
+            field.appendChild(element('span', null, config.label));
+            const input = document.createElement('input');
+            input.id = config.id;
+            input.type = 'text';
+            input.value = config.value;
+            input.placeholder = config.placeholder;
+            input.maxLength = config.maxLength;
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+            input.setAttribute('aria-describedby', help.id);
+            field.appendChild(input);
+            form.appendChild(field);
+        });
+        const submit = actionButton(
+            'Browse public container',
+            'azureBrowserOpenPublicContainer',
+            'btn primary',
+        );
+        submit.type = 'submit';
+        form.appendChild(submit);
+        form.appendChild(element(
+            'p',
+            'help',
+            'Only listing metadata is read. URLs with credentials, explicit ports, query strings (including SAS), or fragments are rejected. Nothing entered here is saved.',
+        ));
+        return form;
+    }
+
+    function submitPublicContainer() {
+        const url = byId('azure-public-container-url');
+        const prefix = byId('azure-public-container-prefix');
+        if (!url || !prefix) {
+            return;
+        }
+        const request = {
+            type: 'azureBrowserOpenPublicContainer',
+            url: url.value,
+            prefix: prefix.value,
+        };
+        publicContainerFormOpen = false;
+        publicContainerUrlDraft = '';
+        publicContainerPrefixDraft = '';
+        post(request);
+    }
+
     function renderAzureBrowser() {
         const browser = byId('azure-browser');
         const standard = byId('standard-layout');
         const azure = state.azure;
+        const publicMode = azure.mode === 'public';
         browser.hidden = !azure.open;
         standard.hidden = azure.open;
         if (!azure.open) {
+            publicContainerFormOpen = false;
+            publicContainerUrlDraft = '';
+            publicContainerPrefixDraft = '';
             return;
         }
         clear(browser);
@@ -488,44 +568,62 @@
                 ),
             );
             signedOut.appendChild(
+                actionButton('Open public container', 'showPublicContainer', 'btn subtle'),
+            );
+            signedOut.appendChild(
                 actionButton('Close', 'azureBrowserClose', 'btn subtle'),
             );
             browser.appendChild(signedOut);
+            if (publicContainerFormOpen) {
+                browser.appendChild(publicContainerForm());
+            }
             return;
         }
 
         const identity = element('header', 'azure-identity-bar');
         const identityCopy = element('div', 'azure-identity');
-        identityCopy.appendChild(element('span', 'azure-avatar', 'MS'));
+        identityCopy.appendChild(element('span', 'azure-avatar', publicMode ? 'P' : 'MS'));
         const identityText = element('div');
         identityText.appendChild(
             element(
                 'h2',
                 null,
-                azure.identity ? azure.identity.label : 'Microsoft account',
+                publicMode
+                    ? 'Public container · no sign-in'
+                    : azure.identity ? azure.identity.label : 'Microsoft account',
             ),
         );
         identityText.appendChild(
-            element('p', null, 'Azure public cloud · read-only browsing'),
+            element('p', null, publicMode
+                ? 'Read-only listing · no anonymous account or container discovery'
+                : 'Azure public cloud · read-only browsing'),
         );
         identityCopy.appendChild(identityText);
         identity.appendChild(identityCopy);
-        identity.appendChild(
-            azureSelect(
-                'Tenant',
-                'azure-browser-tenant',
-                azure.tenants,
-                azure.selectedTenantId,
-                'tenant',
-            ),
-        );
-        identity.appendChild(
-            azureSubscriptionSelect(
-                azure.subscriptions,
-                azure.selectedSubscriptionId,
-            ),
-        );
+        if (!publicMode) {
+            identity.appendChild(
+                azureSelect(
+                    'Tenant',
+                    'azure-browser-tenant',
+                    azure.tenants,
+                    azure.selectedTenantId,
+                    'tenant',
+                ),
+            );
+            identity.appendChild(
+                azureSubscriptionSelect(
+                    azure.subscriptions,
+                    azure.selectedSubscriptionId,
+                ),
+            );
+        }
         const identityActions = element('div', 'azure-identity-actions');
+        identityActions.appendChild(
+            actionButton('Connect to Azure', 'azureBrowserConnect', 'btn subtle'),
+        );
+        identityActions.appendChild(
+            actionButton('Open public container', 'showPublicContainer', 'btn subtle'),
+        );
         const refresh = actionButton('Refresh', 'azureBrowserRefresh', 'btn subtle');
         refresh.disabled = azure.phase === 'loading';
         identityActions.appendChild(refresh);
@@ -537,8 +635,11 @@
         );
         identity.appendChild(identityActions);
         browser.appendChild(identity);
+        if (publicContainerFormOpen || (publicMode && !azure.publicContainer)) {
+            browser.appendChild(publicContainerForm());
+        }
 
-        if (azure.phase === 'loading' && azure.accounts.length === 0) {
+        if (!publicMode && azure.phase === 'loading' && azure.accounts.length === 0) {
             browser.appendChild(
                 azureStateCard(
                     'Loading Azure…',
@@ -550,7 +651,7 @@
             return;
         }
 
-        const layout = element('div', 'azure-layout');
+        const layout = element('div', publicMode ? 'azure-layout azure-public-layout' : 'azure-layout');
         const accountsPane = element('aside', 'azure-accounts-pane');
         const accountsHeading = element('div', 'azure-pane-heading');
         accountsHeading.appendChild(element('h2', null, 'Storage accounts'));
@@ -606,21 +707,32 @@
             );
         }
         accountsPane.appendChild(accountList);
-        layout.appendChild(accountsPane);
+        if (!publicMode) {
+            layout.appendChild(accountsPane);
+        }
 
         const browsePane = element('section', 'azure-browse-pane');
-        const selectedAccount = selectedAzureAccount();
+        const selectedAccount = publicMode && azure.publicContainer
+            ? {
+                name: azure.publicContainer.accountName,
+                hns: false,
+                resourceGroup: 'Known public container',
+                location: 'No sign-in',
+            }
+            : selectedAzureAccount();
         if (azure.phase === 'error' && !selectedAccount) {
             const title =
-                azure.errorKind === 'controlAccess'
+                publicMode
+                    ? 'Could not open public container'
+                    : azure.errorKind === 'controlAccess'
                     ? 'Azure management access denied'
                     : 'Could not list Azure resources';
             browsePane.appendChild(
                 azureStateCard(
                     title,
                     azure.message || 'Retry the request.',
-                    'Retry',
-                    'azureBrowserRetry',
+                    publicMode ? null : 'Retry',
+                    publicMode ? null : 'azureBrowserRetry',
                 ),
             );
             layout.appendChild(browsePane);
@@ -669,6 +781,10 @@
         root.type = 'button';
         root.dataset.azureDepth = '0';
         root.textContent = selectedAccount.name;
+        root.disabled = publicMode;
+        if (publicMode) {
+            root.title = 'Public browsing cannot list accounts or containers.';
+        }
         breadcrumbs.appendChild(root);
         azure.path.forEach(function (segment, index) {
             breadcrumbs.appendChild(
@@ -683,13 +799,13 @@
         browsePane.appendChild(breadcrumbs);
         if (azure.path.length > 0) {
             const folderActions = element('div', 'azure-folder-actions');
-            folderActions.appendChild(
-                actionButton(
-                    'Use this folder for setup',
-                    'azureBrowserUseCurrentFolder',
-                    'btn primary',
-                ),
+            const useFolder = actionButton(
+                'Use this folder for setup',
+                'azureBrowserUseCurrentFolder',
+                'btn primary',
             );
+            useFolder.disabled = azure.phase !== 'ready';
+            folderActions.appendChild(useFolder);
             folderActions.appendChild(
                 element(
                     'span',
@@ -701,7 +817,7 @@
         }
 
         if (azure.phase === 'error') {
-            const storageConsent = azure.errorKind === 'storageConsent';
+            const storageConsent = !publicMode && azure.errorKind === 'storageConsent';
             let title = 'Could not list this Azure location';
             if (azure.errorKind === 'controlAccess') {
                 title = 'Azure management access denied';
@@ -709,13 +825,24 @@
                 title = 'Authorize Storage browsing';
             } else if (azure.errorKind === 'dataAccess') {
                 title = 'Storage data access denied';
+            } else if (azure.errorKind === 'publicAccess') {
+                title = 'Public container listing unavailable';
+            } else if (azure.errorKind === 'accountDisabled') {
+                title = 'Storage account disabled';
+            } else if (azure.errorKind === 'network') {
+                title = 'Check Storage network access';
+            } else if (azure.errorKind === 'storageAuthentication') {
+                title = 'Storage credential not accepted';
+            } else if (azure.errorKind === 'notFound') {
+                title = 'Storage location not found or not visible';
             }
             browsePane.appendChild(
                 azureStateCard(
                     title,
                     azure.message || 'Retry the request or choose another account.',
-                    storageConsent ? 'Authorize storage access' : 'Retry',
-                    'azureBrowserRetry',
+                    azure.errorKind === 'accountDisabled' ? null
+                        : storageConsent ? 'Authorize storage access' : 'Retry',
+                    azure.errorKind === 'accountDisabled' ? null : 'azureBrowserRetry',
                 ),
             );
             layout.appendChild(browsePane);
@@ -1998,6 +2125,22 @@
             return;
         }
         const name = action.dataset.action;
+        if (name === 'showPublicContainer') {
+            publicContainerFormOpen = true;
+            rerenderAzureBrowser();
+            byId('azure-public-container-url').focus();
+            return;
+        }
+        if (name === 'azureBrowserOpenPublicContainer') {
+            event.preventDefault();
+            submitPublicContainer();
+            return;
+        }
+        if (['azureBrowserClose', 'azureBrowserDisconnect', 'azureBrowserConnect', 'activateLocalSource'].includes(name)) {
+            publicContainerFormOpen = false;
+            publicContainerUrlDraft = '';
+            publicContainerPrefixDraft = '';
+        }
         if (name === 'azureBrowserClose') {
             focusSourceTabAfterClose = true;
         }
@@ -2015,6 +2158,13 @@
             return;
         }
         post({ type: name });
+    });
+
+    document.addEventListener('submit', function (event) {
+        if (event.target instanceof Element && event.target.id === 'azure-public-container-form') {
+            event.preventDefault();
+            submitPublicContainer();
+        }
     });
 
     document.addEventListener('change', function (event) {
@@ -2086,6 +2236,14 @@
 
     document.addEventListener('input', function (event) {
         const target = event.target;
+        if (target instanceof Element && target.id === 'azure-public-container-url') {
+            publicContainerUrlDraft = target.value;
+            return;
+        }
+        if (target instanceof Element && target.id === 'azure-public-container-prefix') {
+            publicContainerPrefixDraft = target.value;
+            return;
+        }
         if (target instanceof Element && target.id === 'file-filter') {
             const value = target.value;
             fileFilter = value;

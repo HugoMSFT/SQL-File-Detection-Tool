@@ -59,6 +59,8 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
     assert.deepEqual(state.azure, {
+        mode: 'authenticated',
+        publicContainer: null,
         open: false,
         phase: 'closed',
         identity: null,

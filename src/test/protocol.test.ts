@@ -99,6 +99,26 @@ test('Browse local actions are explicit zero-field capabilities', () => {
     }
 });
 
+test('public container requests accept bounded locations but never renderer-owned access metadata', () => {
+    const url = 'https://blob001.blob.core.windows.net/raw/';
+    assert.deepEqual(parseWebviewRequest({
+        type: 'azureBrowserOpenPublicContainer', url, prefix: 'sales%20data/',
+        access: 'authenticated', identity: 'forged', accessToken: 'SECRET',
+    }), { type: 'azureBrowserOpenPublicContainer', url, prefix: 'sales%20data/' });
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'azureBrowserOpenPublicContainer', url }),
+        { type: 'azureBrowserOpenPublicContainer', url, prefix: '' },
+    );
+    for (const invalid of [
+        { url: '' }, { url: 'a'.repeat(2_049) }, { url, prefix: 'a'.repeat(1_025) },
+        { url, prefix: null }, { url: url + '\n' }, { url, prefix: 'a\tb' },
+        { url, prefix: 'a\u0085b' },
+    ]) {
+        assert.equal(parseWebviewRequest({ type: 'azureBrowserOpenPublicContainer', ...invalid }), undefined);
+    }
+    assert.equal(parseWebviewRequest({ type: 'showPublicContainer' }), undefined);
+});
+
 test('Azure browser actions accept only bounded opaque selections', () => {
     for (const type of [
         'openAzureBrowser',
