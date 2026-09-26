@@ -1610,8 +1610,14 @@
             selectedImportProfile,
         ));
         const apply = settingsButton('Apply selected profile', 'applyImportProfile');
-        apply.disabled = !selectedImportProfile || !state.selectedFileId || !state.metadata;
+        const provisional = state.metadata && state.metadata.analysis_stage === 'provisional';
+        apply.disabled = !selectedImportProfile || !state.selectedFileId || !state.metadata || provisional;
         controls.appendChild(apply);
+        if (provisional) {
+            controls.appendChild(
+                element('p', 'help', 'Wait for file analysis to finish before applying a profile.'),
+            );
+        }
         const remove = settingsButton('Delete profile', 'deleteImportProfile');
         remove.disabled = !selectedImportProfile;
         controls.appendChild(remove);

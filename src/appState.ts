@@ -343,10 +343,10 @@ export class AppStateStore {
         return identified;
     }
 
-    settingsFor(file: RegisteredFile): FileSettings {
+    settingsFor(file: RegisteredFile, fallback: FileSettings = DEFAULT_FILE_SETTINGS): FileSettings {
         return file.settingsIdentity
-            ? this.fileSettings.get(file.settingsIdentity)
-            : DEFAULT_FILE_SETTINGS;
+            ? this.fileSettings.get(file.settingsIdentity, fallback)
+            : fallback;
     }
 
     rememberSettings(file: RegisteredFile, settings: FileSettings, rememberUndo = true): FileSettings {

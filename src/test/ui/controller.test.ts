@@ -130,7 +130,7 @@ function completeOnlyService<T extends {
     };
 }
 
-function gate<T>() {
+function gate<T = void>() {
     let release!: (value: T) => void;
     const promise = new Promise<T>((resolve) => { release = resolve; });
     return { promise, release };
@@ -181,12 +181,6 @@ function snapshot(record: Recorder): AppStateSnapshot {
 
 function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
-}
-
-function gate(): { promise: Promise<void>; release: () => void } {
-    let release!: () => void;
-    const promise = new Promise<void>((resolve) => { release = resolve; });
-    return { promise, release };
 }
 
 test('all settings and one-level Undo are isolated across file switching, refresh and source switching', async () => {
@@ -1829,6 +1823,72 @@ test('a live sample is published while refinement waits and current edits surviv
         assert.equal(final.columnOverrides.id, 'BIGINT');
         assert.match(final.statements?.create_table ?? '', /\[imports\]\.\[my_draft\]/);
         assert.doesNotMatch(final.statements?.create_table ?? '', /SAMPLE ONLY/);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('refinement and file switching preserve intentionally cleared object names', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const first = path.join(record.downloadDir, 'first.csv');
+    const second = path.join(record.downloadDir, 'second.csv');
+    fs.writeFileSync(first, 'id\n1\n');
+    fs.writeFileSync(second, 'id\n2\n');
+    const service = new HeldRefinementService(first);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([first, second]);
+        await service.analyzing.promise;
+        const fileId = snapshot(record).selectedFileId;
+        for (const type of ['setTableName', 'setSchemaName', 'setDataSource', 'setCredentialName', 'setFormatName']) {
+            await ui.handle({ type, fileId, value: '' });
+        }
+        const cleared = fileSettingsFrom(snapshot(record));
+        service.final.release();
+        await running;
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), cleared);
+        await ui.handle({ type: 'selectFile', fileId: snapshot(record).files[1].id });
+        await ui.handle({ type: 'selectFile', fileId });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), cleared);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('profile application waits for refinement so late JSON columns are not lost', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'late-column.json');
+    fs.writeFileSync(file, JSON.stringify([
+        ...Array.from({ length: 40 }, (_, id) => ({ id })),
+        { id: 40, late: 'value' },
+    ]));
+    record.preferences.set(IMPORT_PROFILES_PREFERENCE, [{
+        version: 1,
+        name: 'Late column',
+        ...DEFAULT_FILE_SETTINGS,
+        columnOverrides: { late: 'NVARCHAR(80)' },
+    }]);
+    const service = new HeldRefinementService(file);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        const fileId = snapshot(record).selectedFileId;
+        const settings = fileSettingsFrom(snapshot(record));
+        assert.equal(snapshot(record).metadata?.schema?.some(([name]) => name === 'late'), false);
+        await ui.handle({ type: 'applyImportProfile', fileId, name: 'Late column' });
+        assert.deepEqual(fileSettingsFrom(snapshot(record)), settings);
+        assert.match(snapshot(record).error ?? '', /Wait for file analysis to finish/);
+        assert.equal(snapshot(record).busy, true);
+        service.final.release();
+        await running;
+        await ui.handle({ type: 'applyImportProfile', fileId, name: 'Late column' });
+        assert.deepEqual(snapshot(record).columnOverrides, { late: 'NVARCHAR(80)' });
+        assert.equal(snapshot(record).error, null);
     } finally {
         service.final.release();
         await ui.dispose();

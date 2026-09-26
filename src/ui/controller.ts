@@ -706,7 +706,7 @@ export class UiController {
         }
     }
 
-    private defaultTableName(metadata = this.rawMetadata): string {
+    private defaultTableName(metadata: GeneratorMetadata | null = this.rawMetadata): string {
         return metadata
             ? this.service.resolveTableName(metadata, null).slice(0, MAX_SETTING_NAME_LENGTH)
             : '';
@@ -716,7 +716,7 @@ export class UiController {
         settings: FileSettings,
         metadata: FileMetadata | null,
     ): { settings: FileSettings; missing: string[] } {
-        if (!metadata) {
+        if (!metadata || metadata.analysis_stage === 'provisional') {
             return { settings, missing: [] };
         }
         const columns = new Set((metadata.schema ?? []).map(([name]) => name));
@@ -777,8 +777,8 @@ export class UiController {
         if (!profile) {
             throw new SettingsValidationError('That import profile is no longer available.');
         }
-        if (!this.rawMetadata) {
-            throw new SettingsValidationError('Wait for the selected file schema before applying an import profile.');
+        if (!this.rawMetadata || this.rawMetadata.analysis_stage === 'provisional') {
+            throw new SettingsValidationError('Wait for file analysis to finish before applying an import profile.');
         }
         const matched = this.matchingSettings(fileSettingsFrom(profile), this.rawMetadata);
         this.changeSettings(matched.settings, true, this.missingColumnsNotice(matched.missing)
@@ -1220,7 +1220,6 @@ export class UiController {
         }
         const operation = this.begin();
         this.activateLocalSource();
-        const operation = this.begin();
         const previousFile = this.store.selected;
         try {
             const file = await this.store.identifyFile(fileId);
@@ -1233,7 +1232,10 @@ export class UiController {
             const changed = this.store.state.selectedFileId !== fileId
                 || previousFile?.settingsIdentity !== file.settingsIdentity;
             const settings = changed
-                ? this.store.settingsFor(file)
+                ? this.store.settingsFor(file, {
+                      ...DEFAULT_FILE_SETTINGS,
+                      tableName: this.defaultTableName({ file_path: file.absolutePath }),
+                  })
                 : fileSettingsFrom(this.store.state);
             this.store.rememberSettings(file, settings, false);
             if (changed) {
@@ -1535,10 +1537,7 @@ export class UiController {
         const matched = authoritative
             ? this.matchingSettings(fileSettingsFrom(state), metadata)
             : { settings: fileSettingsFrom(state), missing: [] };
-        const settings = {
-            ...matched.settings,
-            tableName: state.tableName || this.defaultTableName(metadata),
-        };
+        const settings = matched.settings;
         const file = this.store.selected;
         if (file) {
             this.store.rememberSettings(file, settings, false);

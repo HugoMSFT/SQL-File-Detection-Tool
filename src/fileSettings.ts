@@ -374,10 +374,10 @@ export class FileSettingsHistory {
     get size(): number { return this.entries.size; }
     get byteSize(): number { return this.bytes; }
 
-    get(identity: string): FileSettings {
+    get(identity: string, fallback: FileSettings = DEFAULT_FILE_SETTINGS): FileSettings {
         const entry = this.entries.get(identity);
         if (!entry) {
-            return DEFAULT_FILE_SETTINGS;
+            return fallback;
         }
         this.entries.delete(identity);
         this.entries.set(identity, entry);
