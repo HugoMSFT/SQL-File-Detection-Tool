@@ -1,0 +1,114 @@
+name: Approved immutable Marketplace release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact existing package.json version (x.y.z; no version bump is performed)
+        type: string
+        required: true
+      head:
+        description: Full 40-character current main commit SHA
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: marketplace-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+  RELEASE_SHA: ${{ inputs.head }}
+
+jobs:
+  build:
+    name: Validate and package once (no publisher credential)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      manifest_sha256: ${{ steps.manifest.outputs.manifest_sha256 }}
+      vsix_sha256: ${{ steps.manifest.outputs.vsix_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Require exact main head/version and externally configured approval protection
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release.js preflight
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run notices -- --check
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Create the only VSIX for this run
+        run: npm run package
+      - name: Audit and bind artifact bytes to version and source
+        id: manifest
+        run: node scripts/release.js prepare --vsix "dist/sql-file-detection-${RELEASE_VERSION}.vsix"
+      - uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: marketplace-release
+          path: .artifacts/release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  publish:
+    name: Approve, verify immutable artifact, publish and verify Gallery
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: marketplace
+    env:
+      RELEASE_ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+      RELEASE_ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+      RELEASE_MANIFEST_SHA256: ${{ needs.build.outputs.manifest_sha256 }}
+      RELEASE_VSIX_SHA256: ${{ needs.build.outputs.vsix_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      # Tooling dependencies only: never compile, bundle or package in this job.
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          merge-multiple: true
+          path: .artifacts/release/
+      - name: Recheck approval settings, immutable ID/digest, source, manifest, VSIX hash and audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release.js verify
+      - name: Publish packagePath once; inspect Gallery even after an uncertain upload
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MARKETPLACE_VSCE_PAT: ${{ secrets.MARKETPLACE_VSCE_PAT }}
+        run: node scripts/release.js publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gallery-verification
+          path: .artifacts/release/gallery-verification.json
+          if-no-files-found: warn
+          retention-days: 14

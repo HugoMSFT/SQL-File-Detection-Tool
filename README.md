@@ -957,6 +957,13 @@ npm run audit:vsix     # mechanical content audit of that .vsix
 loads and activates `dist/extension.js` itself, so the artifact that ships is the
 artifact that is tested, not just the `tsc` output beside it.
 
+CI also installs that VSIX into isolated Windows/macOS VS Code profiles and
+drives the real webview. See [regression and release tooling](docs/regression-release.md)
+for `npm run test:installed`, native-TypeScript SQL plans and optional disposable
+Linux live checks, and the manual, environment-approved immutable-VSIX release
+workflow. The walkthrough GIF is not installed-extension evidence, and historical
+Python certification results do not certify newly generated native SQL.
+
 Build distributable packages:
 
 ```bash

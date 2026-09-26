@@ -49,6 +49,7 @@ certification-evidence.json
 certification-evidence.md
 scripts/certification/evidence/
 .vscode-test/
+.artifacts/
 
 # Testing
 .pytest_cache/

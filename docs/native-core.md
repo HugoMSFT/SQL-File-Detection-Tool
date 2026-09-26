@@ -509,6 +509,13 @@ npm test
 | `progressivePreview.test.ts` | Blocked-final publication, measured byte/row caps, split Unicode/quoted records, giant JSON, numeric preservation, cancellation, file edits and final-preview compatibility. |
 | `metadataCache.test.ts` | Byte and entry eviction, clone isolation, overweight refusal, stale signature release, nested table changes and no duplicate log replay for final previews. |
 
+The [native SQL evidence runner](regression-release.md#native-sql-offline-first-optional-live)
+additionally compiles this core, derives native metadata from exact-byte
+100-record fixtures, hashes its generated SQL, and safety-checks it offline.
+Optional x86 Linux execution records DDL and read results independently; historical
+Python evidence and unavailable external endpoints are never counted as native
+live successes.
+
 ### Measurements
 
 Recorded on a Windows developer machine with Node 20.18.1:

@@ -1,0 +1,62 @@
+name: Native SQL evidence (optional live)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: Run disposable SQL Server containers (known native SQL failures make this run fail)
+        type: boolean
+        required: true
+        default: false
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  native-sql:
+    # A schedule stays disabled until a repository admin explicitly opts in.
+    if: github.event_name == 'workflow_dispatch' || vars.SQLFDT_ENABLE_LIVE_SQL == 'true'
+    name: SQL Server ${{ matrix.engine }} on native x86 Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: ["2022", "2025"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: npm run compile
+      - run: npm run test:certification
+      - name: Generate and safety-check the offline native plan
+        env:
+          SQL_ENGINE: ${{ matrix.engine }}
+        run: |
+          export TMPDIR="$(realpath "${TMPDIR:-/tmp}")"
+          node scripts/native-sql.js --engine "$SQL_ENGINE" --output .artifacts/native-plan
+          python -m scripts.certification.native_live --validate-plan .artifacts/native-plan
+      - name: Execute exact native SQL on a disposable Developer engine
+        if: inputs.run_live || (github.event_name == 'schedule' && vars.SQLFDT_ENABLE_LIVE_SQL == 'true')
+        env:
+          SQL_ENGINE: ${{ matrix.engine }}
+        run: |
+          export TMPDIR="$(realpath "${TMPDIR:-/tmp}")"
+          python -m scripts.certification.native_live --live --engine "$SQL_ENGINE" --output .artifacts/native-live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-sql-${{ matrix.engine }}
+          path: .artifacts/native-*/
+          if-no-files-found: error
+          retention-days: 14
