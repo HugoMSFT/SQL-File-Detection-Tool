@@ -1367,7 +1367,9 @@
         }
         if (preview.error) {
             container.appendChild(element('p', 'error', preview.error));
-            return;
+            if (preview.rows.length === 0) {
+                return;
+            }
         }
 
         const scroll = element('div', 'table-scroll');
@@ -1379,8 +1381,9 @@
                 preview.rows.length +
                 (preview.truncated ? ' of more rows' : ' rows') +
                 (preview.total_rows !== null && preview.total_rows !== undefined
-                    ? ' · ' + preview.total_rows + ' total'
-                    : ''),
+                    ? ' · ' + preview.total_rows
+                        + (preview.total_rows_estimated ? ' total (estimated)' : ' total')
+                    : ' · total unknown'),
         );
         table.appendChild(caption);
 
@@ -1811,6 +1814,25 @@
     }
 
     function storageSetupReadiness() {
+        if (state.metadata && (
+            state.metadata.analysis_stage === 'provisional'
+            || state.metadata.schema_inference === 'sampled'
+        )) {
+            return {
+                kind: 'template',
+                title: state.metadata.analysis_stage === 'provisional'
+                    ? 'Sample only: analysis incomplete'
+                    : 'Template: sampled schema',
+                detail: 'Schema and total row count are not verified. Finish analysis before using this SQL.',
+            };
+        }
+        if (state.selectedFileId && state.busy) {
+            return {
+                kind: 'blocked',
+                title: 'Analysis in progress',
+                detail: 'Wait for metadata and SQL refinement to finish.',
+            };
+        }
         if (!state.storageUrl) {
             return {
                 kind: 'blocked',
@@ -2122,6 +2144,19 @@
     function renderPanel() {
         const panel = byId('panel');
         clear(panel);
+        if (state.metadata && state.metadata.analysis_stage === 'provisional') {
+            const provenance = element(
+                'p',
+                'notice',
+                state.busy
+                    ? 'Sample preview — analyzing file…'
+                    : 'Sample preview only — analysis incomplete.',
+            );
+            provenance.setAttribute('role', 'status');
+            panel.appendChild(provenance);
+        } else if (state.metadata && state.metadata.schema_inference === 'sampled') {
+            panel.appendChild(element('p', 'notice', 'Sampled schema — the full source has not been verified.'));
+        }
         renderFileSettings(panel);
         const tab = state.activeTab;
         if (tab === 'metadata') {

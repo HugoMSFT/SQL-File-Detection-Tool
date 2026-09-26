@@ -22,6 +22,7 @@ import * as path from 'path';
 
 import {
     CancellationError,
+    FileChangedError,
     SimpleCancellationTokenSource,
     deduplicateSharedPrerequisites,
     describeError,
@@ -38,15 +39,18 @@ import {
     externalTableRecommendedSqlType,
     isSqlSourceFile,
     knownStorageLocation,
+    markProvisionalSql,
     nativeAnalysisService,
     NATIVE_SUPPORT_BY_TYPE,
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
     type FileMetadata,
+    type AnalysisPreview,
     type FileType,
     type GeneratorMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
+    type PreviewResult,
     sqlSourceFileType,
     type StatementKind,
 } from '../native';
@@ -620,7 +624,7 @@ export class UiController {
                     Math.min(request.rows, MAX_PREVIEW_ROWS),
                 );
                 this.store.update({ previewRows: rows });
-                return this.queue(() => this.refreshPreview());
+                return this.refreshPreview();
             }
             case 'copyStatement':
                 return this.copyStatement(request.kind);
@@ -821,6 +825,9 @@ export class UiController {
         this.tokenSource?.cancel();
         this.tokenSource = undefined;
         this.azure?.cancel();
+        if (this.store.state.busy) {
+            this.store.update({ busy: false, progress: null });
+        }
     }
 
     private requireAzure(): AzureBrowser {
@@ -993,6 +1000,7 @@ export class UiController {
     // -- file selection ------------------------------------------------------
 
     private async showLocalSource(): Promise<void> {
+        this.cancelActive();
         this.activateLocalSource();
         if (!this.store.state.sourceLabel && this.store.state.files.length === 0) {
             await this.browseLocal();
@@ -1000,6 +1008,7 @@ export class UiController {
     }
 
     private async browseLocal(): Promise<void> {
+        this.cancelActive();
         this.activateLocalSource();
         const generation = this.generation;
         const picked = await this.host.showOpenDialog({
@@ -1192,10 +1201,10 @@ export class UiController {
             notice: null,
         });
         this.refreshQuickAnalyze();
-        if (first) {
-            await this.selectFile(first.id);
-        }
-        if (skipped > 0) {
+        const selecting = first ? this.selectFile(first.id) : undefined;
+        const selectionGeneration = this.generation;
+        await selecting;
+        if (skipped > 0 && this.isCurrent(selectionGeneration)) {
             this.store.update({
                 notice:
                     `${skipped} unsupported ${skipped === 1 ? 'file was' : 'files were'} skipped.`,
@@ -1209,6 +1218,7 @@ export class UiController {
             this.store.update({ error: 'That file is no longer in the list. Refresh and try again.' });
             return;
         }
+        const operation = this.begin();
         this.activateLocalSource();
         const operation = this.begin();
         const previousFile = this.store.selected;
@@ -1383,9 +1393,16 @@ export class UiController {
         });
     }
 
-    private async analyzeSelected(file: RegisteredFile, operation = this.begin()): Promise<void> {
+    private async analyzeSelected(
+        file: RegisteredFile,
+        operation = this.begin(),
+    ): Promise<void> {
         const { token, generation } = operation;
         const started = this.host.now();
+        const current = (): boolean =>
+            this.isCurrent(generation)
+            && this.store.state.selectedFileId === file.id
+            && this.store.state.sourceMode === 'local';
         this.store.update({
             busy: true,
             progress: `Analyzing ${file.entry.label}…`,
@@ -1393,35 +1410,51 @@ export class UiController {
             preview: null,
         });
         try {
-            const metadata = await this.service.analyze({
+            const result = await this.service.analyzeProgressively({
                 filePath: file.absolutePath,
                 allowedRoot: file.allowedRoot,
                 token: token.token,
+                maxRows: this.store.state.previewRows,
+                progress: {
+                    report: ({ message }) => {
+                        if (current() && message) {
+                            this.store.update({
+                                progress: this.rawMetadata?.analysis_stage === 'provisional'
+                                    ? `Sample preview — analyzing file… ${message}`
+                                    : message,
+                            });
+                        }
+                    },
+                },
+                onPreview: (sample) => {
+                    if (!current()) {
+                        return;
+                    }
+                    this.rawMetadata = sample.metadata;
+                    this.applyMetadata(sample.metadata, this.host.now() - started, false, sample.preview);
+                    this.store.update({ progress: 'Sample preview — analyzing file…' });
+                    if (sample.preview.error) {
+                        this.host.log(`Sample preview: ${redact(sample.preview.error)}`);
+                    }
+                    if (!this.firstAnalysisLogged) {
+                        this.host.log(`First native sample preview published in ${Math.round(this.host.now() - started)} ms.`);
+                    }
+                },
             });
-            if (!this.isCurrent(generation)) {
+            if (!current()) {
                 return;
             }
-            this.rawMetadata = metadata;
+            this.rawMetadata = result.metadata;
             const elapsedMs = this.host.now() - started;
-            this.applyMetadata(metadata, elapsedMs);
+            this.applyMetadata(
+                result.metadata, elapsedMs, true,
+                supportsPreview(result.metadata) ? result.preview : null,
+            );
             if (!this.firstAnalysisLogged) {
                 this.firstAnalysisLogged = true;
                 this.host.log(`First native analysis completed in ${Math.round(elapsedMs)} ms.`);
             }
 
-            if (supportsPreview(metadata)) {
-                this.store.update({ progress: 'Reading preview rows…' });
-                const preview = await this.service.preview({
-                    filePath: file.absolutePath,
-                    allowedRoot: file.allowedRoot,
-                    maxRows: this.store.state.previewRows,
-                    token: token.token,
-                });
-                if (!this.isCurrent(generation)) {
-                    return;
-                }
-                this.store.update({ preview });
-            }
             this.store.update({ busy: false, progress: null });
         } catch (error) {
             this.failIfCurrent(generation, error);
@@ -1430,22 +1463,47 @@ export class UiController {
 
     private async refreshPreview(): Promise<void> {
         const file = this.store.selected;
-        if (!file || !supportsPreview(this.rawMetadata)) {
+        const metadata = this.rawMetadata;
+        if (!file || (metadata && !supportsPreview(metadata))) {
+            return;
+        }
+        if (!metadata && !['csv', 'json', 'text'].includes(file.entry.fileType)) {
+            await this.analyzeSelected(file);
             return;
         }
         const { token, generation } = this.begin();
         this.store.update({ busy: true, progress: 'Reading preview rows…' });
         try {
-            const preview = await this.service.preview({
+            const request = {
                 filePath: file.absolutePath,
                 allowedRoot: file.allowedRoot,
                 maxRows: this.store.state.previewRows,
                 token: token.token,
-            });
-            if (!this.isCurrent(generation)) {
+            };
+            let sample: AnalysisPreview | undefined;
+            let preview: PreviewResult;
+            if (!metadata || metadata.analysis_stage === 'provisional') {
+                sample = await this.service.samplePreview(request);
+                preview = sample.preview;
+            } else {
+                preview = await this.service.previewAnalyzed({ ...request, metadata });
+            }
+            if (!this.isCurrent(generation) || this.store.state.selectedFileId !== file.id) {
                 return;
             }
-            this.store.update({ preview, busy: false, progress: null });
+            if (sample) {
+                this.rawMetadata = sample.metadata;
+                this.applyMetadata(sample.metadata, 0, false, preview);
+            }
+            this.store.update({
+                preview,
+                busy: false,
+                progress: null,
+                error: preview.error ? redact(preview.error) : null,
+                notice: sample
+                    ? 'Sample preview only — analysis incomplete. Select the file again to finish analysis.'
+                    : this.store.state.notice,
+            });
         } catch (error) {
             this.failIfCurrent(generation, error);
         }
@@ -1457,12 +1515,21 @@ export class UiController {
         }
         const message = redact(describeError(error));
         this.host.log(`Analysis failed: ${message}`);
+        if (error instanceof FileChangedError && this.rawMetadata?.analysis_stage !== 'provisional') {
+            this.rawMetadata = null;
+            this.store.update({ metadata: null, preview: null, statements: null });
+        }
         this.store.update({ busy: false, progress: null, error: message });
     }
 
     // -- generation ----------------------------------------------------------
 
-    private applyMetadata(metadata: FileMetadata, elapsedMs: number, authoritative = true): void {
+    private applyMetadata(
+        metadata: FileMetadata,
+        elapsedMs: number,
+        authoritative = true,
+        preview?: PreviewResult | null,
+    ): void {
         const display = metadataForDisplay(metadata, this.host.workspaceFolders());
         const state = this.store.state;
         const matched = authoritative
@@ -1479,12 +1546,17 @@ export class UiController {
         this.store.update({
             ...settings,
             metadata: display,
+            ...(preview !== undefined ? { preview } : {}),
             recommendedSqlTypes: recommendedSqlTypes(metadata),
             limitation: limitationFor(metadata),
             canUndoSettings: !!file && this.store.canUndoSettings(file),
             settingsRevision: state.settingsRevision + (matched.missing.length > 0 ? 1 : 0),
             notice: this.missingColumnsNotice(matched.missing) ?? state.notice,
-            lastAnalysisMs: Math.max(0, Math.round(elapsedMs)),
+            authMethod: state.authMethod,
+            lastAnalysisMs: authoritative ? Math.max(0, Math.round(elapsedMs)) : null,
+            error: metadata.error || preview?.error
+                ? redact(metadata.error || preview?.error || '')
+                : null,
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -1588,9 +1660,9 @@ export class UiController {
         });
         const statements: GeneratedStatements = {
             ...generated,
-            credential_setup: state.storageUrl
+            credential_setup: markProvisionalSql(state.storageUrl
                 ? this.storageGoalSql(this.rawMetadata, credentialSetup, true)
-                : credentialSetup,
+                : credentialSetup, this.rawMetadata),
         };
         this.store.update({ statements });
     }
@@ -1892,9 +1964,7 @@ export class UiController {
 
     /** Analyse an explicit path chosen outside the webview (a command). */
     async analyzePath(target: string, isDirectory: boolean): Promise<void> {
-        await this.queue(() =>
-            isDirectory ? this.loadDirectory(target) : this.loadFiles([target]),
-        );
+        await (isDirectory ? this.loadDirectory(target) : this.loadFiles([target]));
     }
 
     async dispose(): Promise<void> {

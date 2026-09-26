@@ -15,6 +15,7 @@
  */
 
 import { NativeAnalysisError } from '../errors';
+import { throwIfCancelled, type CancellationToken } from '../cancellation';
 import { exactNumericSample, MAX_NUMERIC_TOKEN_CHARS } from './numeric';
 
 /** A parsed JSON value with its original numeric flavour retained. */
@@ -45,11 +46,20 @@ function skipWhitespace(text: string, index: number): number {
     return i;
 }
 
-function parseString(text: string, index: number): { value: string; next: number; } {
+function* parseStringSteps(
+    text: string,
+    index: number,
+): Generator<void, { value: string; next: number }, void> {
     // `index` points at the opening quote.
     let i = index + 1;
     let out = '';
+    let checked = 0;
     while (i < text.length) {
+        checked += 1;
+        if (checked >= 8192) {
+            checked = 0;
+            yield;
+        }
         const char = text[i];
         if (char === '"') {
             return { value: out, next: i + 1 };
@@ -91,7 +101,17 @@ const NUMBER_PATTERN = /^-?(?:0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/;
 export const MAX_JSON_DEPTH = 200;
 
 /** Decode one JSON value beginning at `index`. */
-export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode; next: number; } {
+function* decodeSteps(
+    text: string,
+    index: number,
+    depth: number,
+    work: { remaining: number },
+): Generator<void, { node: JsonNode; next: number }, void> {
+    work.remaining -= 1;
+    if (work.remaining <= 0) {
+        work.remaining = 512;
+        yield;
+    }
     if (depth > MAX_JSON_DEPTH) {
         throw new JsonSyntaxError('JSON nesting is too deep', index);
     }
@@ -112,12 +132,12 @@ export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode;
             if (text[i] !== '"') {
                 throw new JsonSyntaxError('Expected an object key', i);
             }
-            const key = parseString(text, i);
+            const key = yield* parseStringSteps(text, i);
             i = skipWhitespace(text, key.next);
             if (text[i] !== ':') {
                 throw new JsonSyntaxError('Expected ":" after an object key', i);
             }
-            const value = rawDecode(text, i + 1, depth + 1);
+            const value = yield* decodeSteps(text, i + 1, depth + 1, work);
             entries.push([key.value, value.node]);
             i = skipWhitespace(text, value.next);
             if (text[i] === ',') {
@@ -138,7 +158,7 @@ export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode;
             return { node: { kind: 'array', items }, next: i + 1 };
         }
         for (;;) {
-            const value = rawDecode(text, i, depth + 1);
+            const value = yield* decodeSteps(text, i, depth + 1, work);
             items.push(value.node);
             i = skipWhitespace(text, value.next);
             if (text[i] === ',') {
@@ -153,7 +173,7 @@ export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode;
     }
 
     if (char === '"') {
-        const parsed = parseString(text, start);
+        const parsed = yield* parseStringSteps(text, start);
         return { node: { kind: 'string', value: parsed.value }, next: parsed.next };
     }
 
@@ -181,6 +201,16 @@ export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode;
     throw new JsonSyntaxError('Unexpected token in JSON', start);
 }
 
+/** Synchronous complete API: drain exactly the same parser without scheduling. */
+export function rawDecode(text: string, index = 0, depth = 0): { node: JsonNode; next: number } {
+    const steps = decodeSteps(text, index, depth, { remaining: 512 });
+    let step = steps.next();
+    while (!step.done) {
+        step = steps.next();
+    }
+    return step.value;
+}
+
 /** Decode a complete JSON document, rejecting trailing content. */
 export function parseJson(text: string): JsonNode {
     const { node, next } = rawDecode(text, 0);
@@ -189,6 +219,26 @@ export function parseJson(text: string): JsonNode {
         throw new JsonSyntaxError('Extra data after JSON document', end);
     }
     return node;
+}
+
+/** Opt-in extension-host path: yield during large strings and nested containers. */
+export async function parseJsonCooperatively(
+    text: string,
+    token?: CancellationToken,
+): Promise<JsonNode> {
+    const steps = decodeSteps(text, 0, 0, { remaining: 512 });
+    for (;;) {
+        throwIfCancelled(token);
+        const step = steps.next();
+        if (step.done) {
+            if (skipWhitespace(text, step.value.next) !== text.length) {
+                throw new JsonSyntaxError('Extra data after JSON document', step.value.next);
+            }
+            throwIfCancelled(token);
+            return step.value.node;
+        }
+        await new Promise<void>((resolve) => setImmediate(resolve));
+    }
 }
 
 /** Convert a node into a plain JavaScript value. */

@@ -67,6 +67,38 @@ Formats, Best Practices, COPY INTO, JSON, and FOR JSON are not navigation tabs.
 JSON guidance is emitted only in the relevant `OPENROWSET` or external-table
 context.
 
+For an explicitly selected local CSV/TSV/DAT, JSON/NDJSON/JSONL or text file,
+the controller publishes a bounded first stage before waiting for full analysis.
+It displays **“Sample preview — analyzing file…”**, real rows and progress while
+refinement continues. The sample reads at most 256 KiB including sniffing, at
+most 100 data records (plus a CSV header), and caps records at 64 Ki decoded
+characters and schemas at 256 columns. Unicode, quoted newlines and exact
+numeric text are preserved. A first record that cannot fit is explicitly
+reported as unavailable; it is not shortened into a fake value.
+
+Sample metadata is `analysis_stage: 'provisional'` with
+`schema_inference: 'sampled'`; row totals are unknown, not exact or estimated
+counts. Sample SQL is a conservative template with an embedded `SAMPLE ONLY`
+comment and cannot be labeled Ready to run. Final metadata, SQL and preview
+replace it only while the selected file id and operation generation remain
+current. Normal large-file sampled/estimated provenance is retained even after
+refinement finishes. Final preview limits and format capabilities are unchanged.
+
+Cancel, source switching, or changing Preview rows cancels refinement promptly.
+Retained rows then display **“Sample preview only — analysis incomplete.”**
+Resizing that sample does not silently restart a complete scan; selecting the
+file again retries refinement. Resizing a final preview reuses its metadata,
+without another file/table analysis. A file edited during refinement is rejected
+as changed rather than combining metadata and rows from different revisions.
+Detected facts and SQL use the current user settings when refinement lands, so
+names, parser/column edits, and Reset/Undo/profile choices are not overwritten.
+Renderer drafts and focus still survive state updates.
+
+This improvement applies to selected local files. Initial folder inventory
+still analyzes its bounded listing before selecting a file; Parquet and table
+directories retain their existing footer/log path. There is no remote sampling,
+worker process, authentication or network work added to activation.
+
 Storage SQL is a goal-first workflow: operation, source, SQL runtime access,
 then optional advanced object names. The global target-platform selector remains
 the single platform control. A readiness row distinguishes blocked output,
@@ -334,18 +366,19 @@ The separate Storage SQL URL boundary remains unchanged:
 
 ## Cancellation and stale results
 
-Context-menu analysis and export use `createSerialQueue()`, so requests keep
-their own arguments. Explicit file selections and source switches cancel
-obsolete analysis immediately rather than waiting behind it. On top of that:
+Selections, preview resizes and source switches do not wait behind an obsolete
+analysis in a serial queue. Export requests remain serialized. In addition:
 
-- `begin()` bumps a monotonic `generation` and cancels the previous
-  `CancellationTokenSource`.
+- `begin()` cancels the previous `CancellationTokenSource`; every cancellation
+  also advances a monotonic `generation`, even when a reader ignores its token.
 - Every `await` is followed by `isCurrent(generation)`; a superseded task drops
   its result instead of writing it. A slow analysis of file A can therefore never
   overwrite a fast analysis of file B.
 - The token reaches all the way down into the native analysis service.
-- Cancellation also invalidates the generation, so even an operation that
-  finishes after its token is canceled cannot publish a stale result.
+- Provisional callbacks and progress reports also check generation and selected
+  file identity. Cancelled work cannot clear a newer error or publish late SQL.
+- Cooperative JSON parser yields and bounded streaming reads admit new host
+  requests during refinement, without introducing a worker or subprocess.
 - Schema and SQL regeneration is debounced, so typing in the table name field
   does not start work on every keystroke.
 

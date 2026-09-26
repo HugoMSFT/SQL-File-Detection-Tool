@@ -24,8 +24,13 @@ import type {
     UiHost,
 } from '../../ui/host';
 import type { AppStateSnapshot } from '../../protocol';
-import { NativeAnalysisService, type StatementKind } from '../../native';
 import { DEFAULT_FILE_SETTINGS, IMPORT_PROFILES_PREFERENCE, fileSettingsFrom, type ImportProfile } from '../../fileSettings';
+import {
+    NativeAnalysisService,
+    type AnalysisRequest,
+    type ProgressiveAnalysisRequest,
+    type StatementKind,
+} from '../../native';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -108,6 +113,59 @@ function recorder(options: { workspaceFolders?: string[] } = {}): Recorder {
 
 function controller(record: Recorder, deps = {}): UiController {
     return new UiController(record.host, record.store, deps);
+}
+
+/** Legacy workflow stubs model a service with no speculative sample stage. */
+function completeOnlyService<T extends {
+    analyze(request: { filePath: string }): Promise<unknown>;
+    preview(): Promise<unknown>;
+}>(service: T) {
+    return {
+        ...service,
+        analyzeProgressively: async (request: AnalysisRequest) => ({
+            metadata: await service.analyze(request),
+            preview: await service.preview(),
+        }),
+        previewAnalyzed: service.preview,
+    };
+}
+
+function gate<T>() {
+    let release!: (value: T) => void;
+    const promise = new Promise<T>((resolve) => { release = resolve; });
+    return { promise, release };
+}
+
+/** Real sampling/parsing, with the authoritative service boundary held open. */
+class HeldRefinementService extends NativeAnalysisService {
+    readonly sampled = gate<void>();
+    readonly analyzing = gate<void>();
+    readonly final = gate<void>();
+    readonly requests: AnalysisRequest[] = [];
+
+    constructor(private readonly heldFile: string) { super(); }
+
+    override async analyzeProgressively(request: ProgressiveAnalysisRequest) {
+        return super.analyzeProgressively({
+            ...request,
+            onPreview: async (sample) => {
+                await request.onPreview(sample);
+                if (request.filePath === this.heldFile) {
+                    this.sampled.release();
+                }
+            },
+        });
+    }
+
+    override async analyze(request: AnalysisRequest) {
+        this.requests.push(request);
+        if (request.filePath === this.heldFile) {
+            this.analyzing.release();
+            await this.final.promise;
+            request.progress?.report({ message: 'Held refinement resumed' });
+        }
+        return super.analyze(request);
+    }
 }
 
 /** Wait for the controller's serial queue and any microtasks to settle. */
@@ -722,7 +780,7 @@ test('a malformed or unknown message is dropped, never defaulted', async () => {
 test('handle never throws, whatever the handler does', async () => {
     const record = recorder();
     const ui = controller(record, {
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'X',
@@ -738,7 +796,7 @@ test('handle never throws, whatever the handler does', async () => {
             generateStatements: () => ({}),
             generateCompleteDocument: () => '',
             generateMultiFileScript: () => '',
-        },
+        }),
     });
     try {
         await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
@@ -961,7 +1019,7 @@ test('starting a folder scan clears the previous file result', async () => {
         release = resolve;
     });
     const ui = controller(record, {
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
@@ -980,7 +1038,7 @@ test('starting a folder scan clears the previous file result', async () => {
             generateStatements: () => ({ create_table: 'previous SQL' }),
             generateCompleteDocument: () => 'x',
             generateMultiFileScript: () => 'x',
-        },
+        }),
     });
     try {
         await ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
@@ -1167,7 +1225,7 @@ test('selecting another file clears the previous result while analysis is pendin
     });
     let call = 0;
     const ui = controller(record, {
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
@@ -1189,7 +1247,7 @@ test('selecting another file clears the previous result while analysis is pendin
             generateStatements: () => ({ create_table: 'previous SQL' }),
             generateCompleteDocument: () => 'x',
             generateMultiFileScript: () => 'x',
-        },
+        }),
     });
     try {
         await ui.loadFiles([
@@ -1726,6 +1784,276 @@ test('exporting with nothing analysed says so', async () => {
 
 // -- cancellation and stale results -------------------------------------------
 
+test('a live sample is published while refinement waits and current edits survive final metadata', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'progressive.csv');
+    fs.writeFileSync(file, 'id,amount\n' + '1,2\n'.repeat(200) + '2,3.5\n');
+    const service = new HeldRefinementService(file);
+    const timers: Array<() => void> = [];
+    const ui = controller(record, {
+        service,
+        setTimeoutImpl: (fn: () => void) => { timers.push(fn); return fn; },
+        clearTimeoutImpl: () => undefined,
+    });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        const sample = snapshot(record);
+        assert.equal(sample.busy, true);
+        assert.equal(sample.metadata?.analysis_stage, 'provisional');
+        assert.equal(sample.metadata?.schema_inference, 'sampled');
+        assert.equal(sample.metadata?.row_count, null);
+        assert.equal(sample.preview?.rows.length, 25);
+        assert.match(sample.progress ?? '', /Sample preview/);
+        assert.match(sample.statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        const fileId = sample.selectedFileId;
+        await ui.handle({ type: 'setTableName', fileId, value: 'my_draft' });
+        await ui.handle({ type: 'setSchemaName', fileId, value: 'imports' });
+        await ui.handle({ type: 'setParserOverride', fileId, key: 'fieldDelimiter', value: '|' });
+        await ui.handle({ type: 'setColumnOverride', fileId, column: 'id', sqlType: 'BIGINT' });
+        await ui.handle({ type: 'resetParserOverride', fileId, key: 'fieldDelimiter' });
+        await ui.handle({ type: 'setParserOverride', fileId, key: 'firstRow', value: '3' });
+        timers.splice(0).forEach((fire) => fire());
+        service.final.release();
+        await running;
+        const final = snapshot(record);
+        assert.equal(final.busy, false);
+        assert.equal(final.metadata?.analysis_stage, undefined);
+        assert.equal(final.metadata?.row_count, 201);
+        assert.equal(final.preview?.total_rows, 201);
+        assert.equal(new Map(final.metadata?.schema ?? []).get('amount'), 'decimal(2,1)');
+        assert.equal(final.tableName, 'my_draft');
+        assert.equal(final.schemaName, 'imports');
+        assert.equal(final.parserOverrides.fieldDelimiter, undefined);
+        assert.equal(final.parserOverrides.firstRow, 3);
+        assert.equal(final.columnOverrides.id, 'BIGINT');
+        assert.match(final.statements?.create_table ?? '', /\[imports\]\.\[my_draft\]/);
+        assert.doesNotMatch(final.statements?.create_table ?? '', /SAMPLE ONLY/);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('canceling refinement retains an explicit sample-only result and selecting again finishes it', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'cancel.csv');
+    fs.writeFileSync(file, 'id\n' + '1\n'.repeat(200));
+    const service = new HeldRefinementService(file);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        const fileId = snapshot(record).selectedFileId;
+        await ui.handle({ type: 'cancel' });
+        assert.equal(snapshot(record).busy, false);
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).preview?.total_rows, null);
+        assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        service.final.release();
+        await running;
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        await ui.handle({ type: 'selectFile', fileId });
+        assert.equal(snapshot(record).metadata?.analysis_stage, undefined);
+        assert.equal(snapshot(record).preview?.total_rows, 200);
+        assert.equal(snapshot(record).error, null);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('changing preview rows cancels refinement without another complete analysis or a false ready state', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'resize.csv');
+    fs.writeFileSync(file, 'id\n' + '1\n'.repeat(200));
+    const service = new HeldRefinementService(file);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        await ui.handle({ type: 'setPreviewRows', rows: 5 });
+        assert.equal(service.requests.length, 1);
+        assert.equal(service.requests[0].token?.isCancellationRequested, true);
+        assert.equal(snapshot(record).preview?.rows.length, 5);
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).busy, false);
+        assert.match(snapshot(record).notice ?? '', /Sample preview only/);
+        assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        service.final.release();
+        await running;
+        assert.equal(snapshot(record).preview?.rows.length, 5);
+        assert.equal(snapshot(record).preview?.total_rows, null);
+        const fileId = snapshot(record).selectedFileId;
+        await ui.handle({ type: 'selectFile', fileId });
+        const analyses = service.requests.length;
+        await ui.handle({ type: 'setPreviewRows', rows: 8 });
+        assert.equal(service.requests.length, analyses, 'a final-preview resize reuses authoritative metadata');
+        assert.equal(snapshot(record).preview?.rows.length, 8);
+        assert.equal(snapshot(record).preview?.total_rows, 200);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a new selected file finishes before blocked obsolete refinement is released', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const first = path.join(record.downloadDir, 'first.csv');
+    const second = path.join(record.downloadDir, 'second.csv');
+    fs.writeFileSync(first, 'id\n1\n');
+    fs.writeFileSync(second, 'id\n2\n3\n');
+    const service = new HeldRefinementService(first);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([first, second, path.join(record.downloadDir, 'ignored.xlsx')]);
+        await service.analyzing.promise;
+        const secondId = snapshot(record).files[1].id;
+        await ui.handle({ type: 'selectFile', fileId: secondId });
+        assert.equal(service.requests[0].token?.isCancellationRequested, true);
+        assert.equal(snapshot(record).metadata?.file_name, 'second.csv');
+        assert.equal(snapshot(record).metadata?.row_count, 2);
+        const current = snapshot(record);
+        service.final.release();
+        await running;
+        assert.deepEqual(snapshot(record), current, 'late progress, metadata, SQL and previews must all be ignored');
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a preview resize before the first sample cancels the old request and only samples the new limit', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'early.csv');
+    fs.writeFileSync(file, 'id\n' + '1\n'.repeat(200));
+    const entered = gate<void>();
+    const release = gate<void>();
+    class DelayedSampleService extends NativeAnalysisService {
+        analyses = 0;
+        override async analyzeProgressively(request: ProgressiveAnalysisRequest) {
+            entered.release();
+            await release.promise;
+            return super.analyzeProgressively(request);
+        }
+        override async analyze(request: AnalysisRequest) {
+            this.analyses += 1;
+            return super.analyze(request);
+        }
+    }
+    const service = new DelayedSampleService();
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([file]);
+        await entered.promise;
+        assert.equal(snapshot(record).metadata, null);
+        await ui.handle({ type: 'setPreviewRows', rows: 5 });
+        assert.equal(snapshot(record).preview?.rows.length, 5);
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).busy, false);
+        release.release();
+        await running;
+        assert.equal(service.analyses, 0);
+        assert.equal(snapshot(record).preview?.rows.length, 5);
+    } finally {
+        release.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('an obsolete file picker cannot replace a newer selected source', async () => {
+    const record = recorder();
+    const first = path.join(record.downloadDir, 'picked.csv');
+    const second = path.join(record.downloadDir, 'newer.csv');
+    fs.writeFileSync(first, 'id\n1\n');
+    fs.writeFileSync(second, 'id\n2\n');
+    const picked = gate<readonly OpenDialogSelection[]>();
+    record.host = { ...record.host, showOpenDialog: async () => picked.promise };
+    const ui = controller(record);
+    try {
+        const picker = ui.handle({ type: 'openLocalDialog' });
+        await ui.loadFiles([second]);
+        picked.release([{ path: first, isDirectory: false }]);
+        await picker;
+        assert.equal(snapshot(record).metadata?.file_name, 'newer.csv');
+    } finally {
+        picked.release([]);
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('source switching cancels refinement, and returning to local restores sample-only provenance', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'source.csv');
+    fs.writeFileSync(file, 'id\n1\n2\n');
+    const service = new HeldRefinementService(file);
+    let authenticationCalls = 0;
+    const azure = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async () => {
+            authenticationCalls += 1;
+            return undefined;
+        }),
+    });
+    const ui = controller(record, { service, azure });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        await ui.handle({ type: 'openAzureBrowser' });
+        assert.equal(snapshot(record).sourceMode, 'azure');
+        assert.equal(snapshot(record).metadata, null);
+        assert.equal(snapshot(record).busy, false);
+        assert.equal(service.requests[0].token?.isCancellationRequested, true);
+        await ui.handle({ type: 'activateLocalSource' });
+        assert.equal(snapshot(record).sourceMode, 'local');
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).busy, false);
+        assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        const restored = snapshot(record);
+        service.final.release();
+        await running;
+        assert.deepEqual(snapshot(record), restored);
+        assert.equal(authenticationCalls, 0);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('a source-file edit during refinement leaves the sample explicit until a successful retry', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'edit.csv');
+    fs.writeFileSync(file, 'id,amount\n1,2\n');
+    const service = new HeldRefinementService(file);
+    const ui = controller(record, { service });
+    try {
+        const running = ui.loadFiles([file]);
+        await service.analyzing.promise;
+        fs.appendFileSync(file, '2,3.5\n');
+        service.final.release();
+        await running;
+        assert.equal(snapshot(record).busy, false);
+        assert.equal(snapshot(record).metadata?.analysis_stage, 'provisional');
+        assert.equal(snapshot(record).preview?.total_rows, null);
+        assert.match(snapshot(record).error ?? '', /file changed/i);
+        assert.match(snapshot(record).statements?.create_table ?? '', /^-- SAMPLE ONLY:/);
+        await ui.handle({ type: 'selectFile', fileId: snapshot(record).selectedFileId });
+        assert.equal(snapshot(record).metadata?.analysis_stage, undefined);
+        assert.equal(snapshot(record).preview?.total_rows, 2);
+        assert.equal(snapshot(record).error, null);
+    } finally {
+        service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
 test('a superseded analysis cannot overwrite newer state', async () => {
     const record = recorder();
     let release: (() => void) | undefined;
@@ -1734,7 +2062,7 @@ test('a superseded analysis cannot overwrite newer state', async () => {
     });
     let call = 0;
     const ui = controller(record, {
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
@@ -1751,7 +2079,7 @@ test('a superseded analysis cannot overwrite newer state', async () => {
             generateStatements: () => ({ create_table: 'x' }),
             generateCompleteDocument: () => 'x',
             generateMultiFileScript: () => 'x',
-        },
+        }),
     });
     try {
         const first = ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
@@ -1780,7 +2108,7 @@ test('an explicit cancel clears progress without leaving an error', async () => 
         release = resolve;
     });
     const ui = controller(record, {
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
@@ -1799,7 +2127,7 @@ test('an explicit cancel clears progress without leaving an error', async () => 
             generateStatements: () => ({}),
             generateCompleteDocument: () => '',
             generateMultiFileScript: () => '',
-        },
+        }),
     });
     try {
         const running = ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
@@ -1834,7 +2162,7 @@ test('credential name, auth method and table name reach the generator', async ()
             return timers.length;
         },
         clearTimeoutImpl: () => undefined,
-        service: {
+        service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
@@ -1859,7 +2187,7 @@ test('credential name, auth method and table name reach the generator', async ()
                 multi.push(request);
                 return 'x';
             },
-        },
+        }),
     });
     try {
         await ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);

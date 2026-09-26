@@ -899,7 +899,14 @@ containers = azure_auth.list_containers(connection, account_name="myaccount")
 
 ## Analysis behavior
 
-- Metadata and encoding caches are thread-safe, signature-based LRU caches.
+- The optional Python metadata/encoding caches are thread-safe, signature-based
+  LRU caches. The native metadata cache is clone-isolated and bounded by 256
+  entries, 16 MiB total and 2 MiB per entry; table directories are not cached.
+- The VS Code interface publishes a local sample preview before full
+  CSV/TSV/DAT, JSON/NDJSON or text analysis: at most 256 KiB including sniffing,
+  100 data records, 64 Ki decoded characters per record and 256 columns.
+  “Sample preview” and sample-only SQL stay explicit until refinement finishes.
+  Existing complete analysis APIs and final-preview capabilities are unchanged.
 - CSV and text row counts stream records instead of retaining file contents.
 - CSV files below 100 MB and NDJSON streams aggregate type and width evidence
   across every row at constant schema memory.
@@ -917,6 +924,13 @@ containers = azure_auth.list_containers(connection, account_name="myaccount")
 - Parquet previews read bounded record batches rather than complete row groups.
 - Iceberg row counts come from the current snapshot summary, not every Parquet
   file in the data directory.
+
+The progressive-path test independently measures file-handle reads and holds
+final analysis blocked until the sample arrives. A 13.29 MiB CSV produced 25
+sample rows after reading 64 KiB in about 11 ms on the reference macOS run,
+versus about 340–380 ms for authoritative refinement. Timing is diagnostic, not
+a strict CI threshold. Initial folder scans are unchanged. See
+[native performance and cache details](docs/native-core.md#measurements).
 
 ## Development
 

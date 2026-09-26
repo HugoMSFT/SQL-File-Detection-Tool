@@ -34,6 +34,25 @@ export const TARGET_TABLE_MAX_COLUMNS = 1024;
 /** Entries retained by the analysis cache. */
 export const CACHE_MAX_ENTRIES = 256;
 
+/** Conservative retained-size budget for the metadata LRU (not source bytes). */
+export const CACHE_MAX_BYTES = 16 * 1024 * 1024;
+
+/** Do not clone or retain a single unusually wide metadata result. */
+export const CACHE_MAX_ENTRY_BYTES = 2 * 1024 * 1024;
+
+/** Total bytes read for an opt-in first text preview, including sniffing. */
+export const FAST_PREVIEW_MAX_BYTES = 256 * 1024;
+
+/** Complete logical data records retained by a first preview. */
+export const FAST_PREVIEW_MAX_ROWS = 100;
+
+/** A first preview never buffers a wider record or schema than these limits. */
+export const FAST_PREVIEW_MAX_RECORD_CHARS = 64 * 1024;
+export const FAST_PREVIEW_MAX_COLUMNS = 256;
+
+/** Small reads keep first-preview work and cancellation latency bounded. */
+export const FAST_PREVIEW_CHUNK_BYTES = 16 * 1024;
+
 /** Rows read from a delimited file when inferring its schema. */
 export const CSV_SCHEMA_SAMPLE_ROWS = 1000;
 

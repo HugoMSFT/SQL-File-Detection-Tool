@@ -28,6 +28,18 @@ const scriptCode = script
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^[ \t]*\/\/.*$/gm, '');
 
+test('progressive preview and sampled SQL remain visibly provisional, including after cancellation', () => {
+    assert.match(script, /Sample preview — analyzing file…/);
+    assert.match(script, /Sample preview only — analysis incomplete\./);
+    assert.match(script, /metadata\.analysis_stage === 'provisional'/);
+    assert.match(script, /Template: sampled schema/);
+    assert.match(script, /preview\.total_rows_estimated/);
+    assert.match(script, /total unknown/);
+    assert.match(script, /provenance\.setAttribute\('role', 'status'\)/);
+    const readiness = script.slice(script.indexOf('function storageSetupReadiness()'), script.indexOf('function renderCredentialSetup('));
+    assert.ok(readiness.indexOf("analysis_stage === 'provisional'") < readiness.indexOf("title: 'Ready to run'"));
+});
+
 function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     return buildWebviewHtml({
         cspSource: 'vscode-webview://abc',

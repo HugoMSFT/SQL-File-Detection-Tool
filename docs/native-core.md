@@ -2,16 +2,10 @@
 
 `src/native/` is a self-contained TypeScript port of the analysis and T-SQL
 generation logic that has historically lived in `external_file_detection/`
-(Python). It exists so the VS Code extension can eventually analyse files and
-generate SQL in-process, without spawning a Python interpreter or a Flask
-server.
-
-> **Status: not yet on the shipped runtime path.** Nothing in `src/extension.ts`,
-> `src/backend.ts`, or `src/sidebar.ts` imports `src/native/`. Installing this
-> version of the extension behaves exactly like the previous one: the managed
-> Python backend is still started, and the web UI is still what users see. This
-> module is proven against the Python implementation by tests, and is wired into
-> the UI in a later change.
+(Python). The VS Code interface uses it in-process, without spawning a Python
+interpreter or a Flask server. Complete programmatic analysis and preview APIs
+retain their existing behavior; the interface opts into the progressive path
+described below.
 
 The Python CLI, Python API, and Flask web app are unchanged and remain the
 supported entry points for non-extension users.
@@ -47,7 +41,9 @@ src/native/
 |-- streams.ts            bounded chunk/line readers over fs.createReadStream
 |-- encoding.ts           BOM sniffing, chardet fallback, iconv decode, codepage map
 |-- detector.ts           extension + magic-byte dispatch to an analyzer
+|-- metadataCache.ts      byte- and entry-bounded, clone-isolated metadata LRU
 |-- preview.ts            bounded tabular previews for every supported format
+|-- samplePreview.ts      opt-in byte/record/column-limited first text preview
 |-- analysis/
 |   |-- delimited.ts      shared delimiter/header/type/nullability inference
 |   |-- numeric.ts        lexical BigInt/decimal precision and sample preservation
@@ -111,11 +107,84 @@ Every method that touches disk accepts an optional `allowedRoot`, a
 `CancellationToken`, and a `ProgressReporter`. `tryAnalyze` returns a typed
 result union instead of throwing, which suits a webview message handler.
 
+### Progressive local previews
+
+`analyze()` and `preview()` still finish normal metadata analysis before
+returning. Hosts that need an early first preview explicitly opt in:
+
+```ts
+const result = await service.analyzeProgressively({
+    filePath,
+    token,
+    maxRows: 25,
+    progress,
+    onPreview: ({ metadata, preview }) => renderSample(metadata, preview),
+});
+renderFinal(result.metadata, result.preview);
+
+// A resize does not run metadata analysis again.
+const resized = await service.previewAnalyzed({
+    filePath, metadata: result.metadata, maxRows: 50, token,
+});
+```
+
+For CSV, TSV, DAT, JSON, JSONL, NDJSON and text, `onPreview` is awaited **before**
+authoritative analysis begins. `samplePreview()` exposes just that first stage
+without starting refinement. Neither operation performs remote sampling.
+Parquet and table directories keep their normal footer/log analysis and row
+preview, without a speculative text pass.
+
+The first stage reads at most **256 KiB total**, including its 64 KiB
+encoding/dialect probe. It retains at most 100 logical data records, with one
+additional CSV header; blank CSV records also consume the logical-record
+budget. A record is limited to 64 Ki decoded characters and a schema to 256
+columns. The same open file and stateful decoder are reused across reads;
+quoted newlines, escaped quotes and split UTF-8/UTF-16 characters remain intact.
+Only complete records are emitted. Oversized initial records, excessive column
+counts and malformed JSON produce explicit sample errors, not fabricated
+values or silent truncation. Refinement can still succeed: these early limits
+do **not** constrain the existing final preview (up to 10,000 requested rows).
+
+Sample metadata has `analysis_stage: 'provisional'`,
+`schema_inference: 'sampled'`, `row_count: null`, conservative nullability and
+no verified string-width bounds. `preview_sample` reports actual `bytes_read`,
+`logical_rows`, all ceilings and `stopped_by`. Exact numeric tokens remain
+strings when JavaScript numbers cannot preserve them. SQL remains a
+preservation-oriented template, with an explicit `SAMPLE ONLY` comment.
+An unknown total is different from an estimated total: final previews carry
+`total_rows_estimated` when appropriate.
+
+Refinement returns metadata and preview together. It reuses the analyzed
+metadata directly rather than replaying uncached Delta/Iceberg logs just to
+read preview rows. Local `source_revision` values contain only opaque stat
+facts, not paths. Changed revisions or replaced paths reject the result with
+`file_changed`; the host must retry rather than combine different file versions.
+Finishing refinement does not override the normal large-file policies:
+metadata remains `sampled` or row counts remain estimated when the complete API
+would report them that way.
+
+### Metadata cache
+
+The LRU is limited to **256 entries and 16 MiB** of conservatively accounted
+retained data. Entries exceeding **2 MiB** are refused before cloning. Accounting
+includes strings, object keys, reference slots and container overhead, not just
+source-file size; it is a cache budget, not a promise about total process heap.
+Both insertion and retrieval clone metadata to preserve caller isolation.
+
+Regular-file signatures include device/inode, size, modification time and
+change time. A mismatched or missing signature releases its old entry. Tokens
+are checked after signature reads, cloning and analysis; changed revisions,
+errors and provisional samples are never inserted. Normal authoritative
+large-file results can still be cached with their original sampled provenance.
+**Directories are deliberately not cached**: a root-directory mtime cannot
+detect nested `_delta_log`, `metadata`, or partition-file changes. Sidecar
+containment checks still run on every analysis.
+
 ### Errors
 
 All failures are `NativeAnalysisError` with a discriminated `code`:
 `path_outside_root`, `path_not_found`, `not_a_directory`, `unsupported_format`,
-`limit_exceeded`, `malformed_input`, `cancelled`, `internal`. Hosts can map
+`limit_exceeded`, `malformed_input`, `file_changed`, `cancelled`, `internal`. Hosts can map
 codes to UI without string matching. A format the native core recognises but
 cannot parse is *not* an error: it returns metadata with
 `native_support: 'unsupported_native'` and an explanatory `warning`.
@@ -127,6 +196,10 @@ a `vscode.CancellationToken` satisfies it without importing `vscode` into the
 core. Loops poll every `CANCELLATION_POLL_INTERVAL` records and throw a
 `cancelled` error. `SimpleCancellationTokenSource` exists for tests and for
 hosts that have no VS Code token to hand.
+The progressive path also yields to the host before refinement and uses
+cooperative complete JSON decoding. Synchronous and cooperative decoding drive
+the same exact parser; large strings and container loops yield without adding a
+worker, subprocess, runtime bundle, or activation-time work.
 
 ---
 
@@ -433,6 +506,8 @@ npm test
 | `generatorMatrix.test.ts` | 6 targets x CSV/Parquet/JSON/Delta x local/remote, plus multi-file export and the corrected edge cases. |
 | `security.test.ts` | Hostile identifiers, URLs, delimiters, JSON keys, comments, SQL type overrides, credential names; path containment including symlink and junction escapes. |
 | `performance.test.ts` | Module import cost, deferred Parquet loading, bounded analysis of generated large files, preview and cache costs. |
+| `progressivePreview.test.ts` | Blocked-final publication, measured byte/row caps, split Unicode/quoted records, giant JSON, numeric preservation, cancellation, file edits and final-preview compatibility. |
+| `metadataCache.test.ts` | Byte and entry eviction, clone isolation, overweight refusal, stale signature release, nested table changes and no duplicate log replay for final previews. |
 
 ### Measurements
 
@@ -456,25 +531,24 @@ is genuinely streaming.
 The suites assert against generous ceilings rather than these exact numbers, so
 CI stays reliable on slower machines.
 
+Progressive-path evidence on macOS, Node 20.19.5: a generated **13.29 MiB CSV**
+(85,001 logical data rows, Unicode and quoted newlines) published 25 sample rows
+in **10.5–11.4 ms**, with **65,536 actual file-handle bytes read**. Authoritative
+refinement, including exact numeric widening at the final record, completed in
+**338.8–378.9 ms**. These are observations, not latency assertions. The decisive
+test holds the final stage blocked, proves the callback has already delivered
+real rows, and independently measures the I/O budget. It also fills the entire
+256 KiB budget to prove no incomplete final record leaks into the preview.
+In the broader parallel run, the same fixture measured 17.3 ms to first preview
+and 443.6 ms through refinement.
+Folder inventory still analyzes files before listing them; this change does
+not claim faster initial folder scans.
+
 ---
 
 ## Packaging
 
-This layer adds four runtime dependencies but does not change what ships to
-users. The packaged VSIX is still version 1.1.1, still contains
-`external_file_detection/`, and still activates the managed Python backend.
-`out/native/**` is compiled into the VSIX but is inert: nothing requires it, so
-its four dependencies are not needed at runtime and `.vscodeignore` correctly
-still excludes `node_modules/**`.
-
-The layer that wires the core into the UI must therefore also start shipping
-those dependencies — either by narrowing the `node_modules` exclusion to
-`hyparquet`, `iconv-lite`, `chardet`, and `fflate`, or by bundling `out/` with
-esbuild.
-
-Python files still ship in the VSIX and the extension version is unchanged,
-because no shipped user behaviour changed here.
-
-`npm audit` reports three advisories, all in the `@vscode/vsce` -> `markdown-it`
--> `linkify-it` devDependency chain that predates this work. `npm audit
---omit=dev` reports zero vulnerabilities, so nothing shipped is affected.
+The native runtime is bundled by the existing esbuild pipeline. Progressive
+previews add no dependency, worker entry point, interpreter or provisioning
+step. Activation still performs no analysis, authentication or network access.
+The optional Python CLI/API behavior is unchanged.

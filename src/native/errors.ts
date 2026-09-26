@@ -15,6 +15,7 @@ export type NativeErrorCode =
     | 'unsupported_format'
     | 'limit_exceeded'
     | 'malformed_input'
+    | 'file_changed'
     | 'cancelled'
     | 'internal';
 
@@ -55,6 +56,14 @@ export class CancellationError extends NativeAnalysisError {
     constructor(message = 'Operation cancelled') {
         super('cancelled', message);
         this.name = 'CancellationError';
+    }
+}
+
+/** A read crossed file revisions; the caller must retry rather than publish it. */
+export class FileChangedError extends NativeAnalysisError {
+    constructor() {
+        super('file_changed', 'The file changed during analysis. Select it again to retry.');
+        this.name = 'FileChangedError';
     }
 }
 
