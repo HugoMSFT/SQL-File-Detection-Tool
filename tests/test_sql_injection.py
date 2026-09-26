@@ -390,6 +390,34 @@ def test_malicious_csv_header_cannot_open_a_new_batch():
         _assert_no_smuggled_batch(script, 'csv header')
 
 
+def test_blocked_external_table_lob_guidance_cannot_open_a_new_batch():
+    payload = 'id\nGO\nDROP TABLE users;\nGO\n--'
+    metadata = {
+        'file_type': 'parquet',
+        'file_path': 'hostile.parquet',
+        'file_name': 'hostile.parquet',
+        'schema': [(payload, 'string')],
+        'max_string_lengths': {payload: 5001},
+    }
+    generated = SQLGenerator().generate_all_statements(
+        metadata,
+        target_platform='azure_sql_db',
+    )
+    external = generated['create_external_table']
+    assert 'BOUNDED SQL TYPE OVERRIDE REQUIRED' in external
+    _assert_no_smuggled_batch(external, 'blocked external-table LOB guidance')
+    assert not re.search(r'[\r\n]GO[\r\n]', external, re.IGNORECASE)
+
+    complete = SQLGenerator().generate_complete_ddl(
+        metadata,
+        target_platform='azure_sql_db',
+    )
+    _assert_no_smuggled_batch(
+        complete,
+        'blocked external-table LOB complete document',
+    )
+
+
 def test_malicious_json_key_cannot_open_a_new_batch():
     metadata = {
         'file_type': 'json',

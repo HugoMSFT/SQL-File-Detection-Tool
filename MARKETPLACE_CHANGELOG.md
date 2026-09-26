@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [1.1.16] - 2026-09-26
+
+### Fixed
+
+- Sanitized column names in blocked external-table LOB guidance so crafted
+  headers cannot escape comments and inject executable T-SQL batches.
+
 ## 1.1.15
 
 ### Fixed
