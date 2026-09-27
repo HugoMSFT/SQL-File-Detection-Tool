@@ -6,7 +6,9 @@ the test-driver extension, fixtures, tests, and credentials.
 ## Commands
 
 Use Node 20 and the lockfile (`npm ci`). SQL tooling additionally needs Python
-3.9+; its adapter and tests use the standard library. On POSIX, normalize the
+3.9+; its adapter and tests use the standard library. The npm commands use
+`python3` on macOS/Linux and `python` on Windows, or the executable path in
+`PYTHON` when set. On POSIX, normalize the
 temporary directory before testing:
 
 ```sh
@@ -64,6 +66,7 @@ mock-host walkthrough, not installed-extension evidence.
 The installed scenarios cover activation, source-tab keyboard navigation,
 Azure open/Escape without sign-in, local CSV/JSON analysis, preview/metadata/
 schema/SQL, type/name typing and caret retention, real SQL editor documents,
+per-file Reset/Undo and profile Save/Apply/Delete across A/B/A file selection,
 preview row/platform settings, unsent Storage SQL drafts, sidebar/editor
 relocation, renderer/panel recreation, cancellation and the next selection.
 Detected Metadata is read-only on the original baseline: edits here mean schema
@@ -76,9 +79,10 @@ restored, including on failure. No animation-frame wait is used: Electron can
 pause those in background windows. This avoids delayed native selection
 overwriting the first character without slowing the subsequent typing test.
 
-`--progressive-preview` additionally requires the forthcoming large-file
+`--progressive-preview` additionally requires the large-file
 `metadata.analysis_stage === 'provisional'` while busy, followed by final metadata
-with no stage marker. Do not enable it until that contract is integrated.
+with no stage marker. CI enables this check, and records the sample count before
+selecting the large file so previews of earlier fixtures cannot satisfy it.
 
 Reports and sanitized VS Code logs are written under
 `.artifacts/installed-smoke/`; failures include a screenshot of the synthetic,

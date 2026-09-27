@@ -11,6 +11,14 @@ const {
     visibleWebview,
 } = require('../installed-smoke');
 const { fixtureBytes, fixtureRows } = require('../regression-fixtures');
+const { pythonExecutable } = require('../run-python');
+
+test('Python tooling uses the platform interpreter or an explicit executable without a shell', () => {
+    assert.equal(pythonExecutable({}, 'darwin'), 'python3');
+    assert.equal(pythonExecutable({}, 'linux'), 'python3');
+    assert.equal(pythonExecutable({}, 'win32'), 'python');
+    assert.equal(pythonExecutable({ PYTHON: '/path with spaces/python' }, 'darwin'), '/path with spaces/python');
+});
 
 test('artifact paths reject traversal, absolute paths and symlink escapes', () => {
     const owned = temporaryRoot('sqlfdt-path-test-');
@@ -103,9 +111,11 @@ test('collapsed File settings is opened before interacting with naming controls'
         isVisible: async () => visible,
         waitFor: async () => assert.equal(visible, true),
     };
-    const ui = { locator: (selector) => selector === '[data-edit="tableName"]'
-        ? input
-        : { filter: () => ({ click: async () => { clicks++; visible = true; } }) } };
+    const ui = { locator: (selector) => {
+        if (selector === '[data-edit="tableName"]') { return input; }
+        assert.equal(selector, 'details.file-settings > summary');
+        return { click: async () => { clicks++; visible = true; } };
+    } };
     await revealNamingControls(ui);
     assert.equal(clicks, 1);
     await revealNamingControls(ui);

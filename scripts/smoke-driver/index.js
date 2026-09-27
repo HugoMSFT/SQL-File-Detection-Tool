@@ -41,6 +41,7 @@ function activate(context) {
             tableName: state.tableName, schemaName: state.schemaName,
             platform: state.platform, previewRows: state.previewRows,
             columnOverrides: state.columnOverrides, parserOverrides: state.parserOverrides,
+            canUndoSettings: state.canUndoSettings, importProfiles: state.importProfiles,
             fileFilter: state.fileFilter, previewCount: state.preview?.rows?.length,
             analysisStage: state.metadata?.analysis_stage ?? null,
             metadataRows: state.metadata?.row_count,

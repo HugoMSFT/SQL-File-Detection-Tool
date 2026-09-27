@@ -144,7 +144,7 @@ jobs:
           name: vsix
           path: dist
       - name: Drive the installed artifact in an isolated VS Code profile
-        run: npm run test:installed
+        run: npm run test:installed -- --progressive-preview
       - uses: actions/upload-artifact@v4
         if: always()
         with:

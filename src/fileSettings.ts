@@ -84,6 +84,7 @@ function containsSensitiveContent(value: string): boolean {
         || /(?:sig|token|access[_-]?token|accountkey|sharedaccesssignature|password|pwd|secret|clientsecret|connectionstring|defaultendpointsprotocol|authorization)\s*=/i.test(decoded)
         || /\b(?:Bearer|SharedKey)\s+\S/i.test(decoded)
         || /\beyJ[\w-]+\.[\w-]+\.[\w-]+\b/.test(decoded)
+        || /\b(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]{15,}\b/.test(decoded)
         || /(?:^|;)\s*(?:server|data source)\s*=[^;]*;/i.test(decoded);
 }
 

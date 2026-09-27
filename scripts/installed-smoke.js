@@ -45,7 +45,7 @@ function resolveExecutable(candidate, platform = process.platform) {
 async function revealNamingControls(ui) {
     const input = ui.locator('[data-edit="tableName"]');
     if (!await input.isVisible()) {
-        await ui.locator('summary').filter({ hasText: /^File settings$/ }).click();
+        await ui.locator('details.file-settings > summary').click();
     }
     await input.waitFor({ state: 'visible' });
 }
@@ -435,6 +435,31 @@ async function smoke(options) {
             report.checks.push('Fast keyboard typing and caret survive host state updates');
         }
 
+        await tab(ui, 'create_table');
+        await revealNamingControls(ui);
+        const originalFileId = (await command('probe')).snapshot.selectedFileId;
+        await ui.locator('[data-edit="importProfileName"]').fill('Smoke profile');
+        await ui.locator('[data-action="saveImportProfile"]').click();
+        await settled((state) => state.importProfiles.includes('Smoke profile'));
+        await ui.locator('[data-action="resetFileSettings"]').click();
+        await settled((state) => state.tableName === 'sample' && Object.keys(state.columnOverrides).length === 0);
+        await ui.locator('[data-action="undoFileSettings"]').click();
+        await settled((state) => state.tableName === 'edited_smoke_table' && state.columnOverrides.label === 'NVARCHAR(80)');
+        await ui.locator('.file-item').filter({ hasText: 'sample.json' }).click();
+        await settled((state) => state.selectedFileId !== originalFileId && Object.keys(state.columnOverrides).length === 0);
+        await revealNamingControls(ui);
+        await ui.locator('[data-edit="importProfile"]').selectOption('Smoke profile');
+        await ui.locator('[data-action="applyImportProfile"]').click();
+        await settled((state) => state.tableName === 'edited_smoke_table' && state.columnOverrides.label === 'NVARCHAR(80)');
+        await ui.locator('.file-item').filter({ hasText: 'sample.csv' }).click();
+        await settled((state) => state.selectedFileId === originalFileId &&
+            state.tableName === 'edited_smoke_table' && state.columnOverrides.label === 'NVARCHAR(80)');
+        await revealNamingControls(ui);
+        await ui.locator('[data-edit="importProfile"]').selectOption('Smoke profile');
+        await ui.locator('[data-action="deleteImportProfile"]').click();
+        await settled((state) => state.importProfiles.length === 0 && state.columnOverrides.label === 'NVARCHAR(80)');
+        report.checks.push('Per-file settings survive A/B/A selection; Reset/Undo and profile Save/Apply/Delete keep the correct file');
+
         await ui.locator('[data-source-tab="credential_setup"]').click();
         const draft = 'abs://samples@sqlfdtdemo.blob.core.windows.net/unsubmitted.csv';
         await ui.locator('.storage-url-input').fill(draft);
@@ -480,10 +505,11 @@ async function smoke(options) {
         report.checks.push('Cancel real directory analysis, then select and preview a different file without stale results');
 
         if (options.progressivePreview) {
+            const previousSamples = (await command('probe')).provisionalSnapshots;
             await command('analyze', { sample: 'large.csv' });
             probe = await waitFor('an early provisional preview', async () => {
                 const result = await command('probe');
-                return result.provisionalSnapshots > 0 ? result : false;
+                return result.provisionalSnapshots > previousSamples ? result : false;
             }, bounded);
             await settled((state) => state.analysisStage === null && state.metadataRows === 400_000);
             report.checks.push('Large CSV emits a provisional preview while busy before final whole-file metadata');

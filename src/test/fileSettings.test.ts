@@ -124,6 +124,8 @@ test('names and parser fields reject secret-bearing text without echoing it in e
         'name?sig=SECRET',
         'AccountKey=SECRET',
         'SharedAccessSignature=SECRET',
+        'ghp_' + 'a'.repeat(36),
+        'github_pat_' + 'b'.repeat(30),
         'Bearer SECRET',
         'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.SECRET',
         'name\nSECRET',
