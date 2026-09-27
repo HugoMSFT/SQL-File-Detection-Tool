@@ -1007,8 +1007,9 @@ test('folder scans reach partitioned layouts and skip non-SQL files', async () =
     }
 });
 
-test('starting a folder scan clears the previous file result', async () => {
+test('starting a folder scan clears the previous file result', { timeout: 10_000 }, async () => {
     const record = recorder();
+    const started = gate();
     let release: (() => void) | undefined;
     const blocked = new Promise<void>((resolve) => {
         release = resolve;
@@ -1026,6 +1027,7 @@ test('starting a folder scan clears the previous file result', async () => {
                 columns: [],
             }),
             analyzeDirectory: async () => {
+                started.release();
                 await blocked;
                 return { root: DEMO, files: [] };
             },
@@ -1041,7 +1043,7 @@ test('starting a folder scan clears the previous file result', async () => {
         assert.ok(snapshot(record).statements);
 
         const scanning = ui.loadDirectory(DEMO);
-        await settle();
+        await started.promise;
         const pending = snapshot(record);
         assert.equal(pending.busy, true);
         assert.equal(pending.selectedFileId, null);
@@ -1212,21 +1214,21 @@ test('selecting an existing local file replaces Azure setup state', async () => 
     }
 });
 
-test('selecting another file clears the previous result while analysis is pending', async () => {
+test('selecting another file clears the previous result while analysis is pending', { timeout: 10_000 }, async () => {
     const record = recorder();
+    const started = gate();
     let release: (() => void) | undefined;
     const blocked = new Promise<void>((resolve) => {
         release = resolve;
     });
-    let call = 0;
     const ui = controller(record, {
         service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
             analyze: async ({ filePath }: { filePath: string }) => {
-                call += 1;
-                if (call === 2) {
+                if (filePath === path.join(FIXTURES, 'employees.csv')) {
+                    started.release();
                     await blocked;
                 }
                 return {
@@ -1255,7 +1257,7 @@ test('selecting another file clears the previous result while analysis is pendin
         const next = snapshot(record).files.find((file) => file.label === 'employees.csv');
         assert.ok(next);
         const selecting = ui.handle({ type: 'selectFile', fileId: next.id });
-        await settle();
+        await started.promise;
 
         const pending = snapshot(record);
         assert.equal(pending.selectedFileId, next.id);

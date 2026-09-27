@@ -195,6 +195,26 @@ test('VS Code CLI path and macOS renamed binary stay inside the selected install
     } finally { owned.cleanup(); }
 });
 
+test('Windows CLI follows the installed bootstrap version directory rather than assuming a flat layout', () => {
+    const owned = temporaryRoot('sqlfdt-windows-cli-');
+    try {
+        const executable = path.join(owned.root, 'Code.exe');
+        const commit = '04c0d99f4f';
+        const script = path.join(owned.root, commit, 'resources', 'app', 'out', 'cli.js');
+        fs.mkdirSync(path.dirname(script), { recursive: true });
+        fs.mkdirSync(path.join(owned.root, 'bin'));
+        fs.writeFileSync(script, '// fixture');
+        fs.writeFileSync(path.join(owned.root, 'bin', 'code.cmd'),
+            `"%~dp0..\\Code.exe" "%~dp0..\\${commit}\\resources\\app\\out\\cli.js" %*\r\n`);
+        assert.equal(cliScript(executable, 'win32'), script);
+        fs.unlinkSync(script);
+        assert.throws(() => cliScript(executable, 'win32'), /missing/);
+        fs.writeFileSync(path.join(owned.root, 'bin', 'code.cmd'),
+            '"%~dp0..\\Code.exe" "%~dp0..\\resources\\app\\out\\cli.js" %*\r\n');
+        assert.equal(cliScript(executable, 'win32'), path.join(owned.root, 'resources/app/out/cli.js'));
+    } finally { owned.cleanup(); }
+});
+
 test('failure artifacts redact roots, known credentials, authorization and URL signatures', () => {
     const text = redact('host=/private/run Password=synthetic; Bearer bearer-test ?sig=signature&x=1 custom-synthetic',
         ['/private/run', 'custom-synthetic']);

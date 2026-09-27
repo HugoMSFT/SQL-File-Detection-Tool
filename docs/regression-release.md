@@ -42,7 +42,9 @@ npm run test:installed -- --code "/Applications/Visual Studio Code.app/Contents/
 ```
 
 `--code` takes the Electron executable, not the shell launcher. The runner supports
-both the old macOS `Electron` name and the newer `Code` name. All user data,
+both the old macOS `Electron` name and the newer `Code` name. On Windows it reads
+the version directory from VS Code's CLI bootstrap without executing that script.
+All user data,
 extensions, settings, home/cache directories, IPC, fixtures, and temporary files
 are run-owned. macOS uses a short `/private/tmp` root to fit Unix socket limits.
 Cleanup inventories the launched process tree by PID and creation time, never

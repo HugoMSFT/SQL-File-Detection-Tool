@@ -28,6 +28,20 @@ async function waitFor(label, predicate, { timeout = 20_000, signal } = {}) {
 }
 
 function cliScript(executable, platform = process.platform) {
+    if (platform === 'win32') {
+        const root = path.dirname(executable);
+        const bootstrap = path.join(root, 'bin', 'code.cmd');
+        if (fs.existsSync(bootstrap)) {
+            assert.ok(fs.statSync(bootstrap).size <= 64 * 1024, 'VS Code CLI bootstrap exceeds the size limit');
+            const versioned = fs.readFileSync(bootstrap, 'utf8')
+                .match(/[\\/]([0-9a-f]{10,40})[\\/]resources[\\/]app[\\/]out[\\/]cli\.js/i);
+            if (versioned) {
+                const script = path.join(root, versioned[1], 'resources', 'app', 'out', 'cli.js');
+                assert.ok(fs.existsSync(script), 'The CLI referenced by the selected VS Code installation is missing');
+                return script;
+            }
+        }
+    }
     return platform === 'darwin'
         ? path.resolve(executable, '../../Resources/app/out/cli.js')
         : path.resolve(executable, '../resources/app/out/cli.js');
