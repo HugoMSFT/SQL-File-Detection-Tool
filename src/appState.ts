@@ -331,14 +331,19 @@ export class AppStateStore {
             return undefined;
         }
         const reference = await resolveWithinRoot(file.absolutePath, file.allowedRoot);
-        if (this.lookup(fileId) !== file) {
+        const current = this.lookup(fileId);
+        // Concurrent validation may enrich the handle, but not replace its listing entry.
+        if (!current || current.entry !== file.entry) {
             return undefined;
         }
         const canonical = path.normalize(reference.realPath);
         const settingsIdentity = crypto.createHash('sha256')
             .update(process.platform === 'win32' ? canonical.toLowerCase() : canonical)
             .digest('hex');
-        const identified = { ...file, settingsIdentity };
+        if (current.settingsIdentity === settingsIdentity) {
+            return current;
+        }
+        const identified = { ...current, settingsIdentity };
         this.registry.set(fileId, identified);
         return identified;
     }

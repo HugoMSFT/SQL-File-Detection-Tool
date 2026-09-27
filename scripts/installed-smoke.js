@@ -375,6 +375,42 @@ async function smoke(options) {
                 await settled(matches);
             }
         };
+        const typeSetting = async (ui, selector, value, matches) => {
+            const control = ui.locator(selector);
+            await control.focus();
+            await selectAllStable(control);
+            let typed = '';
+            for (const character of value) {
+                const previousSnapshots = (await command('probe')).snapshots;
+                await control.pressSequentially(character, { delay: 25 });
+                typed += character;
+                await waitFor('the typed setting to reach the host', async () => {
+                    const result = await command('probe');
+                    return result.snapshots > previousSnapshots && matches(result.snapshot, typed);
+                }, bounded);
+                assert.equal(await control.inputValue(), typed, 'Host normalization must not replace the active draft');
+                assert.equal(await control.isVisible(), true, 'A settings update must not collapse the active controls');
+                assert.equal(await control.evaluate((input) => input.ownerDocument.activeElement === input), true);
+                assert.deepEqual(await control.evaluate((input) => [input.selectionStart, input.selectionEnd]),
+                    [typed.length, typed.length], 'Intermediate host snapshots must preserve the typing caret');
+            }
+        };
+        const parserAndSpacedName = async (ui, schemaName) => {
+            await revealNamingControls(ui);
+            await typeSetting(ui, '[data-edit="schemaName"]', schemaName,
+                (state, typed) => state.schemaName === typed.trim());
+            const parser = ui.locator('details.parser-settings');
+            if (!await parser.evaluate((section) => section.open)) {
+                await parser.locator('summary').click();
+            }
+            await typeSetting(ui, '[data-parser-option="codepage"]', '65001',
+                (state, typed) => state.parserOverrides.codepage === typed);
+            await typeSetting(ui, '[data-parser-option="compression"]', 'GZIP',
+                (state, typed) => typed === 'GZIP'
+                    ? state.parserOverrides.compression === typed && !state.error
+                    : Boolean(state.error));
+            assert.equal(await parser.evaluate((section) => section.open), true);
+        };
         const activation = await command('activate');
         assert.ok(activation.guardedImports.includes('vscode'),
             'The installed bundle activated without the VS Code API guard');
@@ -426,18 +462,18 @@ async function smoke(options) {
         await tableName.press('Home');
         await tableName.pressSequentially('edited_', { delay: 25 });
         await verifyTyped(tableName, 'edited_smoke_table', (state) => state.tableName === 'edited_smoke_table');
-        await ui.locator('[data-edit="schemaName"]').fill('smoke_schema');
+        await parserAndSpacedName(ui, 'sales data');
         await ui.locator('#platform').selectOption('sql_server_2022');
-        await settled((state) => state.tableName === 'edited_smoke_table' && state.schemaName === 'smoke_schema');
+        await settled((state) => state.tableName === 'edited_smoke_table' && state.schemaName === 'sales data');
         await waitFor('SQL regenerated from edited metadata', async () => {
             const sql = await ui.locator('.sql code').innerText();
-            return sql.includes('[smoke_schema].[edited_smoke_table]') && sql.includes('NVARCHAR(80)');
+            return sql.includes('[sales data].[edited_smoke_table]') && sql.includes('NVARCHAR(80)');
         }, bounded);
         await ui.locator('[data-sql-action="open"]').click();
         probe = await waitFor('real SQL editor document', async () => {
             const result = await command('probe');
             return result.activeSqlDocument &&
-                result.documents.some((text) => text.includes('[smoke_schema].[edited_smoke_table]')) ? result : false;
+                result.documents.some((text) => text.includes('[sales data].[edited_smoke_table]')) ? result : false;
         }, bounded);
         await command('closeSqlDocument');
         await command('editor');
@@ -490,6 +526,10 @@ async function smoke(options) {
         await revealNamingControls(ui);
         assert.equal(await ui.locator('[data-edit="tableName"]').inputValue(), 'edited_smoke_table');
         assert.match(await ui.locator('.sql code').innerText(), /NVARCHAR\(80\)/);
+        await parserAndSpacedName(ui, 'regional data');
+        await waitFor('SQL preserves the spaced schema name from the sidebar', async () =>
+            (await ui.locator('.sql code').innerText()).includes('[regional data].[edited_smoke_table]'), bounded);
+        report.checks.push('Both surfaces preserve typed object-name spaces and expanded parser controls through host acknowledgements and validation errors');
         await ui.locator('[data-source-tab="credential_setup"]').click();
         await ui.locator('.storage-url-input').fill(draft);
         await command('hideSidebar');

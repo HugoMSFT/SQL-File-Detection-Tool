@@ -71,6 +71,7 @@ The installed scenarios cover activation, source-tab keyboard navigation,
 Azure open/Escape without sign-in, local CSV/JSON analysis, preview/metadata/
 schema/SQL, type/name typing and caret retention, real SQL editor documents,
 per-file Reset/Undo and profile Save/Apply/Delete across A/B/A file selection,
+object names with typed spaces and multi-character parser edits on both surfaces,
 preview row/platform settings, unsent Storage SQL drafts, sidebar/editor
 relocation, renderer/panel recreation, cancellation and the next selection.
 Detected Metadata is read-only on the original baseline: edits here mean schema

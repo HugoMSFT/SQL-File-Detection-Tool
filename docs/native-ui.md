@@ -138,6 +138,8 @@ selection, preview, or detected facts. **Undo settings change** restores one
 previous settings snapshot for that file, including a reset or applied profile.
 Selecting the file again reanalyzes it without resetting settings. Parser
 overrides affect generated SQL, not the detected metadata or preview reader.
+Parser controls stay expanded through edits and validation errors. Object-name
+drafts retain typed spaces while focused, even when the host trims outer spaces.
 Multi-file export uses each file's own settings, not the active file's names.
 
 File settings are memory-only. The host validates realpath containment before
@@ -148,7 +150,9 @@ are evicted first. It contains no file contents. Object-name and override edits,
 Reset, Undo, and profile actions carry the selected opaque `fileId`. Stale
 messages cannot edit a different file, and analysis completion uses current
 settings rather than replacing edits made while it was running. Authoritative
-schema changes discard and report overrides for columns that no longer exist.
+complete schema changes discard and report overrides for columns that no longer
+exist. Sampled, truncated, or failed analysis cannot prove a column absent, so
+unmatched overrides are retained even after background analysis finishes.
 
 **Save current settings**, **Apply selected profile**, and **Delete profile**
 manage named profiles in the existing non-sensitive VS Code preference storage
@@ -160,7 +164,8 @@ Unknown/prototype fields, invalid SQL types or parser values, and
 credential-/URL-/control-bearing names are rejected with safe errors. Exact
 source column names preserve ordinary punctuation and surrounding spaces.
 Profiles are limited to 20 entries, 32 KiB each, 256 KiB total, and 128 column
-overrides each. Applying one matches columns by name and reports absent columns;
+overrides each. Applying one matches columns by name and reports columns absent
+from a complete schema;
 it never changes the platform, source selection, storage URL, or authentication.
 No tokens, SAS values, account keys, connection strings, paths, or file contents
 are persisted in profiles. Corrupt or unsupported saved profiles produce a

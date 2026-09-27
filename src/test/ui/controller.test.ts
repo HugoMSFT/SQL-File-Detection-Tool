@@ -32,6 +32,7 @@ import {
     type ProgressiveAnalysisRequest,
     type StatementKind,
 } from '../../native';
+import { JSON_FULL_PARSE_MAX_BYTES, JSON_SCHEMA_SAMPLE_ROWS } from '../../native/limits';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const SAMPLES = path.join(REPO, 'data sample');
@@ -183,6 +184,25 @@ function snapshot(record: Recorder): AppStateSnapshot {
 function cleanup(record: Recorder): void {
     fs.rmSync(record.downloadDir, { recursive: true, force: true });
 }
+
+test('clicking a listed file during automatic selection still loads the latest selection', async () => {
+    const record = recorder();
+    const ui = controller(record);
+    try {
+        const loading = ui.loadFiles([path.join(FIXTURES, 'sample.csv')]);
+        const fileId = snapshot(record).files[0].id;
+        const selecting = ui.handle({ type: 'selectFile', fileId });
+        await Promise.all([loading, selecting]);
+        assert.equal(snapshot(record).selectedFileId, fileId);
+        assert.ok(snapshot(record).metadata?.schema?.length);
+        assert.ok(snapshot(record).preview?.rows.length);
+        assert.equal(snapshot(record).busy, false);
+        assert.equal(snapshot(record).error, null);
+    } finally {
+        await ui.dispose();
+        cleanup(record);
+    }
+});
 
 test('all settings and one-level Undo are isolated across file switching, refresh and source switching', async () => {
     const record = recorder();
@@ -1894,6 +1914,48 @@ test('profile application waits for refinement so late JSON columns are not lost
         assert.equal(snapshot(record).error, null);
     } finally {
         service.final.release();
+        await ui.dispose();
+        cleanup(record);
+    }
+});
+
+test('sampled final schemas retain unmatched profile overrides through reanalysis', { timeout: 10_000 }, async () => {
+    const record = recorder();
+    const file = path.join(record.downloadDir, 'sampled-final.json');
+    const rows = [
+        ...Array.from({ length: JSON_SCHEMA_SAMPLE_ROWS }, (_, id) => ({ id })),
+        { id: JSON_SCHEMA_SAMPLE_ROWS, late: 'value' },
+    ];
+    fs.writeFileSync(file, JSON.stringify(rows));
+    fs.appendFileSync(file, Buffer.alloc(JSON_FULL_PARSE_MAX_BYTES + 1, ' '));
+    record.preferences.set(IMPORT_PROFILES_PREFERENCE, [{
+        version: 1,
+        name: 'Late column',
+        ...DEFAULT_FILE_SETTINGS,
+        columnOverrides: { late: 'NVARCHAR(80)' },
+    }]);
+    const ui = controller(record);
+    try {
+        await ui.loadFiles([file]);
+        const fileId = snapshot(record).selectedFileId;
+        assert.equal(snapshot(record).busy, false);
+        assert.equal(snapshot(record).metadata?.analysis_stage, undefined);
+        assert.equal(snapshot(record).metadata?.schema_inference, 'sampled');
+        assert.equal(snapshot(record).metadata?.schema?.some(([name]) => name === 'late'), false);
+        await ui.handle({ type: 'applyImportProfile', fileId, name: 'Late column' });
+        assert.deepEqual(snapshot(record).columnOverrides, { late: 'NVARCHAR(80)' });
+        assert.doesNotMatch(snapshot(record).notice ?? '', /columns not in this file/);
+        await ui.handle({ type: 'selectFile', fileId });
+        assert.deepEqual(snapshot(record).columnOverrides, { late: 'NVARCHAR(80)' });
+        assert.equal(snapshot(record).metadata?.schema_inference, 'sampled');
+        assert.doesNotMatch(snapshot(record).notice ?? '', /columns not in this file/);
+
+        fs.writeFileSync(file, JSON.stringify(rows));
+        await ui.handle({ type: 'selectFile', fileId });
+        assert.equal(snapshot(record).metadata?.schema_inference, 'full');
+        assert.deepEqual(snapshot(record).columnOverrides, { late: 'NVARCHAR(80)' });
+        assert.match(snapshot(record).statements?.create_table ?? '', /\[late\]\s+NVARCHAR\(80\)/);
+    } finally {
         await ui.dispose();
         cleanup(record);
     }

@@ -716,7 +716,8 @@ export class UiController {
         settings: FileSettings,
         metadata: FileMetadata | null,
     ): { settings: FileSettings; missing: string[] } {
-        if (!metadata || metadata.analysis_stage === 'provisional') {
+        if (!metadata || !metadata.schema || metadata.error || metadata.analysis_truncated
+            || metadata.analysis_stage === 'provisional' || metadata.schema_inference === 'sampled') {
             return { settings, missing: [] };
         }
         const columns = new Set((metadata.schema ?? []).map(([name]) => name));

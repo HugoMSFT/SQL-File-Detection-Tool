@@ -217,6 +217,33 @@ test('an identity lookup cannot revive a file handle replaced during validation'
     model.dispose();
 });
 
+test('overlapping identity lookups share the current handle without invalidating each other', async () => {
+    const model = store();
+    const fixture = path.resolve(__dirname, '..', '..', 'data sample', 'csv', 'sample.csv');
+    const [entry] = model.setFiles([{
+        absolutePath: fixture,
+        allowedRoot: path.dirname(fixture),
+        fileType: 'csv',
+        sizeBytes: 0,
+        nativeSupport: 'supported',
+        isDirectory: false,
+    }]);
+    try {
+        const [first, second] = await Promise.all([
+            model.identifyFile(entry.id),
+            model.identifyFile(entry.id),
+        ]);
+        assert.ok(first?.settingsIdentity);
+        assert.strictEqual(second, first);
+        assert.strictEqual(model.lookup(entry.id), first);
+        assert.strictEqual(await model.identifyFile(entry.id), first);
+        model.rememberSettings(first, { ...DEFAULT_FILE_SETTINGS, tableName: 'retained' });
+        assert.equal(model.settingsFor(second).tableName, 'retained');
+    } finally {
+        model.dispose();
+    }
+});
+
 test('every listed file carries its own allowed root', () => {
     const model = store();
     const entries = model.setFiles([

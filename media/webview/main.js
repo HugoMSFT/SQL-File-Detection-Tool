@@ -100,6 +100,7 @@
     let publicContainerPrefixDraft = '';
     let advancedObjectNamesOpen = restoredViewState.advancedObjectNamesOpen === true;
     let fileSettingsOpen = restoredViewState.fileSettingsOpen === true;
+    let parserSettingsOpen = restoredViewState.parserSettingsOpen === true;
     let profileNameDraft = '';
     let selectedImportProfile = '';
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
@@ -134,6 +135,7 @@
             azureFormat: azureFormat,
             advancedObjectNamesOpen: advancedObjectNamesOpen,
             fileSettingsOpen: fileSettingsOpen,
+            parserSettingsOpen: parserSettingsOpen,
             storageUrlDraft: sanitizeStorageUrlDraft(
                 pendingEdits.get('knownStorageUrl') || '',
             ),
@@ -153,9 +155,13 @@
             formatName: 'formatName',
         };
         Object.keys(scalarFields).forEach(function (key) {
+            const active = document.activeElement;
+            const editing = active && active.dataset && active.dataset.edit === key;
+            const draft = pendingEdits.get(key);
+            const accepted = String(nextState[scalarFields[key]] || '');
             if (
                 pendingEdits.has(key)
-                && String(nextState[scalarFields[key]] || '') === pendingEdits.get(key).trim()
+                && (accepted === draft || (!editing && accepted === draft.trim()))
             ) {
                 pendingEdits.delete(key);
             }
@@ -1539,6 +1545,13 @@
             renderNamingOptions(section);
 
             const parser = element('details', 'parser-settings');
+            parser.open = parserSettingsOpen;
+            parser.addEventListener('toggle', function () {
+                if (parser.isConnected) {
+                    parserSettingsOpen = parser.open;
+                    persistViewState();
+                }
+            });
             parser.appendChild(element('summary', null, 'SQL parser overrides'));
             parser.appendChild(element(
                 'p', 'help',
@@ -1573,7 +1586,10 @@
                 }
                 input.dataset.parserOption = option.key;
                 input.dataset.fileId = state.selectedFileId;
-                input.value = editable('parser:' + option.key, option.value);
+                // Derived option labels may lag the snapshot that acknowledged this edit.
+                const overridden = Object.prototype.hasOwnProperty.call(state.parserOverrides, option.key);
+                const value = overridden ? state.parserOverrides[option.key] : option.value;
+                input.value = editable('parser:' + option.key, String(value ?? ''));
                 field.appendChild(input);
                 field.appendChild(element('span', 'provenance', option.provenance));
                 if (option.overridden) {
@@ -2149,6 +2165,10 @@
 
     function renderPanel() {
         const panel = byId('panel');
+        const parser = panel.querySelector('.parser-settings');
+        if (parser) {
+            parserSettingsOpen = parser.open;
+        }
         clear(panel);
         if (state.metadata && state.metadata.analysis_stage === 'provisional') {
             const provenance = element(
@@ -2412,22 +2432,6 @@
         }
         if (edit === 'azureFolderFormat') {
             post({ type: 'setAzureFolderFormat', value: target.value });
-            return;
-        }
-        if (target.dataset && target.dataset.parserOption) {
-            if (target.dataset.fileId !== state.selectedFileId) {
-                return;
-            }
-            const key = 'parser:' + target.dataset.parserOption;
-            cancelDebounce(key);
-            pendingEdits.delete(key);
-            persistViewState();
-            post({
-                type: 'setParserOverride',
-                fileId: target.dataset.fileId,
-                key: target.dataset.parserOption,
-                value: target.value,
-            });
             return;
         }
         if (edit === 'previewRows') {

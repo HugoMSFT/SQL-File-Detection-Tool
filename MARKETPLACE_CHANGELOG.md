@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 1.1.21
+## 1.1.22
 
 ### Added
 
@@ -20,6 +20,8 @@
 ### Fixed
 
 - Local files can be opened through Windows short paths and folder aliases.
+- Sampled schemas retain column overrides, rapid file selections finish
+  correctly, and settings controls preserve typing and expanded sections.
 
 ## [1.1.16] - 2026-09-26
 

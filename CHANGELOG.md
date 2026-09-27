@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## [1.1.21] - 2026-09-27
+## [1.1.22] - 2026-09-27
 
 ### Added
 
@@ -26,6 +26,10 @@
 
 - Local paths using Windows short names or a selected folder alias are accepted
   without weakening traversal and symlink-escape checks.
+- Keep late-column overrides when final schema discovery is sampled, and allow
+  overlapping selections of the same listed file to finish correctly.
+- Preserve typed spaces in object names and expanded parser controls while
+  editing on either surface.
 
 ## 1.1.16
 
