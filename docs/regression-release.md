@@ -185,7 +185,9 @@ version. The build job checks those inputs and lockfile agreement, then
 validates/builds/packages a VSIX **once**, audits it, and uploads a version/source/
 hash-bound manifest beside it. No publisher credential is available to that job.
 
-After environment approval, the publish job downloads by immutable artifact ID,
+Windows and macOS then install and exercise that exact release artifact, including
+profiles and progressive previews. Publishing depends on both platform checks.
+After those checks and environment approval, the publish job downloads by immutable artifact ID,
 checks GitHub's ID/digest/head metadata against build outputs, locally hashes the
 manifest and VSIX, checks version/source and every inner file, and reruns the
 VSIX audit. It never compiles, bundles, or packages. It invokes only

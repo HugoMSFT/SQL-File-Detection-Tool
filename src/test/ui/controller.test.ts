@@ -2184,22 +2184,20 @@ test('a source-file edit during refinement leaves the sample explicit until a su
     }
 });
 
-test('a superseded analysis cannot overwrite newer state', async () => {
+test('a superseded analysis cannot overwrite newer state', { timeout: 10_000 }, async () => {
     const record = recorder();
-    let release: (() => void) | undefined;
-    const slow = new Promise<void>((resolve) => {
-        release = resolve;
-    });
-    let call = 0;
+    const started = gate();
+    const slow = gate();
+    const slowFile = path.join(FIXTURES, 'sample.csv');
     const ui = controller(record, {
         service: completeOnlyService({
             listFormats: () => [],
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
             analyze: async ({ filePath }: { filePath: string }) => {
-                call += 1;
-                if (call === 1) {
-                    await slow;
+                if (filePath === slowFile) {
+                    started.release();
+                    await slow.promise;
                     return { file_path: filePath, file_name: 'slow', file_type: 'csv', size_bytes: 1, columns: [] };
                 }
                 return { file_path: filePath, file_name: 'fast', file_type: 'csv', size_bytes: 1, columns: [] };
@@ -2212,12 +2210,12 @@ test('a superseded analysis cannot overwrite newer state', async () => {
         }),
     });
     try {
-        const first = ui.analyzePath(path.join(FIXTURES, 'sample.csv'), false);
-        await settle();
-        const second = ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
-        release?.();
-        await Promise.all([first, second]);
-        await settle();
+        const first = ui.analyzePath(slowFile, false);
+        await started.promise;
+        await ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
+        assert.equal(snapshot(record).metadata?.file_name, 'fast');
+        slow.release();
+        await first;
 
         assert.equal(
             snapshot(record).metadata?.file_name,
@@ -2226,13 +2224,15 @@ test('a superseded analysis cannot overwrite newer state', async () => {
         );
         assert.equal(snapshot(record).busy, false);
     } finally {
+        slow.release();
         await ui.dispose();
         cleanup(record);
     }
 });
 
-test('an explicit cancel clears progress without leaving an error', async () => {
+test('an explicit cancel clears progress without leaving an error', { timeout: 10_000 }, async () => {
     const record = recorder();
+    const started = gate();
     let release: (() => void) | undefined;
     const blocked = new Promise<void>((resolve) => {
         release = resolve;
@@ -2243,6 +2243,7 @@ test('an explicit cancel clears progress without leaving an error', async () => 
             normalizePlatform: () => 'azure_sql_db',
             resolveTableName: () => 'T',
             analyze: async ({ filePath }: { filePath: string }) => {
+                started.release();
                 await blocked;
                 return {
                     file_path: filePath,
@@ -2261,7 +2262,7 @@ test('an explicit cancel clears progress without leaving an error', async () => 
     });
     try {
         const running = ui.analyzePath(path.join(FIXTURES, 'employees.csv'), false);
-        await settle();
+        await started.promise;
         assert.equal(snapshot(record).busy, true);
         await ui.handle({ type: 'cancel' });
         assert.equal(snapshot(record).notice, 'Analysis canceled.');

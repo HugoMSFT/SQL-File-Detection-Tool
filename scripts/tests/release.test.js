@@ -190,6 +190,14 @@ test('release and optional live workflows retain their trigger, secret and immut
     assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
     assert.equal(workflow.jobs.publish.environment.name, 'marketplace');
     assert.match(workflow.jobs.publish.if, /refs\/heads\/main/);
+    assert.deepEqual(workflow.jobs.publish.needs, ['build', 'installed-ui']);
+    const installed = workflow.jobs['installed-ui'];
+    assert.deepEqual(installed.strategy.matrix.os, ['windows-2022', 'macos-14']);
+    assert.ok(!JSON.stringify(installed).includes('secrets.'));
+    assert.ok(installed.steps.some((step) =>
+        step.run?.includes('--vsix .artifacts/release/extension.vsix --progressive-preview')));
+    assert.ok(installed.steps.some((step) =>
+        step.with?.['artifact-ids'] === '${{ needs.build.outputs.artifact_id }}'));
     const publishSteps = workflow.jobs.publish.steps;
     const download = publishSteps.find((step) => step.uses?.startsWith('actions/download-artifact@'));
     assert.match(download.with['artifact-ids'], /needs\.build\.outputs\.artifact_id/);

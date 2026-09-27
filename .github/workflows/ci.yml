@@ -115,6 +115,8 @@ jobs:
       # Mechanical proof that the package carries no Python, no sources, no
       # fixtures and no credentials.
       - run: npm run audit:vsix
+      - name: Validate release guards against the packaged artifact
+        run: npm run test:tooling
       - uses: actions/upload-artifact@v4
         with:
           name: vsix

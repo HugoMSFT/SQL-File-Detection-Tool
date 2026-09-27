@@ -58,6 +58,8 @@ jobs:
       - name: Audit and bind artifact bytes to version and source
         id: manifest
         run: node scripts/release.js prepare --vsix "dist/sql-file-detection-${RELEASE_VERSION}.vsix"
+      - name: Validate release guards against the packaged artifact
+        run: npm run test:tooling
       - uses: actions/upload-artifact@v4
         id: upload
         with:
@@ -67,9 +69,51 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+  installed-ui:
+    name: Verify release VSIX on ${{ matrix.os }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    env:
+      RELEASE_ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+      RELEASE_ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+      RELEASE_MANIFEST_SHA256: ${{ needs.build.outputs.manifest_sha256 }}
+      RELEASE_VSIX_SHA256: ${{ needs.build.outputs.vsix_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          merge-multiple: true
+          path: .artifacts/release/
+      - name: Verify downloaded release bytes without publisher credentials
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release.js verify
+      - run: npm run test:installed -- --vsix .artifacts/release/extension.vsix --progressive-preview
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-smoke-${{ matrix.os }}
+          path: .artifacts/installed-smoke/
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
     name: Approve, verify immutable artifact, publish and verify Gallery
-    needs: build
+    needs: [build, installed-ui]
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
