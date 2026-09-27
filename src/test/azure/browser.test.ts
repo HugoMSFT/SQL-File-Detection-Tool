@@ -1007,14 +1007,50 @@ test('storage access failures are distinct from management access failures', () 
     const expired = classifyStorageError({ statusCode: 401, code: 'AuthenticationFailed' });
     assert.equal(expired.kind, 'storageConsent');
     assert.match(expired.message, /Authorize Storage browsing again/);
-    const dataDenied = classifyStorageError({ statusCode: 403, code: 'AuthorizationFailure' });
+    const dataDenied = classifyStorageError({ statusCode: 403, code: 'AuthorizationPermissionMismatch' });
     assert.equal(dataDenied.kind, 'dataAccess');
     assert.match(dataDenied.message, /Storage Blob Data Reader/);
     assert.match(dataDenied.message, /Owner and Contributor do not grant/);
     assert.match(dataDenied.message, /parent scope/);
-    assert.match(dataDenied.message, /firewall or private endpoint/);
+    const networkDenied = classifyStorageError({ statusCode: 403, code: 'AuthorizationFailure' });
+    assert.equal(networkDenied.kind, 'network');
+    assert.match(networkDenied.message, /firewall/);
     const controlDenied = new AzureBrowserError('controlAccess', 'Reader access is required.', 403);
     assert.equal(controlDenied.kind, 'controlAccess');
+});
+
+test('authenticated failures never silently fall back to anonymous browsing or repeatedly prompt for disabled accounts', async () => {
+    const options: SessionOptions[] = [];
+    class DeniedStorage extends FakeStorage {
+        code = 'AuthorizationFailure';
+        override async listContainers(): Promise<StoragePage> {
+            throw classifyStorageError({ statusCode: 403, code: this.code });
+        }
+        override async listPublicBlobs(): Promise<StoragePage> {
+            assert.fail('OAuth failures must not fall back to public browsing');
+        }
+    }
+    const storage = new DeniedStorage();
+    const subject = new AzureBrowser({
+        authentication: new MicrosoftAuthentication(async (_provider, _scopes, settings) => {
+            options.push(settings);
+            return SESSION;
+        }),
+        storage,
+        arm: new FakeArm(),
+    });
+    await subject.connect();
+    await subject.selectAccount(ACCOUNT_ID);
+    await subject.retry();
+    assert.equal(subject.snapshot.mode, 'authenticated');
+    assert.equal(subject.snapshot.errorKind, 'network');
+    assert.equal(options.some((option) => option.createIfNone), false);
+    storage.code = 'AccountIsDisabled';
+    await subject.selectAccount(ACCOUNT_ID);
+    const calls = options.length;
+    await subject.retry();
+    assert.equal(options.length, calls);
+    assert.equal(subject.snapshot.errorKind, 'accountDisabled');
 });
 
 test('an incompatible Azure source stays in the browser and generates no setup', async () => {

@@ -132,6 +132,7 @@ export async function getPreviewData(
     metadata: FileMetadata,
     maxRows: number,
     token?: CancellationToken,
+    cooperative = false,
 ): Promise<PreviewResult> {
     const limit = clampPreviewRows(maxRows);
     const encoding = metadata.encoding === 'binary' || metadata.encoding.length === 0
@@ -170,6 +171,7 @@ export async function getPreviewData(
                     limit,
                     encoding,
                     token,
+                    cooperative,
                 );
                 return finish(
                     metadata,
@@ -239,6 +241,7 @@ function finish(
         columns,
         rows,
         total_rows: metadata.row_count,
+        ...(metadata.row_count_estimated ? { total_rows_estimated: true } : {}),
         truncated:
             metadata.analysis_truncated === true || (metadata.row_count ?? 0) > limit,
     };

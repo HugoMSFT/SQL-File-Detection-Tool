@@ -12,8 +12,9 @@ import * as path from 'path';
 
 import { throwIfCancelled, type CancellationToken } from './cancellation';
 import { detectEncoding, encodingToCodepage } from './encoding';
-import { NativeAnalysisError } from './errors';
-import { CACHE_MAX_ENTRIES, CSV_SAMPLE_SIZE } from './limits';
+import { FileChangedError, NativeAnalysisError } from './errors';
+import { CSV_SAMPLE_SIZE } from './limits';
+import { MetadataCache } from './metadataCache';
 import { directorySize, listContainedEntries } from './paths';
 import { readDecodedPrefix } from './streams';
 import type { FileMetadata, FileType, NativeSupport, StorageReference, SupportedFormat } from './types';
@@ -235,41 +236,22 @@ async function detectByContent(filePath: string): Promise<FileType> {
     return 'text';
 }
 
-interface CacheEntry {
-    signature: string;
-    metadata: FileMetadata;
-}
+const metadataCache = new MetadataCache();
 
-const metadataCache = new Map<string, CacheEntry>();
-
-async function cacheSignature(reference: StorageReference): Promise<string | null> {
+/** Directory mtimes do not cover nested table sidecars: never cache directories. */
+export async function fileRevision(reference: StorageReference): Promise<string | null> {
+    if (reference.isDirectory) {
+        return null;
+    }
     try {
-        const stats = await fs.promises.stat(reference.realPath);
-        return `${reference.realPath}|${stats.size}|${stats.mtimeMs}`;
-    } catch {
-        return null;
-    }
-}
-
-function cacheGet(key: string, signature: string): FileMetadata | null {
-    const entry = metadataCache.get(key);
-    if (entry === undefined || entry.signature !== signature) {
-        return null;
-    }
-    // Refresh recency so the map doubles as an LRU.
-    metadataCache.delete(key);
-    metadataCache.set(key, entry);
-    return structuredClone(entry.metadata);
-}
-
-function cacheSet(key: string, signature: string, metadata: FileMetadata): void {
-    metadataCache.set(key, { signature, metadata: structuredClone(metadata) });
-    while (metadataCache.size > CACHE_MAX_ENTRIES) {
-        const oldest = metadataCache.keys().next();
-        if (oldest.done === true) {
-            break;
+        const stats = await fs.promises.stat(reference.realPath, { bigint: true });
+        return `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeNs}:${stats.ctimeNs}`;
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === 'ENOENT' || code === 'ENOTDIR') {
+            return null;
         }
-        metadataCache.delete(oldest.value);
+        throw error;
     }
 }
 
@@ -278,40 +260,14 @@ export function clearMetadataCache(): void {
     metadataCache.clear();
 }
 
-/**
- * Analyse one file or table directory.
- *
- * Mirrors `FileDetector.analyze_file_metadata`: a fixed base dictionary is
- * built first, then the per-format analyser's keys are merged over it.
- */
-export async function analyzeFileMetadata(
+/** Common facts shared by complete analysis and opt-in bounded previews. */
+export function baseMetadata(
     reference: StorageReference,
-    token?: CancellationToken,
-): Promise<FileMetadata> {
-    throwIfCancelled(token);
-    const signature = await cacheSignature(reference);
-    if (signature !== null) {
-        const cached = cacheGet(reference.realPath, signature);
-        if (cached !== null) {
-            return cached;
-        }
-    }
-
-    const fileType = await detectFileType(reference);
-    const textual = fileType === 'csv' || fileType === 'text' || fileType === 'json';
-
-    let encoding = 'binary';
-    let confidence = 1;
-    if (textual) {
-        const detection = await detectEncoding(reference.realPath);
-        encoding = detection.encoding;
-        confidence = detection.confidence;
-    }
-
-    const fileSize = reference.isDirectory
-        ? await directorySize(reference)
-        : reference.sizeBytes;
-
+    fileType: FileType,
+    encoding: string,
+    confidence: number,
+    fileSize = reference.sizeBytes,
+): FileMetadata {
     const metadata: FileMetadata = {
         file_path: reference.realPath,
         file_name: path.basename(reference.realPath),
@@ -331,15 +287,59 @@ export async function analyzeFileMetadata(
         delta_metadata: null,
         native_support: NATIVE_SUPPORT_BY_TYPE[fileType],
     };
-
-    if (textual && confidence < 0.5) {
+    if (encoding !== 'binary' && confidence < 0.5) {
         metadata.encoding_warning =
             `Low confidence (${Math.round(confidence * 100)}%) for encoding "${encoding}". ` +
             'Verify encoding manually or specify it explicitly.';
     }
+    return metadata;
+}
+
+/**
+ * Analyse one file or table directory.
+ *
+ * Mirrors `FileDetector.analyze_file_metadata`: a fixed base dictionary is
+ * built first, then the per-format analyser's keys are merged over it.
+ */
+export async function analyzeFileMetadata(
+    reference: StorageReference,
+    token?: CancellationToken,
+    cooperative = false,
+): Promise<FileMetadata> {
+    throwIfCancelled(token);
+    const signature = await fileRevision(reference);
+    throwIfCancelled(token);
+    if (signature !== null) {
+        const cached = metadataCache.get(reference.realPath, signature);
+        throwIfCancelled(token);
+        if (cached !== null) {
+            return cached;
+        }
+    } else {
+        metadataCache.delete(reference.realPath);
+    }
+
+    const fileType = await detectFileType(reference);
+    throwIfCancelled(token);
+    const textual = fileType === 'csv' || fileType === 'text' || fileType === 'json';
+
+    let encoding = 'binary';
+    let confidence = 1;
+    if (textual) {
+        const detection = await detectEncoding(reference.realPath);
+        throwIfCancelled(token);
+        encoding = detection.encoding;
+        confidence = detection.confidence;
+    }
+
+    const fileSize = reference.isDirectory
+        ? await directorySize(reference, token)
+        : (await fs.promises.stat(reference.realPath)).size;
+    throwIfCancelled(token);
+    const metadata = baseMetadata(reference, fileType, encoding, confidence, fileSize);
 
     try {
-        Object.assign(metadata, await analyzeByType(fileType, reference, encoding, fileSize, token));
+        Object.assign(metadata, await analyzeByType(fileType, reference, encoding, fileSize, token, cooperative));
     } catch (error) {
         if (error instanceof NativeAnalysisError && error.code === 'cancelled') {
             throw error;
@@ -347,8 +347,16 @@ export async function analyzeFileMetadata(
         metadata.error = error instanceof Error ? error.message : String(error);
     }
 
+    throwIfCancelled(token);
     if (signature !== null) {
-        cacheSet(reference.realPath, signature, metadata);
+        const currentSignature = await fileRevision(reference);
+        throwIfCancelled(token);
+        if (currentSignature !== signature) {
+            metadataCache.delete(reference.realPath);
+            throw new FileChangedError();
+        }
+        metadataCache.set(reference.realPath, signature, metadata);
+        throwIfCancelled(token);
     }
     return metadata;
 }
@@ -359,12 +367,13 @@ async function analyzeByType(
     encoding: string,
     fileSize: number,
     token?: CancellationToken,
+    cooperative = false,
 ): Promise<Partial<FileMetadata>> {
     switch (fileType) {
         case 'csv':
             return analyzeDelimited(reference.realPath, fileSize, { encoding, token });
         case 'json':
-            return analyzeJson(reference.realPath, fileSize, { encoding, token });
+            return analyzeJson(reference.realPath, fileSize, { encoding, token, cooperative });
         case 'text':
             return analyzeText(reference.realPath, encoding, token);
         case 'parquet':

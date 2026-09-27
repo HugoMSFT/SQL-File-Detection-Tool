@@ -59,10 +59,12 @@ export class DelimitedRowParser {
     private quotePending = false;
     private started = false;
     private skipLineFeed = false;
+    private recordChars = 0;
 
     constructor(
         private readonly delimiter: string,
         private readonly quoteChar: string = '"',
+        private readonly limits: { maxRecordChars?: number; maxColumns?: number } = {},
     ) {
         if (delimiter.length !== 1) {
             throw new Error('Delimiter must be a single character');
@@ -70,15 +72,19 @@ export class DelimitedRowParser {
     }
 
     /** Feed a decoded chunk and return every complete row it produced. */
-    public push(chunk: string): string[][] {
+    public push(chunk: string, maxRows = Number.POSITIVE_INFINITY): string[][] {
         const rows: string[][] = [];
-        for (let i = 0; i < chunk.length; i += 1) {
+        for (let i = 0; i < chunk.length && rows.length < maxRows; i += 1) {
             const char = chunk[i];
             if (this.skipLineFeed) {
                 this.skipLineFeed = false;
                 if (char === '\n') {
                     continue;
                 }
+            }
+            this.recordChars += 1;
+            if (this.recordChars > (this.limits.maxRecordChars ?? Number.POSITIVE_INFINITY)) {
+                throw new LimitExceededError('A delimited record exceeds the sample preview limit');
             }
             if (this.inQuotes) {
                 if (this.quotePending) {
@@ -130,6 +136,7 @@ export class DelimitedRowParser {
     public end(): string[][] {
         const rows: string[][] = [];
         if (this.started || this.field.length > 0 || this.row.length > 0) {
+            this.checkColumns(true);
             this.row.push(this.field);
             rows.push(this.row);
         }
@@ -138,7 +145,17 @@ export class DelimitedRowParser {
         this.started = false;
         this.inQuotes = false;
         this.quotePending = false;
+        this.recordChars = 0;
         return rows;
+    }
+
+    private checkColumns(finalField = false): void {
+        if (finalField && this.limits.maxColumns === undefined) {
+            return;
+        }
+        if (this.row.length >= (this.limits.maxColumns ?? MAX_COLUMNS)) {
+            throw new LimitExceededError('Row exceeded the maximum supported column count');
+        }
     }
 
     private appendChar(char: string): void {
@@ -152,15 +169,14 @@ export class DelimitedRowParser {
     }
 
     private endField(): void {
-        if (this.row.length >= MAX_COLUMNS) {
-            throw new LimitExceededError('Row exceeded the maximum supported column count');
-        }
+        this.checkColumns();
         this.row.push(this.field);
         this.field = '';
         this.started = true;
     }
 
     private endRow(rows: string[][], terminator: string): void {
+        this.recordChars = 0;
         if (terminator === '\r') {
             this.skipLineFeed = true;
         }
@@ -169,6 +185,7 @@ export class DelimitedRowParser {
             rows.push([]);
             return;
         }
+        this.checkColumns(true);
         this.row.push(this.field);
         rows.push(this.row);
         this.field = '';

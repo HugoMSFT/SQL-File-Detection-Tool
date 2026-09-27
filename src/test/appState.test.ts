@@ -11,6 +11,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as path from 'node:path';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 
 import {
     AppStateStore,
@@ -20,6 +22,7 @@ import {
     supportsPreview,
 } from '../appState';
 import type { FileMetadata } from '../native';
+import { DEFAULT_FILE_SETTINGS } from '../fileSettings';
 
 const ROOT = path.resolve(path.sep === '\\' ? 'C:\\work\\project' : '/work/project');
 
@@ -59,6 +62,8 @@ test('the initial snapshot is frozen and carries no file state', () => {
     assert.deepEqual(state.recommendedSqlTypes, {});
     assert.equal(state.previewRows, DEFAULT_PREVIEW_ROWS);
     assert.deepEqual(state.azure, {
+        mode: 'authenticated',
+        publicContainer: null,
         open: false,
         phase: 'closed',
         identity: null,
@@ -132,6 +137,111 @@ test('an unknown, forged or stale id does not resolve', () => {
 
     model.setFiles(listing(1));
     assert.equal(model.lookup(stale), undefined, 'a previous listing must stop resolving');
+});
+
+test('settings identities are canonical, validated, host-only and independent of listing ids', async () => {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'sqlfd-settings-')));
+    const model = store();
+    try {
+        const a = path.join(root, 'a');
+        const b = path.join(root, 'b');
+        fs.mkdirSync(a);
+        fs.mkdirSync(b);
+        fs.writeFileSync(path.join(a, 'same.csv'), 'id\n1\n');
+        fs.writeFileSync(path.join(b, 'same.csv'), 'id\n2\n');
+        const files = [a, b].map((folder) => ({
+            absolutePath: path.join(folder, 'same.csv'),
+            allowedRoot: root,
+            fileType: 'csv',
+            sizeBytes: 5,
+            nativeSupport: 'supported' as const,
+            isDirectory: false,
+        }));
+        const entries = model.setFiles(files);
+        assert.throws(() => model.rememberSettings(model.lookup(entries[0].id)!, DEFAULT_FILE_SETTINGS), /validated/);
+        const first = await model.identifyFile(entries[0].id);
+        const second = await model.identifyFile(entries[1].id);
+        assert.ok(first?.settingsIdentity);
+        assert.ok(second?.settingsIdentity);
+        assert.notEqual(first.settingsIdentity, second.settingsIdentity, 'same basename does not conflate different files');
+        model.rememberSettings(first, { ...DEFAULT_FILE_SETTINGS, tableName: 'kept' });
+        assert.equal(model.settingsFor(first).tableName, 'kept');
+        assert.deepEqual(model.settingsFor(second), DEFAULT_FILE_SETTINGS);
+        assert.equal(model.canUndoSettings(first), true);
+        const registry = model.snapshotFiles();
+        model.setFiles([]);
+        model.restoreFiles(registry);
+        assert.equal(model.canUndoSettings(first), true);
+        const reselected = model.setFiles([{
+            ...files[0], absolutePath: path.join(a, '..', 'a', 'same.csv'),
+        }]);
+        assert.equal(model.lookup(entries[0].id), undefined);
+        const identified = await model.identifyFile(reselected[0].id);
+        assert.ok(identified);
+        assert.equal(identified.settingsIdentity, first.settingsIdentity);
+        assert.equal(model.settingsFor(identified).tableName, 'kept');
+        assert.equal(model.canUndoSettings(identified), true);
+        assert.ok(!JSON.stringify(model.state).includes(root));
+        assert.ok(!JSON.stringify(model.state).includes(first.settingsIdentity));
+
+        const outside = model.setFiles([{ ...files[1], allowedRoot: a }])[0];
+        await assert.rejects(model.identifyFile(outside.id), /outside the allowed root/);
+        assert.equal(model.lookup(outside.id)?.settingsIdentity, undefined);
+        model.reset();
+        const resetFile = model.setFiles(files)[0];
+        const resetIdentity = await model.identifyFile(resetFile.id);
+        assert.ok(resetIdentity);
+        assert.deepEqual(model.settingsFor(resetIdentity), DEFAULT_FILE_SETTINGS);
+        assert.equal(model.canUndoSettings(resetIdentity), false);
+    } finally {
+        model.dispose();
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('an identity lookup cannot revive a file handle replaced during validation', async () => {
+    const model = store();
+    const fixture = path.resolve(__dirname, '..', '..', 'data sample', 'csv', 'sample.csv');
+    const [entry] = model.setFiles([{
+        absolutePath: fixture,
+        allowedRoot: path.dirname(fixture),
+        fileType: 'csv',
+        sizeBytes: 0,
+        nativeSupport: 'supported',
+        isDirectory: false,
+    }]);
+    const pending = model.identifyFile(entry.id);
+    model.setFiles([]);
+    assert.equal(await pending, undefined);
+    assert.equal(model.lookup(entry.id), undefined);
+    model.dispose();
+});
+
+test('overlapping identity lookups share the current handle without invalidating each other', async () => {
+    const model = store();
+    const fixture = path.resolve(__dirname, '..', '..', 'data sample', 'csv', 'sample.csv');
+    const [entry] = model.setFiles([{
+        absolutePath: fixture,
+        allowedRoot: path.dirname(fixture),
+        fileType: 'csv',
+        sizeBytes: 0,
+        nativeSupport: 'supported',
+        isDirectory: false,
+    }]);
+    try {
+        const [first, second] = await Promise.all([
+            model.identifyFile(entry.id),
+            model.identifyFile(entry.id),
+        ]);
+        assert.ok(first?.settingsIdentity);
+        assert.strictEqual(second, first);
+        assert.strictEqual(model.lookup(entry.id), first);
+        assert.strictEqual(await model.identifyFile(entry.id), first);
+        model.rememberSettings(first, { ...DEFAULT_FILE_SETTINGS, tableName: 'retained' });
+        assert.equal(model.settingsFor(second).tableName, 'retained');
+    } finally {
+        model.dispose();
+    }
 });
 
 test('every listed file carries its own allowed root', () => {

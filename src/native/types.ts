@@ -141,6 +141,22 @@ export interface FileMetadata {
     sql_type_overrides?: Record<string, string>;
     /** Optional UI-authored parser overrides. Omitted on the certified default path. */
     parser_overrides?: ParserOverrides;
+    /** Only opt-in first previews carry this marker; never a complete cache entry. */
+    analysis_stage?: 'provisional';
+    /** Opaque local file revision, used to reject edits during refinement/preview. */
+    source_revision?: string;
+    preview_sample?: PreviewSample;
+}
+
+/** Observable work ceilings and provenance for a bounded first preview. */
+export interface PreviewSample {
+    bytes_read: number;
+    logical_rows: number;
+    byte_limit: number;
+    row_limit: number;
+    record_char_limit: number;
+    column_limit: number;
+    stopped_by: 'end' | 'rows' | 'bytes' | 'record_limit' | 'error';
 }
 
 /** Parser settings users may override without changing the detected file facts. */
@@ -178,6 +194,14 @@ export interface PreviewResult {
     total_rows: number | null;
     truncated: boolean;
     error?: string;
+    /** An estimated total must not be rendered as an exact count. */
+    total_rows_estimated?: boolean;
+}
+
+/** One atomic metadata/preview publication in the progressive service. */
+export interface AnalysisPreview {
+    metadata: FileMetadata;
+    preview: PreviewResult;
 }
 
 /** SQL products the generator can target. */

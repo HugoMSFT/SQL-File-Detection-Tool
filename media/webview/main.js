@@ -95,7 +95,14 @@
         ? restoredViewState.azureFormat
         : 'all';
     let focusSourceTabAfterClose = false;
+    let publicContainerFormOpen = false;
+    let publicContainerUrlDraft = '';
+    let publicContainerPrefixDraft = '';
     let advancedObjectNamesOpen = restoredViewState.advancedObjectNamesOpen === true;
+    let fileSettingsOpen = restoredViewState.fileSettingsOpen === true;
+    let parserSettingsOpen = restoredViewState.parserSettingsOpen === true;
+    let profileNameDraft = '';
+    let selectedImportProfile = '';
     const restoredStorageUrlDraft = sanitizeStorageUrlDraft(
         restoredViewState.storageUrlDraft,
     );
@@ -127,6 +134,8 @@
             azureEntryQuery: azureEntryQuery,
             azureFormat: azureFormat,
             advancedObjectNamesOpen: advancedObjectNamesOpen,
+            fileSettingsOpen: fileSettingsOpen,
+            parserSettingsOpen: parserSettingsOpen,
             storageUrlDraft: sanitizeStorageUrlDraft(
                 pendingEdits.get('knownStorageUrl') || '',
             ),
@@ -146,9 +155,13 @@
             formatName: 'formatName',
         };
         Object.keys(scalarFields).forEach(function (key) {
+            const active = document.activeElement;
+            const editing = active && active.dataset && active.dataset.edit === key;
+            const draft = pendingEdits.get(key);
+            const accepted = String(nextState[scalarFields[key]] || '');
             if (
                 pendingEdits.has(key)
-                && String(nextState[scalarFields[key]] || '') === pendingEdits.get(key)
+                && (accepted === draft || (!editing && accepted === draft.trim()))
             ) {
                 pendingEdits.delete(key);
             }
@@ -167,7 +180,10 @@
                 }
             } else if (key.startsWith('override:')) {
                 const column = key.slice('override:'.length);
-                if (String(nextState.columnOverrides[column] ?? '') === pendingEdits.get(key)) {
+                if (
+                    String(nextState.columnOverrides[column] ?? '').replace(/ +/g, '').toUpperCase()
+                    === pendingEdits.get(key).trim().replace(/ +/g, '').toUpperCase()
+                ) {
                     pendingEdits.delete(key);
                 }
             }
@@ -214,13 +230,17 @@
     }
 
     function clearFileEdits() {
+        function fileEdit(key) {
+            return ['tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'].includes(key)
+                || key.startsWith('parser:') || key.startsWith('override:');
+        }
         for (const key of Array.from(debounceTimers.keys())) {
-            if (key.startsWith('parser:') || key.startsWith('override:')) {
+            if (fileEdit(key)) {
                 cancelDebounce(key);
             }
         }
         for (const key of Array.from(pendingEdits.keys())) {
-            if (key.startsWith('parser:') || key.startsWith('override:')) {
+            if (fileEdit(key)) {
                 pendingEdits.delete(key);
             }
         }
@@ -455,13 +475,90 @@
         }) || null;
     }
 
+    function publicContainerForm() {
+        const form = element('form', 'azure-public-form');
+        form.id = 'azure-public-container-form';
+        form.appendChild(element('h2', null, 'Open public container'));
+        const help = element(
+            'p',
+            'help',
+            'Use a known Azure Blob container. Container-level public access is required to list it; Blob-level access only permits reading known blobs. Accounts and containers cannot be discovered anonymously. No Microsoft sign-in, SAS, or key is used.',
+        );
+        help.id = 'azure-public-container-help';
+        form.appendChild(help);
+        [
+            {
+                id: 'azure-public-container-url',
+                label: 'HTTPS or ABS container URL',
+                placeholder: 'https://account.blob.core.windows.net/container',
+                value: publicContainerUrlDraft,
+                maxLength: 2048,
+            },
+            {
+                id: 'azure-public-container-prefix',
+                label: 'Folder prefix (optional)',
+                placeholder: 'folder/subfolder/',
+                value: publicContainerPrefixDraft,
+                maxLength: 1024,
+            },
+        ].forEach(function (config) {
+            const field = element('label', 'field');
+            field.appendChild(element('span', null, config.label));
+            const input = document.createElement('input');
+            input.id = config.id;
+            input.type = 'text';
+            input.value = config.value;
+            input.placeholder = config.placeholder;
+            input.maxLength = config.maxLength;
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+            input.setAttribute('aria-describedby', help.id);
+            field.appendChild(input);
+            form.appendChild(field);
+        });
+        const submit = actionButton(
+            'Browse public container',
+            'azureBrowserOpenPublicContainer',
+            'btn primary',
+        );
+        submit.type = 'submit';
+        form.appendChild(submit);
+        form.appendChild(element(
+            'p',
+            'help',
+            'Only listing metadata is read. URLs with credentials, explicit ports, query strings (including SAS), or fragments are rejected. Nothing entered here is saved.',
+        ));
+        return form;
+    }
+
+    function submitPublicContainer() {
+        const url = byId('azure-public-container-url');
+        const prefix = byId('azure-public-container-prefix');
+        if (!url || !prefix) {
+            return;
+        }
+        const request = {
+            type: 'azureBrowserOpenPublicContainer',
+            url: url.value,
+            prefix: prefix.value,
+        };
+        publicContainerFormOpen = false;
+        publicContainerUrlDraft = '';
+        publicContainerPrefixDraft = '';
+        post(request);
+    }
+
     function renderAzureBrowser() {
         const browser = byId('azure-browser');
         const standard = byId('standard-layout');
         const azure = state.azure;
+        const publicMode = azure.mode === 'public';
         browser.hidden = !azure.open;
         standard.hidden = azure.open;
         if (!azure.open) {
+            publicContainerFormOpen = false;
+            publicContainerUrlDraft = '';
+            publicContainerPrefixDraft = '';
             return;
         }
         clear(browser);
@@ -488,44 +585,62 @@
                 ),
             );
             signedOut.appendChild(
+                actionButton('Open public container', 'showPublicContainer', 'btn subtle'),
+            );
+            signedOut.appendChild(
                 actionButton('Close', 'azureBrowserClose', 'btn subtle'),
             );
             browser.appendChild(signedOut);
+            if (publicContainerFormOpen) {
+                browser.appendChild(publicContainerForm());
+            }
             return;
         }
 
         const identity = element('header', 'azure-identity-bar');
         const identityCopy = element('div', 'azure-identity');
-        identityCopy.appendChild(element('span', 'azure-avatar', 'MS'));
+        identityCopy.appendChild(element('span', 'azure-avatar', publicMode ? 'P' : 'MS'));
         const identityText = element('div');
         identityText.appendChild(
             element(
                 'h2',
                 null,
-                azure.identity ? azure.identity.label : 'Microsoft account',
+                publicMode
+                    ? 'Public container · no sign-in'
+                    : azure.identity ? azure.identity.label : 'Microsoft account',
             ),
         );
         identityText.appendChild(
-            element('p', null, 'Azure public cloud · read-only browsing'),
+            element('p', null, publicMode
+                ? 'Read-only listing · no anonymous account or container discovery'
+                : 'Azure public cloud · read-only browsing'),
         );
         identityCopy.appendChild(identityText);
         identity.appendChild(identityCopy);
-        identity.appendChild(
-            azureSelect(
-                'Tenant',
-                'azure-browser-tenant',
-                azure.tenants,
-                azure.selectedTenantId,
-                'tenant',
-            ),
-        );
-        identity.appendChild(
-            azureSubscriptionSelect(
-                azure.subscriptions,
-                azure.selectedSubscriptionId,
-            ),
-        );
+        if (!publicMode) {
+            identity.appendChild(
+                azureSelect(
+                    'Tenant',
+                    'azure-browser-tenant',
+                    azure.tenants,
+                    azure.selectedTenantId,
+                    'tenant',
+                ),
+            );
+            identity.appendChild(
+                azureSubscriptionSelect(
+                    azure.subscriptions,
+                    azure.selectedSubscriptionId,
+                ),
+            );
+        }
         const identityActions = element('div', 'azure-identity-actions');
+        identityActions.appendChild(
+            actionButton('Connect to Azure', 'azureBrowserConnect', 'btn subtle'),
+        );
+        identityActions.appendChild(
+            actionButton('Open public container', 'showPublicContainer', 'btn subtle'),
+        );
         const refresh = actionButton('Refresh', 'azureBrowserRefresh', 'btn subtle');
         refresh.disabled = azure.phase === 'loading';
         identityActions.appendChild(refresh);
@@ -537,8 +652,11 @@
         );
         identity.appendChild(identityActions);
         browser.appendChild(identity);
+        if (publicContainerFormOpen || (publicMode && !azure.publicContainer)) {
+            browser.appendChild(publicContainerForm());
+        }
 
-        if (azure.phase === 'loading' && azure.accounts.length === 0) {
+        if (!publicMode && azure.phase === 'loading' && azure.accounts.length === 0) {
             browser.appendChild(
                 azureStateCard(
                     'Loading Azure…',
@@ -550,7 +668,7 @@
             return;
         }
 
-        const layout = element('div', 'azure-layout');
+        const layout = element('div', publicMode ? 'azure-layout azure-public-layout' : 'azure-layout');
         const accountsPane = element('aside', 'azure-accounts-pane');
         const accountsHeading = element('div', 'azure-pane-heading');
         accountsHeading.appendChild(element('h2', null, 'Storage accounts'));
@@ -606,21 +724,32 @@
             );
         }
         accountsPane.appendChild(accountList);
-        layout.appendChild(accountsPane);
+        if (!publicMode) {
+            layout.appendChild(accountsPane);
+        }
 
         const browsePane = element('section', 'azure-browse-pane');
-        const selectedAccount = selectedAzureAccount();
+        const selectedAccount = publicMode && azure.publicContainer
+            ? {
+                name: azure.publicContainer.accountName,
+                hns: false,
+                resourceGroup: 'Known public container',
+                location: 'No sign-in',
+            }
+            : selectedAzureAccount();
         if (azure.phase === 'error' && !selectedAccount) {
             const title =
-                azure.errorKind === 'controlAccess'
+                publicMode
+                    ? 'Could not open public container'
+                    : azure.errorKind === 'controlAccess'
                     ? 'Azure management access denied'
                     : 'Could not list Azure resources';
             browsePane.appendChild(
                 azureStateCard(
                     title,
                     azure.message || 'Retry the request.',
-                    'Retry',
-                    'azureBrowserRetry',
+                    publicMode ? null : 'Retry',
+                    publicMode ? null : 'azureBrowserRetry',
                 ),
             );
             layout.appendChild(browsePane);
@@ -669,6 +798,10 @@
         root.type = 'button';
         root.dataset.azureDepth = '0';
         root.textContent = selectedAccount.name;
+        root.disabled = publicMode;
+        if (publicMode) {
+            root.title = 'Public browsing cannot list accounts or containers.';
+        }
         breadcrumbs.appendChild(root);
         azure.path.forEach(function (segment, index) {
             breadcrumbs.appendChild(
@@ -683,13 +816,13 @@
         browsePane.appendChild(breadcrumbs);
         if (azure.path.length > 0) {
             const folderActions = element('div', 'azure-folder-actions');
-            folderActions.appendChild(
-                actionButton(
-                    'Use this folder for setup',
-                    'azureBrowserUseCurrentFolder',
-                    'btn primary',
-                ),
+            const useFolder = actionButton(
+                'Use this folder for setup',
+                'azureBrowserUseCurrentFolder',
+                'btn primary',
             );
+            useFolder.disabled = azure.phase !== 'ready';
+            folderActions.appendChild(useFolder);
             folderActions.appendChild(
                 element(
                     'span',
@@ -701,7 +834,7 @@
         }
 
         if (azure.phase === 'error') {
-            const storageConsent = azure.errorKind === 'storageConsent';
+            const storageConsent = !publicMode && azure.errorKind === 'storageConsent';
             let title = 'Could not list this Azure location';
             if (azure.errorKind === 'controlAccess') {
                 title = 'Azure management access denied';
@@ -709,13 +842,24 @@
                 title = 'Authorize Storage browsing';
             } else if (azure.errorKind === 'dataAccess') {
                 title = 'Storage data access denied';
+            } else if (azure.errorKind === 'publicAccess') {
+                title = 'Public container listing unavailable';
+            } else if (azure.errorKind === 'accountDisabled') {
+                title = 'Storage account disabled';
+            } else if (azure.errorKind === 'network') {
+                title = 'Check Storage network access';
+            } else if (azure.errorKind === 'storageAuthentication') {
+                title = 'Storage credential not accepted';
+            } else if (azure.errorKind === 'notFound') {
+                title = 'Storage location not found or not visible';
             }
             browsePane.appendChild(
                 azureStateCard(
                     title,
                     azure.message || 'Retry the request or choose another account.',
-                    storageConsent ? 'Authorize storage access' : 'Retry',
-                    'azureBrowserRetry',
+                    azure.errorKind === 'accountDisabled' ? null
+                        : storageConsent ? 'Authorize storage access' : 'Retry',
+                    azure.errorKind === 'accountDisabled' ? null : 'azureBrowserRetry',
                 ),
             );
             layout.appendChild(browsePane);
@@ -1229,7 +1373,9 @@
         }
         if (preview.error) {
             container.appendChild(element('p', 'error', preview.error));
-            return;
+            if (preview.rows.length === 0) {
+                return;
+            }
         }
 
         const scroll = element('div', 'table-scroll');
@@ -1241,8 +1387,9 @@
                 preview.rows.length +
                 (preview.truncated ? ' of more rows' : ' rows') +
                 (preview.total_rows !== null && preview.total_rows !== undefined
-                    ? ' · ' + preview.total_rows + ' total'
-                    : ''),
+                    ? ' · ' + preview.total_rows
+                        + (preview.total_rows_estimated ? ' total (estimated)' : ' total')
+                    : ' · total unknown'),
         );
         table.appendChild(caption);
 
@@ -1306,10 +1453,12 @@
             const input = row.querySelector('.override-input');
             input.dataset.edit = 'override';
             input.dataset.column = field[0];
+            input.dataset.fileId = state.selectedFileId;
             input.setAttribute('aria-label', 'SQL type for ' + field[0]);
             input.value = editable(
                 'override:' + field[0],
-                state.columnOverrides[field[0]]
+                (Object.prototype.hasOwnProperty.call(state.columnOverrides, field[0])
+                    ? state.columnOverrides[field[0]] : '')
                     || (state.recommendedSqlTypes || {})[field[0]]
                     || '',
             );
@@ -1323,6 +1472,7 @@
             const clearButton = element('button', 'btn subtle', 'Reset SQL types');
             clearButton.type = 'button';
             clearButton.dataset.action = 'clearColumnOverrides';
+            clearButton.dataset.fileId = state.selectedFileId;
             container.appendChild(clearButton);
         }
     }
@@ -1343,7 +1493,6 @@
                 label: 'Credential name',
                 value: state.credentialName,
             },
-            { key: 'storageUrl', label: 'Storage URL', value: state.storageUrl },
         ].forEach(function (field) {
             const label = element('label', 'field');
             label.appendChild(element('span', null, field.label));
@@ -1352,12 +1501,144 @@
             input.spellcheck = false;
             input.autocomplete = 'off';
             input.dataset.edit = field.key;
+            input.dataset.fileId = state.selectedFileId || '';
+            input.maxLength = 128;
             input.value = editable(field.key, field.value || '');
             label.appendChild(input);
             row.appendChild(label);
         });
 
         container.appendChild(row);
+    }
+
+    function settingsButton(label, action) {
+        const button = element('button', 'btn subtle', label);
+        button.type = 'button';
+        button.dataset.action = action;
+        button.dataset.fileId = state.selectedFileId || '';
+        return button;
+    }
+
+    function renderFileSettings(container) {
+        const profiles = state.importProfiles || [];
+        if (!state.selectedFileId && profiles.length === 0) {
+            return;
+        }
+        const section = element('details', 'file-settings');
+        section.open = fileSettingsOpen;
+        section.addEventListener('toggle', function () {
+            fileSettingsOpen = section.open;
+            persistViewState();
+        });
+        section.appendChild(element('summary', null, 'File settings and import profiles'));
+        if (state.selectedFileId) {
+            section.appendChild(element(
+                'p', 'help',
+                'Settings stay with this local file for this session. Reset removes your overrides; it does not reanalyze or deselect the file.',
+            ));
+            const actions = element('div', 'settings-actions');
+            actions.appendChild(settingsButton('Reset settings', 'resetFileSettings'));
+            const undo = settingsButton('Undo settings change', 'undoFileSettings');
+            undo.disabled = !state.canUndoSettings;
+            actions.appendChild(undo);
+            section.appendChild(actions);
+            renderNamingOptions(section);
+
+            const parser = element('details', 'parser-settings');
+            parser.open = parserSettingsOpen;
+            parser.addEventListener('toggle', function () {
+                if (parser.isConnected) {
+                    parserSettingsOpen = parser.open;
+                    persistViewState();
+                }
+            });
+            parser.appendChild(element('summary', null, 'SQL parser overrides'));
+            parser.appendChild(element(
+                'p', 'help',
+                'These options change generated SQL, not detected metadata or preview rows. Select the file again to reanalyze without clearing settings.',
+            ));
+            const grid = element('div', 'parser-grid');
+            state.quickAnalyze.options.filter(function (option) {
+                return option.label !== 'File encoding';
+            }).forEach(function (option) {
+                const field = element('label', 'field parser-option');
+                field.appendChild(element('span', null, option.label));
+                let input;
+                if (option.key === 'format') {
+                    input = document.createElement('select');
+                    state.formats.filter(function (format) {
+                        return format.fileType !== 'excel' && format.fileType !== 'unknown';
+                    }).forEach(function (format) {
+                        const choice = element('option', null, format.fileType);
+                        choice.value = format.fileType;
+                        input.appendChild(choice);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = option.key === 'firstRow' ? 'number' : 'text';
+                    input.maxLength = 128;
+                    input.autocomplete = 'off';
+                    input.spellcheck = false;
+                    if (option.key === 'firstRow') {
+                        input.min = '1';
+                        input.max = '1000000';
+                    }
+                }
+                input.dataset.parserOption = option.key;
+                input.dataset.fileId = state.selectedFileId;
+                // Derived option labels may lag the snapshot that acknowledged this edit.
+                const overridden = Object.prototype.hasOwnProperty.call(state.parserOverrides, option.key);
+                const value = overridden ? state.parserOverrides[option.key] : option.value;
+                input.value = editable('parser:' + option.key, String(value ?? ''));
+                field.appendChild(input);
+                field.appendChild(element('span', 'provenance', option.provenance));
+                if (option.overridden) {
+                    const reset = settingsButton('Use detected/default value', 'resetParserOverride');
+                    reset.dataset.parserKey = option.key;
+                    field.appendChild(reset);
+                }
+                grid.appendChild(field);
+            });
+            parser.appendChild(grid);
+            section.appendChild(parser);
+        }
+
+        section.appendChild(element('h3', null, 'Reusable import profiles'));
+        section.appendChild(element(
+            'p', 'help',
+            'Profiles save object names and parser and SQL type overrides across reloads. They never save file paths, contents, storage URLs, credentials, sign-in, or the target platform. Saving an existing name replaces that profile.',
+        ));
+        const controls = element('div', 'import-profile-controls');
+        const nameField = textControl('Profile name', 'importProfileName', profileNameDraft);
+        nameField.querySelector('input').maxLength = 64;
+        controls.appendChild(nameField);
+        const save = settingsButton('Save current settings', 'saveImportProfile');
+        save.id = 'save-import-profile';
+        save.disabled = !state.selectedFileId || !profileNameDraft.trim();
+        controls.appendChild(save);
+        if (!profiles.includes(selectedImportProfile)) {
+            selectedImportProfile = '';
+        }
+        controls.appendChild(selectControl(
+            'Saved profile',
+            'importProfile',
+            profiles.map(function (name) { return { id: name, label: name }; }),
+            selectedImportProfile,
+        ));
+        const apply = settingsButton('Apply selected profile', 'applyImportProfile');
+        const provisional = state.metadata && state.metadata.analysis_stage === 'provisional';
+        apply.disabled = !selectedImportProfile || !state.selectedFileId || !state.metadata || provisional;
+        controls.appendChild(apply);
+        if (provisional) {
+            controls.appendChild(
+                element('p', 'help', 'Wait for file analysis to finish before applying a profile.'),
+            );
+        }
+        const remove = settingsButton('Delete profile', 'deleteImportProfile');
+        remove.disabled = !selectedImportProfile;
+        controls.appendChild(remove);
+        section.appendChild(controls);
+        container.appendChild(section);
     }
 
     function renderSqlBlock(container, kind, text) {
@@ -1388,7 +1669,9 @@
     }
 
     function renderStatement(container, kind) {
-        renderNamingOptions(container);
+        if (!state.selectedFileId) {
+            renderNamingOptions(container);
+        }
         renderLimitation(container);
         renderDocumentationLinks(container, state.quickAnalyze.documentation);
         renderSqlBlock(container, kind, (state.statements || {})[kind]);
@@ -1426,6 +1709,10 @@
         input.spellcheck = false;
         input.autocomplete = 'off';
         input.dataset.edit = edit;
+        if (['tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'].includes(edit)) {
+            input.dataset.fileId = state.selectedFileId || '';
+            input.maxLength = 128;
+        }
         input.value = editable(edit, value || '');
         if (placeholder) {
             input.placeholder = placeholder;
@@ -1549,6 +1836,25 @@
     }
 
     function storageSetupReadiness() {
+        if (state.metadata && (
+            state.metadata.analysis_stage === 'provisional'
+            || state.metadata.schema_inference === 'sampled'
+        )) {
+            return {
+                kind: 'template',
+                title: state.metadata.analysis_stage === 'provisional'
+                    ? 'Sample only: analysis incomplete'
+                    : 'Template: sampled schema',
+                detail: 'Schema and total row count are not verified. Finish analysis before using this SQL.',
+            };
+        }
+        if (state.selectedFileId && state.busy) {
+            return {
+                kind: 'blocked',
+                title: 'Analysis in progress',
+                detail: 'Wait for metadata and SQL refinement to finish.',
+            };
+        }
         if (!state.storageUrl) {
             return {
                 kind: 'blocked',
@@ -1859,7 +2165,25 @@
 
     function renderPanel() {
         const panel = byId('panel');
+        const parser = panel.querySelector('.parser-settings');
+        if (parser) {
+            parserSettingsOpen = parser.open;
+        }
         clear(panel);
+        if (state.metadata && state.metadata.analysis_stage === 'provisional') {
+            const provenance = element(
+                'p',
+                'notice',
+                state.busy
+                    ? 'Sample preview — analyzing file…'
+                    : 'Sample preview only — analysis incomplete.',
+            );
+            provenance.setAttribute('role', 'status');
+            panel.appendChild(provenance);
+        } else if (state.metadata && state.metadata.schema_inference === 'sampled') {
+            panel.appendChild(element('p', 'notice', 'Sampled schema — the full source has not been verified.'));
+        }
+        renderFileSettings(panel);
         const tab = state.activeTab;
         if (tab === 'metadata') {
             renderMetadata(panel);
@@ -1998,6 +2322,45 @@
             return;
         }
         const name = action.dataset.action;
+        if (name === 'showPublicContainer') {
+            publicContainerFormOpen = true;
+            rerenderAzureBrowser();
+            byId('azure-public-container-url').focus();
+            return;
+        }
+        if (name === 'azureBrowserOpenPublicContainer') {
+            event.preventDefault();
+            submitPublicContainer();
+            return;
+        }
+        if (['azureBrowserClose', 'azureBrowserDisconnect', 'azureBrowserConnect', 'activateLocalSource'].includes(name)) {
+            publicContainerFormOpen = false;
+            publicContainerUrlDraft = '';
+            publicContainerPrefixDraft = '';
+        }
+        if (name === 'saveImportProfile') {
+            post({ type: name, fileId: action.dataset.fileId, name: profileNameDraft });
+            return;
+        }
+        if (name === 'applyImportProfile') {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId, name: selectedImportProfile });
+            return;
+        }
+        if (name === 'deleteImportProfile') {
+            post({ type: name, name: selectedImportProfile });
+            return;
+        }
+        if (['resetFileSettings', 'undoFileSettings', 'clearColumnOverrides'].includes(name)) {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId });
+            return;
+        }
+        if (name === 'resetParserOverride') {
+            clearFileEdits();
+            post({ type: name, fileId: action.dataset.fileId, key: action.dataset.parserKey });
+            return;
+        }
         if (name === 'azureBrowserClose') {
             focusSourceTabAfterClose = true;
         }
@@ -2015,6 +2378,13 @@
             return;
         }
         post({ type: name });
+    });
+
+    document.addEventListener('submit', function (event) {
+        if (event.target instanceof Element && event.target.id === 'azure-public-container-form') {
+            event.preventDefault();
+            submitPublicContainer();
+        }
     });
 
     document.addEventListener('change', function (event) {
@@ -2047,6 +2417,11 @@
             return;
         }
         const edit = target.dataset ? target.dataset.edit : null;
+        if (edit === 'importProfile') {
+            selectedImportProfile = target.value;
+            render();
+            return;
+        }
         if (edit === 'authMethod') {
             post({ type: 'setAuthMethod', value: target.value });
             return;
@@ -2057,19 +2432,6 @@
         }
         if (edit === 'azureFolderFormat') {
             post({ type: 'setAzureFolderFormat', value: target.value });
-            return;
-        }
-        if (target.dataset && target.dataset.parserOption) {
-            const key = 'parser:' + target.dataset.parserOption;
-            cancelDebounce(key);
-            pendingEdits.delete(key);
-            persistViewState();
-            post({
-                type: 'setParserOverride',
-                fileId: state.selectedFileId,
-                key: target.dataset.parserOption,
-                value: target.value,
-            });
             return;
         }
         if (edit === 'previewRows') {
@@ -2086,6 +2448,14 @@
 
     document.addEventListener('input', function (event) {
         const target = event.target;
+        if (target instanceof Element && target.id === 'azure-public-container-url') {
+            publicContainerUrlDraft = target.value;
+            return;
+        }
+        if (target instanceof Element && target.id === 'azure-public-container-prefix') {
+            publicContainerPrefixDraft = target.value;
+            return;
+        }
         if (target instanceof Element && target.id === 'file-filter') {
             const value = target.value;
             fileFilter = value;
@@ -2122,9 +2492,20 @@
         const edit = target.dataset.edit;
         const value = target.value;
 
+        if (edit === 'importProfileName') {
+            profileNameDraft = value;
+            byId('save-import-profile').disabled = !state.selectedFileId || !value.trim();
+            return;
+        }
+        if (
+            target.dataset.fileId !== undefined
+            && target.dataset.fileId !== (state.selectedFileId || '')
+        ) {
+            return;
+        }
         if (target.dataset.parserOption) {
             const parserKey = target.dataset.parserOption;
-            const fileId = state.selectedFileId;
+            const fileId = target.dataset.fileId;
             pendingEdits.set('parser:' + parserKey, value);
             post({
                 type: 'setParserOverride',
@@ -2137,7 +2518,7 @@
 
         if (edit === 'override') {
             const column = target.dataset.column;
-            const fileId = state.selectedFileId;
+            const fileId = target.dataset.fileId;
             pendingEdits.set('override:' + column, value);
             post({
                 type: 'setColumnOverride',
@@ -2178,7 +2559,7 @@
             return;
         }
         pendingEdits.set(edit, value);
-        post({ type: messageType, value: value });
+        post({ type: messageType, fileId: target.dataset.fileId || null, value: value });
     });
 
     document.addEventListener('keydown', function (event) {
@@ -2248,7 +2629,11 @@
         if (!message || message.type !== 'state' || !message.state) {
             return;
         }
-        if (state && state.selectedFileId !== message.state.selectedFileId) {
+        if (state && (
+            state.selectedFileId !== message.state.selectedFileId
+            || state.sourceMode !== message.state.sourceMode
+            || state.settingsRevision !== message.state.settingsRevision
+        )) {
             clearFileEdits();
         }
         acknowledgePendingEdits(message.state);

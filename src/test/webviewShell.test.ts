@@ -28,6 +28,18 @@ const scriptCode = script
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^[ \t]*\/\/.*$/gm, '');
 
+test('progressive preview and sampled SQL remain visibly provisional, including after cancellation', () => {
+    assert.match(script, /Sample preview — analyzing file…/);
+    assert.match(script, /Sample preview only — analysis incomplete\./);
+    assert.match(script, /metadata\.analysis_stage === 'provisional'/);
+    assert.match(script, /Template: sampled schema/);
+    assert.match(script, /preview\.total_rows_estimated/);
+    assert.match(script, /total unknown/);
+    assert.match(script, /provenance\.setAttribute\('role', 'status'\)/);
+    const readiness = script.slice(script.indexOf('function storageSetupReadiness()'), script.indexOf('function renderCredentialSetup('));
+    assert.ok(readiness.indexOf("analysis_stage === 'provisional'") < readiness.indexOf("title: 'Ready to run'"));
+});
+
 function render(surface: 'sidebar' | 'panel' = 'sidebar'): string {
     return buildWebviewHtml({
         cspSource: 'vscode-webview://abc',
@@ -174,6 +186,28 @@ test('the Azure surface states its read-only browser boundary', () => {
         /\[hidden\]\s*\{\s*display:\s*none\s*!important/,
         'Azure browsing and credential setup must not render at the same time',
     );
+});
+
+test('public browsing is an explicit non-persisted form with no renderer authentication or network access', () => {
+    for (const selector of [
+        'showPublicContainer', 'azure-public-container-form', 'azure-public-container-url',
+        'azure-public-container-prefix', 'azureBrowserOpenPublicContainer',
+    ]) {
+        assert.ok(script.includes(selector));
+    }
+    assert.match(script, /Public container · no sign-in/);
+    assert.match(script, /Container-level public access is required to list/);
+    assert.match(script, /Blob-level access only permits reading known blobs/);
+    assert.match(script, /root\.disabled = publicMode/);
+    assert.match(script, /if \(!publicMode\) \{\s*layout\.appendChild\(accountsPane\)/);
+    assert.match(script, /useFolder\.disabled = azure\.phase !== 'ready'/);
+    const persistence = script.slice(script.indexOf('function persistViewState()'), script.indexOf('function acknowledgePendingEdits'));
+    assert.doesNotMatch(persistence, /publicContainer|azure-public/);
+    const openForm = script.slice(script.indexOf("if (name === 'showPublicContainer')"), script.indexOf("if (name === 'azureBrowserOpenPublicContainer')"));
+    assert.doesNotMatch(openForm, /post\(/);
+    assert.match(script, /document\.addEventListener\('submit'/);
+    assert.match(script, /maxLength: 2048/);
+    assert.match(script, /maxLength: 1024/);
 });
 
 test('Preview is primary and Storage SQL exposes readiness and runtime access', () => {
@@ -342,6 +376,22 @@ test('the renderer renders values as text, never as markup', () => {
     assert.ok(script.includes('textContent'));
     // Templates are cloned rather than built.
     assert.ok(script.includes('cloneNode(true)'));
+});
+
+test('both surfaces expose scoped settings and profile actions without persisting drafts or file identities', () => {
+    for (const action of [
+        'resetFileSettings', 'undoFileSettings', 'saveImportProfile',
+        'applyImportProfile', 'deleteImportProfile', 'resetParserOverride',
+    ]) {
+        assert.ok(script.includes(`'${action}'`), `${action} is not reachable`);
+    }
+    assert.match(script, /fileId: target\.dataset\.fileId \|\| null/);
+    assert.match(script, /fileId: action\.dataset\.fileId/);
+    assert.match(script, /state\.settingsRevision !== message\.state\.settingsRevision/);
+    assert.match(script, /function clearFileEdits[\s\S]*'tableName', 'schemaName', 'dataSource', 'credentialName', 'formatName'/);
+    assert.match(script, /Reset removes your overrides; it does not reanalyze or deselect the file/);
+    const persistedViewState = script.slice(script.indexOf('function persistViewState()'), script.indexOf('function acknowledgePendingEdits'));
+    assert.doesNotMatch(persistedViewState, /profileNameDraft|selectedImportProfile|parserOverrides|columnOverrides|fileId|tableName/);
 });
 
 test('the stylesheet uses theme variables rather than fixed colours', () => {

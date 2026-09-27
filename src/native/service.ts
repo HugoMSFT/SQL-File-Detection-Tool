@@ -15,13 +15,16 @@
 import * as path from 'path';
 import type { CancellationToken, ProgressReporter } from './cancellation';
 import { NEVER_CANCELLED, throwIfCancelled } from './cancellation';
-import { describeError } from './errors';
+import { describeError, FileChangedError, NativeAnalysisError } from './errors';
 import {
     analyzeFileMetadata,
+    fileRevision,
     listSupportedFormats,
     scanDirectory,
+    sqlSourceFileType,
 } from './detector';
 import { getPreviewData } from './preview';
+import { boundedTextPreview, isTextPreviewType } from './samplePreview';
 import { impliedRoot, resolveWithinRoot } from './paths';
 import { PREVIEW_DEFAULT_ROWS } from './limits';
 import type {
@@ -33,6 +36,8 @@ import type {
     SupportedFormat,
     TargetPlatform,
     ParserOverrides,
+    AnalysisPreview,
+    StatementKind,
 } from './types';
 import {
     deduplicateSharedPrerequisites,
@@ -54,11 +59,29 @@ export interface AnalysisRequest {
     readonly allowedRoot?: string;
     readonly token?: CancellationToken;
     readonly progress?: ProgressReporter;
+    /** Yield during complete JSON parsing. Enabled by the progressive UI path. */
+    readonly cooperative?: boolean;
 }
 
 /** Options for {@link NativeAnalysisService.preview}. */
 export interface PreviewRequest extends AnalysisRequest {
     readonly maxRows?: number;
+}
+
+/** Opt-in sample publication, followed by the normal authoritative analysis. */
+export interface ProgressiveAnalysisRequest extends PreviewRequest {
+    readonly onPreview: (sample: AnalysisPreview) => void | Promise<void>;
+}
+
+/** Read rows using metadata already returned by analyzeProgressively. */
+export interface AnalyzedPreviewRequest extends PreviewRequest {
+    readonly metadata: FileMetadata;
+}
+
+export function markProvisionalSql(sql: string, metadata: GeneratorMetadata): string {
+    return metadata.analysis_stage === 'provisional' && sql
+        ? '-- SAMPLE ONLY: analysis is incomplete; schema and row count are not verified. Do not treat this template as ready to run.\n' + sql
+        : sql;
 }
 
 /** Options for a directory scan. Depth zero means only the selected root. */
@@ -148,8 +171,11 @@ export class NativeAnalysisService {
         throwIfCancelled(token);
         reportProgress(request.progress, 'Resolving path');
         const reference = await this.resolve(request);
+        throwIfCancelled(token);
         reportProgress(request.progress, `Analyzing ${path.basename(reference.realPath)}`);
-        return analyzeFileMetadata(reference, token);
+        const metadata = await analyzeFileMetadata(reference, token, request.cooperative);
+        throwIfCancelled(token);
+        return metadata;
     }
 
     /**
@@ -185,12 +211,109 @@ export class NativeAnalysisService {
         const reference = await this.resolve(request);
         const metadata = await analyzeFileMetadata(reference, token);
         reportProgress(request.progress, 'Reading preview rows');
-        return getPreviewData(
+        const preview = await getPreviewData(
             reference,
             metadata,
             request.maxRows ?? PREVIEW_DEFAULT_ROWS,
             token,
         );
+        throwIfCancelled(token);
+        return preview;
+    }
+
+    private async assertRevision(
+        request: AnalysisRequest,
+        reference: StorageReference,
+        revision: string | null,
+        token: CancellationToken,
+    ): Promise<void> {
+        throwIfCancelled(token);
+        const current = await this.resolve(request);
+        const currentRevision = await fileRevision(current);
+        throwIfCancelled(token);
+        if (current.realPath !== reference.realPath || currentRevision !== revision) {
+            throw new FileChangedError();
+        }
+    }
+
+    /** Bounded local text sample only; never scans or inserts into the metadata cache. */
+    async samplePreview(request: PreviewRequest): Promise<AnalysisPreview> {
+        const token = request.token ?? NEVER_CANCELLED;
+        throwIfCancelled(token);
+        const reference = await this.resolve(request);
+        const fileType = sqlSourceFileType(reference.realPath);
+        if (reference.isDirectory || fileType === undefined || !isTextPreviewType(fileType)) {
+            throw new NativeAnalysisError('unsupported_format', 'A fast sample requires a local delimited, JSON, or text file.');
+        }
+        const revision = await fileRevision(reference);
+        throwIfCancelled(token);
+        const result = await boundedTextPreview(
+            reference, fileType, request.maxRows ?? PREVIEW_DEFAULT_ROWS, token,
+        );
+        await this.assertRevision(request, reference, revision, token);
+        if (revision !== null) {
+            result.metadata.source_revision = revision;
+        }
+        return result;
+    }
+
+    /**
+     * Publish the sample before starting complete work. Non-text readers retain
+     * their existing bounded footer/preview path, without a speculative pass.
+     */
+    async analyzeProgressively(request: ProgressiveAnalysisRequest): Promise<AnalysisPreview> {
+        const token = request.token ?? NEVER_CANCELLED;
+        throwIfCancelled(token);
+        const reference = await this.resolve(request);
+        const fileType = sqlSourceFileType(reference.realPath);
+        const revision = await fileRevision(reference);
+        throwIfCancelled(token);
+        if (!reference.isDirectory && fileType !== undefined && isTextPreviewType(fileType)) {
+            reportProgress(request.progress, 'Reading bounded sample');
+            const sample = await boundedTextPreview(
+                reference, fileType, request.maxRows ?? PREVIEW_DEFAULT_ROWS, token,
+            );
+            await this.assertRevision(request, reference, revision, token);
+            if (revision !== null) {
+                sample.metadata.source_revision = revision;
+            }
+            await request.onPreview(sample);
+            throwIfCancelled(token);
+            // Let the host deliver the preview and admit cancellation before refinement.
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+        throwIfCancelled(token);
+        const metadata = await this.analyze({ ...request, cooperative: true });
+        await this.assertRevision(request, reference, revision, token);
+        if (metadata.error) {
+            throw new NativeAnalysisError('malformed_input', metadata.error);
+        }
+        if (revision !== null) {
+            metadata.source_revision = revision;
+        }
+        reportProgress(request.progress, 'Refining preview');
+        const preview = await this.previewAnalyzed({ ...request, metadata });
+        throwIfCancelled(token);
+        return { metadata, preview };
+    }
+
+    /** Refresh rows without re-analyzing an uncached file or table. */
+    async previewAnalyzed(request: AnalyzedPreviewRequest): Promise<PreviewResult> {
+        const token = request.token ?? NEVER_CANCELLED;
+        throwIfCancelled(token);
+        const reference = await this.resolve(request);
+        const metadata = request.metadata;
+        const revision = await fileRevision(reference);
+        throwIfCancelled(token);
+        if (metadata.file_path !== reference.realPath
+            || metadata.analysis_stage === 'provisional'
+            || (!reference.isDirectory && metadata.source_revision !== revision)) {
+            throw new FileChangedError();
+        }
+        const limit = request.maxRows ?? PREVIEW_DEFAULT_ROWS;
+        const preview = await getPreviewData(reference, metadata, limit, token, true);
+        await this.assertRevision(request, reference, revision, token);
+        return preview;
     }
 
     /**
@@ -212,7 +335,7 @@ export class NativeAnalysisService {
         const metadata = request.parserOverrides
             ? { ...request.metadata, parser_overrides: request.parserOverrides }
             : request.metadata;
-        return generateAllStatements(metadata, {
+        const statements = generateAllStatements(metadata, {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
@@ -224,6 +347,12 @@ export class NativeAnalysisService {
             dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
         });
+        if (metadata.analysis_stage === 'provisional') {
+            for (const kind of Object.keys(statements) as StatementKind[]) {
+                statements[kind] = markProvisionalSql(statements[kind], metadata);
+            }
+        }
+        return statements;
     }
 
     /** Generate one runnable, GO-separated document containing every section. */
@@ -231,7 +360,7 @@ export class NativeAnalysisService {
         const metadata = request.parserOverrides
             ? { ...request.metadata, parser_overrides: request.parserOverrides }
             : request.metadata;
-        return generateCompleteDdl(metadata, {
+        return markProvisionalSql(generateCompleteDdl(metadata, {
             tableName: request.tableName ?? null,
             schemaName: request.schemaName ?? 'dbo',
             dataSource: request.dataSource ?? 'MyDataSource',
@@ -242,7 +371,7 @@ export class NativeAnalysisService {
             storageUrl: request.storageUrl ?? null,
             dataSourceType: request.dataSourceType ?? null,
             formatName: request.formatName ?? null,
-        });
+        }), metadata);
     }
 
     /**
@@ -263,7 +392,7 @@ export class NativeAnalysisService {
                 storageUrl: request.storageUrl ?? null,
                 dataSourceType: request.dataSourceType ?? null,
             });
-            chunks.push(deduplicateSharedPrerequisites(script, seen));
+            chunks.push(markProvisionalSql(deduplicateSharedPrerequisites(script, seen), entry.metadata));
         }
         return chunks.join('\n\n');
     }

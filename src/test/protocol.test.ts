@@ -99,6 +99,26 @@ test('Browse local actions are explicit zero-field capabilities', () => {
     }
 });
 
+test('public container requests accept bounded locations but never renderer-owned access metadata', () => {
+    const url = 'https://blob001.blob.core.windows.net/raw/';
+    assert.deepEqual(parseWebviewRequest({
+        type: 'azureBrowserOpenPublicContainer', url, prefix: 'sales%20data/',
+        access: 'authenticated', identity: 'forged', accessToken: 'SECRET',
+    }), { type: 'azureBrowserOpenPublicContainer', url, prefix: 'sales%20data/' });
+    assert.deepEqual(
+        parseWebviewRequest({ type: 'azureBrowserOpenPublicContainer', url }),
+        { type: 'azureBrowserOpenPublicContainer', url, prefix: '' },
+    );
+    for (const invalid of [
+        { url: '' }, { url: 'a'.repeat(2_049) }, { url, prefix: 'a'.repeat(1_025) },
+        { url, prefix: null }, { url: url + '\n' }, { url, prefix: 'a\tb' },
+        { url, prefix: 'a\u0085b' },
+    ]) {
+        assert.equal(parseWebviewRequest({ type: 'azureBrowserOpenPublicContainer', ...invalid }), undefined);
+    }
+    assert.equal(parseWebviewRequest({ type: 'showPublicContainer' }), undefined);
+});
+
 test('Azure browser actions accept only bounded opaque selections', () => {
     for (const type of [
         'openAzureBrowser',
@@ -207,14 +227,15 @@ test('the contract has no way to send a path or a root', () => {
 test('control characters are refused in free text', () => {
     for (const value of ['a\u0000b', 'a\u001fb', 'a\u007fb', '\u0008']) {
         assert.equal(
-            parseWebviewRequest({ type: 'setTableName', value }),
+            parseWebviewRequest({ type: 'setTableName', fileId: 'file-1', value }),
             undefined,
             JSON.stringify(value),
         );
     }
     // A newline is legitimate in a pasted value and is therefore allowed.
-    assert.deepEqual(parseWebviewRequest({ type: 'setTableName', value: 'a\nb' }), {
+    assert.deepEqual(parseWebviewRequest({ type: 'setTableName', fileId: 'file-1', value: 'a\nb' }), {
         type: 'setTableName',
+        fileId: 'file-1',
         value: 'a\nb',
     });
 });
@@ -322,8 +343,8 @@ test('parser override messages are allowlisted and bounded', () => {
         { type: 'setParserOverride', fileId: 'file-1', key: 'fieldDelimiter', value: '|' },
     );
     assert.deepEqual(
-        parseWebviewRequest({ type: 'resetParserOverride', key: 'codepage' }),
-        { type: 'resetParserOverride', key: 'codepage' },
+        parseWebviewRequest({ type: 'resetParserOverride', fileId: 'file-1', key: 'codepage' }),
+        { type: 'resetParserOverride', fileId: 'file-1', key: 'codepage' },
     );
     assert.equal(
         parseWebviewRequest({ type: 'setStatementKind', kind: 'openrowset' }),
@@ -348,6 +369,27 @@ test('parser override messages are allowlisted and bounded', () => {
         }),
         undefined,
     );
+});
+
+test('every file settings action requires an explicit file binding and rejects extra fields', () => {
+    for (const type of ['resetFileSettings', 'undoFileSettings', 'clearColumnOverrides']) {
+        assert.deepEqual(parseWebviewRequest({ type, fileId: 'file-1' }), { type, fileId: 'file-1' });
+        assert.equal(parseWebviewRequest({ type }), undefined);
+        assert.equal(parseWebviewRequest({ type, fileId: null }), undefined);
+        assert.equal(parseWebviewRequest({ type, fileId: 'file-1', path: '/private/file.csv' }), undefined);
+    }
+    for (const type of ['setTableName', 'setSchemaName', 'setDataSource', 'setCredentialName', 'setFormatName']) {
+        assert.equal(parseWebviewRequest({ type, value: 'Name' }), undefined);
+        assert.deepEqual(parseWebviewRequest({ type, fileId: null, value: 'Name' }), { type, fileId: null, value: 'Name' });
+        assert.deepEqual(parseWebviewRequest({ type, fileId: 'file-1', value: 'Name' }), { type, fileId: 'file-1', value: 'Name' });
+    }
+    for (const type of ['saveImportProfile', 'applyImportProfile']) {
+        assert.deepEqual(parseWebviewRequest({ type, fileId: 'file-1', name: 'Orders' }), { type, fileId: 'file-1', name: 'Orders' });
+        assert.equal(parseWebviewRequest({ type, name: 'Orders' }), undefined);
+        assert.equal(parseWebviewRequest({ type, fileId: 'file-1', name: 'x'.repeat(65) }), undefined);
+        assert.equal(parseWebviewRequest({ type, fileId: 'file-1', name: 'Orders', profile: { token: 'SECRET' } }), undefined);
+    }
+    assert.deepEqual(parseWebviewRequest({ type: 'deleteImportProfile', name: 'Orders' }), { type: 'deleteImportProfile', name: 'Orders' });
 });
 
 test('fuzzing never throws and never invents a request', () => {

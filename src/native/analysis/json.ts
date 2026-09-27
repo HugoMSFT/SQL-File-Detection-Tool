@@ -25,6 +25,7 @@ import type { FileMetadata, JsonNestingKind, SampleValue, SchemaField } from '..
 import { sizeSampledString } from './csv';
 import {
     parseJson,
+    parseJsonCooperatively,
     pythonRepr,
     rawDecode,
     type JsonNode,
@@ -51,7 +52,7 @@ function lookup(row: ObjectRow, key: string): JsonNode | undefined {
 }
 
 /** `_json_safe` applied to a node: containers collapse to their Python `str()`. */
-function jsonSafe(node: JsonNode | null): SampleValue {
+export function jsonSafe(node: JsonNode | null): SampleValue {
     if (node === null || node.kind === 'null') {
         return null;
     }
@@ -261,6 +262,7 @@ async function analyzeNdjsonCandidate(
     encoding: string,
     explicitNdjson: boolean,
     token?: CancellationToken,
+    cooperative = false,
 ): Promise<Partial<FileMetadata> | null> {
     const accumulator = new JsonSchemaAccumulator();
     let rowCount = 0;
@@ -282,8 +284,11 @@ async function analyzeNdjsonCandidate(
         }
         let node: JsonNode;
         try {
-            node = parseJson(line);
+            node = cooperative && line.length > 8192
+                ? await parseJsonCooperatively(line, token)
+                : parseJson(line);
         } catch {
+            throwIfCancelled(token);
             invalidLines += 1;
             if (!explicitNdjson) {
                 return null;
@@ -363,6 +368,7 @@ async function readJsonArraySample(
 export interface JsonAnalysisOptions {
     encoding?: string;
     token?: CancellationToken;
+    cooperative?: boolean;
 }
 
 /** Analyse a JSON, JSONL or NDJSON document. */
@@ -379,7 +385,9 @@ export async function analyzeJson(
     const explicitNdjson = suffix === '.jsonl' || suffix === '.ndjson';
 
     if (firstChar === '{' || explicitNdjson) {
-        const ndjson = await analyzeNdjsonCandidate(filePath, encoding, explicitNdjson, token);
+        const ndjson = await analyzeNdjsonCandidate(
+            filePath, encoding, explicitNdjson, token, options.cooperative,
+        );
         if (ndjson !== null) {
             return ndjson;
         }
@@ -420,8 +428,11 @@ export async function analyzeJson(
     );
     let document: JsonNode;
     try {
-        document = parseJson(text);
+        document = options.cooperative
+            ? await parseJsonCooperatively(text, token)
+            : parseJson(text);
     } catch (error) {
+        throwIfCancelled(token);
         return { error: error instanceof Error ? error.message : String(error) };
     }
 
@@ -467,6 +478,7 @@ export async function previewJsonRows(
     maxRows: number,
     encoding: string,
     token?: CancellationToken,
+    cooperative = false,
 ): Promise<{ columns: string[]; rows: SampleValue[][]; }> {
     const suffix = path.extname(filePath).toLowerCase();
     const explicitNdjson = suffix === '.jsonl' || suffix === '.ndjson';
@@ -487,11 +499,15 @@ export async function previewJsonRows(
                 continue;
             }
             try {
-                const row = asObjectRow(parseJson(line));
+                const node = cooperative && line.length > 8192
+                    ? await parseJsonCooperatively(line, token)
+                    : parseJson(line);
+                const row = asObjectRow(node);
                 if (row !== null) {
                     rows.push(row);
                 }
             } catch {
+                throwIfCancelled(token);
                 continue;
             }
         }
@@ -507,7 +523,9 @@ export async function previewJsonRows(
                 encoding,
                 token,
             );
-            const document = parseJson(text);
+            const document = cooperative
+                ? await parseJsonCooperatively(text, token)
+                : parseJson(text);
             if (document.kind === 'array') {
                 for (const item of document.items.slice(0, maxRows)) {
                     const row = asObjectRow(item);

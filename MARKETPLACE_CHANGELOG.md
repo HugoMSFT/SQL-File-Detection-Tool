@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 1.1.22
+
+### Added
+
+- Per-file settings with Reset and Undo, plus reusable import profiles.
+- An early sample preview while local analysis continues.
+- Public-container browsing without Microsoft sign-in.
+
+### Changed
+
+- Clearer Azure error messages and recovery steps.
+- Size-bounded metadata caching and fresh table-directory analysis.
+- Isolated UI and SQL regression workflows, plus approved publication of the
+  same VSIX that passed the release checks.
+
+### Fixed
+
+- Local files can be opened through Windows short paths and folder aliases.
+- Sampled schemas retain column overrides, rapid file selections finish
+  correctly, and settings controls preserve typing and expanded sections.
+
 ## [1.1.16] - 2026-09-26
 
 ### Fixed

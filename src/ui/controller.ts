@@ -22,7 +22,9 @@ import * as path from 'path';
 
 import {
     CancellationError,
+    FileChangedError,
     SimpleCancellationTokenSource,
+    deduplicateSharedPrerequisites,
     describeError,
     DIRECTORY_SCAN_MAX_DEPTH,
     DIRECTORY_SCAN_MAX_DIRECTORIES,
@@ -37,19 +39,20 @@ import {
     externalTableRecommendedSqlType,
     isSqlSourceFile,
     knownStorageLocation,
+    markProvisionalSql,
     nativeAnalysisService,
     NATIVE_SUPPORT_BY_TYPE,
     normalizeDataSourceType,
     normalizeGuidedAuthMethod,
     type FileMetadata,
+    type AnalysisPreview,
     type FileType,
     type GeneratorMetadata,
     type GeneratedStatements,
     type NativeAnalysisService,
-    type ParserOverrides,
+    type PreviewResult,
     sqlSourceFileType,
     type StatementKind,
-    type TargetPlatform,
 } from '../native';
 import {
     AppStateStore,
@@ -60,9 +63,6 @@ import {
     supportsPreview,
     type RegisteredFile,
 } from '../appState';
-import {
-    suggestedObjectNames,
-} from '../quickAnalyze';
 import {
     MAX_PREVIEW_ROWS,
     MIN_PREVIEW_ROWS,
@@ -75,6 +75,24 @@ import { resolveDocumentationUrl } from '../documentation';
 import { createSerialQueue, redact } from '../util';
 import type { UiHost } from './host';
 import { AzureBrowser } from '../azure/browser';
+import {
+    DEFAULT_FILE_SETTINGS,
+    IMPORT_PROFILES_PREFERENCE,
+    MAX_PROFILE_NAME_LENGTH,
+    MAX_SETTING_NAME_LENGTH,
+    SettingsValidationError,
+    fileSettingsFrom,
+    settingName,
+    validateColumnName,
+    validateFileSettings,
+    validateImportProfile,
+    validateImportProfiles,
+    validateParserOverrides,
+    validatedSqlType,
+    type FileSettings,
+    type ImportProfile,
+    type ObjectNameKey,
+} from '../fileSettings';
 
 /** Files the extension will analyse in one "Export All" pass. */
 export const MAX_EXPORT_FILES = 100;
@@ -99,6 +117,7 @@ type LocalSourceState = Pick<
     | 'metadata'
     | 'preview'
     | 'tableName'
+    | 'schemaName'
     | 'dataSource'
     | 'dataSourceType'
     | 'credentialName'
@@ -112,6 +131,7 @@ type LocalSourceState = Pick<
     | 'sourceKind'
     | 'folderProfile'
     | 'columnOverrides'
+    | 'canUndoSettings'
     | 'recommendedSqlTypes'
     | 'limitation'
     | 'lastAnalysisMs'
@@ -122,6 +142,11 @@ interface LocalSourceSnapshot {
     readonly state: LocalSourceState;
     readonly rawMetadata: FileMetadata | null;
     readonly folderMetadata: readonly FileMetadata[];
+}
+
+interface AnalysisOperation {
+    readonly token: SimpleCancellationTokenSource;
+    readonly generation: number;
 }
 
 /**
@@ -170,17 +195,16 @@ function localLocationLabel(
 export function recommendedSqlTypes(
     metadata: FileMetadata,
 ): Readonly<Record<string, string>> {
-    const recommendations: Record<string, string> = {};
-    for (const [column, detectedType] of metadata.schema ?? []) {
-        recommendations[column] = externalTableRecommendedSqlType(metadata, column, detectedType);
-    }
-    return recommendations;
+    return Object.fromEntries((metadata.schema ?? []).map(([column, detectedType]) =>
+        [column, externalTableRecommendedSqlType(metadata, column, detectedType)]));
 }
 
 export class UiController {
     private readonly service: NativeAnalysisService;
     private readonly azure: AzureBrowser | undefined;
     private readonly queue = createSerialQueue();
+    private readonly profileQueue = createSerialQueue();
+    private profiles: readonly ImportProfile[] = [];
     private tokenSource: SimpleCancellationTokenSource | undefined;
     private generation = 0;
     private regenerateHandle: unknown;
@@ -203,6 +227,7 @@ export class UiController {
         this.store.update({
             formats: this.service.listFormats(),
         });
+        this.loadImportProfiles();
         this.generateNow();
     }
 
@@ -225,6 +250,11 @@ export class UiController {
             await this.dispatch(request);
         } catch (error) {
             if (error instanceof CancellationError) {
+                return;
+            }
+            if (error instanceof SettingsValidationError) {
+                this.host.log(`Settings were not changed: ${error.message}`);
+                this.store.update({ error: error.message });
                 return;
             }
             const message = redact(describeError(error));
@@ -318,16 +348,21 @@ export class UiController {
                 this.store.update({ fileFilter: request.value });
                 return;
             case 'selectFile':
-                return this.queue(() => this.selectFile(request.fileId));
+                return this.selectFile(request.fileId);
             case 'activateLocalSource':
-                return this.queue(() => this.showLocalSource());
+                return this.showLocalSource();
             case 'openLocalDialog':
-                return this.queue(() => this.browseLocal());
+                return this.browseLocal();
             case 'openAzureBrowser':
                 this.activateAzureSource();
                 return this.runAzure(() => this.requireAzure().open());
             case 'azureBrowserConnect':
                 return this.runAzure(() => this.requireAzure().connect());
+            case 'azureBrowserOpenPublicContainer':
+                this.activateAzureSource();
+                return this.runAzure(() =>
+                    this.requireAzure().openPublicContainer(request.url, request.prefix),
+                );
             case 'azureBrowserRefresh':
                 return this.runAzure(() => this.requireAzure().refresh());
             case 'azureBrowserDisconnect': {
@@ -373,22 +408,16 @@ export class UiController {
                 this.useCurrentAzureFolder();
                 return;
             case 'setTableName':
-                this.store.update({ tableName: request.value });
-                this.regenerate();
+                this.setObjectName(request.fileId, 'tableName', request.value);
                 return;
             case 'setSchemaName':
-                this.store.update({ schemaName: request.value });
-                this.regenerate();
+                this.setObjectName(request.fileId, 'schemaName', request.value);
                 return;
             case 'setDataSource':
-                this.store.update({ dataSource: request.value });
-                this.refreshQuickAnalyze();
-                this.regenerate();
+                this.setObjectName(request.fileId, 'dataSource', request.value);
                 return;
             case 'setCredentialName':
-                this.store.update({ credentialName: request.value });
-                this.refreshQuickAnalyze();
-                this.regenerate();
+                this.setObjectName(request.fileId, 'credentialName', request.value);
                 return;
             case 'setAuthMethod':
                 this.store.update({
@@ -523,60 +552,79 @@ export class UiController {
                 return;
             }
             case 'setFormatName':
-                this.store.update({ formatName: request.value });
-                this.refreshQuickAnalyze();
-                this.regenerate();
+                this.setObjectName(request.fileId, 'formatName', request.value);
                 return;
             case 'setParserOverride': {
-                if (request.fileId !== this.store.state.selectedFileId) {
-                    return;
-                }
-                const value = this.parseParserOverride(request.key, request.value);
-                if (value === undefined) {
-                    return;
-                }
-                const parserOverrides = {
+                this.currentSettingsFile(request.fileId);
+                const value = request.key === 'firstRow'
+                    ? Number(request.value)
+                    : request.value === '\\t' && request.key === 'fieldDelimiter'
+                        ? '\t'
+                        : request.value;
+                const parserOverrides = validateParserOverrides({
                     ...this.store.state.parserOverrides,
                     [request.key]: value,
-                };
-                this.store.update({ parserOverrides, error: null });
-                this.refreshQuickAnalyze();
-                this.regenerate();
+                });
+                this.changeSettings({ parserOverrides });
                 return;
             }
             case 'resetParserOverride': {
+                this.currentSettingsFile(request.fileId);
                 const parserOverrides = { ...this.store.state.parserOverrides };
                 delete parserOverrides[request.key];
-                this.store.update({ parserOverrides });
-                this.refreshQuickAnalyze();
-                this.regenerate();
+                this.changeSettings({ parserOverrides }, true);
                 return;
             }
             case 'setColumnOverride': {
-                if (request.fileId !== this.store.state.selectedFileId) {
-                    return;
+                this.currentSettingsFile(request.fileId);
+                const column = validateColumnName(request.column);
+                if (!this.rawMetadata?.schema?.some(([name]) => name === column)) {
+                    throw new SettingsValidationError('That column is not in the selected file. Analyze the file again to refresh its schema.');
                 }
                 const overrides = { ...this.store.state.columnOverrides };
                 if (request.sqlType.trim() === '') {
-                    delete overrides[request.column];
+                    delete overrides[column];
                 } else {
-                    overrides[request.column] = request.sqlType.trim();
+                    overrides[column] = validatedSqlType(request.sqlType);
                 }
-                this.store.update({ columnOverrides: overrides });
-                this.regenerate();
+                this.changeSettings({ columnOverrides: overrides });
                 return;
             }
             case 'clearColumnOverrides':
-                this.store.update({ columnOverrides: {} });
-                this.regenerate();
+                this.currentSettingsFile(request.fileId);
+                this.changeSettings({ columnOverrides: {} }, true);
                 return;
+            case 'resetFileSettings':
+                this.currentSettingsFile(request.fileId);
+                this.changeSettings({
+                    ...DEFAULT_FILE_SETTINGS,
+                    tableName: this.defaultTableName(),
+                }, true, 'Settings reset. The selected file and detected facts have not changed. Undo restores your previous settings.');
+                return;
+            case 'undoFileSettings': {
+                const file = this.currentSettingsFile(request.fileId);
+                const previous = this.store.undoSettings(file);
+                if (!previous) {
+                    throw new SettingsValidationError('There is no settings change to undo for this file.');
+                }
+                const matched = this.matchingSettings(previous, this.rawMetadata);
+                this.changeSettings(matched.settings, true, this.missingColumnsNotice(matched.missing) ?? 'Previous file settings restored.', false);
+                return;
+            }
+            case 'saveImportProfile':
+                return this.saveImportProfile(request.fileId, request.name);
+            case 'applyImportProfile':
+                this.applyImportProfile(request.fileId, request.name);
+                return;
+            case 'deleteImportProfile':
+                return this.deleteImportProfile(request.name);
             case 'setPreviewRows': {
                 const rows = Math.max(
                     MIN_PREVIEW_ROWS,
                     Math.min(request.rows, MAX_PREVIEW_ROWS),
                 );
                 this.store.update({ previewRows: rows });
-                return this.queue(() => this.refreshPreview());
+                return this.refreshPreview();
             }
             case 'copyStatement':
                 return this.copyStatement(request.kind);
@@ -610,23 +658,177 @@ export class UiController {
         }
     }
 
+    // -- local settings and explicitly saved profiles ------------------------
+
+    private currentSettingsFile(fileId: string): RegisteredFile {
+        const file = this.store.selected;
+        if (
+            this.store.state.sourceMode !== 'local' || !file
+            || file.id !== fileId || !file.settingsIdentity
+        ) {
+            throw new SettingsValidationError('Those settings belong to a different or unavailable file. Select the file again.');
+        }
+        return file;
+    }
+
+    private setObjectName(fileId: string | null, key: ObjectNameKey, value: string): void {
+        if (fileId !== null) {
+            this.currentSettingsFile(fileId);
+        } else if (this.store.state.selectedFileId !== null) {
+            throw new SettingsValidationError('Those object names are not for the selected file.');
+        }
+        this.changeSettings({ [key]: settingName(value) });
+    }
+
+    private changeSettings(
+        patch: Partial<FileSettings>,
+        replace = false,
+        notice?: string,
+        rememberUndo = true,
+    ): void {
+        const settings = validateFileSettings({ ...fileSettingsFrom(this.store.state), ...patch });
+        const file = this.store.selected;
+        if (file) {
+            this.store.rememberSettings(file, settings, rememberUndo);
+        }
+        this.store.update({
+            ...settings,
+            canUndoSettings: !!file && this.store.canUndoSettings(file),
+            settingsRevision: this.store.state.settingsRevision + (replace ? 1 : 0),
+            error: null,
+            notice: notice ?? this.store.state.notice,
+        });
+        this.refreshQuickAnalyze();
+        if (replace) {
+            this.generateNow();
+        } else {
+            this.regenerate();
+        }
+    }
+
+    private defaultTableName(metadata: GeneratorMetadata | null = this.rawMetadata): string {
+        return metadata
+            ? this.service.resolveTableName(metadata, null).slice(0, MAX_SETTING_NAME_LENGTH)
+            : '';
+    }
+
+    private matchingSettings(
+        settings: FileSettings,
+        metadata: FileMetadata | null,
+    ): { settings: FileSettings; missing: string[] } {
+        if (!metadata || !metadata.schema || metadata.error || metadata.analysis_truncated
+            || metadata.analysis_stage === 'provisional' || metadata.schema_inference === 'sampled') {
+            return { settings, missing: [] };
+        }
+        const columns = new Set((metadata.schema ?? []).map(([name]) => name));
+        const missing = Object.keys(settings.columnOverrides).filter((name) => !columns.has(name));
+        return {
+            settings: {
+                ...settings,
+                columnOverrides: Object.fromEntries(
+                    Object.entries(settings.columnOverrides).filter(([name]) => columns.has(name)),
+                ),
+            },
+            missing,
+        };
+    }
+
+    private missingColumnsNotice(missing: readonly string[]): string | null {
+        if (missing.length === 0) {
+            return null;
+        }
+        const rest = missing.length > 8 ? ` and ${missing.length - 8} more` : '';
+        return `Skipped SQL type overrides for columns not in this file: ${missing.slice(0, 8).join(', ')}${rest}. Other settings were kept.`;
+    }
+
+    private loadImportProfiles(): void {
+        try {
+            const stored = this.host.getPreference<unknown>(IMPORT_PROFILES_PREFERENCE, []);
+            this.profiles = validateImportProfiles(stored);
+            this.store.update({ importProfiles: this.profiles.map((profile) => profile.name) });
+        } catch {
+            // A corrupt preference is untrusted data, including its error text.
+            const warning = 'Saved import profiles could not be loaded because they are invalid, unsupported, or too large. No saved data was changed.';
+            this.host.log(warning);
+            this.host.showWarning(warning);
+            this.store.update({ notice: warning });
+        }
+    }
+
+    private saveImportProfile(fileId: string, name: string): Promise<void> {
+        this.currentSettingsFile(fileId);
+        // Capture before any await: another surface may select a different file.
+        const profile = validateImportProfile({
+            version: 1,
+            name,
+            ...fileSettingsFrom(this.store.state),
+        });
+        return this.profileQueue(async () => {
+            const existing = this.profiles.find((entry) => entry.name === profile.name);
+            const profiles = existing
+                ? this.profiles.map((entry) => entry.name === profile.name ? profile : entry)
+                : [...this.profiles, profile];
+            await this.persistImportProfiles(profiles, 'Import profile saved. Only object names and parser and SQL type overrides were saved.');
+        });
+    }
+
+    private applyImportProfile(fileId: string, name: string): void {
+        this.currentSettingsFile(fileId);
+        const profile = this.profiles.find((entry) => entry.name === name);
+        if (!profile) {
+            throw new SettingsValidationError('That import profile is no longer available.');
+        }
+        if (!this.rawMetadata || this.rawMetadata.analysis_stage === 'provisional') {
+            throw new SettingsValidationError('Wait for file analysis to finish before applying an import profile.');
+        }
+        const matched = this.matchingSettings(fileSettingsFrom(profile), this.rawMetadata);
+        this.changeSettings(matched.settings, true, this.missingColumnsNotice(matched.missing)
+            ?? 'Import profile applied. The target platform, source, and SQL runtime access have not changed.');
+    }
+
+    private deleteImportProfile(name: string): Promise<void> {
+        const validatedName = settingName(name, MAX_PROFILE_NAME_LENGTH, false);
+        return this.profileQueue(async () => {
+            if (!this.profiles.some((entry) => entry.name === validatedName)) {
+                throw new SettingsValidationError('That import profile is no longer available.');
+            }
+            await this.persistImportProfiles(
+                this.profiles.filter((entry) => entry.name !== validatedName),
+                'Import profile deleted. Current file settings have not changed.',
+            );
+        });
+    }
+
+    private async persistImportProfiles(value: readonly ImportProfile[], notice: string): Promise<void> {
+        const profiles = validateImportProfiles(value);
+        try {
+            await this.host.setPreference(IMPORT_PROFILES_PREFERENCE, profiles);
+        } catch {
+            throw new SettingsValidationError('Import profiles could not be saved. The previous saved profiles are unchanged; try again.');
+        }
+        if (!this.disposed) {
+            this.profiles = profiles;
+            this.store.update({ importProfiles: profiles.map((profile) => profile.name), notice, error: null });
+        }
+    }
+
     // -- cancellation / staleness -------------------------------------------
 
-    private begin(): {
-        token: SimpleCancellationTokenSource;
-        generation: number;
-    } {
+    private begin(): AnalysisOperation {
         this.cancelActive();
         const token = new SimpleCancellationTokenSource();
         this.tokenSource = token;
-        this.generation += 1;
         return { token, generation: this.generation };
     }
 
     private cancelActive(): void {
+        this.generation += 1;
         this.tokenSource?.cancel();
         this.tokenSource = undefined;
         this.azure?.cancel();
+        if (this.store.state.busy) {
+            this.store.update({ busy: false, progress: null });
+        }
     }
 
     private requireAzure(): AzureBrowser {
@@ -646,13 +848,13 @@ export class UiController {
 
     private useSelectedAzureFile(): void {
         const azure = this.requireAzure();
-        const value = azure.selectedUrl();
-        if (!value) {
-            this.store.update({ azure: azure.snapshot });
+        const selection = azure.selectedLocation();
+        if (!selection) {
+            this.store.update({ azure: azure.snapshot, error: 'Select a file from a successful Azure listing first.' });
             return;
         }
         this.activateAzureSource();
-        const location = knownStorageLocation(value);
+        const location = knownStorageLocation(selection.url);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
@@ -665,7 +867,7 @@ export class UiController {
             });
             return;
         }
-        const authMethod = normalizeGuidedAuthMethod(
+        const authMethod = selection.access === 'public' ? 'public' : normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
                 : this.store.state.authMethod,
@@ -692,7 +894,9 @@ export class UiController {
             authMethod,
             error: null,
             notice:
-                'Azure file location selected. Configure SQL credentials for this URL; remote bytes were not downloaded or analyzed.',
+                selection.access === 'public'
+                    ? 'Public Azure file location selected. SQL runtime access is Public (no credential); remote bytes were not downloaded or analyzed.'
+                    : 'Azure file location selected. Configure SQL credentials for this URL; remote bytes were not downloaded or analyzed.',
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -700,14 +904,14 @@ export class UiController {
 
     private useCurrentAzureFolder(): void {
         const azure = this.requireAzure();
-        const value = azure.currentFolderUrl();
-        if (!value) {
-            this.store.update({ azure: azure.snapshot });
+        const selection = azure.currentFolderLocation();
+        if (!selection) {
+            this.store.update({ azure: azure.snapshot, error: 'Open a folder from a successful Azure listing first.' });
             return;
         }
         const snapshot = azure.snapshot;
         this.activateAzureSource();
-        const location = knownStorageLocation(value);
+        const location = knownStorageLocation(selection.url);
         const dataSourceType = normalizeDataSourceType(
             location.dataSourceType,
             this.store.state.platform,
@@ -720,7 +924,7 @@ export class UiController {
             });
             return;
         }
-        const authMethod = normalizeGuidedAuthMethod(
+        const authMethod = selection.access === 'public' ? 'public' : normalizeGuidedAuthMethod(
             this.store.state.authMethod === 'public'
                 ? null
                 : this.store.state.authMethod,
@@ -781,7 +985,9 @@ export class UiController {
             },
             error: null,
             notice:
-                'Azure folder location selected. Configure SQL credentials for this URL; browse metadata remains available in Preview.',
+                selection.access === 'public'
+                    ? 'Public Azure folder location selected. SQL runtime access is Public (no credential); Preview contains listing metadata only, not remote file bytes.'
+                    : 'Azure folder location selected. Configure SQL credentials for this URL; browse metadata remains available in Preview.',
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -795,6 +1001,7 @@ export class UiController {
     // -- file selection ------------------------------------------------------
 
     private async showLocalSource(): Promise<void> {
+        this.cancelActive();
         this.activateLocalSource();
         if (!this.store.state.sourceLabel && this.store.state.files.length === 0) {
             await this.browseLocal();
@@ -802,14 +1009,16 @@ export class UiController {
     }
 
     private async browseLocal(): Promise<void> {
+        this.cancelActive();
         this.activateLocalSource();
+        const generation = this.generation;
         const picked = await this.host.showOpenDialog({
             files: true,
             folders: true,
             many: true,
             title: 'Select data files or a folder to analyze',
         });
-        if (!picked || picked.length === 0) {
+        if (!this.isCurrent(generation) || !picked || picked.length === 0) {
             return;
         }
         const folders = picked.filter((item) => item.isDirectory);
@@ -916,6 +1125,7 @@ export class UiController {
     /** Analyse one or more explicitly chosen files. */
     async loadFiles(paths: readonly string[]): Promise<void> {
         this.activateLocalSource();
+        this.cancelActive();
         this.folderMetadata = [];
         const supportedPaths = paths.filter(isSqlSourceFile);
         const skipped = paths.length - supportedPaths.length;
@@ -925,6 +1135,8 @@ export class UiController {
             this.store.clearSelection();
             this.generateNow();
             this.store.update({
+                busy: false,
+                progress: null,
                 fileFilter: '',
                 error:
                     'No SQL-readable data file was selected. Use CSV, TSV, DAT, JSON, ' +
@@ -990,10 +1202,10 @@ export class UiController {
             notice: null,
         });
         this.refreshQuickAnalyze();
-        if (first) {
-            await this.selectFile(first.id);
-        }
-        if (skipped > 0) {
+        const selecting = first ? this.selectFile(first.id) : undefined;
+        const selectionGeneration = this.generation;
+        await selecting;
+        if (skipped > 0 && this.isCurrent(selectionGeneration)) {
             this.store.update({
                 notice:
                     `${skipped} unsupported ${skipped === 1 ? 'file was' : 'files were'} skipped.`,
@@ -1002,41 +1214,56 @@ export class UiController {
     }
 
     private async selectFile(fileId: string): Promise<void> {
-        const file = this.store.lookup(fileId);
-        if (!file) {
+        if (!this.store.lookup(fileId)) {
             // A stale id from a previous listing. Say so rather than guessing.
             this.store.update({ error: 'That file is no longer in the list. Refresh and try again.' });
             return;
         }
+        const operation = this.begin();
         this.activateLocalSource();
-        const changed = this.store.state.selectedFileId !== fileId;
-        if (changed) {
-            this.rawMetadata = null;
-        }
-        this.store.update({
-            selectedFileId: fileId,
-            locationLabel: localLocationLabel(
-                file.absolutePath,
-                this.host.workspaceFolders(),
-            ),
-            activeTab: 'preview',
-            metadata: changed ? null : this.store.state.metadata,
-            preview: changed ? null : this.store.state.preview,
-            statements: changed ? null : this.store.state.statements,
-            tableName: changed ? '' : this.store.state.tableName,
-            parserOverrides: changed ? {} : this.store.state.parserOverrides,
-            columnOverrides: changed ? {} : this.store.state.columnOverrides,
-            recommendedSqlTypes: changed ? {} : this.store.state.recommendedSqlTypes,
-            limitation: changed ? null : this.store.state.limitation,
-            lastAnalysisMs: changed ? null : this.store.state.lastAnalysisMs,
-            error: null,
-            notice: null,
-        });
-        if (changed) {
+        const previousFile = this.store.selected;
+        try {
+            const file = await this.store.identifyFile(fileId);
+            if (!this.isCurrent(operation.generation)) {
+                return;
+            }
+            if (!file) {
+                throw new Error('That file is no longer in the list. Refresh and try again.');
+            }
+            const changed = this.store.state.selectedFileId !== fileId
+                || previousFile?.settingsIdentity !== file.settingsIdentity;
+            const settings = changed
+                ? this.store.settingsFor(file, {
+                      ...DEFAULT_FILE_SETTINGS,
+                      tableName: this.defaultTableName({ file_path: file.absolutePath }),
+                  })
+                : fileSettingsFrom(this.store.state);
+            this.store.rememberSettings(file, settings, false);
+            if (changed) {
+                this.rawMetadata = null;
+            }
+            this.store.update({
+                ...settings,
+                selectedFileId: fileId,
+                locationLabel: localLocationLabel(file.absolutePath, this.host.workspaceFolders()),
+                activeTab: 'preview',
+                metadata: changed ? null : this.store.state.metadata,
+                preview: changed ? null : this.store.state.preview,
+                statements: changed ? null : this.store.state.statements,
+                recommendedSqlTypes: changed ? {} : this.store.state.recommendedSqlTypes,
+                limitation: changed ? null : this.store.state.limitation,
+                lastAnalysisMs: changed ? null : this.store.state.lastAnalysisMs,
+                canUndoSettings: this.store.canUndoSettings(file),
+                settingsRevision: this.store.state.settingsRevision + (changed ? 1 : 0),
+                error: null,
+                notice: null,
+            });
             this.refreshQuickAnalyze();
+            void this.host.setPreference('activeTab', 'preview');
+            await this.analyzeSelected(file, operation);
+        } catch (error) {
+            this.failIfCurrent(operation.generation, error);
         }
-        void this.host.setPreference('activeTab', 'preview');
-        await this.analyzeSelected(file);
     }
 
     private activateLocalSource(): void {
@@ -1071,6 +1298,7 @@ export class UiController {
                 progress: null,
                 error: null,
                 notice: null,
+                settingsRevision: this.store.state.settingsRevision + 1,
             });
             void this.host.setPreference('activeTab', 'preview');
             this.refreshQuickAnalyze();
@@ -1122,6 +1350,7 @@ export class UiController {
                 metadata: state.metadata,
                 preview: state.preview,
                 tableName: state.tableName,
+                schemaName: state.schemaName,
                 dataSource: state.dataSource,
                 dataSourceType: state.dataSourceType,
                 credentialName: state.credentialName,
@@ -1135,6 +1364,7 @@ export class UiController {
                 sourceKind: state.sourceKind,
                 folderProfile: state.folderProfile,
                 columnOverrides: state.columnOverrides,
+                canUndoSettings: state.canUndoSettings,
                 recommendedSqlTypes: state.recommendedSqlTypes,
                 limitation: state.limitation,
                 lastAnalysisMs: state.lastAnalysisMs,
@@ -1155,18 +1385,27 @@ export class UiController {
             storageUrl: '',
             azureFolderPreview: null,
             remoteSchema: null,
-            tableName: '',
-            parserOverrides: {},
-            columnOverrides: {},
+            ...DEFAULT_FILE_SETTINGS,
+            canUndoSettings: false,
+            settingsRevision: this.store.state.settingsRevision + 1,
             recommendedSqlTypes: {},
+            busy: false,
+            progress: null,
             error: null,
             notice: null,
         });
     }
 
-    private async analyzeSelected(file: RegisteredFile): Promise<void> {
-        const { token, generation } = this.begin();
+    private async analyzeSelected(
+        file: RegisteredFile,
+        operation = this.begin(),
+    ): Promise<void> {
+        const { token, generation } = operation;
         const started = this.host.now();
+        const current = (): boolean =>
+            this.isCurrent(generation)
+            && this.store.state.selectedFileId === file.id
+            && this.store.state.sourceMode === 'local';
         this.store.update({
             busy: true,
             progress: `Analyzing ${file.entry.label}…`,
@@ -1174,35 +1413,51 @@ export class UiController {
             preview: null,
         });
         try {
-            const metadata = await this.service.analyze({
+            const result = await this.service.analyzeProgressively({
                 filePath: file.absolutePath,
                 allowedRoot: file.allowedRoot,
                 token: token.token,
+                maxRows: this.store.state.previewRows,
+                progress: {
+                    report: ({ message }) => {
+                        if (current() && message) {
+                            this.store.update({
+                                progress: this.rawMetadata?.analysis_stage === 'provisional'
+                                    ? `Sample preview — analyzing file… ${message}`
+                                    : message,
+                            });
+                        }
+                    },
+                },
+                onPreview: (sample) => {
+                    if (!current()) {
+                        return;
+                    }
+                    this.rawMetadata = sample.metadata;
+                    this.applyMetadata(sample.metadata, this.host.now() - started, false, sample.preview);
+                    this.store.update({ progress: 'Sample preview — analyzing file…' });
+                    if (sample.preview.error) {
+                        this.host.log(`Sample preview: ${redact(sample.preview.error)}`);
+                    }
+                    if (!this.firstAnalysisLogged) {
+                        this.host.log(`First native sample preview published in ${Math.round(this.host.now() - started)} ms.`);
+                    }
+                },
             });
-            if (!this.isCurrent(generation)) {
+            if (!current()) {
                 return;
             }
-            this.rawMetadata = metadata;
+            this.rawMetadata = result.metadata;
             const elapsedMs = this.host.now() - started;
-            this.applyMetadata(metadata, elapsedMs);
+            this.applyMetadata(
+                result.metadata, elapsedMs, true,
+                supportsPreview(result.metadata) ? result.preview : null,
+            );
             if (!this.firstAnalysisLogged) {
                 this.firstAnalysisLogged = true;
                 this.host.log(`First native analysis completed in ${Math.round(elapsedMs)} ms.`);
             }
 
-            if (supportsPreview(metadata)) {
-                this.store.update({ progress: 'Reading preview rows…' });
-                const preview = await this.service.preview({
-                    filePath: file.absolutePath,
-                    allowedRoot: file.allowedRoot,
-                    maxRows: this.store.state.previewRows,
-                    token: token.token,
-                });
-                if (!this.isCurrent(generation)) {
-                    return;
-                }
-                this.store.update({ preview });
-            }
             this.store.update({ busy: false, progress: null });
         } catch (error) {
             this.failIfCurrent(generation, error);
@@ -1211,22 +1466,47 @@ export class UiController {
 
     private async refreshPreview(): Promise<void> {
         const file = this.store.selected;
-        if (!file || !supportsPreview(this.rawMetadata)) {
+        const metadata = this.rawMetadata;
+        if (!file || (metadata && !supportsPreview(metadata))) {
+            return;
+        }
+        if (!metadata && !['csv', 'json', 'text'].includes(file.entry.fileType)) {
+            await this.analyzeSelected(file);
             return;
         }
         const { token, generation } = this.begin();
         this.store.update({ busy: true, progress: 'Reading preview rows…' });
         try {
-            const preview = await this.service.preview({
+            const request = {
                 filePath: file.absolutePath,
                 allowedRoot: file.allowedRoot,
                 maxRows: this.store.state.previewRows,
                 token: token.token,
-            });
-            if (!this.isCurrent(generation)) {
+            };
+            let sample: AnalysisPreview | undefined;
+            let preview: PreviewResult;
+            if (!metadata || metadata.analysis_stage === 'provisional') {
+                sample = await this.service.samplePreview(request);
+                preview = sample.preview;
+            } else {
+                preview = await this.service.previewAnalyzed({ ...request, metadata });
+            }
+            if (!this.isCurrent(generation) || this.store.state.selectedFileId !== file.id) {
                 return;
             }
-            this.store.update({ preview, busy: false, progress: null });
+            if (sample) {
+                this.rawMetadata = sample.metadata;
+                this.applyMetadata(sample.metadata, 0, false, preview);
+            }
+            this.store.update({
+                preview,
+                busy: false,
+                progress: null,
+                error: preview.error ? redact(preview.error) : null,
+                notice: sample
+                    ? 'Sample preview only — analysis incomplete. Select the file again to finish analysis.'
+                    : this.store.state.notice,
+            });
         } catch (error) {
             this.failIfCurrent(generation, error);
         }
@@ -1238,32 +1518,45 @@ export class UiController {
         }
         const message = redact(describeError(error));
         this.host.log(`Analysis failed: ${message}`);
+        if (error instanceof FileChangedError && this.rawMetadata?.analysis_stage !== 'provisional') {
+            this.rawMetadata = null;
+            this.store.update({ metadata: null, preview: null, statements: null });
+        }
         this.store.update({ busy: false, progress: null, error: message });
     }
 
     // -- generation ----------------------------------------------------------
 
-    private applyMetadata(metadata: FileMetadata, elapsedMs: number): void {
+    private applyMetadata(
+        metadata: FileMetadata,
+        elapsedMs: number,
+        authoritative = true,
+        preview?: PreviewResult | null,
+    ): void {
         const display = metadataForDisplay(metadata, this.host.workspaceFolders());
         const state = this.store.state;
-        const sourceNames =
-            state.sourceKind === 'local' || !state.storageUrl
-                ? null
-                : suggestedObjectNames(
-                      state.storageUrl,
-                      metadata.file_type,
-                      state.authMethod,
-                  );
+        const matched = authoritative
+            ? this.matchingSettings(fileSettingsFrom(state), metadata)
+            : { settings: fileSettingsFrom(state), missing: [] };
+        const settings = matched.settings;
+        const file = this.store.selected;
+        if (file) {
+            this.store.rememberSettings(file, settings, false);
+        }
         this.store.update({
+            ...settings,
             metadata: display,
+            ...(preview !== undefined ? { preview } : {}),
             recommendedSqlTypes: recommendedSqlTypes(metadata),
             limitation: limitationFor(metadata),
-            tableName: state.tableName || this.service.resolveTableName(metadata, null),
-            dataSource: sourceNames?.dataSource ?? state.dataSource,
-            credentialName: sourceNames?.credentialName ?? state.credentialName,
-            formatName: sourceNames?.formatName ?? state.formatName,
+            canUndoSettings: !!file && this.store.canUndoSettings(file),
+            settingsRevision: state.settingsRevision + (matched.missing.length > 0 ? 1 : 0),
+            notice: this.missingColumnsNotice(matched.missing) ?? state.notice,
             authMethod: state.authMethod,
-            lastAnalysisMs: Math.max(0, Math.round(elapsedMs)),
+            lastAnalysisMs: authoritative ? Math.max(0, Math.round(elapsedMs)) : null,
+            error: metadata.error || preview?.error
+                ? redact(metadata.error || preview?.error || '')
+                : null,
         });
         this.refreshQuickAnalyze();
         this.generateNow();
@@ -1276,40 +1569,6 @@ export class UiController {
             this.folderMetadata,
         );
         this.store.update(patch);
-    }
-
-    private parseParserOverride(
-        key: keyof ParserOverrides,
-        raw: string,
-    ): ParserOverrides[keyof ParserOverrides] | undefined {
-        if (key === 'firstRow') {
-            const value = Number(raw);
-            if (!Number.isInteger(value) || value < 1 || value > 1_000_000) {
-                this.store.update({ error: 'FIRSTROW must be an integer from 1 to 1000000.' });
-                return undefined;
-            }
-            return value;
-        }
-        if (key === 'format') {
-            const formats = this.store.state.formats.map((entry) => entry.fileType);
-            if (!formats.includes(raw as FileMetadata['file_type'])) {
-                this.store.update({ error: 'Choose a supported file format.' });
-                return undefined;
-            }
-            return raw as FileMetadata['file_type'];
-        }
-        if (
-            (key === 'fieldDelimiter' || key === 'quoteCharacter') &&
-            [...raw].length !== 1
-        ) {
-            this.store.update({ error: `${key} must be exactly one character.` });
-            return undefined;
-        }
-        if (key === 'rowTerminator' && raw.length === 0) {
-            this.store.update({ error: 'Row terminator cannot be empty.' });
-            return undefined;
-        }
-        return raw;
     }
 
     /** Schedule a regeneration, collapsing bursts of keystrokes into one. */
@@ -1401,9 +1660,9 @@ export class UiController {
         });
         const statements: GeneratedStatements = {
             ...generated,
-            credential_setup: state.storageUrl
+            credential_setup: markProvisionalSql(state.storageUrl
                 ? this.storageGoalSql(this.rawMetadata, credentialSetup, true)
-                : credentialSetup,
+                : credentialSetup, this.rawMetadata),
         };
         this.store.update({ statements });
     }
@@ -1453,6 +1712,11 @@ export class UiController {
         schemaAnalyzed = false,
     ): string {
         const state = this.store.state;
+        const configuredMetadata: GeneratorMetadata = {
+            ...metadata,
+            sql_type_overrides: { ...state.columnOverrides },
+            parser_overrides: { ...state.parserOverrides },
+        };
         const dataSource = state.dataSource || 'MyDataSource';
         const isFolder = state.azureFolderPreview !== null;
         const extension = metadata.file_type === 'text'
@@ -1495,21 +1759,21 @@ export class UiController {
 
         let operation: string;
         if (state.storageGoal === 'bulk_insert') {
-            operation = generateBulkInsert(metadata, {
+            operation = generateBulkInsert(configuredMetadata, {
                 ...shared,
                 includePrereq: false,
                 credentialName: state.credentialName || null,
                 authMethod: state.authMethod || null,
             });
         } else if (state.storageGoal === 'openrowset') {
-            operation = generateOpenrowset(metadata, shared);
+            operation = generateOpenrowset(configuredMetadata, shared);
         } else {
             operation = [
-                generateExternalFileFormat(metadata, {
+                generateExternalFileFormat(configuredMetadata, {
                     formatName: state.formatName || null,
                     targetPlatform: state.platform,
                 }),
-                generateExternalTable(metadata, {
+                generateExternalTable(configuredMetadata, {
                     ...shared,
                     fileFormat: state.formatName || null,
                 }),
@@ -1595,13 +1859,15 @@ export class UiController {
         }
 
         const { token, generation } = this.begin();
-        const state = this.store.state;
-        const entries: Array<{ metadata: FileMetadata; tableName?: string | null }> = [];
+        const entries: Array<{ metadata: FileMetadata; file: RegisteredFile }> = [];
         const budget = Math.min(files.length, MAX_EXPORT_FILES);
         this.store.update({ busy: true, progress: 'Preparing export…', error: null });
         try {
             for (let index = 0; index < budget; index += 1) {
-                const registered = this.store.lookup(files[index].id);
+                const registered = await this.store.identifyFile(files[index].id);
+                if (!this.isCurrent(generation)) {
+                    return;
+                }
                 if (!registered) {
                     continue;
                 }
@@ -1616,47 +1882,39 @@ export class UiController {
                 if (!this.isCurrent(generation)) {
                     return;
                 }
-                entries.push({
-                    metadata: {
-                        ...metadata,
-                        sql_type_overrides:
-                            registered.id === state.selectedFileId
-                                ? { ...state.columnOverrides }
-                                : undefined,
-                        parser_overrides:
-                            registered.id === state.selectedFileId &&
-                            Object.keys(state.parserOverrides).length > 0
-                                ? { ...state.parserOverrides }
-                                : undefined,
-                    },
-                    // A table name is a per-file override, so it only applies
-                    // to the file it was typed for.
-                    tableName:
-                        registered.id === state.selectedFileId
-                            ? state.tableName || null
-                            : null,
-                });
+                entries.push({ metadata, file: registered });
             }
-            const script = this.service.generateMultiFileScript({
-                entries,
-                schemaName: state.schemaName || 'dbo',
-                dataSource: state.dataSource || 'MyDataSource',
-                credentialName: state.credentialName || null,
-                authMethod: state.authMethod || null,
-                targetPlatform: state.platform as TargetPlatform,
-                storageUrl: state.storageUrl || null,
-                dataSourceType: state.dataSourceType,
-            });
+            const state = this.store.state;
+            const seen = new Set<string>();
+            const missing = new Set<string>();
+            const script = entries.map(({ metadata, file }) => {
+                const matched = this.matchingSettings(this.store.settingsFor(file), metadata);
+                matched.missing.forEach((column) => missing.add(column));
+                const settings = matched.settings;
+                return deduplicateSharedPrerequisites(this.service.generateCompleteDocument({
+                    metadata: { ...metadata, sql_type_overrides: { ...settings.columnOverrides } },
+                    tableName: settings.tableName || null,
+                    schemaName: settings.schemaName || 'dbo',
+                    dataSource: settings.dataSource || 'MyDataSource',
+                    credentialName: settings.credentialName || null,
+                    formatName: settings.formatName || null,
+                    parserOverrides: { ...settings.parserOverrides },
+                    authMethod: state.authMethod || null,
+                    targetPlatform: state.platform,
+                    storageUrl: state.storageUrl || null,
+                    dataSourceType: state.dataSourceType,
+                }), seen);
+            }).join('\n\n');
             if (!this.isCurrent(generation)) {
                 return;
             }
             this.store.update({
                 busy: false,
                 progress: null,
-                notice:
-                    files.length > budget
-                        ? `Exported the first ${budget} of ${files.length} files.`
-                        : null,
+                notice: [
+                    files.length > budget ? `Exported the first ${budget} of ${files.length} files.` : '',
+                    this.missingColumnsNotice([...missing]),
+                ].filter(Boolean).join(' ') || null,
             });
             await this.deliverExport('sql-file-detection-tool.sql', script);
         } catch (error) {
@@ -1706,9 +1964,7 @@ export class UiController {
 
     /** Analyse an explicit path chosen outside the webview (a command). */
     async analyzePath(target: string, isDirectory: boolean): Promise<void> {
-        await this.queue(() =>
-            isDirectory ? this.loadDirectory(target) : this.loadFiles([target]),
-        );
+        await (isDirectory ? this.loadDirectory(target) : this.loadFiles([target]));
     }
 
     async dispose(): Promise<void> {
@@ -1723,6 +1979,8 @@ export class UiController {
         }
         this.rawMetadata = null;
         this.folderMetadata = [];
+        this.localSourceSnapshot = undefined;
+        this.profiles = [];
         this.azure?.disconnect();
     }
 }

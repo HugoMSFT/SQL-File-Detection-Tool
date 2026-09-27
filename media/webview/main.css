@@ -1155,6 +1155,30 @@ thead th {
   margin-bottom: var(--gap);
 }
 
+.file-settings {
+  border: 1px solid var(--vscode-panel-border, var(--vscode-contrastBorder));
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.settings-actions,
+.import-profile-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.import-profile-controls .field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.parser-settings {
+  margin-top: var(--gap);
+}
+
 .parser-option,
 .source-readiness,
 .folder-profile,
@@ -1406,6 +1430,7 @@ body.surface-panel [data-action='openInEditor'] {
 
 .azure-identity-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -1413,6 +1438,23 @@ body.surface-panel [data-action='openInEditor'] {
   display: grid;
   grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
   min-height: 410px;
+}
+
+.azure-public-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.azure-public-form {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+  padding: 20px;
+  margin: auto;
+}
+
+.azure-public-form h2,
+.azure-public-form p {
+  margin: 0;
 }
 
 .azure-accounts-pane {

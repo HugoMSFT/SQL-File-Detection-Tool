@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { NativeAnalysisError, PathContainmentError } from './errors';
+import { throwIfCancelled, type CancellationToken } from './cancellation';
 import type { StorageReference } from './types';
 
 /** Case-insensitive comparison is required on Windows and macOS defaults. */
@@ -70,10 +71,12 @@ export async function resolveWithinRoot(
 
     const realRoot = await realpathOrThrow(allowedRoot);
     const lexical = path.resolve(realRoot, requestedPath);
+    const throughRootAlias = path.isAbsolute(requestedPath) && isWithinRoot(lexical, allowedRoot);
 
     // Reject the obvious traversal before touching the filesystem so that a
-    // hostile path never triggers a stat outside the root.
-    if (!isWithinRoot(lexical, realRoot)) {
+    // hostile path never triggers a stat outside the root. Absolute paths may
+    // use the root's original alias, but must pass canonical containment below.
+    if (!isWithinRoot(lexical, realRoot) && !throughRootAlias) {
         throw new PathContainmentError(
             'Path resolves outside the allowed root',
             `${requestedPath} -> ${lexical}`,
@@ -168,7 +171,11 @@ export async function listContainedEntries(
 }
 
 /** Recursive byte size of a directory, bounded to entries inside the root. */
-export async function directorySize(reference: StorageReference): Promise<number> {
+export async function directorySize(
+    reference: StorageReference,
+    token?: CancellationToken,
+): Promise<number> {
+    throwIfCancelled(token);
     if (!reference.isDirectory) {
         return reference.sizeBytes;
     }
@@ -176,12 +183,14 @@ export async function directorySize(reference: StorageReference): Promise<number
     const stack: StorageReference[] = [reference];
     const seen = new Set<string>();
     while (stack.length > 0) {
+        throwIfCancelled(token);
         const current = stack.pop() as StorageReference;
         if (seen.has(current.realPath)) {
             continue;
         }
         seen.add(current.realPath);
         const children = await listContainedEntries(current);
+        throwIfCancelled(token);
         for (const child of children) {
             if (child.isDirectory) {
                 stack.push(child);

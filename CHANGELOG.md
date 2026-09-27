@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## [1.1.22] - 2026-09-27
+
+### Added
+
+- Per-file parser options, column mappings, and SQL object names, with Reset,
+  Undo, and reusable import profiles that contain no credentials or source URLs.
+- A bounded sample preview before local file analysis finishes. Samples remain
+  labeled as provisional until the final analysis is available.
+- An explicit public-container option in Browse Azure, separate from Microsoft
+  sign-in and limited to known Azure Blob Storage container URLs.
+- Installed-extension smoke checks for Windows and macOS, an opt-in native SQL
+  compatibility workflow, and approval-gated publication of an audited VSIX.
+
+### Changed
+
+- Azure errors distinguish missing authorization, disabled accounts, unavailable
+  containers, and network or service failures without exposing raw responses.
+- Metadata caching is bounded by both size and entry count. Table directories
+  are reanalyzed so changes to their metadata files are not missed.
+
+### Fixed
+
+- Local paths using Windows short names or a selected folder alias are accepted
+  without weakening traversal and symlink-escape checks.
+- Keep late-column overrides when final schema discovery is sampled, and allow
+  overlapping selections of the same listed file to finish correctly.
+- Preserve typed spaces in object names and expanded parser controls while
+  editing on either surface.
+
 ## 1.1.16
 
 ### Fixed

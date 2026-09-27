@@ -57,8 +57,9 @@ export class MicrosoftAuthentication {
         allowInteractive: boolean,
         account?: AuthenticationAccount,
         tenantId?: string,
+        signal?: AbortSignal,
     ): Promise<AuthenticationResult> {
-        return this.acquireResource(ARM_SCOPE, allowInteractive, account, tenantId);
+        return this.acquireResource(ARM_SCOPE, allowInteractive, account, tenantId, signal);
     }
 
     async acquireSession(
@@ -66,9 +67,10 @@ export class MicrosoftAuthentication {
         tenantId: string | undefined,
         account: AuthenticationAccount | undefined,
         allowInteractive: boolean,
+        signal?: AbortSignal,
     ): Promise<AuthenticationSession | undefined> {
         return (
-            await this.acquireResource(resourceScope, allowInteractive, account, tenantId)
+            await this.acquireResource(resourceScope, allowInteractive, account, tenantId, signal)
         ).session;
     }
 
@@ -77,12 +79,19 @@ export class MicrosoftAuthentication {
         allowInteractive: boolean,
         account?: AuthenticationAccount,
         tenantId?: string,
+        signal?: AbortSignal,
     ): Promise<AuthenticationResult> {
+        if (signal?.aborted) {
+            return { session: undefined, source: 'none' };
+        }
         const scopes = scopedAuthenticationScopes(resourceScope, tenantId);
         const silent = await this.getSession(MICROSOFT_PROVIDER_ID, scopes, {
             silent: true,
             ...(account ? { account } : {}),
         });
+        if (signal?.aborted) {
+            return { session: undefined, source: 'none' };
+        }
         if (silent) {
             return { session: silent, source: 'silent' };
         }
@@ -93,6 +102,9 @@ export class MicrosoftAuthentication {
             createIfNone: true,
             ...(account ? { account } : {}),
         });
+        if (signal?.aborted) {
+            return { session: undefined, source: 'none' };
+        }
         return {
             session: interactive,
             source: interactive ? 'interactive' : 'none',

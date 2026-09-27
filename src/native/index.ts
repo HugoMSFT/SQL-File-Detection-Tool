@@ -24,6 +24,7 @@ export {
 export {
     NativeAnalysisService,
     nativeAnalysisService,
+    markProvisionalSql,
     type AnalysisRequest,
     type DirectoryAnalysis,
     type DirectoryAnalysisRequest,
@@ -31,6 +32,8 @@ export {
     type GenerationRequest,
     type MultiFileRequest,
     type PreviewRequest,
+    type ProgressiveAnalysisRequest,
+    type AnalyzedPreviewRequest,
 } from './service';
 export {
     analyzeFileMetadata,

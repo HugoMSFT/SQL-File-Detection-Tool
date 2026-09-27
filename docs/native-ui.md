@@ -21,8 +21,9 @@ TypeScript running in the extension host.
 | `src/ui/host.ts` | no | The `UiHost` seam. Everything the controller needs from the editor, expressed as an interface. |
 | `src/ui/webviewShell.ts` | no | Builds the HTML shell and extension-origin-only CSP. |
 | `src/appState.ts` | no | The shared model, the file registry and the containment roots. |
+| `src/fileSettings.ts` | no | Bounded session-only file settings/Undo and strict, credential-free import-profile validation. |
 | `src/protocol.ts` | no | The message contract and the single validation choke point. |
-| `src/azure/*` | no | Explicit Microsoft sign-in, bounded tenant discovery, and auth lifecycle reconciliation. |
+| `src/azure/*` | no | Explicit Microsoft sign-in or known-public-container listing, bounded discovery, and mode/auth lifecycle reconciliation. |
 | `src/native/*` | no | Layer 1: analysis and SQL generation. |
 
 Keeping `vscode` confined to two files is what makes the rest of the extension
@@ -66,6 +67,38 @@ Formats, Best Practices, COPY INTO, JSON, and FOR JSON are not navigation tabs.
 JSON guidance is emitted only in the relevant `OPENROWSET` or external-table
 context.
 
+For an explicitly selected local CSV/TSV/DAT, JSON/NDJSON/JSONL or text file,
+the controller publishes a bounded first stage before waiting for full analysis.
+It displays **“Sample preview — analyzing file…”**, real rows and progress while
+refinement continues. The sample reads at most 256 KiB including sniffing, at
+most 100 data records (plus a CSV header), and caps records at 64 Ki decoded
+characters and schemas at 256 columns. Unicode, quoted newlines and exact
+numeric text are preserved. A first record that cannot fit is explicitly
+reported as unavailable; it is not shortened into a fake value.
+
+Sample metadata is `analysis_stage: 'provisional'` with
+`schema_inference: 'sampled'`; row totals are unknown, not exact or estimated
+counts. Sample SQL is a conservative template with an embedded `SAMPLE ONLY`
+comment and cannot be labeled Ready to run. Final metadata, SQL and preview
+replace it only while the selected file id and operation generation remain
+current. Normal large-file sampled/estimated provenance is retained even after
+refinement finishes. Final preview limits and format capabilities are unchanged.
+
+Cancel, source switching, or changing Preview rows cancels refinement promptly.
+Retained rows then display **“Sample preview only — analysis incomplete.”**
+Resizing that sample does not silently restart a complete scan; selecting the
+file again retries refinement. Resizing a final preview reuses its metadata,
+without another file/table analysis. A file edited during refinement is rejected
+as changed rather than combining metadata and rows from different revisions.
+Detected facts and SQL use the current user settings when refinement lands, so
+names, parser/column edits, and Reset/Undo/profile choices are not overwritten.
+Renderer drafts and focus still survive state updates.
+
+This improvement applies to selected local files. Initial folder inventory
+still analyzes its bounded listing before selecting a file; Parquet and table
+directories retain their existing footer/log path. There is no remote sampling,
+worker process, authentication or network work added to activation.
+
 Storage SQL is a goal-first workflow: operation, source, SQL runtime access,
 then optional advanced object names. The global target-platform selector remains
 the single platform control. A readiness row distinguishes blocked output,
@@ -79,8 +112,9 @@ receives no SAS token, access key, or master-key password. Generated SQL contain
 placeholders that users replace later in a secure editor.
 
 Folder scans retain one metadata record per file. Generation and schema
-overrides remain selected-file scoped. Storage URLs configure generated SQL but
-are never fetched. Local files expose direct SQL Server/UNC reads where supported
+overrides remain selected-file scoped. URLs entered in Storage SQL configure
+generated SQL but are never fetched. Only an explicit Browse Azure action
+authorizes metadata listing. Local files expose direct SQL Server/UNC reads where supported
 and otherwise state that staging is required.
 
 Generated-statement headers and relevant external-object readiness entries show
@@ -91,6 +125,52 @@ it with `vscode.env.openExternal`. Unsupported command/platform combinations do
 not receive a command link. SQL Server documentation is pinned to the 2019,
 2022, or 2025 view; Azure SQL Database, Managed Instance, and Fabric use their
 current product views.
+
+## File settings and import profiles
+
+**File settings and import profiles** is available above the result tabs' content
+in both surfaces. Table, schema, external data source, credential **name**, file
+format name, parser overrides, and SQL type overrides stay with each local file
+when switching files or returning from Browse Azure. New files start with the
+usual inferred table name, `dbo`, `MyDataSource`, and automatic credential/file
+format names. **Reset settings** restores these defaults without changing the
+selection, preview, or detected facts. **Undo settings change** restores one
+previous settings snapshot for that file, including a reset or applied profile.
+Selecting the file again reanalyzes it without resetting settings. Parser
+overrides affect generated SQL, not the detected metadata or preview reader.
+Parser controls stay expanded through edits and validation errors. Object-name
+drafts retain typed spaces while focused, even when the host trims outer spaces.
+Multi-file export uses each file's own settings, not the active file's names.
+
+File settings are memory-only. The host validates realpath containment before
+hashing a canonical path as a history key; neither that key nor the path enters
+the renderer's settings state. History retains at most 50 files and 512 KiB of
+serialized UTF-8 settings, including Undo snapshots; least-recently-used entries
+are evicted first. It contains no file contents. Object-name and override edits,
+Reset, Undo, and profile actions carry the selected opaque `fileId`. Stale
+messages cannot edit a different file, and analysis completion uses current
+settings rather than replacing edits made while it was running. Authoritative
+complete schema changes discard and report overrides for columns that no longer
+exist. Sampled, truncated, or failed analysis cannot prove a column absent, so
+unmatched overrides are retained even after background analysis finishes.
+
+**Save current settings**, **Apply selected profile**, and **Delete profile**
+manage named profiles in the existing non-sensitive VS Code preference storage
+(`native.importProfiles`). Saving an existing name replaces it. The version-1
+schema allows only `version`, `name`, `tableName`, `schemaName`, `dataSource`,
+`credentialName`, `formatName`, `parserOverrides`, and `columnOverrides`.
+Only explicit overrides are saved, not inferred column types or metadata.
+Unknown/prototype fields, invalid SQL types or parser values, and
+credential-/URL-/control-bearing names are rejected with safe errors. Exact
+source column names preserve ordinary punctuation and surrounding spaces.
+Profiles are limited to 20 entries, 32 KiB each, 256 KiB total, and 128 column
+overrides each. Applying one matches columns by name and reports columns absent
+from a complete schema;
+it never changes the platform, source selection, storage URL, or authentication.
+No tokens, SAS values, account keys, connection strings, paths, or file contents
+are persisted in profiles. Corrupt or unsupported saved profiles produce a
+visible warning and an output-channel warning without changing the stored value
+or triggering authentication, file analysis, or network access at startup.
 
 ## The message boundary
 
@@ -169,7 +249,7 @@ Storage SQL has one entry path: a storage URL. The host validates and
 normalizes the location, strips query strings and fragments, infers the storage
 type, and generates credential/data-source SQL without fetching the URL.
 
-The extension uses VS Code's built-in Microsoft provider for the ARM and Storage
+The authenticated browser uses VS Code's built-in Microsoft provider for the ARM and Storage
 user-impersonation scopes. **Browse Azure** lists accessible tenants,
 subscriptions, Blob-capable Storage accounts, containers, virtual folders, and
 blob metadata read-only. ARM Reader access is distinct from account-level
@@ -189,19 +269,28 @@ and editor context menus retain direct source analysis.
 
 Opening **Browse Azure** never performs authentication or an ARM call. The
 browser starts in its signed-out state on each extension activation and begins
-session acquisition only after **Connect to Azure** is selected. While connected,
+session acquisition only after **Connect to Azure** is selected. The separate
+**Open public container** submission performs anonymous metadata listing without
+acquiring any Microsoft session. While connected,
 closing and reopening the browser reuses verified metadata for at most two
 minutes; expired metadata and the explicit **Refresh** action perform a new
 silent session check and metadata lookup. Interactive tenant or Storage-scope
 authentication occurs only after an explicit **Connect to Azure** or **Retry**.
-Transient network failures, HTTP 408/429, and selected 5xx responses receive
+Transient ARM network failures, HTTP 408/429, and selected 5xx responses receive
 cancellation-aware retries with bounded backoff. Azure browser metadata is
 cached in memory for at most two minutes, is never persisted, and is cleared on
-Disconnect, sign-out, authorization failure, or disposal.
+Disconnect or disposal; Microsoft provider changes invalidate only authenticated
+browsing.
 HTTP 401 from Storage is treated as expired or missing Storage authorization and
-offers authorization again. HTTP 403 is reported as a data-plane RBAC denial:
-**Storage Blob Data Reader** is required at the storage-account or parent scope
-to enumerate containers, independently of Owner or Contributor management roles.
+offers authorization again in authenticated mode. Allowlisted structured error
+codes distinguish `AuthorizationPermissionMismatch` (data role/scope),
+`AuthenticationFailed` (credential retry), `AccountIsDisabled` (account or
+subscription administration, not repeated sign-in), known network-policy failures,
+and missing containers/resources. Generic 403 remains uncertain: permission or
+network policy could be responsible. Transport codes distinguish DNS/connectivity
+failures from timeouts, and throttling has separate guidance. Diagnostics name
+container listing or blob listing correctly and never echo arbitrary messages,
+service bodies, request URLs, query strings, or headers.
 The ARM clients permit only HTTPS requests to fixed public-cloud
 `management.azure.com` tenant, subscription, and Storage-account endpoints and
 validated continuation links, reject redirects, and apply hard limits for time,
@@ -213,13 +302,61 @@ session returned by the current interactive operation survives its own provider
 event, while later account removal cancels work and clears retained identity
 and tenant data.
 
+### Explicit public-container browsing
+
+`AzureBrowserState.mode` discriminates authenticated and public browsing.
+Public state has no identity, tenant, subscription, or account resources.
+`publicContainer` contains only a validated account name, Blob host, and container
+(or is null after rejected input). Public retries cannot acquire OAuth, including
+after invalid input, 401, 403, or disabled-public-access responses.
+
+The public form submits only a bounded URL and optional folder prefix. It accepts
+HTTPS or ABS URLs with a known container on canonical public-cloud Blob hosts:
+`account.blob.core.windows.net` and `account.zN.blob.storage.azure.net`.
+Ordinary container names follow Azure's lowercase DNS-label rules; `$root` and
+`$web` are explicit exceptions, not account roots. A shared host validator is also
+used for ARM-discovered endpoints. The host rejects credentials, explicit ports,
+queries (including SAS rather than silently stripping it), fragments, lookalike
+or private/IP hosts, and decoded traversal/control characters. Encoded spaces and
+Unicode folder names are preserved.
+
+An official `ContainerClient` with `AnonymousCredential` sends only GET List Blobs
+requests, through an extension-host transport restricted to the original HTTPS
+origin and container path. It sends neither Authorization nor cookies and rejects
+all redirects, including same-origin redirects, before the SDK can follow them.
+Response bodies are capped at 2 MiB; continuation markers, prefixes, page sizes,
+and returned hierarchy names/metadata are bounded and validated. Only listing
+metadata is read, never blob bytes. The existing 100-item pages, 1,000-entry limit,
+breadcrumbs, filters, and selections are reused, but the account breadcrumb is
+disabled and the host rejects attempts to enumerate containers.
+
+Container-level public access is required for listing. Blob-level public access
+only permits reading known blobs. Private containers may report 404 instead of
+disclosing their existence. None of these failures silently switches to OAuth,
+and an OAuth failure never downgrades to anonymous browsing.
+
+Mode changes immediately cancel requests and invalidate both generations and
+deferred authentication lifecycles. A cancelled silent session lookup cannot
+later launch an interactive consent prompt. Microsoft provider events do not
+replace public browsing. Close retains public metadata in memory for the same
+two-minute cache policy; Refresh and expired-cache reopening re-list anonymously.
+Disconnect and Browse local clear it. Public input drafts and endpoints are
+never written to settings or webview persistence.
+
+The header shows **Public container · no sign-in**. Host-only selection metadata
+(`url`, `access`) controls handoff: public file/folder selections produce canonical
+ABS URLs and explicitly select Public SQL runtime access, overriding stale managed
+identity settings. The renderer cannot supply this access identity. Storage SQL
+still generates templates when remote schema has not been analyzed; there is no
+remote row or schema preview.
+
 Selecting a file creates `abs://container@account.blob.core.windows.net/path`
 for Blob Storage or `abfss://container@account.dfs.core.windows.net/path` for
 HNS/ADLS Gen2 and hands it to Storage SQL. This selects
 the remote SQL source location only; no remote bytes, schema, or preview are
 downloaded.
 
-The URL boundary remains strict:
+The separate Storage SQL URL boundary remains unchanged:
 
 - `abs://` selects Azure Blob and emits the ABS connector.
 - `adls://` selects Azure Data Lake and emits the ADLS connector.
@@ -234,16 +371,19 @@ The URL boundary remains strict:
 
 ## Cancellation and stale results
 
-Analysis is serialised through `createSerialQueue()`, so two concurrent requests
-keep their own arguments and their own results rather than one being satisfied
-by the other. On top of that:
+Selections, preview resizes and source switches do not wait behind an obsolete
+analysis in a serial queue. Export requests remain serialized. In addition:
 
-- `begin()` bumps a monotonic `generation` and cancels the previous
-  `CancellationTokenSource`.
+- `begin()` cancels the previous `CancellationTokenSource`; every cancellation
+  also advances a monotonic `generation`, even when a reader ignores its token.
 - Every `await` is followed by `isCurrent(generation)`; a superseded task drops
   its result instead of writing it. A slow analysis of file A can therefore never
   overwrite a fast analysis of file B.
 - The token reaches all the way down into the native analysis service.
+- Provisional callbacks and progress reports also check generation and selected
+  file identity. Cancelled work cannot clear a newer error or publish late SQL.
+- Cooperative JSON parser yields and bounded streaming reads admit new host
+  requests during refinement, without introducing a worker or subprocess.
 - Schema and SQL regeneration is debounced, so typing in the table name field
   does not start work on every keystroke.
 

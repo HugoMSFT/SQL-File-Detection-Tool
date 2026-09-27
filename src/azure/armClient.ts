@@ -1,4 +1,5 @@
 import { AzureBrowserError } from './errors';
+import { azurePublicStorageAccountName } from './locations';
 import type { AzureStorageAccount, AzureSubscription, AzureTenant } from './types';
 
 export const ARM_HOST = 'management.azure.com';
@@ -93,10 +94,6 @@ function storageEndpointHost(
     } catch {
         throw new AzureBrowserError('invalidResponse', `Azure returned an invalid ${service} endpoint.`);
     }
-    const escapedName = accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const hostPattern = new RegExp(
-        `^${escapedName}(?:\\.${service}\\.core\\.windows\\.net|\\.z\\d+\\.${service}\\.storage\\.azure\\.net)$`,
-    );
     if (
         endpoint.protocol !== 'https:'
         || endpoint.port !== ''
@@ -105,7 +102,7 @@ function storageEndpointHost(
         || endpoint.pathname !== '/'
         || endpoint.search !== ''
         || endpoint.hash !== ''
-        || !hostPattern.test(endpoint.hostname)
+        || azurePublicStorageAccountName(endpoint.hostname, service) !== accountName
     ) {
         throw new AzureBrowserError(
             'invalidResponse',

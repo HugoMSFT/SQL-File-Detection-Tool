@@ -1,5 +1,13 @@
 # Certification harness
 
+**Evidence boundary:** the historical runs below belong to the legacy
+certification generator. They are not new execution evidence for the shipped
+native TypeScript generator. [`native_live.py`](native_live.py) reuses only this
+harness's lexer/safety gate and executes SQL produced by `scripts/native-sql.js`.
+See [native regression/release tooling](../../docs/regression-release.md) for the
+offline plan, exact-byte fixture contracts, optional x86 Linux workflow, and
+explicit failures/unavailable surfaces.
+
 This directory is **not shipped**. `.vscodeignore` is an allowlist that starts
 from `**`, so nothing under `scripts/` can enter the `.vsix`, and nothing here is
 imported by the extension at runtime or by the Python package.

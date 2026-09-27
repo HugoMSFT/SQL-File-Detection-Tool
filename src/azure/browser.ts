@@ -9,6 +9,7 @@ import {
 } from './auth';
 import { ArmClient } from './armClient';
 import { AzureBrowserError } from './errors';
+import { parsePublicContainerUrl, validBlobListingName } from './locations';
 import {
     MAX_STORAGE_ITEMS,
     StorageBrowserClient,
@@ -19,6 +20,7 @@ import {
     type AzureBrowserEntry,
     type AzureBrowserState,
     type AzureStorageAccount,
+    type AzureStorageSelection,
 } from './types';
 
 const SUPPORTED_EXTENSIONS = new Set([
@@ -109,7 +111,7 @@ export class AzureBrowser {
     }
 
     async authenticationChanged(): Promise<AzureBrowserState> {
-        if (this.reconnectRequiresUserAction) {
+        if (this.state.mode === 'public' || this.reconnectRequiresUserAction) {
             return this.state;
         }
         // VS Code reports only the provider, not the affected session. A session
@@ -153,6 +155,17 @@ export class AzureBrowser {
     }
 
     async open(): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            if (this.state.errorKind) {
+                this.state = { ...this.state, open: true, phase: 'error' };
+                return this.state;
+            }
+            if (!this.cacheIsFresh()) {
+                return this.refresh();
+            }
+            this.state = { ...this.state, open: true, phase: 'ready' };
+            return this.state;
+        }
         if (this.reconnectRequiresUserAction) {
             return this.signedOut(
                 this.state.phase === 'signedOut' && this.state.message
@@ -178,6 +191,9 @@ export class AzureBrowser {
     }
 
     connect(): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            this.disconnect();
+        }
         if (this.connectPromise) {
             return this.connectPromise;
         }
@@ -192,7 +208,47 @@ export class AzureBrowser {
         return pending;
     }
 
+    async openPublicContainer(url: string, prefix = ''): Promise<AzureBrowserState> {
+        this.disconnect();
+        this.state = {
+            ...CLOSED_AZURE_BROWSER_STATE,
+            mode: 'public',
+            publicContainer: null,
+            open: true,
+            phase: 'ready',
+        };
+        this.retryOperation = 'location';
+        try {
+            const location = parsePublicContainerUrl(url, prefix);
+            this.state = {
+                ...this.state,
+                publicContainer: {
+                    accountName: location.accountName,
+                    blobHost: location.blobHost,
+                    container: location.container,
+                },
+            };
+            this.container = location.container;
+            this.prefix = location.prefix;
+            return this.loadLocation(false);
+        } catch (error) {
+            return this.fail(error);
+        }
+    }
+
     refresh(): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            if (this.refreshPromise) {
+                return this.refreshPromise;
+            }
+            const pending = this.loadLocation(false);
+            this.refreshPromise = pending;
+            void pending.then(
+                () => this.clearRefreshPromise(pending),
+                () => this.clearRefreshPromise(pending),
+            );
+            return pending;
+        }
         if (this.connectPromise) {
             return this.connectPromise;
         }
@@ -226,26 +282,41 @@ export class AzureBrowser {
     }
 
     retry(): Promise<AzureBrowserState> {
-        return this.runInteractive(() => this.retryInteractive());
+        if (this.state.errorKind === 'accountDisabled') {
+            return Promise.resolve(this.state);
+        }
+        if (this.state.mode === 'public') {
+            return this.loadLocation(false);
+        }
+        const interactive = this.retryOperation === 'discover'
+            || this.state.errorKind === 'signIn'
+            || this.state.errorKind === 'storageConsent'
+            || this.state.errorKind === 'storageAuthentication';
+        return interactive
+            ? this.runInteractive(() => this.retryInteractive(true))
+            : this.retryInteractive(false);
     }
 
-    private async retryInteractive(): Promise<AzureBrowserState> {
+    private async retryInteractive(interactive: boolean): Promise<AzureBrowserState> {
         switch (this.retryOperation) {
             case 'tenant':
-                return this.selectTenant(this.state.selectedTenantId ?? '', true);
+                return this.selectTenant(this.state.selectedTenantId ?? '', interactive);
             case 'subscription':
-                return this.selectSubscription(this.state.selectedSubscriptionId ?? '', true);
+                return this.selectSubscription(this.state.selectedSubscriptionId ?? '', interactive);
             case 'account':
-                return this.selectAccount(this.state.selectedAccountId ?? '', true);
+                return this.selectAccount(this.state.selectedAccountId ?? '', interactive);
             case 'location':
-                return this.loadLocation(false, true);
+                return this.loadLocation(false, interactive);
             case 'discover':
             default:
-                return this.discover(true);
+                return this.discover(interactive);
         }
     }
 
     async selectTenant(tenantId: string, interactive = false): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            return this.authenticatedSelectionRequired();
+        }
         if (!this.state.tenants.some((tenant) => tenant.id === tenantId)) {
             return this.fail(new AzureBrowserError('invalidResponse', 'That Azure tenant is no longer available.'));
         }
@@ -310,6 +381,9 @@ export class AzureBrowser {
         subscriptionId: string,
         interactive = false,
     ): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            return this.authenticatedSelectionRequired();
+        }
         const subscription = this.state.subscriptions.find((item) => item.id === subscriptionId);
         if (!subscription) {
             return this.fail(
@@ -367,6 +441,9 @@ export class AzureBrowser {
     }
 
     async selectAccount(accountId: string, interactive = false): Promise<AzureBrowserState> {
+        if (this.state.mode === 'public') {
+            return this.authenticatedSelectionRequired();
+        }
         const selected = this.state.accounts.find((item) => item.id === accountId);
         const tenantId = this.state.selectedTenantId;
         if (!selected || !tenantId) {
@@ -432,6 +509,9 @@ export class AzureBrowser {
             return this.state;
         }
         if (registered.target.kind === 'container') {
+            if (this.state.mode === 'public') {
+                return this.fail(new AzureBrowserError('invalidResponse', 'Public browsing stays inside the selected container.'));
+            }
             this.container = registered.target.container;
             this.prefix = '';
         } else {
@@ -445,6 +525,9 @@ export class AzureBrowser {
             return this.fail(new AzureBrowserError('invalidResponse', 'That breadcrumb is invalid.'));
         }
         if (depth === 0) {
+            if (this.state.mode === 'public') {
+                return this.fail(new AzureBrowserError('invalidResponse', 'Public browsing cannot enumerate accounts or containers. Select the container breadcrumb.'));
+            }
             const accountId = this.state.selectedAccountId;
             return accountId ? this.selectAccount(accountId, false) : this.state;
         }
@@ -465,22 +548,36 @@ export class AzureBrowser {
     }
 
     selectedUrl(): string | undefined {
+        return this.selectedLocation()?.url;
+    }
+
+    selectedLocation(): AzureStorageSelection | undefined {
         const registered = this.state.selectedEntryId
             ? this.entryRegistry.get(this.state.selectedEntryId)
             : undefined;
-        const account = this.selectedAccount();
-        if (!registered || registered.target.kind !== 'file' || !account || !this.container) {
+        const account = this.selectedStorageTarget();
+        if (
+            !registered || registered.target.kind !== 'file' || !account || !this.container
+            || !this.publicSelectionIsReady()
+        ) {
             return undefined;
         }
-        return azureStorageUrl(account, this.container, registered.target.blobName);
+        return {
+            url: azureStorageUrl(account, this.container, registered.target.blobName),
+            access: this.state.mode,
+        };
     }
 
     currentFolderUrl(): string | undefined {
-        const account = this.selectedAccount();
-        if (!account || !this.container) {
+        return this.currentFolderLocation()?.url;
+    }
+
+    currentFolderLocation(): AzureStorageSelection | undefined {
+        const account = this.selectedStorageTarget();
+        if (!account || !this.container || !this.publicSelectionIsReady()) {
             return undefined;
         }
-        return azureStorageUrl(account, this.container, this.prefix);
+        return { url: azureStorageUrl(account, this.container, this.prefix), access: this.state.mode };
     }
 
     close(): AzureBrowserState {
@@ -517,7 +614,7 @@ export class AzureBrowser {
         this.connectPromise = undefined;
         this.refreshPromise = undefined;
         this.cancel();
-        return this.signedOut('Disconnected. Select Connect to browse Azure again.');
+        return this.signedOut('Disconnected. Select Connect or open a known public container to browse again.');
     }
 
     cancel(preserveInteractiveOperationId?: number): void {
@@ -602,17 +699,26 @@ export class AzureBrowser {
         append: boolean,
         interactive = false,
     ): Promise<AzureBrowserState> {
-        const account = this.selectedAccount();
+        const account = this.selectedStorageTarget();
         const tenantId = this.state.selectedTenantId;
-        if (!account || !tenantId || !this.container) {
+        const publicMode = this.state.mode === 'public';
+        if (!account || (!publicMode && !tenantId) || !this.container) {
             return this.fail(new AzureBrowserError('invalidResponse', 'The Azure location is incomplete.'));
         }
         this.retryOperation = 'location';
+        const continuation = append ? this.continuationToken : undefined;
+        if (!append) {
+            this.entryRegistry.clear();
+            this.continuationToken = undefined;
+            if (publicMode) {
+                this.lastRefreshAt = undefined;
+            }
+        }
         const generation = this.loading(
             'Loading files…',
             append
                 ? { path: this.locationPath() }
-                : { path: this.locationPath(), entries: [], selectedEntryId: null },
+                : { path: this.locationPath(), entries: [], selectedEntryId: null, hasMore: false },
             this.interactiveOwner(interactive),
         );
         const supersededAuthentication = this.reconcileSupersededAuthentication();
@@ -620,6 +726,33 @@ export class AzureBrowser {
             return supersededAuthentication;
         }
         try {
+            if (publicMode) {
+                const page = await this.storage.listPublicBlobs(
+                    account.blobHost,
+                    this.container,
+                    this.prefix,
+                    continuation,
+                    this.signal(),
+                );
+                if (!this.isCurrent(generation)) {
+                    return this.state;
+                }
+                if (page.items.some((item) =>
+                    item.kind === 'container'
+                    || !validBlobListingName(
+                        item.kind === 'folder' ? item.prefix : item.blobName,
+                        this.prefix,
+                        item.kind,
+                    )
+                )) {
+                    throw new AzureBrowserError('invalidResponse', 'Azure returned an invalid public container listing path.');
+                }
+                this.markRefreshed();
+                return this.applyItems(page.items, page.continuationToken, append);
+            }
+            if (!tenantId) {
+                throw new AzureBrowserError('invalidResponse', 'The Azure tenant is missing.');
+            }
             const session = await this.session(STORAGE_SCOPE, tenantId, interactive);
             if (!this.isCurrent(generation)) {
                 return this.state;
@@ -635,7 +768,7 @@ export class AzureBrowser {
                 this.container,
                 this.prefix,
                 session,
-                append ? this.continuationToken : undefined,
+                continuation,
                 this.signal(),
             );
             if (!this.isCurrent(generation)) {
@@ -756,16 +889,45 @@ export class AzureBrowser {
         return this.state.accounts.find((item) => item.id === this.state.selectedAccountId);
     }
 
+    private selectedStorageTarget(): Pick<AzureStorageAccount, 'name' | 'hns' | 'blobHost' | 'dfsHost'> | undefined {
+        if (this.state.mode === 'public') {
+            const target = this.state.publicContainer;
+            return target
+                ? { name: target.accountName, hns: false, blobHost: target.blobHost, dfsHost: null }
+                : undefined;
+        }
+        return this.selectedAccount();
+    }
+
+    private publicSelectionIsReady(): boolean {
+        return this.state.mode !== 'public' || (
+            this.lastRefreshAt !== undefined
+            && this.state.phase !== 'loading'
+            && this.state.errorKind === null
+        );
+    }
+
+    private authenticatedSelectionRequired(): AzureBrowserState {
+        return this.fail(new AzureBrowserError(
+            'invalidResponse',
+            'Select Connect to Azure to browse authenticated accounts. Public browsing stays inside the selected container.',
+        ));
+    }
+
     private session(
         scope: typeof ARM_SCOPE | typeof STORAGE_SCOPE,
         tenantId: string,
         interactive: boolean,
     ): Promise<AuthenticationSession | undefined> {
+        if (this.state.mode === 'public') {
+            return Promise.reject(new AzureBrowserError('invalidResponse', 'Public browsing does not use Microsoft authentication.'));
+        }
         return this.deps.authentication.acquireSession(
             scope,
             tenantId,
             this.account,
             interactive,
+            this.signal(),
         );
     }
 
@@ -784,12 +946,14 @@ export class AzureBrowser {
         pinned: AuthenticationAccount | undefined,
         interactive: boolean,
     ): Promise<AuthenticationSession | undefined> {
+        const signal = this.signal();
         if (!pinned) {
             return this.deps.authentication.acquireSession(
                 ARM_SCOPE,
                 undefined,
                 undefined,
                 interactive,
+                signal,
             );
         }
         if (interactive) {
@@ -798,6 +962,7 @@ export class AzureBrowser {
                 undefined,
                 pinned,
                 true,
+                signal,
             );
         }
         const retained = await this.deps.authentication.acquireSession(
@@ -805,6 +970,7 @@ export class AzureBrowser {
             undefined,
             pinned,
             false,
+            signal,
         );
         if (retained) {
             return retained;
@@ -817,6 +983,7 @@ export class AzureBrowser {
             undefined,
             undefined,
             false,
+            signal,
         );
     }
 
@@ -867,7 +1034,7 @@ export class AzureBrowser {
     private async reconcileDeferredAuthentication(
         operationLifecycle: number,
     ): Promise<AzureBrowserState> {
-        if (!this.state.open || operationLifecycle !== this.lifecycle) {
+        if (this.state.mode === 'public' || !this.state.open || operationLifecycle !== this.lifecycle) {
             return this.state;
         }
         const account = this.account;
@@ -885,6 +1052,7 @@ export class AzureBrowser {
                 tenantId,
                 account,
                 false,
+                this.signal(),
             );
         } catch {
             if (this.reconcilingLifecycle === reconcilingLifecycle) {
@@ -997,7 +1165,7 @@ export class AzureBrowser {
 
     private loading(
         message: string,
-        patch: Partial<AzureBrowserState> = {},
+        patch: Partial<Omit<AzureBrowserState, 'mode' | 'publicContainer'>> = {},
         interactiveOperationId?: number,
     ): number {
         this.cancel(interactiveOperationId);
@@ -1023,7 +1191,8 @@ export class AzureBrowser {
 
     private reconcileSupersededAuthentication(): Promise<AzureBrowserState> | undefined {
         if (
-            this.pendingAuthenticationChangeLifecycle !== this.lifecycle
+            this.state.mode === 'public'
+            || this.pendingAuthenticationChangeLifecycle !== this.lifecycle
             || !this.state.open
             || this.interactiveOperation
         ) {

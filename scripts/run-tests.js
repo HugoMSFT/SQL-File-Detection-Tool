@@ -16,7 +16,9 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const testDir = path.join(__dirname, '..', 'out', 'test');
+const testDir = process.argv[2]
+    ? path.resolve(__dirname, '..', process.argv[2])
+    : path.join(__dirname, '..', 'out', 'test');
 
 if (!fs.existsSync(testDir)) {
     console.error(`No compiled tests found at ${testDir}. Run "npm run compile" first.`);

@@ -89,10 +89,20 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:certification
+      - name: Validate exact native-generated SQL offline
+        run: |
+          node scripts/native-sql.js --engine 2022 --output .artifacts/native-plan-2022
+          python -m scripts.certification.native_live --validate-plan .artifacts/native-plan-2022
+          node scripts/native-sql.js --engine 2025 --output .artifacts/native-plan-2025
+          python -m scripts.certification.native_live --validate-plan .artifacts/native-plan-2025
       # The notices must describe the bundle that was just built, not a bundle
       # from whenever someone last remembered to regenerate them.
       - run: npm run notices -- --check
@@ -105,8 +115,42 @@ jobs:
       # Mechanical proof that the package carries no Python, no sources, no
       # fixtures and no credentials.
       - run: npm run audit:vsix
+      - name: Validate release guards against the packaged artifact
+        run: npm run test:tooling
       - uses: actions/upload-artifact@v4
         with:
           name: vsix
           path: dist/*.vsix
           if-no-files-found: error
+
+  installed-ui:
+    name: Installed VSIX on ${{ matrix.os }}
+    needs: extension
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: vsix
+          path: dist
+      - name: Drive the installed artifact in an isolated VS Code profile
+        run: npm run test:installed -- --progressive-preview
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installed-smoke-${{ matrix.os }}
+          path: .artifacts/installed-smoke/
+          if-no-files-found: error
+          retention-days: 7

@@ -127,3 +127,23 @@ test('an existing silent session prevents an interactive prompt', async () => {
         label: 'developer@example.test',
     });
 });
+
+test('cancelling a pending silent session prevents delayed interactive consent', async () => {
+    let resolveSession!: (session: AuthenticationSession | undefined) => void;
+    const pending = new Promise<AuthenticationSession | undefined>((resolve) => {
+        resolveSession = resolve;
+    });
+    const calls: SessionOptions[] = [];
+    const authentication = new MicrosoftAuthentication(async (_provider, _scopes, options) => {
+        calls.push(options);
+        return pending;
+    });
+    const cancellation = new AbortController();
+    const request = authentication.acquire(true, undefined, undefined, cancellation.signal);
+    cancellation.abort();
+    resolveSession(undefined);
+    assert.deepEqual(await request, { session: undefined, source: 'none' });
+    assert.deepEqual(calls, [{ silent: true }]);
+    await authentication.acquire(true, undefined, undefined, cancellation.signal);
+    assert.equal(calls.length, 1, 'an already cancelled operation cannot query the provider');
+});
