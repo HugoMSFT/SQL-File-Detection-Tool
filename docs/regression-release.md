@@ -69,8 +69,11 @@ relocation, renderer/panel recreation, cancellation and the next selection.
 Detected Metadata is read-only on the original baseline: edits here mean schema
 type overrides and generation/settings controls, not fabricated metadata edits.
 Parser overrides retain their existing controller tests.
-Before typing, the runner waits for Select All's full range to remain stable for
-three animation frames; this avoids Electron/macOS's delayed native selection
+Before typing, the runner observes the forwarded native `execCommand('selectAll')`
+completion and polls for the active input's full selected range with a five-second
+deadline. The original method/arguments/result are preserved and its descriptor is
+restored, including on failure. No animation-frame wait is used: Electron can
+pause those in background windows. This avoids delayed native selection
 overwriting the first character without slowing the subsequent typing test.
 
 `--progressive-preview` additionally requires the forthcoming large-file

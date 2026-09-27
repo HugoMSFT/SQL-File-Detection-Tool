@@ -112,25 +112,49 @@ test('collapsed File settings is opened before interacting with naming controls'
     assert.equal(clicks, 1, 'A visible baseline field does not require a settings disclosure');
 });
 
-test('Select All waits for consecutive stable frames instead of racing a delayed native selection', async () => {
-    let frame = 0;
+function selectionControl(dispatch = true) {
+    const calls = [];
+    let disposed = false;
     const input = { value: 'before', selectionStart: 0, selectionEnd: 6, isConnected: true };
-    input.ownerDocument = {
-        activeElement: input,
-        defaultView: {
-            setTimeout, clearTimeout,
-            requestAnimationFrame: (callback) => setImmediate(() => {
-                frame++;
-                input.selectionEnd = frame === 2 ? 0 : 6;
-                callback();
-            }),
+    const original = function (...args) {
+        calls.push(args);
+        return true;
+    };
+    input.ownerDocument = { activeElement: input, execCommand: original };
+    return {
+        input, original, calls, disposed: () => disposed,
+        control: {
+            press: async (key) => {
+                assert.equal(key, 'ControlOrMeta+A');
+                if (dispatch) {
+                    setTimeout(() => input.ownerDocument.execCommand('selectAll', false, null), 25);
+                }
+            },
+            evaluateHandle: async (callback) => {
+                const state = callback(input);
+                return {
+                    evaluate: async (read) => read(state),
+                    dispose: async () => { disposed = true; },
+                };
+            },
+            evaluate: async (callback) => callback(input),
         },
     };
-    await selectAllStable({
-        press: async (key) => assert.equal(key, 'ControlOrMeta+A'),
-        evaluate: async (callback) => callback(input),
-    });
-    assert.equal(frame, 5);
+}
+
+test('Select All waits for native completion, forwarding original arguments and restoring the method', async () => {
+    const setup = selectionControl();
+    await selectAllStable(setup.control);
+    assert.deepEqual(setup.calls, [['selectAll', false, null]]);
+    assert.equal(setup.input.ownerDocument.execCommand, setup.original);
+    assert.equal(setup.disposed(), true);
+});
+
+test('a missing native Select All event times out and removes its observer', async () => {
+    const setup = selectionControl(false);
+    await assert.rejects(selectAllStable(setup.control, 10), /Timed out/);
+    assert.equal(setup.input.ownerDocument.execCommand, setup.original);
+    assert.equal(setup.disposed(), true);
 });
 
 test('webview selection rejects a retained hidden iframe even when its document looks visible', async () => {

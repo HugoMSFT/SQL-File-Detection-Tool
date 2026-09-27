@@ -50,29 +50,51 @@ async function revealNamingControls(ui) {
     await input.waitFor({ state: 'visible' });
 }
 
-async function selectAllStable(control) {
-    await control.press('ControlOrMeta+A');
+async function selectAllStable(control, timeout = 5000) {
     // Electron on macOS can apply a delayed native Select All after keyup.
-    // Observe completion before typing, without changing the typing cadence.
-    let stableFrames = 0;
-    await waitFor('Select All to reach a stable full selection', async () => {
-        const selected = await control.evaluate((input) => new Promise((resolve) => {
-            const view = input.ownerDocument.defaultView;
-            let finished = false;
-            const timer = view.setTimeout(() => {
-                finished = true;
-                resolve(false);
-            }, 1000);
-            view.requestAnimationFrame(() => {
-                if (finished) { return; }
-                view.clearTimeout(timer);
-                resolve(input.isConnected && input.ownerDocument.activeElement === input &&
-                    input.selectionStart === 0 && input.selectionEnd === input.value.length);
-            });
-        }));
-        stableFrames = selected ? stableFrames + 1 : 0;
-        return stableFrames === 3;
-    }, { timeout: 5000 });
+    // Observe the forwarded operation, not animation frames (which can pause).
+    const observation = await control.evaluateHandle((input) => {
+        const document = input.ownerDocument;
+        const original = document.execCommand;
+        const descriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
+        const state = { completed: false, restore: undefined };
+        const observed = function (command, ...args) {
+            const result = Reflect.apply(original, this, [command, ...args]);
+            if (this === document && String(command).toLowerCase() === 'selectall') {
+                state.completed = true;
+            }
+            return result;
+        };
+        Object.defineProperty(document, 'execCommand', {
+            value: observed, configurable: true, writable: true,
+        });
+        state.restore = () => {
+            if (document.execCommand !== observed) {
+                throw new Error('Select All observer was replaced concurrently');
+            }
+            if (descriptor) {
+                Object.defineProperty(document, 'execCommand', descriptor);
+            } else {
+                delete document.execCommand;
+            }
+        };
+        return state;
+    });
+    try {
+        await control.press('ControlOrMeta+A');
+        await waitFor('native Select All completion and full selection', async () =>
+            await observation.evaluate((state) => state.completed) &&
+            await control.evaluate((input) =>
+                input.isConnected && input.ownerDocument.activeElement === input &&
+                input.selectionStart === 0 && input.selectionEnd === input.value.length),
+        { timeout });
+    } finally {
+        try {
+            await observation.evaluate((state) => state.restore());
+        } finally {
+            await observation.dispose();
+        }
+    }
 }
 
 async function visibleWebview(candidate, surface) {
