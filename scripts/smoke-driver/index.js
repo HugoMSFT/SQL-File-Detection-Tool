@@ -5,7 +5,9 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const Module = require('node:module');
+const { pathToFileURL } = require('node:url');
 const vscode = require('vscode');
+const { sameFile, stackContainsBundle } = require('./paths');
 
 function activate(context) {
     const root = fs.realpathSync(process.env.SQLFDT_SMOKE_ROOT);
@@ -16,12 +18,15 @@ function activate(context) {
     assert.equal(extension.isActive, false, 'The driver must install its guards before activation');
     const installedPath = fs.realpathSync(extension.extensionPath);
     assert.ok(installedPath.startsWith(fs.realpathSync(path.join(root, 'extensions')) + path.sep));
-    const bundle = fs.realpathSync(path.join(installedPath, extension.packageJSON.main));
+    const unresolvedBundle = path.join(installedPath, extension.packageJSON.main);
+    const bundle = fs.realpathSync.native(unresolvedBundle);
+    const bundleAliases = new Set([bundle, unresolvedBundle, pathToFileURL(bundle).href]);
     const bundleHash = crypto.createHash('sha256').update(fs.readFileSync(bundle)).digest('hex');
     assert.equal(bundleHash, process.env.SQLFDT_SMOKE_BUNDLE_SHA, 'Installed bytes differ from the VSIX');
 
     const attempts = [];
     const errors = [];
+    const guardedImports = new Set();
     let snapshot = null;
     let inFlight = 0;
     let snapshots = 0;
@@ -96,8 +101,10 @@ function activate(context) {
     // the analyzer, renderer, commands and all posted state remain real.
     Module._load = function load(request, parent, isMain) {
         const api = originalLoad.call(this, request, parent, isMain);
-        if (parent?.filename !== bundle) { return api; }
+        if (!sameFile(parent?.filename, bundle)) { return api; }
+        bundleAliases.add(parent.filename);
         if (request === 'vscode') {
+            guardedImports.add(request);
             return adapt(api, {
                 authentication: adapt(api.authentication, { getSession: deny('authentication.getSession') }),
                 window: adapt(api.window, {
@@ -112,6 +119,7 @@ function activate(context) {
         }
         const name = request.replace(/^node:/, '');
         if (network[name]) {
+            guardedImports.add(name);
             return Object.assign({}, api, Object.fromEntries(
                 network[name].map((method) => [method, deny(`${name}.${method}`)]),
             ));
@@ -120,7 +128,7 @@ function activate(context) {
     };
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (...args) => {
-        if (new Error().stack?.includes(bundle)) {
+        if (stackContainsBundle(new Error().stack, bundleAliases)) {
             return deny('fetch')();
         }
         return originalFetch(...args);
@@ -129,6 +137,7 @@ function activate(context) {
     const probe = () => ({
         installed: true, active: extension.isActive,
         version: extension.packageJSON.version, bundleSha256: bundleHash,
+        guardedImports: [...guardedImports].sort(),
         attempts, errors, snapshot, snapshots, provisionalSnapshots, inFlight,
         vscodeVersion: vscode.version,
         defaultView: vscode.workspace.getConfiguration('sqlFileDetectionTool').get('defaultView'),

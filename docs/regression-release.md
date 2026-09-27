@@ -54,6 +54,8 @@ The separate `scripts/smoke-driver/` extension only invokes existing commands an
 observes forwarded state. It verifies the installed extension's path, version,
 and bundle SHA against the audited VSIX. VS Code still activates the installed
 bundle; this is not an import of `out/extension.js` or a replayed renderer.
+Guard attribution resolves native file aliases and Windows path casing, and
+activation fails if the installed bundle's VS Code API import was not guarded.
 
 **Exact fake boundary:** imports made by the installed bundle are adapted only
 at VS Code authentication and Node network/process APIs. Attempts are recorded

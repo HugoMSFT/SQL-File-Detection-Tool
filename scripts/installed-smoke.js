@@ -375,7 +375,9 @@ async function smoke(options) {
                 await settled(matches);
             }
         };
-        await command('activate');
+        const activation = await command('activate');
+        assert.ok(activation.guardedImports.includes('vscode'),
+            'The installed bundle activated without the VS Code API guard');
         let ui = await frame();
         let probe = await settled();
         assert.equal(probe.active, true);

@@ -12,6 +12,26 @@ const {
 } = require('../installed-smoke');
 const { fixtureBytes, fixtureRows } = require('../regression-fixtures');
 const { pythonExecutable } = require('../run-python');
+const { sameFile, stackContainsBundle } = require('../smoke-driver/paths');
+
+test('installed-bundle guards match canonical file aliases and Windows path casing', () => {
+    const owned = temporaryRoot('sqlfdt-module-path-');
+    try {
+        const bundle = path.join(owned.root, 'Extension.js');
+        const other = path.join(owned.root, 'other.js');
+        fs.writeFileSync(bundle, '');
+        fs.writeFileSync(other, '');
+        const canonical = fs.realpathSync.native(bundle);
+        assert.equal(sameFile(bundle, canonical), true);
+        assert.equal(sameFile(bundle, canonical.toLowerCase(), 'win32'), true);
+        assert.equal(sameFile(other, canonical), false);
+        assert.equal(sameFile(path.join(owned.root, 'missing.js'), canonical), false);
+        assert.equal(sameFile(undefined, canonical), false);
+        assert.equal(stackContainsBundle('at f (c:\\Code\\extension.js:1:3)', new Set(['C:\\Code\\extension.js']), 'win32'), true);
+        assert.equal(stackContainsBundle('at f (/other/extension.js:1:3)', new Set(['/code/extension.js'])), false);
+        assert.equal(stackContainsBundle('at f (/Code/extension.js:1:3)', new Set(['/code/extension.js']), 'linux'), false);
+    } finally { owned.cleanup(); }
+});
 
 test('Python tooling uses the platform interpreter or an explicit executable without a shell', () => {
     assert.equal(pythonExecutable({}, 'darwin'), 'python3');
