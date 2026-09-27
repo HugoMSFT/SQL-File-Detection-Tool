@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 1.1.20
+## 1.1.21
 
 ### Added
 
@@ -16,6 +16,10 @@
 - Size-bounded metadata caching and fresh table-directory analysis.
 - Isolated UI and SQL regression workflows, plus approved publication of the
   same VSIX that passed the release checks.
+
+### Fixed
+
+- Local files can be opened through Windows short paths and folder aliases.
 
 ## [1.1.16] - 2026-09-26
 

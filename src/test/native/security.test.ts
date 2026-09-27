@@ -780,6 +780,44 @@ describe('path containment', () => {
         assert.ok(reference.realPath.endsWith('inside.csv'));
     });
 
+    it('accepts absolute paths through an allowed-root alias', async () => {
+        const alias = path.join(outside, 'allowed-root-alias');
+        await fs.promises.symlink(root, alias, process.platform === 'win32' ? 'junction' : 'dir');
+        try {
+            const realRoot = await fs.promises.realpath(root);
+            const realFile = await fs.promises.realpath(path.join(root, 'inside.csv'));
+            for (const requested of [path.join(alias, 'inside.csv'), realFile, 'inside.csv']) {
+                const reference = await resolveWithinRoot(requested, alias);
+                assert.strictEqual(reference.realPath, realFile);
+                assert.strictEqual(reference.allowedRoot, realRoot);
+            }
+            assert.strictEqual((await resolveWithinRoot(alias, alias)).realPath, realRoot);
+        } finally {
+            await fs.promises.rm(alias, { recursive: true, force: true });
+        }
+    });
+
+    it('still rejects traversal, prefix siblings and outward links through a root alias', async () => {
+        const alias = path.join(outside, 'contained-root-alias');
+        const escape = path.join(root, 'outward-alias-child');
+        const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+        await fs.promises.symlink(root, alias, linkType);
+        await fs.promises.symlink(outside, escape, linkType);
+        try {
+            for (const requested of [
+                '../secret.csv',
+                path.join(alias, '..', 'secret.csv'),
+                path.join(`${alias}-sibling`, 'secret.csv'),
+                path.join(alias, 'outward-alias-child', 'secret.csv'),
+            ]) {
+                await assert.rejects(() => resolveWithinRoot(requested, alias), PathContainmentError);
+            }
+        } finally {
+            await fs.promises.rm(escape, { recursive: true, force: true });
+            await fs.promises.rm(alias, { recursive: true, force: true });
+        }
+    });
+
     it('rejects traversal with ..', async () => {
         await assert.rejects(
             () => resolveWithinRoot(path.join(root, '..', 'etc', 'passwd'), root),

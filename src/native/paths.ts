@@ -71,10 +71,12 @@ export async function resolveWithinRoot(
 
     const realRoot = await realpathOrThrow(allowedRoot);
     const lexical = path.resolve(realRoot, requestedPath);
+    const throughRootAlias = path.isAbsolute(requestedPath) && isWithinRoot(lexical, allowedRoot);
 
     // Reject the obvious traversal before touching the filesystem so that a
-    // hostile path never triggers a stat outside the root.
-    if (!isWithinRoot(lexical, realRoot)) {
+    // hostile path never triggers a stat outside the root. Absolute paths may
+    // use the root's original alias, but must pass canonical containment below.
+    if (!isWithinRoot(lexical, realRoot) && !throughRootAlias) {
         throw new PathContainmentError(
             'Path resolves outside the allowed root',
             `${requestedPath} -> ${lexical}`,

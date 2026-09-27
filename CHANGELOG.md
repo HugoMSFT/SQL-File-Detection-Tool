@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## [1.1.20] - 2026-09-26
+## [1.1.21] - 2026-09-27
 
 ### Added
 
@@ -21,6 +21,11 @@
   containers, and network or service failures without exposing raw responses.
 - Metadata caching is bounded by both size and entry count. Table directories
   are reanalyzed so changes to their metadata files are not missed.
+
+### Fixed
+
+- Local paths using Windows short names or a selected folder alias are accepted
+  without weakening traversal and symlink-escape checks.
 
 ## 1.1.16
 
